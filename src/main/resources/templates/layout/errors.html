@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Errors</title></head>
+<body>
+<div th:fragment="error-summary"
+     th:if="${#fields.hasErrors('*')}">
+    <div class="error-summary" th:with="errs=${formErrors}">
+        <div class="error-summary-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
+        <div class="error-summary-body">
+            <div class="error-summary-header">
+                <h3 class="error-summary-title" th:text="#{common.errorsTitle}">Please fix the following errors</h3>
+                <button type="button" class="error-summary-close" data-error-close aria-label="Close">&times;</button>
+            </div>
+            <ul class="error-summary-list">
+                <li class="error-summary-item" th:each="err : ${errs}">
+                    <span class="error-summary-field"
+                          th:if="${err.field != null and !err.field.isEmpty()}"
+                          th:text="${#strings.capitalize(err.field)}"></span>
+                    <span class="error-summary-message" th:text="${err.defaultMessage}"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>

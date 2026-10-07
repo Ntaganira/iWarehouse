@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{activity.title}, ~{::content})}">
+<head><title>Activity Logs - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{activity.title}">Activity Logs</h1>
+            <div class="subtitle" th:text="#{activity.subtitle}">Review all user activity across the system</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{activity.sectionTitle}">Activity Log</span>
+                <span class="section-count" th:text="${logs.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/activity}" method="get" class="table-toolbar activity-filters">
+                <select name="userId" class="toolbar-filter" onchange="this.form.submit()">
+                    <option value="" th:selected="${selectedUserId == null}" th:text="#{activity.userSelect}">All Users</option>
+                    <option th:each="u : ${users}" th:value="${u.id}" th:text="${u.fullName} + ' (' + ${u.username} + ')'" th:selected="${selectedUserId != null and selectedUserId == u.id}"></option>
+                </select>
+                <select name="module" class="toolbar-filter" onchange="this.form.submit()">
+                    <option value="" th:selected="${module == null or module == ''}" th:text="#{activity.moduleSelect}">All Modules</option>
+                    <option th:each="m : ${modules}" th:value="${m}" th:text="${m}" th:selected="${m == module}"></option>
+                </select>
+                <select name="action" class="toolbar-filter" onchange="this.form.submit()">
+                    <option value="" th:selected="${action == null or action == ''}" th:text="#{activity.actionSelect}">All Actions</option>
+                    <option th:each="a : ${actions}" th:value="${a}" th:text="${a}" th:selected="${a == action}"></option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{activity.statusSelect}">All Statuses</option>
+                    <option value="SUCCESS" th:selected="${status == 'SUCCESS'}" th:text="#{activity.status.success}">Success</option>
+                    <option value="FAILED" th:selected="${status == 'FAILED'}" th:text="#{activity.status.failed}">Failed</option>
+                </select>
+                <input type="date" name="from" class="toolbar-filter activity-date" th:value="${from}" th:title="#{activity.from}">
+                <input type="date" name="to" class="toolbar-filter activity-date" th:value="${to}" th:title="#{activity.to}">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{activity.apply}">Apply</button>
+                <a href="/activity" class="btn btn-outline btn-sm" th:text="#{activity.reset}">Reset</a>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                        <th th:text="#{activity.user}">User</th>
+                        <th th:text="#{activity.module}">Module</th>
+                        <th th:text="#{activity.action}">Action</th>
+                        <th th:text="#{activity.description}">Description</th>
+                        <th th:text="#{activity.status}">Status</th>
+                        <th th:text="#{activity.ipAddress}">IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="log : ${logs.content}">
+                        <td class="nowrap" th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd HH:mm')}">2026-08-01 10:30</td>
+                        <td>
+                            <div class="patient-cell">
+                                <div class="avatar avatar-sm" th:text="${#strings.isEmpty(log.username) ? '?' : #strings.substring(log.username, 0, 1)}">A</div>
+                                <div class="info">
+                                    <div class="name" th:text="${log.username}">admin</div>
+                                    <div class="email" th:if="${log.ipAddress != null}" th:text="${log.ipAddress}">127.0.0.1</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td th:text="${log.module}">User Management</td>
+                        <td>
+                            <span class="action-badge"
+                                  th:classappend="${#strings.contains(log.action, 'CREATE')} ? 'action-create' : (${#strings.contains(log.action, 'DELETE') or #strings.contains(log.action, 'CANCEL')} ? 'action-delete' : (${#strings.contains(log.action, 'UPDATE')} ? 'action-update' : (${#strings.contains(log.action, 'LOGIN')} ? 'action-login' : (${#strings.contains(log.action, 'ACCESS') or #strings.contains(log.action, 'FAILED')} ? 'action-access' : 'action-other'))))"
+                                  th:text="${log.action}">CREATE_INVOICE</span>
+                        </td>
+                        <td th:text="${log.description}">Created invoice INV-WH-2026-000123</td>
+                        <td>
+                            <span class="badge badge-success" th:if="${log.status.name() == 'SUCCESS'}" th:text="#{activity.status.success}">Success</span>
+                            <span class="badge badge-danger" th:unless="${log.status.name() == 'SUCCESS'}" th:text="#{activity.status.failed}">Failed</span>
+                        </td>
+                        <td class="nowrap" th:text="${log.ipAddress}">127.0.0.1</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(logs.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                </div>
+                                <h3 th:text="#{activity.empty.title}">No activity found</h3>
+                                <p th:text="#{activity.empty.subtitle}">Try adjusting the filters to find what you are looking for</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${logs}, '/activity', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

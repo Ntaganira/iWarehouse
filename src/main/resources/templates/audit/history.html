@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{audit.historyTitle}, ~{::content})}">
+<head><title>Record History - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1><span th:text="#{audit.historyTitle}">Record history</span>: <span th:text="${entityType}">Customer</span></h1>
+            <div class="subtitle mono" th:text="${entityId}">id</div>
+        </div>
+        <div class="page-actions">
+            <a href="/audit" class="btn btn-outline" th:text="#{audit.backToList}">Back to list</a>
+        </div>
+    </div>
+    <div class="section">
+        <th:block th:replace="~{audit/history :: timeline(${changes})}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${changes}, ${'/audit/history/' + entityType + '/' + entityId}, '')}"></th:block>
+    </div>
+</div>
+
+<!--/*
+  Reusable History tab for any audited record's detail page (AUD-10):
+    <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+  where history = dataChangeService.history("Customer", customer.getId().toString(), 0, 20)
+*/-->
+<div th:fragment="timeline(changes)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                <th th:text="#{activity.user}">User</th>
+                <th th:text="#{audit.operation}">Operation</th>
+                <th th:text="#{audit.changedFields}">Changed fields</th>
+                <th th:text="#{audit.reason}">Reason</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="c : ${changes.content}">
+                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm:ss')}">2026-10-07 11:42:05</td>
+                <td th:text="${c.username ?: #messages.msg('audit.system')}">accountant1</td>
+                <td>
+                    <span class="action-badge"
+                          th:classappend="${c.operation.name() == 'CREATE'} ? 'action-create' : (${c.operation.name() == 'DELETE'} ? 'action-delete' : 'action-update')"
+                          th:text="#{${'audit.op.' + c.operation.name()}}">Updated</span>
+                </td>
+                <td class="cell-truncate" th:text="${c.changedFields == null ? '' : #strings.arrayJoin(c.changedFields, ', ')}">creditLimit</td>
+                <td class="cell-truncate" th:text="${c.reason}">Contract renewed</td>
+                <td><a th:href="@{/audit/{id}(id=${c.id})}" class="btn btn-outline btn-sm" th:text="#{audit.viewChange}">View</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(changes.content)}">
+                <td colspan="6"><div class="empty-state"><h3 th:text="#{audit.empty.title}">No changes found</h3></div></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

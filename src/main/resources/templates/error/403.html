@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/sidebar :: html(#{error.accessDenied}, ~{::content})}">
+<head><title>Access Denied - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="error-access">
+        <div class="error-access-card">
+            <div class="error-access-info">
+                <div class="error-access-code" th:text="#{error.403}">403</div>
+                <div class="error-access-divider"></div>
+                <div class="error-access-text">
+                    <h2 class="error-access-title" th:text="#{error.accessDenied}">Access Denied</h2>
+                    <p class="error-access-message" th:text="#{error.accessDeniedMessage}">Check with your administrator</p>
+                </div>
+            </div>
+            <div class="error-access-actions">
+                <a href="/dashboard" class="btn btn-primary" th:text="#{error.backDashboard}">Go to Dashboard</a>
+                <a href="javascript:history.back()" class="btn btn-outline" th:text="#{error.goBack}">Go Back</a>
+                <a href="mailto:admin@iwarehouse.local?subject=Access%20Request" class="btn btn-outline" th:text="#{error.requestAccess}">Request Access</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

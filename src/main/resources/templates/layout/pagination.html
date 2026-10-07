@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+<!--/* pager(page, baseUrl, query): query is "a=1&b=2" without a leading "?" (may be empty) */-->
+<div th:fragment="pager(page, baseUrl, query)"
+     th:with="prefix=${baseUrl + '?' + (query == null or query == '' ? '' : query + '&') + 'page='}">
+    <div class="pagination" th:if="${page.totalPages > 1}">
+        <span class="info"
+              th:text="|${#numbers.formatInteger(page.number * page.size + 1, 0)} - ${#numbers.formatInteger(page.number * page.size + page.numberOfElements, 0)} / ${#numbers.formatInteger(page.totalElements, 0)}|">1 - 8 / 12</span>
+        <a th:href="${prefix + 0}" th:classappend="${page.first} ? 'disabled'" th:title="#{pag.first}">«</a>
+        <a th:href="${prefix + (page.number - 1)}" th:classappend="${page.first} ? 'disabled'" th:title="#{pag.prev}">‹</a>
+        <a th:each="i : ${@paginationHelper.window(page.number, page.totalPages, 2)}"
+           th:href="${prefix + i}" th:text="${i + 1}" th:classappend="${i == page.number} ? 'active'">1</a>
+        <a th:href="${prefix + (page.number + 1)}" th:classappend="${page.last} ? 'disabled'" th:title="#{pag.next}">›</a>
+        <a th:href="${prefix + (page.totalPages - 1)}" th:classappend="${page.last} ? 'disabled'" th:title="#{pag.last}">»</a>
+    </div>
+</div>
+</body>
+</html>

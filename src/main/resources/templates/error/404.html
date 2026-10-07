@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/sidebar :: html(#{error.notFound}, ~{::content})}">
+<head><title>Page Not Found - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="error-access">
+        <div class="error-access-card error-card">
+            <div class="error-access-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    <line x1="8.5" y1="11" x2="13.5" y2="11"></line>
+                </svg>
+            </div>
+            <div class="error-access-info error-access-info-center">
+                <div class="error-access-code" th:text="#{error.404}">404</div>
+                <div class="error-access-divider"></div>
+                <div class="error-access-text">
+                    <h2 class="error-access-title" th:text="#{error.notFound}">Page not found</h2>
+                    <p class="error-access-message" th:text="#{error.notFoundMessage}">The page you are looking for does not exist or has been moved.</p>
+                </div>
+            </div>
+            <div class="error-access-actions error-access-actions-center">
+                <a href="/dashboard" class="btn btn-primary" th:text="#{error.backDashboard}">Go to Dashboard</a>
+                <a href="javascript:history.back()" class="btn btn-outline" th:text="#{error.goBack}">Go Back</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

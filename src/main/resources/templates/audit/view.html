@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{audit.viewTitle}, ~{::content})}">
+<head><title>Change Detail - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1>
+                <span th:text="#{${'audit.op.' + change.operation.name()}}">Updated</span>
+                <span th:text="${change.entityType}">Customer</span>
+                <span class="mono" th:text="${change.entityRef ?: change.entityId}">C-0042</span>
+            </h1>
+            <div class="subtitle" th:text="${#temporals.format(change.serverTime, 'dd/MM/yyyy HH:mm:ss')}">07/10/2026 11:42:05</div>
+        </div>
+        <div class="page-actions">
+            <a th:href="@{/audit/history/{t}/{id}(t=${change.entityType}, id=${change.entityId})}" class="btn btn-outline" th:text="#{audit.fullHistory}">Full history</a>
+            <a href="/audit" class="btn btn-outline" th:text="#{audit.backToList}">Back to list</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-grid">
+                <div class="detail-item"><div class="label" th:text="#{activity.user}">User</div><div class="value" th:text="${change.username ?: #messages.msg('audit.system')}">accountant1</div></div>
+                <div class="detail-item"><div class="label" th:text="#{activity.ipAddress}">IP Address</div><div class="value" th:text="${change.ipAddress ?: '—'}">10.0.0.24</div></div>
+                <div class="detail-item"><div class="label" th:text="#{audit.device}">Device</div><div class="value" th:text="${change.deviceId ?: '—'}">—</div></div>
+                <div class="detail-item"><div class="label" th:text="#{audit.clientTime}">Device time</div><div class="value" th:text="${change.clientTime == null ? '—' : #temporals.format(change.clientTime, 'dd/MM/yyyy HH:mm:ss')}">—</div></div>
+                <div class="detail-item"><div class="label" th:text="#{audit.reason}">Reason</div><div class="value" th:text="${change.reason ?: '—'}">Contract renewed for 2027</div></div>
+                <div class="detail-item"><div class="label" th:text="#{audit.requestId}">Request</div><div class="value mono" th:text="${change.requestId ?: '—'}">uuid</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{audit.beforeAfter}">Before and after</h2>
+        </div>
+        <div class="table-container">
+            <table class="diff-table">
+                <thead>
+                    <tr>
+                        <th th:text="#{audit.field}">Field</th>
+                        <th th:text="#{audit.before}">Before</th>
+                        <th th:text="#{audit.after}">After</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="f : ${fields}" th:classappend="${f.changed} ? 'diff-changed'">
+                        <td class="mono" th:text="${f.field}">creditLimit</td>
+                        <td th:classappend="${f.changed} ? 'diff-before'" th:text="${f.before == null ? '—' : f.before}">500000</td>
+                        <td th:classappend="${f.changed} ? 'diff-after'" th:text="${f.after == null ? '—' : f.after}">1500000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section" th:unless="${#lists.isEmpty(related)}">
+        <div class="section-header">
+            <h2 th:text="#{audit.sameRequest}">Other changes in the same action</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <tbody>
+                    <tr th:each="r : ${related}">
+                        <td th:text="${r.entityType}">StockUnit</td>
+                        <td class="mono" th:text="${r.entityRef ?: r.entityId}">GL-000123</td>
+                        <td th:text="#{${'audit.op.' + r.operation.name()}}">Updated</td>
+                        <td><a th:href="@{/audit/{id}(id=${r.id})}" class="btn btn-outline btn-sm" th:text="#{audit.viewChange}">View</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:fragment="html(title, content)" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - ' + #{app.name}">iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+            var s = localStorage.getItem('iwarehouse-sidebar');
+            if (s === 'collapsed') document.documentElement.classList.add('sidebar-collapsed');
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+    <link rel="stylesheet" href="/vendor/choicesjs/choices.min.css">
+    <script th:inline="javascript">
+        window.appMessages = {
+            confirmDelete: /*[[#{common.confirmDelete}]]*/ 'Are you sure you want to delete this item?',
+            confirmTitle: /*[[#{common.confirmTitle}]]*/ 'Are you sure?',
+            confirmOk: /*[[#{common.confirmOk}]]*/ 'Yes, Continue',
+            confirmCancel: /*[[#{common.confirmCancel}]]*/ 'Not now',
+            toast: {
+                success: /*[[#{toast.success}]]*/ 'Success',
+                error: /*[[#{toast.error}]]*/ 'Error',
+                warning: /*[[#{toast.warning}]]*/ 'Warning',
+                info: /*[[#{toast.info}]]*/ 'Info'
+            },
+            theme: {
+                light: /*[[#{theme.light}]]*/ 'Light Mode',
+                dark: /*[[#{theme.dark}]]*/ 'Dark Mode'
+            }
+        };
+    </script>
+    <script defer src="/vendor/choicesjs/choices.min.js"></script>
+    <script defer src="/js/iwarehouse.js"></script>
+    <script defer src="/js/session-timeout.js"></script>
+</head>
+<body>
+
+<!-- Toasts (flash messages & notices) -->
+<div th:replace="~{fragments/toasts :: toasts}"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="logo-icon">iW</div>
+        <h2><span>i</span>Warehouse</h2>
+    </div>
+    <nav class="sidebar-menu">
+        <div class="menu-label" th:text="#{menu.main}">Main Menu</div>
+        <a sec:authorize="hasAuthority('PAGE_DASHBOARD')" th:classappend="${requestURI == '/' or requestURI == '/dashboard'} ? 'active' : ''" href="/dashboard">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg></span> <span th:text="#{nav.dashboard}">Dashboard</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_STOCK')" th:classappend="${#strings.startsWith(requestURI, '/stock')} ? 'active' : ''" href="/stock">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.stock}">Inventory</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_PRODUCTION')" th:classappend="${#strings.startsWith(requestURI, '/cutting-jobs')} ? 'active' : ''" href="/cutting-jobs">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.production}">Production</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_PROCUREMENT')" th:classappend="${#strings.startsWith(requestURI, '/purchase-orders')} ? 'active' : ''" href="/purchase-orders">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"></path><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"></path><path d="M12 10v4"></path></svg></span> <span th:text="#{nav.procurement}">Procurement</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_FLEET')" th:classappend="${#strings.startsWith(requestURI, '/trips')} ? 'active' : ''" href="/trips">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></span> <span th:text="#{nav.fleet}">Fleet & Trips</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_POS')" th:classappend="${#strings.startsWith(requestURI, '/pos')} ? 'active' : ''" href="/pos">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></span> <span th:text="#{nav.pos}">Counter POS</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_INVOICES')" th:classappend="${#strings.startsWith(requestURI, '/invoices')} ? 'active' : ''" href="/invoices">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span> <span th:text="#{nav.invoices}">Invoices</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:classappend="${#strings.startsWith(requestURI, '/customers')} ? 'active' : ''" href="/customers">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span> <span th:text="#{nav.customers}">Customers</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:classappend="${#strings.startsWith(requestURI, '/accounting')} ? 'active' : ''" href="/accounting">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span> <span th:text="#{nav.accounting}">Accounting</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports')} ? 'active' : ''" href="/reports">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> <span th:text="#{nav.reports}">Reports</span>
+        </a>
+        <div class="menu-label" style="margin-top:16px;" th:text="#{menu.other}">Other</div>
+        <a sec:authorize="hasAuthority('PAGE_MY_ACTIVITY')" th:classappend="${requestURI == '/activity/me'} ? 'active' : ''" href="/activity/me">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span> <span th:text="#{nav.myActivity}">My Activity</span>
+        </a>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="hasAnyAuthority('PAGE_USERS', 'PAGE_ROLES', 'PAGE_PERMISSIONS', 'PAGE_ACTIVITY_LOGS', 'PAGE_DATA_CHANGES', 'PAGE_SETTINGS')" th:text="#{menu.admin}">Administration</div>
+        <a sec:authorize="hasAuthority('PAGE_USERS')" th:classappend="${#strings.startsWith(requestURI, '/users')} ? 'active' : ''" href="/users">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span> <span th:text="#{nav.users}">Users</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_ROLES')" th:classappend="${#strings.startsWith(requestURI, '/roles')} ? 'active' : ''" href="/roles">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span> <span th:text="#{nav.roles}">Roles</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_PERMISSIONS')" th:classappend="${#strings.startsWith(requestURI, '/permissions')} ? 'active' : ''" href="/permissions">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span> <span th:text="#{nav.permissions}">Permissions</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_ACTIVITY_LOGS')" th:classappend="${requestURI == '/activity'} ? 'active' : ''" href="/activity">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span> <span th:text="#{nav.activityLogs}">Activity Logs</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_DATA_CHANGES')" th:classappend="${#strings.startsWith(requestURI, '/audit')} ? 'active' : ''" href="/audit">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v14"></path><path d="M5 10h14"></path><path d="M5 21h14"></path></svg></span> <span th:text="#{nav.dataChanges}">Data Changes</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_SETTINGS')" th:classappend="${#strings.startsWith(requestURI, '/settings')} ? 'active' : ''" href="/settings">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span> <span th:text="#{nav.settings}">Settings</span>
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <form th:action="@{/logout}" method="post" class="sidebar-logout-form">
+            <button type="submit" class="sidebar-logout-btn">
+                <span class="icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </span> <span th:text="#{nav.logout}">Logout</span>
+            </button>
+        </form>
+    </div>
+    <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle Sidebar">
+        <svg class="icon-collapse" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <svg class="icon-expand" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </button>
+</aside>
+
+<!-- Main Content -->
+<div class="main-content">
+    <!-- Page-load skeleton (shown during navigation) -->
+    <div class="page-skeleton" id="page-skeleton" hidden>
+        <div class="skeleton-header">
+            <div>
+                <div class="skeleton skeleton-title"></div>
+                <div class="skeleton skeleton-subtitle"></div>
+            </div>
+            <div class="skeleton skeleton-btn"></div>
+        </div>
+        <div class="skeleton-body">
+            <div class="skeleton-card">
+                <div class="skeleton skeleton-card-head"></div>
+                <div class="skeleton-row">
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                </div>
+                <div class="skeleton-row">
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                </div>
+                <div class="skeleton-row">
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                </div>
+                <div class="skeleton-row">
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                </div>
+                <div class="skeleton-row">
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                    <div class="skeleton skeleton-cell"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1 th:text="#{header.title}">iWarehouse</h1>
+        </div>
+        <div class="header-right">
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" th:placeholder="#{header.search}">
+            </div>
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Dark Mode">
+                <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+            </button>
+            <div class="lang-dropdown" id="lang-dropdown">
+                <button type="button" class="lang-btn" id="lang-btn" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+                    <span class="flag">
+                        <th:block th:switch="${#locale.language}">
+                            <th:block th:case="'fr'"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagFr}" viewBox="0 0 24 18"></svg></th:block>
+                            <th:block th:case="'rw'"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagRw}" viewBox="0 0 24 18"></svg></th:block>
+                            <th:block th:case="*"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagUs}" viewBox="0 0 24 18"></svg></th:block>
+                        </th:block>
+                    </span>
+                    <span class="lang-code" th:switch="${#locale.language}">
+                        <span th:case="'fr'">FR</span>
+                        <span th:case="'rw'">RW</span>
+                        <span th:case="*">EN</span>
+                    </span>
+                    <svg class="lang-caret" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 9l6 6 6-6"></path>
+                    </svg>
+                </button>
+                <ul class="lang-menu" id="lang-menu">
+                    <li>
+                        <a th:href="@{${requestURI}(lang='en')}" class="lang-option" th:classappend="${#locale.language == 'en'} ? 'active'" th:title="#{login.lang.en}">
+                            <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagUs}" viewBox="0 0 24 18"></svg></span>
+                            <span>English</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{${requestURI}(lang='fr')}" class="lang-option" th:classappend="${#locale.language == 'fr'} ? 'active'" th:title="#{login.lang.fr}">
+                            <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagFr}" viewBox="0 0 24 18"></svg></span>
+                            <span>Français</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a th:href="@{${requestURI}(lang='rw')}" class="lang-option" th:classappend="${#locale.language == 'rw'} ? 'active'" th:title="#{login.lang.rw}">
+                            <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagRw}" viewBox="0 0 24 18"></svg></span>
+                            <span>Kinyarwanda</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="profile" sec:authorize="isAuthenticated()">
+                <div class="avatar">
+                    <img th:if="${profilePhotoUrl != null}" th:src="${profilePhotoUrl}" alt="Profile" class="avatar-img">
+                    <span th:if="${profilePhotoUrl == null}" th:text="${profileInitials}" style="font-size:14px">A</span>
+                </div>
+                <div class="info">
+                    <div class="name" th:text="${profileFullName}">Admin</div>
+                    <div class="role">
+                        <span th:each="auth : ${#authentication.authorities}"
+                              th:if="${#strings.startsWith(auth.authority, 'ROLE_')}"
+                              th:text="${#strings.capitalize(#strings.toLowerCase(#strings.substringAfter(auth.authority, 'ROLE_')))}">Admin</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="page-content">
+        <th:block th:replace="${content}"></th:block>
+    </main>
+</div>
+
+</body>
+</html>

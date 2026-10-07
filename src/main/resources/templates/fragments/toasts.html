@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="toasts" class="toast-container" id="toast-container">
+    <!-- Flash: success -->
+    <div th:if="${flashSuccess}" class="toast toast-success" role="status" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.success}">Success</div>
+            <div class="toast-msg" th:text="${flashSuccess}">Done</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+    <!-- Flash: error -->
+    <div th:if="${flashError}" class="toast toast-danger" role="alert" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.error}">Error</div>
+            <div class="toast-msg" th:text="${flashError}">Something went wrong</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+    <!-- Flash: warning -->
+    <div th:if="${flashWarning}" class="toast toast-warning" role="alert" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.warning}">Warning</div>
+            <div class="toast-msg" th:text="${flashWarning}">Please check your input</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+    <!-- Auth pages: invalid credentials -->
+    <div th:if="${param.error}" class="toast toast-danger" role="alert" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.error}">Error</div>
+            <div class="toast-msg" th:text="#{login.error}">Invalid username or password</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+    <!-- Auth pages: logged out -->
+    <div th:if="${param.logout}" class="toast toast-info" role="status" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.info}">Info</div>
+            <div class="toast-msg" th:text="#{login.logout}">You have been logged out</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+    <!-- Auth pages: idle session timeout -->
+    <div th:if="${param.timeout}" class="toast toast-warning" role="alert" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.warning}">Warning</div>
+            <div class="toast-msg" th:text="#{login.timeout}">Your session expired after 15 minutes of inactivity. Please sign in again.</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+    <!-- Auth pages: expired session -->
+    <div th:if="${param.expired}" class="toast toast-warning" role="alert" data-toast>
+        <span class="toast-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </span>
+        <div class="toast-body">
+            <div class="toast-title" th:text="#{toast.warning}">Warning</div>
+            <div class="toast-msg" th:text="#{login.timeout}">Your session has expired. Please sign in again.</div>
+        </div>
+        <button type="button" class="toast-close" data-toast-close aria-label="Close">&times;</button>
+    </div>
+</div>
+</body>
+</html>

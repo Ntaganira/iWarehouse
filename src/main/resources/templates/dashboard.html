@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{nav.dashboard}, ~{::content})}">
+<head><title>Dashboard - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{dash.title}">Dashboard</h1>
+            <div class="subtitle" th:text="#{dash.subtitle}">Overview of today's activity</div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-info">
+                <h3 th:text="#{dash.stat.activity}">Actions today</h3>
+                <div class="number" th:text="${activityToday}">0</div>
+                <div class="change" th:text="#{dash.stat.activity.hint}">Recorded in the activity log</div>
+            </div>
+            <div class="stat-icon blue">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-info">
+                <h3 th:text="#{dash.stat.changes}">Record changes today</h3>
+                <div class="number" th:text="${changesToday}">0</div>
+                <div class="change" th:text="#{dash.stat.changes.hint}">With before and after values</div>
+            </div>
+            <div class="stat-icon green">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v14"></path><path d="M5 10h14"></path><path d="M5 21h14"></path></svg>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-info">
+                <h3 th:text="#{dash.stat.failed}">Failed or denied today</h3>
+                <div class="number" th:text="${failedToday}">0</div>
+                <div class="change" th:classappend="${failedToday > 0} ? 'negative' : 'positive'" th:text="#{dash.stat.failed.hint}">Failed logins and access denied</div>
+            </div>
+            <div class="stat-icon yellow">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{dash.audit.title}">Audit trail</h2>
+        </div>
+        <div class="section-body">
+            <p th:text="#{dash.audit.body}">Every action is logged, and every change to a business record keeps its values before and after the change.</p>
+            <div class="btn-group" style="margin-top:16px;">
+                <a href="/activity/me" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PAGE_MY_ACTIVITY')" th:text="#{nav.myActivity}">My Activity</a>
+                <a href="/activity" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PAGE_ACTIVITY_LOGS')" th:text="#{nav.activityLogs}">Activity Logs</a>
+                <a href="/audit" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PAGE_DATA_CHANGES')" th:text="#{nav.dataChanges}">Data Changes</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{login.welcome}">iWarehouse - Login</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+    <script defer src="/js/iwarehouse.js"></script>
+</head>
+<body class="login-page">
+    <div th:replace="~{fragments/toasts :: toasts}"></div>
+
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Dark Mode">
+        <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+    </button>
+
+    <div class="login-split">
+        <div class="login-brand">
+            <div class="brand-header">
+                <div class="brand-logo">iW</div>
+                <div>
+                    <h2>iWarehouse</h2>
+                    <p th:text="#{login.brand.tagline}">Glass Warehouse &amp; Mobile POS</p>
+                </div>
+            </div>
+
+            <div class="brand-copy">
+                <h1 th:text="#{login.brand.title}">Every sheet, cut and sale in one place</h1>
+                <p th:text="#{login.brand.subtitle}">iWarehouse tracks glass from crate to customer: stock, cutting, fleet, POS and accounting.</p>
+                <ul class="brand-features">
+                    <li>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span th:text="#{login.brand.feat1}">Sheets, off-cuts &amp; cutting jobs</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span th:text="#{login.brand.feat2}">Moving shops with offline POS</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <span th:text="#{login.brand.feat3}">Before/after audit trail</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="brand-stats">
+                <div class="stat">
+                    <div class="num">24/7</div>
+                    <div class="lbl" th:text="#{login.brand.stat1}">Traceable</div>
+                </div>
+                <div class="stat">
+                    <div class="num">100%</div>
+                    <div class="lbl" th:text="#{login.brand.stat2}">Secure</div>
+                </div>
+                <div class="stat">
+                    <div class="num">3</div>
+                    <div class="lbl" th:text="#{login.brand.stat3}">Languages</div>
+                </div>
+            </div>
+
+            <div class="brand-footer" th:text="#{login.brand.copyright}">© 2026 iWarehouse</div>
+        </div>
+
+        <div class="login-form-side">
+            <div class="login-card">
+                <div class="login-header">
+                    <h1 th:text="#{login.welcome}">Welcome to iWarehouse</h1>
+                    <p th:text="#{login.subtitle}">Sign in to your warehouse dashboard</p>
+                </div>
+                <form th:action="@{/login}" method="post">
+                    <div class="form-group">
+                        <label for="username" th:text="#{login.username}">Username</label>
+                        <input type="text" id="username" name="username" th:placeholder="#{login.usernamePh}" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label for="password" th:text="#{login.password}">Password</label>
+                        <input type="password" id="password" name="password" th:placeholder="#{login.passwordPh}" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" th:text="#{login.signIn}">Sign In</button>
+                </form>
+                <div class="login-footer">
+                    <p th:text="#{login.defaultCredentials}">Default: admin / password123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{audit.title}, ~{::content})}">
+<head><title>Data Changes - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{audit.title}">Data Changes</h1>
+            <div class="subtitle" th:text="#{audit.subtitle}">Every change to a record, with its values before and after</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{audit.sectionTitle}">Change Log</span>
+                <span class="section-count" th:text="${changes.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/audit}" method="get" class="table-toolbar activity-filters">
+                <select name="entityType" class="toolbar-filter" onchange="this.form.submit()">
+                    <option value="" th:selected="${entityType == null or entityType == ''}" th:text="#{audit.entitySelect}">All Records</option>
+                    <option th:each="t : ${entityTypes}" th:value="${t}" th:text="${t}" th:selected="${t == entityType}"></option>
+                </select>
+                <select name="operation" class="toolbar-filter" onchange="this.form.submit()">
+                    <option value="" th:selected="${operation == null or operation == ''}" th:text="#{audit.operationSelect}">All Operations</option>
+                    <option value="CREATE" th:selected="${operation == 'CREATE'}" th:text="#{audit.op.CREATE}">Created</option>
+                    <option value="UPDATE" th:selected="${operation == 'UPDATE'}" th:text="#{audit.op.UPDATE}">Updated</option>
+                    <option value="DELETE" th:selected="${operation == 'DELETE'}" th:text="#{audit.op.DELETE}">Deleted</option>
+                </select>
+                <input type="text" name="entityId" class="toolbar-filter" th:value="${entityId}" th:placeholder="#{audit.idPh}">
+                <input type="text" name="username" class="toolbar-filter" th:value="${username}" th:placeholder="#{audit.userPh}">
+                <input type="date" name="from" class="toolbar-filter activity-date" th:value="${from}" th:title="#{activity.from}">
+                <input type="date" name="to" class="toolbar-filter activity-date" th:value="${to}" th:title="#{activity.to}">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{activity.apply}">Apply</button>
+                <a href="/audit" class="btn btn-outline btn-sm" th:text="#{activity.reset}">Reset</a>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                        <th th:text="#{activity.user}">User</th>
+                        <th th:text="#{audit.record}">Record</th>
+                        <th th:text="#{audit.operation}">Operation</th>
+                        <th th:text="#{audit.changedFields}">Changed fields</th>
+                        <th th:text="#{audit.reason}">Reason</th>
+                        <th th:text="#{common.actions}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${changes.content}">
+                        <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm:ss')}">2026-10-07 11:42:05</td>
+                        <td>
+                            <div class="info">
+                                <div class="name" th:text="${c.username ?: #messages.msg('audit.system')}">accountant1</div>
+                                <div class="email" th:if="${c.ipAddress != null}" th:text="${c.ipAddress}">10.0.0.24</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="info">
+                                <div class="name" th:text="${c.entityType}">Customer</div>
+                                <div class="email mono" th:text="${c.entityRef ?: c.entityId}">C-0042</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="action-badge"
+                                  th:classappend="${c.operation.name() == 'CREATE'} ? 'action-create' : (${c.operation.name() == 'DELETE'} ? 'action-delete' : 'action-update')"
+                                  th:text="#{${'audit.op.' + c.operation.name()}}">Updated</span>
+                        </td>
+                        <td class="cell-truncate" th:text="${c.changedFields == null ? '' : #strings.arrayJoin(c.changedFields, ', ')}">creditLimit, paymentTermsDays</td>
+                        <td class="cell-truncate" th:text="${c.reason}">Contract renewed</td>
+                        <td><a th:href="@{/audit/{id}(id=${c.id})}" class="btn btn-outline btn-sm" th:text="#{audit.viewChange}">View</a></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(changes.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v14"></path><path d="M5 10h14"></path><path d="M5 21h14"></path></svg>
+                                </div>
+                                <h3 th:text="#{audit.empty.title}">No changes found</h3>
+                                <p th:text="#{activity.empty.subtitle}">Try adjusting the filters to find what you are looking for</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${changes}, '/audit', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

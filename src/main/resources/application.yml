@@ -1,0 +1,70 @@
+server:
+  port: 8080
+  forward-headers-strategy: native   # real client IP behind a trusted reverse proxy (audit IP addresses)
+  servlet:
+    session:
+      timeout: 15m          # NFR-09: 15-minute idle session expiry (as iVura)
+
+spring:
+  application:
+    name: iWarehouse
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/iwarehouse}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate    # schema is owned by Flyway, never by Hibernate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  messages:
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin123}
+  bucket: iwarehouse-files
+
+app:
+  url: ${APP_URL:http://localhost:8080}
+  base-currency: RWF
+  audit:
+    # Field names (case-insensitive) whose values are never written to audit snapshots (AUD-06)
+    masked-fields: password,passwordHash,token,secret,apiKey,apiSecret
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.ntaganira.heritier: DEBUG

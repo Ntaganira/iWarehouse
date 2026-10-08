@@ -141,7 +141,7 @@ class StockOperationsTest {
         when(settings.getDecimal(SettingKey.GLASS_DENSITY)).thenReturn(new BigDecimal("2.5"));
 
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
-        stockService = new StockService(unitRepo, movementRepo, costEntryRepo, lineRepo, locationRepo, numbers, clock);
+        stockService = new StockService(unitRepo, movementRepo, costEntryRepo, lineRepo, mock(StockCountRepository.class), locationRepo, numbers, clock);
         transferService = new StockTransferService(transferRepo, unitRepo, stockService, numbers, clock);
         adjustmentService = new StockAdjustmentService(adjustmentRepo, unitRepo, productRepo, stockService, numbers, settings, clock);
         signIn(7L, "supervisor1");

@@ -30,5 +30,7 @@ public enum MovementType {
     /** Reserved for a customer (INV-05). */
     RESERVE,
     /** Released from a reservation. */
-    RELEASE
+    RELEASE,
+    /** Found on another rack or slot by a stock count: its location corrected (INV-08). */
+    COUNT
 }

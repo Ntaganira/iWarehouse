@@ -45,6 +45,10 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
     @EntityGraph(attributePaths = {"product", "location"})
     List<StockUnit> findByCodeIn(Collection<String> codes);
 
+    /** Units on these places in these states, with product and location (a stock count's expected units, INV-08). */
+    @EntityGraph(attributePaths = {"product", "location"})
+    List<StockUnit> findByLocation_IdInAndStatusIn(Collection<UUID> locationIds, Collection<StockStatus> statuses);
+
     /** Rows of (product id, location id, status, pieces, m²) of units in some states (INV-09, INV-10). */
     @Query("select u.product.id, u.location.id, u.status, count(u), coalesce(sum(u.areaM2), 0) from StockUnit u"
             + " where u.status in :statuses group by u.product.id, u.location.id, u.status")

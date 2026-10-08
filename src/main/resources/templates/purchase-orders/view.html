@@ -63,7 +63,7 @@
                 <div class="kpi-label" th:text="#{po.kpi.outstanding}">Still to come</div>
                 <div class="kpi-value" th:text="${s.receivable or s.editable} ? ${totals.outstanding} : 0">20</div>
                 <div class="kpi-trend flat">
-                    <span class="vs" th:if="${order.expectedDate != null and (s.receivable or s.editable)}" th:text="#{po.expectedShort(${#temporals.format(order.expectedDate, 'yyyy-MM-dd')})}">due 2026-11-20</span>
+                    <span class="vs" th:if="${order.expectedDate != null and (s.receivable or s.editable)}" th:text="#{po.expectedShort(${#temporals.format(order.expectedDate, 'dd/MM/yyyy')})}">due 2026-11-20</span>
                     <span class="vs" th:if="${s.name() == 'CLOSED'}" th:text="#{po.kpi.notComing(${totals.outstanding})}">20 will not come</span>
                 </div>
             </div>
@@ -97,11 +97,11 @@
                 <div class="detail-list">
                     <div class="item">
                         <label th:text="#{po.orderDate}">Ordered</label>
-                        <div class="value" th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd')}">2026-10-08</div>
+                        <div class="value" th:text="${#temporals.format(order.orderDate, 'dd/MM/yyyy')}">08/10/2026</div>
                     </div>
                     <div class="item">
                         <label th:text="#{po.expectedDate}">Expected</label>
-                        <div class="value" th:text="${order.expectedDate != null} ? ${#temporals.format(order.expectedDate, 'yyyy-MM-dd')} : '—'">2026-11-20</div>
+                        <div class="value" th:text="${order.expectedDate != null} ? ${#temporals.format(order.expectedDate, 'dd/MM/yyyy')} : '—'">20/11/2026</div>
                     </div>
                     <div class="item">
                         <label th:text="#{po.supplierRef}">Supplier reference</label>
@@ -109,7 +109,7 @@
                     </div>
                     <div class="item">
                         <label th:text="#{po.placed}">Placed</label>
-                        <div class="value" th:text="${order.orderedAt != null} ? ${#temporals.format(order.orderedAt, 'yyyy-MM-dd HH:mm') + ' · ' + order.orderedBy} : '—'">—</div>
+                        <div class="value" th:text="${order.orderedAt != null} ? ${#temporals.format(order.orderedAt, 'dd/MM/yyyy HH:mm') + ' · ' + order.orderedBy} : '—'">—</div>
                     </div>
                     <div class="item">
                         <label th:text="#{product.notes}">Notes</label>
@@ -185,7 +185,7 @@
                                     <span class="mono" sec:authorize="!(hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT'))" th:text="${r.number}">GRN-WH-2026-000001</span>
                                     <div class="cell-sub" th:if="${r.deliveryRef != null}" th:text="${r.deliveryRef}">MSKU 123456-7</div>
                                 </td>
-                                <td class="nowrap" th:text="${#temporals.format(r.receivedDate, 'yyyy-MM-dd')}">2026-10-08</td>
+                                <td class="nowrap" th:text="${#temporals.format(r.receivedDate, 'dd/MM/yyyy')}">08/10/2026</td>
                                 <td class="num" th:text="${#lists.size(r.crates)}">2</td>
                                 <td class="num" th:text="${r.sheets}">38</td>
                                 <td class="num" th:text="${r.broken}">2</td>

@@ -284,10 +284,15 @@ public class StockAdjustmentService {
     }
 
     private static void refuseSheetOnOffcutRack(UnitKind kind, Location location, Map<UUID, Location> byId, String f) {
-        Location rack = StockService.rackOf(location, byId);
-        if (kind == UnitKind.SHEET && rack != null && rack.isOffcut()) {
+        if (sheetOnOffcutRack(kind, location, byId)) {
             throw BusinessException.onField(f + "locationId", "adjustment.sheetToOffcut");
         }
+    }
+
+    /** A full sheet would stand on an off-cut rack (refused: off-cut racks hold off-cuts only). */
+    public static boolean sheetOnOffcutRack(UnitKind kind, Location location, Map<UUID, Location> byId) {
+        Location rack = StockService.rackOf(location, byId);
+        return kind == UnitKind.SHEET && rack != null && rack.isOffcut();
     }
 
     /**

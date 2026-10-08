@@ -87,7 +87,7 @@
                         <a class="mono" th:href="@{/goods-receipts/{id}(id=${crate.goodsReceipt.id})}" th:text="${crate.goodsReceipt.number}"
                            sec:authorize="hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT')">GRN-WH-2026-000001</a>
                         <span class="mono" sec:authorize="!(hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT'))" th:text="${crate.goodsReceipt.number}">GRN-WH-2026-000001</span>
-                        <div class="cell-sub" th:text="${crate.goodsReceipt.purchaseOrder.supplier.name + ' · ' + crate.goodsReceipt.purchaseOrder.number + ' · ' + #temporals.format(crate.goodsReceipt.receivedDate, 'yyyy-MM-dd')}">Shandong Glass Co. · PO-WH-2026-000001 · 2026-10-08</div>
+                        <div class="cell-sub" th:text="${crate.goodsReceipt.purchaseOrder.supplier.name + ' · ' + crate.goodsReceipt.purchaseOrder.number + ' · ' + #temporals.format(crate.goodsReceipt.receivedDate, 'dd/MM/yyyy')}">Shandong Glass Co. · PO-WH-2026-000001 · 2026-10-08</div>
                     </div>
                 </div>
                 <div class="item" th:if="${unit.parentUnitId != null}">
@@ -117,7 +117,7 @@
                 </div>
                 <div class="item">
                     <label th:text="#{stock.inSince}">In stock since</label>
-                    <div class="value" th:text="${#temporals.format(unit.createdAt, 'yyyy-MM-dd HH:mm') + ' · ' + unit.createdBy}">2026-10-08 10:12 · admin</div>
+                    <div class="value" th:text="${#temporals.format(unit.createdAt, 'dd/MM/yyyy HH:mm') + ' · ' + unit.createdBy}">2026-10-08 10:12 · admin</div>
                 </div>
             </div>
         </div>
@@ -153,7 +153,7 @@
                         </thead>
                         <tbody>
                             <tr th:each="m : ${movements.content}">
-                                <td class="nowrap" th:text="${#temporals.format(m.movedAt, 'yyyy-MM-dd HH:mm:ss')}">2026-10-08 10:12:04</td>
+                                <td class="nowrap" th:text="${#temporals.format(m.movedAt, 'dd/MM/yyyy HH:mm:ss')}">08/10/2026 10:12:04</td>
                                 <td>
                                     <span th:text="#{${'stock.movement.' + m.type}}">Received</span>
                                     <div class="cell-sub" th:if="${m.reason != null}" th:text="${m.reason}">—</div>
@@ -194,7 +194,7 @@
                         </thead>
                         <tbody>
                             <tr th:each="e : ${costEntries.content}">
-                                <td class="nowrap" th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
+                                <td class="nowrap" th:text="${#temporals.format(e.createdAt, 'dd/MM/yyyy HH:mm')}">08/10/2026 10:12</td>
                                 <td th:text="#{${'stock.costType.' + e.type}}">Receipt cost</td>
                                 <td>
                                     <th:block th:replace="~{stock/view :: refLink(${e.refType}, ${e.refId}, ${e.refNumber})}"></th:block>
@@ -256,7 +256,7 @@
 </div>
 
 <!--/* Link to the document a movement or cost entry came from. */-->
-<th:block th:fragment="refLink(type, id, number)" th:with="url=${type == 'GOODS_RECEIPT' ? '/goods-receipts/' : (type == 'SHIPMENT' ? '/shipments/' : (type == 'CUTTING_JOB' ? '/cutting-jobs/' : (type == 'TRANSFER' ? '/stock-transfers/' : (type == 'ADJUSTMENT' ? '/stock-adjustments/' : (type == 'CUSTOMER' ? '/customers/' : null)))))}">
+<th:block th:fragment="refLink(type, id, number)" th:with="url=${type == 'GOODS_RECEIPT' ? '/goods-receipts/' : (type == 'SHIPMENT' ? '/shipments/' : (type == 'CUTTING_JOB' ? '/cutting-jobs/' : (type == 'TRANSFER' ? '/stock-transfers/' : (type == 'ADJUSTMENT' ? '/stock-adjustments/' : (type == 'CUSTOMER' ? '/customers/' : (type == 'STOCK_COUNT' ? '/stock-counts/' : null))))))}">
     <a class="mono" th:if="${url != null and id != null}" th:href="${url + id}" th:text="${number}">GRN-WH-2026-000001</a>
     <span class="mono" th:unless="${url != null and id != null}" th:text="${number ?: '—'}">—</span>
 </th:block>

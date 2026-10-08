@@ -36,7 +36,7 @@
         previous.textContent = text
             .replace('{source}', source)
             .replace('{rate}', fmt(lastRate, 2, 6))
-            .replace('{date}', last.date)
+            .replace('{date}', last.date.split('-').reverse().join('/'))   // dd/MM/yyyy (NFR-15)
             .replace('{change}', change === null ? '?' : (change > 0 ? '+' : '') + change.toFixed(2));
         previous.className = 'rate-previous' + (change !== null && Math.abs(change) > 10 ? ' is-large' : '');
     }

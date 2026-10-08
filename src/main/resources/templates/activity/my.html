@@ -50,7 +50,7 @@
                 </thead>
                 <tbody>
                     <tr th:each="log : ${logs.content}">
-                        <td class="nowrap" th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd HH:mm')}">2026-08-01 10:30</td>
+                        <td class="nowrap" th:text="${#temporals.format(log.createdAt, 'dd/MM/yyyy HH:mm')}">01/08/2026 10:30</td>
                         <td th:text="${log.module}">User Management</td>
                         <td>
                             <span class="action-badge"

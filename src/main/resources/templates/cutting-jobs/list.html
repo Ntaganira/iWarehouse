@@ -60,7 +60,7 @@
                     <tr th:each="j : ${jobs.content}" th:with="n=${needs.get(j.id)}">
                         <td>
                             <a class="row-link strong mono" th:href="@{/cutting-jobs/{id}(id=${j.id})}" th:text="${j.number}">CUT-WH-2026-000001</a>
-                            <div class="cell-sub" th:if="${j.dueDate != null}" th:text="#{cutting.dueOn(${#temporals.format(j.dueDate, 'yyyy-MM-dd')})}">due 2026-10-10</div>
+                            <div class="cell-sub" th:if="${j.dueDate != null}" th:text="#{cutting.dueOn(${#temporals.format(j.dueDate, 'dd/MM/yyyy')})}">due 2026-10-10</div>
                         </td>
                         <td>
                             <span th:if="${j.purpose.name() == 'STOCK'}" class="text-muted" th:text="#{cutting.purpose.STOCK}">For stock</span>

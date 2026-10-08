@@ -38,7 +38,7 @@
         </thead>
         <tbody>
             <tr th:each="c : ${changes.content}">
-                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm:ss')}">2026-10-07 11:42:05</td>
+                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'dd/MM/yyyy HH:mm:ss')}">07/10/2026 11:42:05</td>
                 <td th:text="${c.username ?: #messages.msg('audit.system')}">accountant1</td>
                 <td>
                     <span class="action-badge"
@@ -75,7 +75,7 @@
         </thead>
         <tbody>
             <tr th:each="c : ${changes.content}">
-                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm:ss')}">2026-10-07 11:42:05</td>
+                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'dd/MM/yyyy HH:mm:ss')}">07/10/2026 11:42:05</td>
                 <td th:text="${c.username ?: #messages.msg('audit.system')}">admin</td>
                 <td>
                     <div class="mono" th:text="${c.entityRef ?: c.entityId}">production.glass-density</div>

@@ -55,7 +55,7 @@
                             <a class="mono" th:href="@{/purchase-orders/{id}(id=${r.purchaseOrder.id})}" th:text="${r.purchaseOrder.number}">PO-WH-2026-000001</a>
                             <div class="cell-sub" th:text="${r.purchaseOrder.supplier.name}">Shandong Glass Co.</div>
                         </td>
-                        <td class="nowrap" th:text="${#temporals.format(r.receivedDate, 'yyyy-MM-dd')}">2026-10-08</td>
+                        <td class="nowrap" th:text="${#temporals.format(r.receivedDate, 'dd/MM/yyyy')}">08/10/2026</td>
                         <td class="num" th:text="${t != null} ? ${t.crates} : 0">2</td>
                         <td class="num" th:text="${t != null} ? ${t.sheets} : 0">38</td>
                         <td class="num" th:text="${t != null} ? ${t.broken} : 0">2</td>

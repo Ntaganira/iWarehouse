@@ -13,7 +13,7 @@
             <h1 class="mono" th:text="${shipment.number}">SHP-WH-2026-000001</h1>
             <div class="subtitle">
                 <span class="mono" th:if="${shipment.reference != null}" th:text="${shipment.reference + ' · '}">MSKU 123456-7 · </span>
-                <span th:text="#{shipment.arrivedOn(${#temporals.format(shipment.arrivalDate, 'yyyy-MM-dd')})}">arrived 2026-10-01</span>
+                <span th:text="#{shipment.arrivedOn(${#temporals.format(shipment.arrivalDate, 'dd/MM/yyyy')})}">arrived 2026-10-01</span>
                 &middot; <th:block th:replace="~{shipments/list :: shipmentStatus(${shipment.status})}"></th:block>
                 <th:block th:if="${claim != 'NONE'}">
                     <th:block th:replace="~{shipments/list :: claimStatus(${shipment.claimStatus})}"></th:block>
@@ -46,7 +46,7 @@
     <div class="doc-note" th:if="${s == 'OPEN' and #lists.isEmpty(shipment.receipts)}" th:text="#{shipment.noReceiptsNote}">No receipt linked yet: link the posted receipts of the crates that came in this shipment before posting.</div>
     <div class="doc-note" th:if="${s == 'CLOSED'}">
         <strong th:text="#{shipment.closedNote}">Costs complete:</strong>
-        <span th:text="${#temporals.format(shipment.closedAt, 'yyyy-MM-dd HH:mm') + ' · ' + shipment.closedBy}">2026-10-08 10:00 · admin</span>
+        <span th:text="${#temporals.format(shipment.closedAt, 'dd/MM/yyyy HH:mm') + ' · ' + shipment.closedBy}">2026-10-08 10:00 · admin</span>
     </div>
 
     <div class="kpi-grid doc-kpis">
@@ -116,7 +116,7 @@
                             <div th:each="r : ${shipment.receipts}" class="shipment-receipt">
                                 <a class="mono" th:if="${seeReceipts}" th:href="@{/goods-receipts/{id}(id=${r.goodsReceipt.id})}" th:text="${r.receiptNumber}">GRN-WH-2026-000001</a>
                                 <span class="mono" th:unless="${seeReceipts}" th:text="${r.receiptNumber}">GRN-WH-2026-000001</span>
-                                <span class="cell-sub" th:text="${r.goodsReceipt.purchaseOrder.supplier.name + ' · ' + r.goodsReceipt.purchaseOrder.number + ' · ' + #temporals.format(r.goodsReceipt.receivedDate, 'yyyy-MM-dd')}">Shandong Glass Co. · PO-WH-2026-000001 · 2026-10-08</span>
+                                <span class="cell-sub" th:text="${r.goodsReceipt.purchaseOrder.supplier.name + ' · ' + r.goodsReceipt.purchaseOrder.number + ' · ' + #temporals.format(r.goodsReceipt.receivedDate, 'dd/MM/yyyy')}">Shandong Glass Co. · PO-WH-2026-000001 · 2026-10-08</span>
                             </div>
                         </div>
                     </div>
@@ -157,18 +157,18 @@
                                 </td>
                                 <td class="nowrap">
                                     <span class="mono" th:text="${c.invoiceRef ?: '—'}">INV-2231</span>
-                                    <div class="cell-sub" th:text="${#temporals.format(c.invoiceDate, 'yyyy-MM-dd')}">2026-10-01</div>
+                                    <div class="cell-sub" th:text="${#temporals.format(c.invoiceDate, 'dd/MM/yyyy')}">01/10/2026</div>
                                 </td>
                                 <td class="num nowrap" th:classappend="${c.amount.signum() < 0} ? 'text-danger'"
                                     th:text="${@num.amount(c.amount, 2) + ' ' + c.currencyCode}">2,000.00 USD</td>
                                 <td class="nowrap">
                                     <th:block th:if="${!draft}">
                                         <span th:text="${c.rateSource == null} ? #{shipment.baseRate} : ${@num.rate(c.rate)}">1,452.10</span>
-                                        <div class="cell-sub" th:if="${c.rateSource != null}" th:text="${#messages.msg('rate.source.' + c.rateSource) + ' · ' + #temporals.format(c.rateDate, 'yyyy-MM-dd')}">BNR · 2026-10-01</div>
+                                        <div class="cell-sub" th:if="${c.rateSource != null}" th:text="${#messages.msg('rate.source.' + c.rateSource) + ' · ' + #temporals.format(c.rateDate, 'dd/MM/yyyy')}">BNR · 2026-10-01</div>
                                     </th:block>
                                     <th:block th:if="${draft and p != null and p.ok()}">
                                         <span class="text-muted" th:text="${p.rate.source == null} ? #{shipment.baseRate} : ${@num.rate(p.rate.rate)}">1,452.10</span>
-                                        <div class="cell-sub" th:if="${p.rate.source != null}" th:text="${#messages.msg('rate.source.' + p.rate.source) + ' · ' + #temporals.format(p.rate.rateDate, 'yyyy-MM-dd')}">BNR · 2026-10-01</div>
+                                        <div class="cell-sub" th:if="${p.rate.source != null}" th:text="${#messages.msg('rate.source.' + p.rate.source) + ' · ' + #temporals.format(p.rate.rateDate, 'dd/MM/yyyy')}">BNR · 2026-10-01</div>
                                     </th:block>
                                     <span th:if="${draft and p != null and !p.ok()}" class="text-danger cell-wrap" th:text="${#messages.msgWithParams(p.errorKey, p.errorArgs)}">No BNR rate for USD on or before 2026-10-01</span>
                                 </td>
@@ -219,7 +219,7 @@
                             <tbody>
                                 <tr th:each="p : ${sheet.postings}">
                                     <td class="num" th:text="${p.number}">1</td>
-                                    <td class="nowrap" th:text="${#temporals.format(p.at, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
+                                    <td class="nowrap" th:text="${#temporals.format(p.at, 'dd/MM/yyyy HH:mm')}">08/10/2026 10:12</td>
                                     <td th:text="${p.username}">admin</td>
                                     <td class="num strong" th:text="${@num.money(p.amount)}">4,104,200</td>
                                     <td class="num" th:text="${@num.money(p.toStock)}">3,899,000</td>
@@ -355,7 +355,7 @@
                             </div>
                             <div class="item">
                                 <label th:text="#{shipment.claimRefDate}">Reference and date</label>
-                                <div class="value" th:text="${(shipment.claimRef != null ? shipment.claimRef + ' · ' : '') + #temporals.format(shipment.claimDate, 'yyyy-MM-dd')}">CLM-77 · 2026-10-08</div>
+                                <div class="value" th:text="${(shipment.claimRef != null ? shipment.claimRef + ' · ' : '') + #temporals.format(shipment.claimDate, 'dd/MM/yyyy')}">CLM-77 · 2026-10-08</div>
                             </div>
                             <div class="item">
                                 <label th:text="#{shipment.claimAmount(${base.code})}">Claimed (RWF)</label>
@@ -415,7 +415,7 @@
                             <div class="form-group">
                                 <label for="claim-date" th:text="#{shipment.claimDate}">Sent on</label>
                                 <input type="date" id="claim-date" name="date" required th:value="${#temporals.format(today, 'yyyy-MM-dd')}"
-                                       th:min="${#temporals.format(shipment.arrivalDate, 'yyyy-MM-dd')}" th:max="${#temporals.format(today, 'yyyy-MM-dd')}">
+                                       th:min="${#temporals.format(shipment.arrivalDate, 'dd/MM/yyyy')}" th:max="${#temporals.format(today, 'dd/MM/yyyy')}">
                             </div>
                         </div>
                         <div class="form-group">

@@ -51,7 +51,7 @@
                             <a class="row-link strong mono" th:href="@{/shipments/{id}(id=${s.id})}" th:text="${s.number}">SHP-WH-2026-000001</a>
                             <div class="cell-sub mono" th:if="${s.reference != null}" th:text="${s.reference}">MSKU 123456-7</div>
                         </td>
-                        <td class="nowrap" th:text="${#temporals.format(s.arrivalDate, 'yyyy-MM-dd')}">2026-10-08</td>
+                        <td class="nowrap" th:text="${#temporals.format(s.arrivalDate, 'dd/MM/yyyy')}">08/10/2026</td>
                         <td class="num" th:text="${t != null} ? ${t.receipts} : 0">1</td>
                         <td th:text="#{${'shipment.method.' + s.allocationMethod}}">By area</td>
                         <td class="num" th:text="${t != null} ? ${@num.money(t.posted)} : 0">4,104,200</td>

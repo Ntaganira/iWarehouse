@@ -52,7 +52,7 @@
                 <tbody>
                     <tr th:each="a : ${adjustments.content}">
                         <td><a class="row-link strong mono" th:href="@{/stock-adjustments/{id}(id=${a.id})}" th:text="${a.number}">ADJ-WH-2026-000001</a></td>
-                        <td class="nowrap" th:text="${#temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 16:20</td>
+                        <td class="nowrap" th:text="${#temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm')}">08/10/2026 16:20</td>
                         <td th:text="${a.reason}">Broken while moving</td>
                         <td class="num" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')" th:classappend="${a.valueChange.signum() < 0} ? 'text-danger'"
                             th:text="${@num.money(a.valueChange)}">-252,628.86</td>

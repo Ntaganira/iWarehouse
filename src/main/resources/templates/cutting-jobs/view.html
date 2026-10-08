@@ -47,7 +47,7 @@
     </div>
     <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{cutting.draftNote}">No sheet taken yet: the operator takes a sheet or off-cut the pieces fit in, then records the cut.</div>
     <div class="doc-note" th:if="${s == 'IN_PROGRESS'}"
-         th:text="#{cutting.inProgressNote(${job.sourceCode}, ${job.operatorName}, ${#temporals.format(job.startedAt, 'yyyy-MM-dd HH:mm')})}">U-WH-000021 taken by operator1 on 2026-10-08 10:12: it is reserved for this job. Record the cut when it is done.</div>
+         th:text="#{cutting.inProgressNote(${job.sourceCode}, ${job.operatorName}, ${#temporals.format(job.startedAt, 'dd/MM/yyyy HH:mm')})}">U-WH-000021 taken by operator1 on 2026-10-08 10:12: it is reserved for this job. Record the cut when it is done.</div>
     <div class="doc-note is-warning" th:if="${job.short}">
         <span th:text="#{cutting.shortNote(${job.pieces - job.piecesCut})}">2 pieces were not cut.</span>
         <th:block th:each="r : ${restJobs}">
@@ -131,7 +131,7 @@
                     </div>
                     <div class="item">
                         <label th:text="#{cutting.dueDate}">Wanted by</label>
-                        <div class="value" th:text="${job.dueDate != null} ? ${#temporals.format(job.dueDate, 'yyyy-MM-dd')} : '—'">2026-10-10</div>
+                        <div class="value" th:text="${job.dueDate != null} ? ${#temporals.format(job.dueDate, 'dd/MM/yyyy')} : '—'">10/10/2026</div>
                     </div>
                     <div class="item">
                         <label th:text="#{product.notes}">Notes</label>
@@ -196,7 +196,7 @@
                     <div class="item">
                         <label th:text="${s == 'COMPLETED'} ? #{cutting.cutOn} : #{cutting.takenOn}">Taken</label>
                         <div class="value">
-                            <span th:text="${#temporals.format(s == 'COMPLETED' ? job.completedAt : job.startedAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</span>
+                            <span th:text="${#temporals.format(s == 'COMPLETED' ? job.completedAt : job.startedAt, 'dd/MM/yyyy HH:mm')}">08/10/2026 10:12</span>
                             <span class="cell-sub" th:text="#{cutting.byOperator(${job.operatorName})}">by operator1</span>
                         </div>
                     </div>

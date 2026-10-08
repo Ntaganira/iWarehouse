@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{count.title}, ~{::content})}">
+<head><title>Stock Counts - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{count.title}">Stock Counts</h1>
+            <div class="subtitle" th:text="#{count.subtitle}">Racks counted by scanning their labels: what was missing, extra or in the wrong place</div>
+        </div>
+        <a href="/stock-counts/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_COUNT_STOCK')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{count.add}">Start a count</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${open > 0}">
+        <span th:text="#{count.openListNote(${open})}">1 count is open: the units on its racks are held until it is closed.</span>
+        <a th:href="@{/stock-counts(status='OPEN')}" th:text="#{count.showOpen}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{count.sectionTitle}">Counts</span>
+                <span class="section-count" th:text="${counts.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/stock-counts}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{count.searchPh}" th:aria-label="#{count.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'count.status.' + st}}">Closed</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{count.number}">Count</th>
+                        <th th:text="#{count.place}">Place</th>
+                        <th th:text="#{count.glass}">Glass</th>
+                        <th th:text="#{count.started}">Started</th>
+                        <th th:text="#{count.result}">Result</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${counts.content}">
+                        <td><a class="row-link strong mono" th:href="@{/stock-counts/{id}(id=${c.id})}" th:text="${c.number}">CNT-WH-2026-000001</a></td>
+                        <td class="mono" th:text="${c.location.code}">WH-A-R01</td>
+                        <td>
+                            <span class="mono" th:if="${c.product != null}" th:text="${c.product.code}">CLR-6</span>
+                            <span class="text-muted" th:unless="${c.product != null}" th:text="#{count.everyGlass}">Every glass</span>
+                        </td>
+                        <td class="nowrap">
+                            <span th:text="${#temporals.format(c.startedAt, 'dd/MM/yyyy HH:mm')}">08/10/2026 16:20</span>
+                            <div class="cell-sub" th:text="${c.startedBy}">supervisor1</div>
+                        </td>
+                        <td>
+                            <span th:if="${c.status.name() == 'CLOSED'}" th:text="#{count.resultShort(${c.missingUnits}, ${c.misplacedUnits}, ${c.extraUnits})}">2 missing · 1 misplaced · 0 extra</span>
+                            <span class="text-muted" th:if="${c.status.name() == 'OPEN'}" th:text="#{count.counting}">Counting</span>
+                            <span class="text-muted" th:if="${c.status.name() == 'CANCELLED'}">—</span>
+                        </td>
+                        <td><th:block th:replace="~{stock-counts/list :: countStatus(${c.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(counts.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{count.empty}">No counts found</h3>
+                                <p th:text="#{count.emptyHint}">Count a rack, a zone or the whole warehouse by scanning the labels you find</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${counts}, '/stock-counts', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a count. */-->
+<th:block th:fragment="countStatus(s)" th:switch="${s.name()}">
+    <span th:case="'OPEN'" class="badge badge-info" th:text="#{count.status.OPEN}">Counting</span>
+    <span th:case="'CLOSED'" class="badge badge-success" th:text="#{count.status.CLOSED}">Closed</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{count.status.CANCELLED}">Cancelled</span>
+</th:block>
+
+<!--/* What a count found for a unit (INV-08). */-->
+<th:block th:fragment="outcome(o)" th:switch="${o.name()}">
+    <span th:case="'MATCHED'" class="badge badge-success" th:text="#{count.outcome.MATCHED}">In its place</span>
+    <span th:case="'MISPLACED'" class="badge badge-warning" th:text="#{count.outcome.MISPLACED}">Misplaced</span>
+    <span th:case="'MISSING'" class="badge badge-danger" th:text="#{count.outcome.MISSING}">Missing</span>
+    <span th:case="'FOUND_LOST'" class="badge badge-info" th:text="#{count.outcome.FOUND_LOST}">Lost, found</span>
+    <span th:case="'ELSEWHERE'" class="badge badge-warning" th:text="#{count.outcome.ELSEWHERE}">Recorded elsewhere</span>
+    <span th:case="'NOT_IN_STOCK'" class="badge badge-danger" th:text="#{count.outcome.NOT_IN_STOCK}">Recorded as gone</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{count.outcome.UNKNOWN}">Unknown label</span>
+</th:block>
+</body>
+</html>

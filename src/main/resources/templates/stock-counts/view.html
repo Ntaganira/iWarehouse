@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${count.number}, ~{::content})}">
+<head><title>Stock count - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${count.status.name()},
+        canCount=${#authorization.expression('hasAuthority(''PERM_COUNT_STOCK'')')},
+        canAdjust=${#authorization.expression('hasAuthority(''PAGE_STOCK_ADJUSTMENTS'')')},
+        base=${'/stock-counts/' + count.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${count.number}">CNT-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${count.location.code}">WH-A-R01</span>
+                &middot; <span th:text="${count.product != null} ? ${count.product.code} : #{count.everyGlass}">Every glass</span>
+                &middot; <span th:text="#{count.startedBy(${count.startedBy}, ${#temporals.format(count.startedAt, 'dd/MM/yyyy HH:mm')})}">started by supervisor1 on 08/10/2026 16:20</span>
+                &middot; <th:block th:replace="~{stock-counts/list :: countStatus(${count.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock-counts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'OPEN' and canCount}">
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{count.cancel}">Cancel the count</button>
+                <form th:action="@{/stock-counts/{id}/close(id=${count.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{count.closeConfirm(${count.number}, ${scans.totalElements}, ${todo.totalElements})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{count.close}">Close and record</button>
+                </form>
+            </th:block>
+        </div>
+    </div>
+
+    <!-- Status notes -->
+    <div class="doc-note is-warning" th:if="${s == 'OPEN'}">
+        <span th:text="#{count.openNote(${count.places.size()})}">Counting: the units on 3 places are held until the count is closed or cancelled.</span>
+        <span th:if="${count.note != null}" th:text="${'· ' + count.note}">· Monthly count</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{count.cancelledBy(${count.closedBy})}">Cancelled by supervisor1:</strong>
+        <span th:text="${count.cancelReason}">Wrong rack</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'CLOSED'}">
+        <strong th:text="#{count.closedOn(${#temporals.format(count.closedAt, 'dd/MM/yyyy HH:mm')}, ${count.closedBy})}">Closed on 08/10/2026 16:45 by supervisor1.</strong>
+        <th:block th:if="${count.adjustmentNumber != null}">
+            <span th:text="#{count.adjustmentNote}">Missing units and lost units found are on adjustment</span>
+            <a class="mono" th:if="${canAdjust}" th:href="@{/stock-adjustments/{id}(id=${count.adjustmentId})}" th:text="${count.adjustmentNumber}">ADJ-WH-2026-000005</a>
+            <span class="mono" th:unless="${canAdjust}" th:text="${count.adjustmentNumber}">ADJ-WH-2026-000005</span>
+        </th:block>
+        <span th:if="${count.note != null}" th:text="${'· ' + count.note}">· Monthly count</span>
+    </div>
+
+    <!-- Scanning (INV-08), first: after each scan the page comes back here. A scanner types the label and presses Enter -->
+    <div class="section count-scan" th:if="${s == 'OPEN' and canCount}" id="scan">
+        <div class="section-header">
+            <h2 th:text="#{count.scanTitle}">Scan labels</h2>
+        </div>
+        <form th:action="@{/stock-counts/{id}/scan(id=${count.id})}" method="post" class="form-container count-scan-form" novalidate>
+            <div class="form-grid">
+                <div class="form-group" th:if="${scanPlaces.size() > 1}">
+                    <label for="locationId" th:text="#{count.at}">Counting at</label>
+                    <select id="locationId" name="locationId" data-searchable required>
+                        <option value="" th:text="#{count.chooseAt}">Choose the rack or slot you are at</option>
+                        <option th:each="p : ${scanPlaces}" th:value="${p.id}" th:selected="${p.id == at}" th:text="${p.code + ' · ' + p.name}">WH-A-R01 · Rack 1</option>
+                    </select>
+                    <span class="hint" th:text="#{count.atHint}">Stays chosen between scans</span>
+                </div>
+                <div class="form-group" th:if="${scanPlaces.size() == 1}">
+                    <span class="count-at-label" th:text="#{count.at}">Counting at</span>
+                    <input type="hidden" name="locationId" th:value="${scanPlaces[0].id}">
+                    <div class="count-at mono" th:text="${scanPlaces[0].code + ' · ' + scanPlaces[0].name}">WH-A-R01 · Rack 1</div>
+                </div>
+                <div class="form-group" th:if="${scanPlaces.isEmpty()}">
+                    <p class="field-error" th:text="#{count.noScanPlaces}">This place has no rack or slot to count.</p>
+                </div>
+                <div class="form-group">
+                    <label for="codes" th:text="#{count.label}">Label</label>
+                    <div class="scan-row">
+                        <textarea id="codes" name="codes" rows="1" maxlength="4000" class="input-code scan-codes" autocomplete="off" autocapitalize="characters"
+                                  spellcheck="false" enterkeyhint="go" autofocus data-enter-submits th:placeholder="#{count.labelPh}"></textarea>
+                        <button type="submit" class="btn btn-primary" th:text="#{count.scan}">Scan</button>
+                    </div>
+                    <span class="hint" th:text="#{count.labelHint}">A scanner reads the label and presses Enter; paste several codes to scan them together</span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Figures -->
+    <div class="kpi-grid doc-kpis" th:if="${s == 'OPEN'}">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.expected}">Expected</div>
+                <div class="kpi-value" th:text="${expectedCount}">25</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.expectedSub}">units the records place here</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.scanned}">Scanned</div>
+                <div class="kpi-value" th:text="${scans.totalElements}">20</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.scannedSub}">labels found so far</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.todo}">Not scanned yet</div>
+                <div class="kpi-value" th:text="${todo.totalElements}">5</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.todoSub}">missing if not found</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.issues}">To check</div>
+                <div class="kpi-value" th:text="${issuesSoFar}">1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.issuesSub}">misplaced or extra so far</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="kpi-grid doc-kpis" th:if="${s == 'CLOSED'}">
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.matched}">In their place</div>
+                <div class="kpi-value" th:text="${count.matchedUnits}">22</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.matchedSub(${count.expectedUnits}, ${count.countedUnits})}">of 25 expected · 24 scanned</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.missing}">Missing</div>
+                <div class="kpi-value" th:text="${count.missingUnits}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.missingSub}">written off as lost, with approval</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.misplaced}">Misplaced</div>
+                <div class="kpi-value" th:text="${count.misplacedUnits}">1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.misplacedSub}">moved to where they were found</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{count.kpi.extra}">Extra</div>
+                <div class="kpi-value" th:text="${count.extraUnits}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{count.kpi.extraSub}">found but not in stock here</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Open or cancelled: the scans and what is not scanned yet; closed: the result -->
+    <div class="section">
+        <div class="tabs">
+            <th:block th:if="${s != 'CLOSED'}">
+                <button type="button" class="tab" data-tab="tab-scanned" th:classappend="${tab == 'scanned'} ? 'active'">
+                    <span th:text="#{count.tab.scanned}">Scanned</span>
+                    <span class="section-count" th:text="${scans.totalElements}">0</span>
+                </button>
+                <button type="button" class="tab" data-tab="tab-todo" th:classappend="${tab == 'todo'} ? 'active'" th:if="${s == 'OPEN'}">
+                    <span th:text="#{count.tab.todo}">Not scanned yet</span>
+                    <span class="section-count" th:text="${todo.totalElements}">0</span>
+                </button>
+            </th:block>
+            <th:block th:if="${s == 'CLOSED'}">
+                <button type="button" class="tab" data-tab="tab-issues" th:classappend="${tab == 'issues'} ? 'active'">
+                    <span th:text="#{count.tab.issues}">To check</span>
+                    <span class="section-count" th:text="${issues.totalElements}">0</span>
+                </button>
+                <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                    <span th:text="#{count.tab.lines}">All units</span>
+                    <span class="section-count" th:text="${lines.totalElements}">0</span>
+                </button>
+            </th:block>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <!-- Scans (newest first) -->
+            <div class="tab-content" id="tab-scanned" th:if="${s != 'CLOSED'}" th:classappend="${tab == 'scanned'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{count.label}">Label</th>
+                                <th th:text="#{count.glass}">Glass</th>
+                                <th th:text="#{count.foundAt}">Found on</th>
+                                <th th:text="#{count.recorded}">Recorded</th>
+                                <th th:if="${s == 'OPEN'}" th:text="#{count.soFar}">So far</th>
+                                <th th:text="#{count.scannedBy}">Scanned</th>
+                                <th th:if="${s == 'OPEN' and canCount}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${scans.content}" th:with="u=${r.unit}">
+                                <td>
+                                    <a class="row-link strong mono" th:if="${u != null}" th:href="@{/stock/{id}(id=${u.id})}" th:text="${r.scan.code}">U-WH-000041</a>
+                                    <span class="mono strong" th:unless="${u != null}" th:text="${r.scan.code}">U-XX-1</span>
+                                </td>
+                                <td>
+                                    <th:block th:if="${u != null}">
+                                        <span class="mono" th:text="${u.product.code}">CLR-6</span>
+                                        <div class="cell-sub" th:text="${u.widthMm + ' × ' + u.heightMm + ' mm'}">3210 × 2250 mm</div>
+                                    </th:block>
+                                    <span class="text-muted" th:unless="${u != null}">—</span>
+                                </td>
+                                <td class="mono" th:text="${locations.get(r.scan.locationId) != null} ? ${locations.get(r.scan.locationId).code} : '—'">WH-A-R01</td>
+                                <td>
+                                    <th:block th:if="${u != null}">
+                                        <span th:text="#{${'stock.status.' + u.status}}">Available</span>
+                                        <div class="cell-sub mono" th:if="${u.location != null}" th:text="${u.location.code}">WH-A-R02</div>
+                                    </th:block>
+                                    <span class="text-muted" th:unless="${u != null}" th:text="#{count.noSuchUnit}">No such unit</span>
+                                </td>
+                                <td th:if="${s == 'OPEN'}"><th:block th:if="${r.outcome != null}"><th:block th:replace="~{stock-counts/list :: outcome(${r.outcome})}"></th:block></th:block></td>
+                                <td class="nowrap">
+                                    <span th:text="${#temporals.format(r.scan.scannedAt, 'dd/MM/yyyy HH:mm')}">08/10/2026 16:30</span>
+                                    <div class="cell-sub" th:text="${r.scan.scannedBy}">supervisor1</div>
+                                </td>
+                                <td th:if="${s == 'OPEN' and canCount}">
+                                    <form th:action="@{/stock-counts/{id}/scans/{scan}/remove(id=${count.id}, scan=${r.scan.id}, at=${at})}" method="post"
+                                          class="row-action-form confirm-submit danger" th:attr="data-confirm=#{count.removeConfirm(${r.scan.code})}">
+                                        <button type="submit" class="action-icon delete" th:title="#{count.removeScan}" th:aria-label="#{count.removeScan}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${scans.totalElements == 0}">
+                                <td th:attr="colspan=${s == 'OPEN'} ? 7 : 5"><div class="empty-state"><p th:text="#{count.noScans}">Nothing scanned yet.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${scans}, ${base}, ${'tab=scanned' + (at != null ? '&at=' + at : '')})}"></th:block>
+            </div>
+
+            <!-- Expected units nobody scanned yet -->
+            <div class="tab-content" id="tab-todo" th:if="${s == 'OPEN'}" th:classappend="${tab == 'todo'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{count.label}">Label</th>
+                                <th th:text="#{count.glass}">Glass</th>
+                                <th th:text="#{count.size}">Size (mm)</th>
+                                <th th:text="#{count.recordedOn}">Recorded on</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${todo.content}">
+                                <td><a class="row-link strong mono" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000045</a></td>
+                                <td class="mono" th:text="${u.product.code}">CLR-6</td>
+                                <td class="nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">3210 × 2250</td>
+                                <td class="mono" th:text="${u.location.code}">WH-A-R01</td>
+                                <td th:text="#{${'stock.status.' + u.status}}">Available</td>
+                            </tr>
+                            <tr th:if="${todo.totalElements == 0}">
+                                <td colspan="5"><div class="empty-state"><p th:text="#{count.allScanned}">Every unit expected here has been scanned.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${todo}, ${base}, ${'tab=todo' + (at != null ? '&at=' + at : '')})}"></th:block>
+            </div>
+
+            <!-- Closed: the lines that need attention, then every line -->
+            <th:block th:if="${s == 'CLOSED'}" th:each="t : ${ {'issues', 'lines'} }" th:with="rows=${t == 'issues'} ? ${issues} : ${lines}">
+                <div class="tab-content" th:id="${'tab-' + t}" th:classappend="${tab == t} ? 'active'">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{count.label}">Label</th>
+                                    <th th:text="#{count.glass}">Glass</th>
+                                    <th th:text="#{count.found}">Found</th>
+                                    <th th:text="#{count.recordedOn}">Recorded on</th>
+                                    <th th:text="#{count.foundAt}">Found on</th>
+                                    <th th:text="#{count.action}">Done</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="l : ${rows.content}" th:with="u=${l.stockUnitId != null} ? ${units.get(l.stockUnitId)} : null">
+                                    <td>
+                                        <a class="row-link strong mono" th:if="${u != null}" th:href="@{/stock/{id}(id=${u.id})}" th:text="${l.code}">U-WH-000041</a>
+                                        <span class="mono strong" th:unless="${u != null}" th:text="${l.code}">U-XX-1</span>
+                                    </td>
+                                    <td>
+                                        <th:block th:if="${u != null}">
+                                            <span class="mono" th:text="${u.product.code}">CLR-6</span>
+                                            <div class="cell-sub" th:text="${u.widthMm + ' × ' + u.heightMm + ' mm'}">3210 × 2250 mm</div>
+                                        </th:block>
+                                        <span class="text-muted" th:unless="${u != null}">—</span>
+                                    </td>
+                                    <td>
+                                        <th:block th:replace="~{stock-counts/list :: outcome(${l.outcome})}"></th:block>
+                                        <div class="cell-sub" th:if="${l.unitStatus != null and (l.outcome.name() == 'ELSEWHERE' or l.outcome.name() == 'NOT_IN_STOCK')}"
+                                             th:text="#{count.recordedAs(${#messages.msg('stock.status.' + l.unitStatus)})}">recorded as sold</div>
+                                    </td>
+                                    <td class="mono" th:text="${l.expectedLocationId != null and locations.get(l.expectedLocationId) != null} ? ${locations.get(l.expectedLocationId).code} : '—'">WH-A-R02</td>
+                                    <td class="mono" th:text="${l.foundLocationId != null and locations.get(l.foundLocationId) != null} ? ${locations.get(l.foundLocationId).code} : '—'">WH-A-R01</td>
+                                    <td th:switch="${l.action.name()}">
+                                        <span th:case="'MOVED'" th:text="#{count.action.MOVED}">Moved where found</span>
+                                        <th:block th:case="'ADJUSTMENT'">
+                                            <a class="mono" th:if="${canAdjust and count.adjustmentId != null}" th:href="@{/stock-adjustments/{id}(id=${count.adjustmentId})}" th:text="${count.adjustmentNumber}">ADJ-WH-2026-000005</a>
+                                            <span class="mono" th:unless="${canAdjust and count.adjustmentId != null}" th:text="${count.adjustmentNumber}">ADJ-WH-2026-000005</span>
+                                        </th:block>
+                                        <th:block th:case="*">
+                                            <span class="text-muted" th:if="${l.note == null}" th:text="${l.outcome.name() == 'MATCHED'} ? '—' : #{count.action.CHECK}">Check it</span>
+                                            <span class="text-muted" th:if="${l.note == 'OFFCUT_RACK'}" th:text="#{count.note.offcutRack}">A full sheet on an off-cut rack: move it, then record it found</span>
+                                            <span class="text-muted" th:if="${l.note != null and l.note != 'OFFCUT_RACK'}" th:text="#{count.note.heldBy(${l.note})}">Held by ADJ-WH-2026-000003</span>
+                                        </th:block>
+                                    </td>
+                                </tr>
+                                <tr th:if="${rows.totalElements == 0}">
+                                    <td colspan="6"><div class="empty-state"><p th:text="#{count.nothingToCheck}">Every unit was where the records say.</p></div></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <th:block th:replace="~{layout/pagination :: pager(${rows}, ${base}, ${'tab=' + t})}"></th:block>
+                </div>
+            </th:block>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'OPEN' and canCount}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{count.cancelTitle}, @{/stock-counts/{id}/cancel(id=${count.id})}, #{count.cancelText}, #{count.cancel})}"></div>
+    </th:block>
+    <script defer src="/js/stock-ops.js"></script>
+</div>
+</body>
+</html>

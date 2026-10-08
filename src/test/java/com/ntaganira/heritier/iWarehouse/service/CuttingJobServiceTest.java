@@ -97,7 +97,7 @@ class CuttingJobServiceTest {
         when(unitRepo.sumArea(eq(clear6.getId()), any())).thenReturn(new BigDecimal("144.4500"));
 
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
-        StockService stockService = new StockService(unitRepo, movementRepo, costEntryRepo, adjustmentLineRepo, locationRepo, numbers, clock);
+        StockService stockService = new StockService(unitRepo, movementRepo, costEntryRepo, adjustmentLineRepo, mock(StockCountRepository.class), locationRepo, numbers, clock);
         service = new CuttingJobService(repo, mock(CuttingJobLineRepository.class), outputRepo, productRepo, customerRepo,
                 serviceRepo, unitRepo, stockService, numbers, settings, clock);
     }

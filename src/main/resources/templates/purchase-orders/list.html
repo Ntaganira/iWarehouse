@@ -58,8 +58,8 @@
                         </td>
                         <td th:text="${o.supplier.name}">Shandong Glass Co.</td>
                         <td class="nowrap">
-                            <div th:text="${#temporals.format(o.orderDate, 'yyyy-MM-dd')}">2026-10-08</div>
-                            <div class="cell-sub" th:if="${o.expectedDate != null}" th:text="#{po.expectedShort(${#temporals.format(o.expectedDate, 'yyyy-MM-dd')})}">due 2026-11-20</div>
+                            <div th:text="${#temporals.format(o.orderDate, 'dd/MM/yyyy')}">08/10/2026</div>
+                            <div class="cell-sub" th:if="${o.expectedDate != null}" th:text="#{po.expectedShort(${#temporals.format(o.expectedDate, 'dd/MM/yyyy')})}">due 2026-11-20</div>
                         </td>
                         <td class="num">
                             <div th:text="${t.sheets}">40</div>

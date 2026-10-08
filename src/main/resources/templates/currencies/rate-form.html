@@ -58,7 +58,7 @@
                     </div>
                     <div class="item">
                         <label th:text="#{rate.date}">Date</label>
-                        <div class="value" th:text="*{rateDate}">2026-10-07</div>
+                        <div class="value" th:text="*{rateDate} != null ? *{#temporals.format(rateDate, 'dd/MM/yyyy')} : '—'">07/10/2026</div>
                     </div>
                     <div class="item">
                         <label th:text="#{rate.source}">Source</label>

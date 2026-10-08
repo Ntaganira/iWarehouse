@@ -4330,3 +4330,15 @@ table .btn { white-space: nowrap; }
 }
 /* Numbers in tables: digits line up in every column */
 td.num, th.num { font-variant-numeric: tabular-nums; }
+/* Warning notes take the orange tint, like danger notes take the red one */
+.doc-note.is-warning { border-left-color: var(--warning); background: var(--tint-orange); }
+
+/* Stock counts (INV-08): the place being counted, when the count has only one rack or slot */
+.count-at-label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); }
+.count-at { display: flex; align-items: center; min-height: 42px; padding: 0 14px; border: 1.5px dashed var(--gray-300);
+  border-radius: 8px; background: var(--gray-50); color: var(--dark); font-weight: 600; overflow-wrap: anywhere; }
+.count-scan .scan-row { max-width: none; }
+.form-group textarea.scan-codes { min-height: 42px; height: 42px; resize: none; line-height: 20px; overflow-y: auto; }
+.scan-row textarea { flex: 1; min-width: 0; }
+/* A badge never breaks over two lines */
+.badge { white-space: nowrap; }

@@ -56,7 +56,7 @@
                         <span class="vs" th:text="#{rate.trend.none}">No earlier rate to compare</span>
                     </div>
                     <div class="rate-meta">
-                        <span th:text="${#temporals.format(lr.rate.rateDate, 'yyyy-MM-dd')}">2026-10-07</span>
+                        <span th:text="${#temporals.format(lr.rate.rateDate, 'dd/MM/yyyy')}">07/10/2026</span>
                         &middot; <span th:text="#{${'rate.source.' + lr.rate.source}}">BNR</span>
                     </div>
                 </th:block>
@@ -128,14 +128,14 @@
                         </thead>
                         <tbody>
                             <tr th:each="r : ${rates.content}">
-                                <td class="nowrap" th:text="${#temporals.format(r.rateDate, 'yyyy-MM-dd')}">2026-10-07</td>
+                                <td class="nowrap" th:text="${#temporals.format(r.rateDate, 'dd/MM/yyyy')}">07/10/2026</td>
                                 <td><span class="strong" th:text="${r.currencyCode}">USD</span></td>
                                 <td><span class="badge badge-secondary" th:text="#{${'rate.source.' + r.source}}">BNR</span></td>
                                 <td class="num" th:text="${@num.rate(r.rate)}">1,450.25</td>
                                 <td class="cell-truncate text-muted" th:text="${r.note}">Imported from rates.csv</td>
                                 <td>
                                     <div th:text="${r.createdBy}">accountant</div>
-                                    <div class="text-muted" th:if="${r.version > 0}" th:text="#{rate.correctedOn(${#temporals.format(r.updatedAt, 'yyyy-MM-dd')})}">corrected</div>
+                                    <div class="text-muted" th:if="${r.version > 0}" th:text="#{rate.correctedOn(${#temporals.format(r.updatedAt, 'dd/MM/yyyy')})}">corrected</div>
                                 </td>
                                 <td sec:authorize="hasAuthority('PERM_MANAGE_EXCHANGE_RATE')">
                                     <a th:href="@{/currencies/rates/{id}/edit(id=${r.id})}" class="action-icon edit" th:title="#{rate.correct}" th:aria-label="#{rate.correct}">

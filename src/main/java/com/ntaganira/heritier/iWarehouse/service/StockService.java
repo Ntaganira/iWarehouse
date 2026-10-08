@@ -22,6 +22,7 @@ import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.LocationRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockAdjustmentLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCostEntryRepository;
+import com.ntaganira.heritier.iWarehouse.repository.StockCountRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockMovementRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
@@ -75,6 +76,8 @@ public class StockService {
     public static final String REF_ADJUSTMENT = "ADJUSTMENT";
     /** ref_type of reservation movements (the customer). */
     public static final String REF_CUSTOMER = "CUSTOMER";
+    /** Reference type of COUNT movements (INV-08). */
+    public static final String REF_STOCK_COUNT = "STOCK_COUNT";
     /** Status filter value for every status; empty means "in stock". */
     public static final String ALL_STATUSES = "all";
 
@@ -82,17 +85,20 @@ public class StockService {
     private final StockMovementRepository movementRepo;
     private final StockCostEntryRepository costEntryRepo;
     private final StockAdjustmentLineRepository adjustmentLineRepo;
+    private final StockCountRepository countRepo;
     private final LocationRepository locationRepo;
     private final DocumentNumberService numbers;
     private final Clock clock;
 
     public StockService(StockUnitRepository unitRepo, StockMovementRepository movementRepo,
                         StockCostEntryRepository costEntryRepo, StockAdjustmentLineRepository adjustmentLineRepo,
-                        LocationRepository locationRepo, DocumentNumberService numbers, Clock clock) {
+                        StockCountRepository countRepo, LocationRepository locationRepo, DocumentNumberService numbers,
+                        Clock clock) {
         this.unitRepo = unitRepo;
         this.movementRepo = movementRepo;
         this.costEntryRepo = costEntryRepo;
         this.adjustmentLineRepo = adjustmentLineRepo;
+        this.countRepo = countRepo;
         this.locationRepo = locationRepo;
         this.numbers = numbers;
         this.clock = clock;
@@ -358,13 +364,16 @@ public class StockService {
 
     // ---------------------------------------------------------------- what a unit may do (INV-05)
 
-    /** Units held by pending adjustments: unit id to adjustment number (INV-05). */
+    /** Units held by pending adjustments and open stock counts: unit id to document number (INV-05, INV-08). */
     public Map<UUID, String> holds(Collection<UUID> unitIds) {
         if (unitIds.isEmpty()) {
             return Map.of();
         }
         Map<UUID, String> holds = new HashMap<>();
         for (Object[] row : adjustmentLineRepo.findHolds(AdjustmentStatus.PENDING_APPROVAL, unitIds)) {
+            holds.putIfAbsent((UUID) row[0], (String) row[1]);
+        }
+        for (Object[] row : countRepo.findHolds(unitIds)) {
             holds.putIfAbsent((UUID) row[0], (String) row[1]);
         }
         return holds;
@@ -428,6 +437,19 @@ public class StockService {
         unit.setLocation(to);
         record(unit, MovementType.TRANSFER, from, unit.getStatus(), LocalDateTime.now(clock), null, REF_TRANSFER,
                 transferId, transferNumber);
+    }
+
+    /**
+     * A unit a stock count found on another rack or slot: its location follows (INV-08). The glass is
+     * there already, so rack limits are not checked; the count reports racks left over their limits.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void countMove(StockUnit unit, Location to, UUID countId, String countNumber) {
+        requireAllowed(unit, StockAction.TRANSFER);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setLocation(to);
+        record(unit, MovementType.COUNT, from, unit.getStatus(), LocalDateTime.now(clock), null, REF_STOCK_COUNT,
+                countId, countNumber);
     }
 
     /** Writes a unit off: damaged units become BROKEN, missing ones LOST; either way it leaves stock. */

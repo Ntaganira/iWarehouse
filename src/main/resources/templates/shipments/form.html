@@ -63,7 +63,7 @@
                                     th:attr="data-placeholder=#{shipment.receiptsPh}, data-no-choices=#{shipment.noReceiptsLeft}, data-no-results=#{shipment.noReceiptMatch}"
                                     th:classappend="${#fields.hasErrors('receiptIds')} ? 'is-invalid'">
                                 <option th:each="r : ${receipts}" th:value="${r.id}"
-                                        th:text="${r.number + ' · ' + r.purchaseOrder.supplier.name + ' · ' + #temporals.format(r.receivedDate, 'yyyy-MM-dd')}">GRN-WH-2026-000001 · Shandong Glass Co. · 2026-10-08</option>
+                                        th:text="${r.number + ' · ' + r.purchaseOrder.supplier.name + ' · ' + #temporals.format(r.receivedDate, 'dd/MM/yyyy')}">GRN-WH-2026-000001 · Shandong Glass Co. · 2026-10-08</option>
                             </select>
                             <span class="hint" th:text="#{shipment.receiptsHint}">Posted receipts of the crates that came in this shipment</span>
                         </th:block>
@@ -95,7 +95,7 @@
                                 <strong th:text="#{${'shipment.costType.' + c.costType}}">Freight</strong>
                                 <div class="cell-sub" th:if="${c.description != null}" th:text="${c.description}">Sea freight</div>
                             </td>
-                            <td class="nowrap"><span class="mono" th:text="${c.invoiceRef ?: '—'}">INV-1</span> <span class="cell-sub" th:text="${#temporals.format(c.invoiceDate, 'yyyy-MM-dd')}">2026-10-01</span></td>
+                            <td class="nowrap"><span class="mono" th:text="${c.invoiceRef ?: '—'}">INV-1</span> <span class="cell-sub" th:text="${#temporals.format(c.invoiceDate, 'dd/MM/yyyy')}">01/10/2026</span></td>
                             <td class="num nowrap" th:text="${@num.amount(c.amount, 2) + ' ' + c.currencyCode}">2,000.00 USD</td>
                             <td><span class="badge badge-success" th:text="#{shipment.costPosted(${c.postingNo})}">Posted #1</span></td>
                         </tr>

@@ -90,11 +90,11 @@
                     </div>
                     <div class="item">
                         <label th:text="#{user.createdAt}">Created</label>
-                        <div class="value" th:text="${#temporals.format(customer.createdAt, 'yyyy-MM-dd HH:mm') + (customer.createdBy != null ? ' · ' + customer.createdBy : '')}">—</div>
+                        <div class="value" th:text="${#temporals.format(customer.createdAt, 'dd/MM/yyyy HH:mm') + (customer.createdBy != null ? ' · ' + customer.createdBy : '')}">—</div>
                     </div>
                     <div class="item">
                         <label th:text="#{user.updatedAt}">Updated</label>
-                        <div class="value" th:text="${customer.version > 0} ? ${#temporals.format(customer.updatedAt, 'yyyy-MM-dd HH:mm') + ' · ' + customer.updatedBy} : '—'">—</div>
+                        <div class="value" th:text="${customer.version > 0} ? ${#temporals.format(customer.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + customer.updatedBy} : '—'">—</div>
                     </div>
                 </div>
             </div>

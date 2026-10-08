@@ -87,7 +87,7 @@
                     </div>
                     <div class="item">
                         <label th:text="#{user.updatedAt}">Updated</label>
-                        <div class="value" th:text="${supplier.version > 0} ? ${#temporals.format(supplier.updatedAt, 'yyyy-MM-dd HH:mm') + ' · ' + supplier.updatedBy} : '—'">—</div>
+                        <div class="value" th:text="${supplier.version > 0} ? ${#temporals.format(supplier.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + supplier.updatedBy} : '—'">—</div>
                     </div>
                 </div>
 

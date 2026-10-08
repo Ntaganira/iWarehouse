@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{count.addTitle}, ~{::content})}">
+<head><title>Start a count - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{count.addTitle}">Start a Stock Count</h1>
+            <div class="subtitle" th:text="#{count.formSubtitle}">Choose what to count; then scan every label you find there</div>
+        </div>
+        <a href="/stock-counts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/stock-counts/new}" th:object="${countDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="locationId" th:text="#{count.place}">Place</label>
+                    <select id="locationId" th:field="*{locationId}" data-searchable th:classappend="${#fields.hasErrors('locationId')} ? 'is-invalid'">
+                        <option value="" th:text="#{count.choosePlace}">Choose a rack, zone or the site</option>
+                        <option th:each="p : ${places}" th:value="${p.id}"
+                                th:text="${p.code + ' · ' + p.name + ' · ' + #messages.msg('location.type.' + p.type)}">WH-A-R01 · Rack 1 · Rack</option>
+                    </select>
+                    <span class="hint" th:text="#{count.placeHint}">A rack or slot for a cycle count; a zone or the site counts every rack under it</span>
+                    <span class="field-error" th:if="${#fields.hasErrors('locationId')}" th:errors="*{locationId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="productId" th:text="#{count.glass}">Glass</label>
+                    <select id="productId" th:field="*{productId}" data-searchable th:classappend="${#fields.hasErrors('productId')} ? 'is-invalid'">
+                        <option value="" th:text="#{count.everyGlass}">Every glass</option>
+                        <option th:each="p : ${products}" th:value="${p.id}" th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                    </select>
+                    <span class="hint" th:text="#{count.glassHint}">Count one glass only, or everything on the place</span>
+                    <span class="field-error" th:if="${#fields.hasErrors('productId')}" th:errors="*{productId}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="note" th:text="#{count.note}">Note</label>
+                    <input type="text" id="note" th:field="*{note}" maxlength="255" th:placeholder="#{count.notePh}"
+                           th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{count.holdNote}">While the count is open, the units on the counted racks are held: nobody can move, cut, reserve or adjust them. Close or cancel it when you are done.</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{count.start}">Start the count</button>
+                <a href="/stock-counts" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

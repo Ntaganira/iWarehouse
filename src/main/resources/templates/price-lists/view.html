@@ -171,7 +171,7 @@
                                          field=${c.entityType == 'PriceListItem' ? 'pricePerM2' : (c.entityType == 'ServicePrice' ? 'price' : null)},
                                          before=${field != null and c.beforeData != null ? c.beforeData.get(field) : null},
                                          after=${field != null and c.afterData != null ? c.afterData.get(field) : null}">
-                                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
+                                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'dd/MM/yyyy HH:mm')}">08/10/2026 10:12</td>
                                 <td th:text="${c.username ?: #messages.msg('audit.system')}">admin</td>
                                 <td>
                                     <th:block th:if="${c.entityType == 'PriceListItem' and subject != null}">

@@ -163,7 +163,12 @@ public class StockTransferService {
             refuse(units, u -> u.getKind() == UnitKind.SHEET, "toLocationId", "transfer.sheetToOffcut");
         }
         Map<UUID, String> holds = stockService.holds(units.stream().map(StockUnit::getId).toList());
-        refuse(units, u -> holds.containsKey(u.getId()), "codes", "transfer.codes.held");
+        // A pending adjustment or an open stock count holds them: name each unit with its document
+        List<String> held = units.stream().filter(u -> holds.containsKey(u.getId()))
+                .map(u -> u.getCode() + " (" + holds.get(u.getId()) + ")").toList();
+        if (!held.isEmpty()) {
+            throw BusinessException.onField("codes", "transfer.codes.held", String.join(", ", held));
+        }
         checkRack(units, toRack, byId);
 
         LocalDateTime now = LocalDateTime.now(clock);

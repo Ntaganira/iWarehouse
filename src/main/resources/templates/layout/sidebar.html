@@ -73,6 +73,9 @@
         <a sec:authorize="hasAuthority('PAGE_STOCK_ADJUSTMENTS')" th:classappend="${#strings.startsWith(requestURI, '/stock-adjustments')} ? 'active' : ''" href="/stock-adjustments">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg></span> <span th:text="#{nav.stockAdjustments}">Stock Adjustments</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_STOCK_COUNTS')" th:classappend="${#strings.startsWith(requestURI, '/stock-counts')} ? 'active' : ''" href="/stock-counts">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1"></rect><polyline points="9 14 11 16 15 12"></polyline></svg></span> <span th:text="#{nav.stockCounts}">Stock Counts</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_PRODUCTS')" th:classappend="${#strings.startsWith(requestURI, '/products')} ? 'active' : ''" href="/products">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span> <span th:text="#{nav.products}">Glass Products</span>
         </a>

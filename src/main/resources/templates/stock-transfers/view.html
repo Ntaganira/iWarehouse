@@ -8,7 +8,7 @@
         <div>
             <h1 class="mono" th:text="${transfer.number}">TRF-WH-2026-000001</h1>
             <div class="subtitle"
-                 th:text="#{transfer.subtitleOne(${transfer.lines.size()}, ${transfer.toLocation.code}, ${#temporals.format(transfer.postedAt, 'yyyy-MM-dd HH:mm')}, ${transfer.postedBy})}">3 units to WH-A-R02 on 2026-10-08 16:20 by admin</div>
+                 th:text="#{transfer.subtitleOne(${transfer.lines.size()}, ${transfer.toLocation.code}, ${#temporals.format(transfer.postedAt, 'dd/MM/yyyy HH:mm')}, ${transfer.postedBy})}">3 units to WH-A-R02 on 2026-10-08 16:20 by admin</div>
         </div>
         <div class="btn-group">
             <a href="/stock-transfers" class="btn btn-outline" th:text="#{common.back}">Back</a>

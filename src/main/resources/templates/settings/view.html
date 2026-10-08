@@ -282,7 +282,7 @@
                                 <td th:text="#{${'numbering.reset.' + s.resetPolicy}}">Every year</td>
                                 <td><span class="number-preview" th:text="${previews.get(s.id)}">INV-WH-2026-000001</span></td>
                                 <td>
-                                    <span th:if="${s.lastIssuedAt != null}" th:text="${#temporals.format(s.lastIssuedAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 10:12</span>
+                                    <span th:if="${s.lastIssuedAt != null}" th:text="${#temporals.format(s.lastIssuedAt, 'dd/MM/yyyy HH:mm')}">07/10/2026 10:12</span>
                                     <span class="text-muted" th:if="${s.lastIssuedAt == null}" th:text="#{numbering.notUsed}">Not used yet</span>
                                 </td>
                                 <td sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">

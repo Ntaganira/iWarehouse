@@ -77,7 +77,7 @@ class ShipmentServiceTest {
         when(rateService.rateFor(eq("RWF"), any())).thenAnswer(a -> new AppliedRate("RWF", BigDecimal.ONE, a.getArgument(1), null));
 
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
-        StockService stockService = new StockService(unitRepo, mock(StockMovementRepository.class), costEntryRepo, mock(StockAdjustmentLineRepository.class),
+        StockService stockService = new StockService(unitRepo, mock(StockMovementRepository.class), costEntryRepo, mock(StockAdjustmentLineRepository.class), mock(StockCountRepository.class),
                 mock(LocationRepository.class), mock(DocumentNumberService.class), clock);
         service = new ShipmentService(repo, linkRepo, mock(ShipmentCostRepository.class), allocationRepo, receiptRepo,
                 crateRepo, productRepo, supplierRepo, currencyRepo, stockService, rateService,

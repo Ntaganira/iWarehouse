@@ -11,7 +11,7 @@
         <div>
             <h1 class="mono" th:text="${adjustment.number}">ADJ-WH-2026-000001</h1>
             <div class="subtitle">
-                <span th:text="#{adjustment.askedBy(${adjustment.requestedBy}, ${#temporals.format(adjustment.createdAt, 'yyyy-MM-dd HH:mm')})}">asked by supervisor1 on 2026-10-08 16:20</span>
+                <span th:text="#{adjustment.askedBy(${adjustment.requestedBy}, ${#temporals.format(adjustment.createdAt, 'dd/MM/yyyy HH:mm')})}">asked by supervisor1 on 2026-10-08 16:20</span>
                 &middot; <th:block th:replace="~{stock-adjustments/list :: adjustmentStatus(${adjustment.status})}"></th:block>
             </div>
         </div>
@@ -40,7 +40,7 @@
         <span th:text="${adjustment.decisionNote}">Unit is on rack R02</span>
     </div>
     <div class="doc-note" th:if="${s == 'POSTED'}">
-        <strong th:text="#{adjustment.postedOn(${#temporals.format(adjustment.postedAt, 'yyyy-MM-dd HH:mm')})}">Posted on 2026-10-08 16:21</strong>
+        <strong th:text="#{adjustment.postedOn(${#temporals.format(adjustment.postedAt, 'dd/MM/yyyy HH:mm')})}">Posted on 2026-10-08 16:21</strong>
         <span th:if="${adjustment.decidedBy != null}" th:text="#{adjustment.approvedBy(${adjustment.decidedBy})}">approved by owner</span>
         <span th:if="${adjustment.decisionNote != null}" th:text="${'· ' + adjustment.decisionNote}">· ok</span>
     </div>

@@ -1,5 +1,6 @@
 /*
- * iWarehouse - stock operations forms (INV-07).
+ * iWarehouse - stock operations forms (INV-07, INV-08).
+ * Stock count: Enter in the scan field scans (scanners send Enter); pasted lists keep their lines.
  * Transfer: counts the label codes scanned or typed (one per line; spaces and commas also separate them).
  * Adjustment: add and remove change rows (tbody.line-body[data-prefix=lines]) keeping their numbers
  * continuous, and show only the fields a row's kind needs (cells carry data-kinds="WRITE_OFF RESIZE"...);
@@ -21,6 +22,18 @@
         codes.addEventListener('input', recount);
         recount();
     }
+
+    // ---------------------------------------------------------------- stock count (INV-08)
+    // The scan field is a one-row textarea: Enter (what a scanner sends after a label) scans at once,
+    // while a pasted list keeps its line breaks (an input would run the codes together).
+    document.querySelectorAll('textarea[data-enter-submits]').forEach(function (area) {
+        area.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                e.preventDefault();
+                if (area.value.trim()) area.form.requestSubmit();
+            }
+        });
+    });
 
     // ---------------------------------------------------------------- adjustment
     const form = document.querySelector('form.adjustment-form');

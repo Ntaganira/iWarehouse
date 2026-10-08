@@ -53,7 +53,7 @@
             <div class="kpi-body">
                 <div class="kpi-label" th:text="#{receipt.crates}">Crates</div>
                 <div class="kpi-value" th:text="${#lists.size(receipt.crates)}">2</div>
-                <div class="kpi-trend flat"><span class="vs" th:text="${#temporals.format(receipt.receivedDate, 'yyyy-MM-dd')}">2026-10-08</span></div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${#temporals.format(receipt.receivedDate, 'dd/MM/yyyy')}">08/10/2026</span></div>
             </div>
         </div>
         <div class="kpi-card">
@@ -81,7 +81,7 @@
                          th:text="${rateText}">1,450.25</div>
                     <div class="kpi-trend flat">
                         <span class="vs" th:if="${receipt.rateSource != null}"
-                              th:text="${#messages.msg('rate.source.' + receipt.rateSource) + ' · ' + #temporals.format(receipt.rateDate, 'yyyy-MM-dd')}">BNR · 2026-10-07</span>
+                              th:text="${#messages.msg('rate.source.' + receipt.rateSource) + ' · ' + #temporals.format(receipt.rateDate, 'dd/MM/yyyy')}">BNR · 2026-10-07</span>
                         <span class="vs" th:if="${receipt.rateSource == null}" th:text="#{receipt.baseCurrency}">Order in RWF</span>
                     </div>
                 </th:block>
@@ -111,7 +111,7 @@
                 <div class="detail-list">
                     <div class="item">
                         <label th:text="#{receipt.date}">Received on</label>
-                        <div class="value" th:text="${#temporals.format(receipt.receivedDate, 'yyyy-MM-dd')}">2026-10-08</div>
+                        <div class="value" th:text="${#temporals.format(receipt.receivedDate, 'dd/MM/yyyy')}">08/10/2026</div>
                     </div>
                     <div class="item">
                         <label th:text="#{receipt.deliveryRef}">Delivery reference</label>
@@ -119,7 +119,7 @@
                     </div>
                     <div class="item">
                         <label th:text="#{receipt.postedBy}">Posted</label>
-                        <div class="value" th:text="${receipt.postedAt != null} ? ${#temporals.format(receipt.postedAt, 'yyyy-MM-dd HH:mm') + ' · ' + receipt.postedBy} : '—'">—</div>
+                        <div class="value" th:text="${receipt.postedAt != null} ? ${#temporals.format(receipt.postedAt, 'dd/MM/yyyy HH:mm') + ' · ' + receipt.postedBy} : '—'">—</div>
                     </div>
                     <div class="item">
                         <label th:text="#{product.notes}">Notes</label>

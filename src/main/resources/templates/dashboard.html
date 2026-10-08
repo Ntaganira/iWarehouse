@@ -166,7 +166,7 @@
                     </thead>
                     <tbody>
                         <tr th:each="log : ${dash.recentActivity()}">
-                            <td class="cell-muted" th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 10:24</td>
+                            <td class="cell-muted" th:text="${#temporals.format(log.createdAt, 'dd/MM/yyyy HH:mm')}">07/10/2026 10:24</td>
                             <td th:if="${allActivity}" th:text="${log.username}">admin</td>
                             <td>
                                 <span class="action-badge"
@@ -220,7 +220,7 @@
                                       th:text="#{${'audit.op.' + c.operation.name()}}">Updated</span>
                             </td>
                             <td th:text="${c.username ?: #messages.msg('audit.system')}">admin</td>
-                            <td class="cell-muted" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm')}">2026-10-07 11:42</td>
+                            <td class="cell-muted" th:text="${#temporals.format(c.serverTime, 'dd/MM/yyyy HH:mm')}">07/10/2026 11:42</td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(dash.recentChanges())}">
                             <td colspan="4"><div class="dash-empty" th:text="#{dash.changes.empty}">No record changes yet</div></td>

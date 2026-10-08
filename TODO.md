@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V14.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V15.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-08)
@@ -22,7 +22,8 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Landed cost and claims (AT-01 passes) | Done | V11, `/shipments` |
 | Cutting jobs, off-cuts, cullet, yield (AT-02 passes) | Done | V12, `/cutting-jobs` |
 | Inventory operations: reservations, transfers, adjustments, valuation, reorder | Done (M1, part 1) | V13, `/stock-transfers`, `/stock-adjustments`, `/stock/summary` |
-| Stock counts, put-away, location labels | **Next** (M1, part 2) | — |
+| Stock counts by scanning | Done (M1, part 2) | V14, `/stock-counts` |
+| Put-away decision, location labels | **Next** (M1, last items) | — |
 | Accounting: chart of accounts, posting engine, journals | Not started (M2) | — |
 | Counter sales: POS, quotations, invoices, payments, returns, VAT | Not started (M3) | — |
 | EBM / VSDC fiscal signing | Not started (M4) | — |
@@ -33,7 +34,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 266, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
+Unit tests: 285, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -56,7 +57,7 @@ Unit tests: 266, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; 
 
 ---
 
-## M1 — Inventory operations (part 1 done 2026-10-08; counts next)
+## M1 — Inventory operations (counts done 2026-10-09; location labels and the put-away decision next)
 
 Goal: the warehouse can move, correct, reserve, count and value every piece. INV-05, INV-07..INV-10, MD-03.
 
@@ -65,7 +66,7 @@ Goal: the warehouse can move, correct, reserve, count and value every piece. INV
 - [x] Adjustments with reason and approval (INV-07) (M) — 2026-10-08: `/stock-adjustments` (V13). Write off (damaged: BROKEN, missing: new status LOST), found again (LOST back to stock at its cost), new unit (a piece nobody recorded, at MAC), correct size (replaced by a new unit at the same cost per m², reservation kept). Up to `ADJUSTMENT_APPROVAL_LIMIT` it posts when saved; above, another person with PERM_APPROVE_ADJUSTMENT (supervisor, owner) approves or rejects with a reason, the requester can withdraw; never self-approved. MAC via `Costing.afterStockChange`. Shortcuts on the unit page: Move, Write off, Correct size, Found again. Also the way to correct a posted receipt (wrong count: write off missing or add new units; wrong size: correct size)
 - [x] Stock valuation and summaries (INV-09) (M) — 2026-10-08: `/stock/summary` by glass, place or state: pieces, m², value = m² x MAC per glass (the value the inventory account will carry); CSV download (opens in Excel). Off-cut age and real Excel/PDF exports go with the reports (M6)
 - [x] Reorder alerts (INV-10) (S) — 2026-10-08: glass whose AVAILABLE m² is below its reorder level, on the summary page. A dashboard card comes with the owner dashboard (M6)
-- [ ] Stock counts by scanning (INV-08) (S): count a location or a product, scan units, list missing, extra and misplaced units, post the result as adjustments (with approval)
+- [x] Stock counts by scanning (INV-08) (S) — 2026-10-09: `/stock-counts` (V14). Count a rack or slot (cycle count), a zone or the site (full count), every glass or one; while open, the units on its places are held (`StockService.holds`: nothing moves, cuts, reserves or adjusts them) and two open counts never cover the same place. Scan labels where they are found (a scanner sends Enter; a pasted list scans together); live progress: scanned, not scanned yet, to check. Closing records one line per unit: matched, misplaced (moved where found, COUNT movement, racks left over their limit reported), missing (written off as LOST) and lost units found, both on one adjustment approved as any other; units recorded as being cut, on a vehicle, gone, or unknown labels are listed to check. Cancel with a reason
 - [x] A clear message when two people change the same record at once (NFR-06) (S) — 2026-10-08: `StaleDataAdvice` sends the user back to the page they came from with "changed by someone else, reload"
 - [ ] Decide whether a put-away scan is needed (units arrive RECEIVED, then AVAILABLE once racked) (S)
 - [ ] Location labels (QR of the location code) for racks and slots, and a location's code fixed once its label is printed (MD-02) (S)
@@ -185,7 +186,7 @@ Goal: every unit and every franc that left in the morning is accounted for at ni
 - [ ] Daily full backup and WAL archiving, RPO 15 min, RTO 4 h, restore tested (NFR-08) (M)
 - [ ] Structured logs, health checks, alerts on errors, EBM backlog and failed syncs (NFR-17) (S)
 - [ ] Performance: stock search under 1 s with 100,000 units, 50 back-office users and 30 vehicles (NFR-01, NFR-04) (M)
-- [ ] Dates shown DD/MM/YYYY, RWF without decimals everywhere (NFR-15) (S); Kinyarwanda translations (NFR-15) (S)
+- [ ] RWF without decimals everywhere (NFR-15) (S); Kinyarwanda translations (NFR-15) (S). Dates shown DD/MM/YYYY: done 2026-10-08
 - [ ] Opening data: products, racks, customers, suppliers, prices, opening stock (migrated or counted fresh, with labels) and opening balances (M)
 - [ ] Test the labels on the real printer: the HTML page at 100% (50 x 30 mm) and the ZPL file on the Zebra (INV-03) (M)
 - [ ] OWASP Top 10 review and a penetration test (NFR-11) (S)
@@ -244,6 +245,7 @@ Answers change what gets built; record each answer next to the question.
 - Cutting jobs CUT-WH-2026-000001 (AT-02 on U-WH-000036 for Umucyo Builders: 3 reserved pieces on WH-A-R04, off-cut U-WH-000059), -000002 (cut that off-cut, with breakage), -000003..5 (cancelled)
 - 60 stock units; MAC on CLR-6, CLR-8, MIR-4
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
+- Stock counts CNT-WH-2026-000001..6: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled
 - Automated-check user qa-admin (ADMIN role, created 2026-10-08 so scripted browser checks never sign the real admin out: one session per user) — disable before go-live
 - Responsive checks: orders PO-WH-2026-000010 and -000011 and cutting jobs CUT-WH-2026-000006 and -000007, all cancelled ("Responsive check"); U-WH-000055 taken and released twice
 - Disabled test users (cashier*, auditor*, super4032); test owner user owner38648 (password kept out of the repo) — disable before go-live
@@ -300,7 +302,7 @@ Answers change what gets built; record each answer next to the question.
 - [x] Every screen works from 360 px phones to desktops — all 86 reachable pages checked at 360, 390, 768, 1024 and 1280 px, plus the 7 that need a draft (order and job edit, receipt, shipment edit, taking a sheet, recording a cut) at 360 to 1024 px, with their dialogs. Phones and tablets (768 px and less) open the menu as a drawer from a button in the header (it was hidden there before, so most screens could not be reached). On phones (640 px and less) table rows become cards with each value labelled by its column, line forms included; list filters wrap two per row. Line forms keep usable field widths on tablets and scroll in their box. Known limit: a long rack choice ("WH-A-R04 · Rack R04 · 21/30 pcs · 1,234/3,000 kg") is cut short in the closed select on a phone; the phone picker shows it in full
 
 ### Design consistency (2026-10-08)
-- [x] One look per component on every screen — measured on all 81 screens (computed styles per component, the odd ones out listed), then fixed at the source: buttons and fields now use the page font (form controls were in Arial on 42 screens) and one height (42 px, small 30, filters 38, line forms 38); one monospace font; links to other records styled (some were browser-blue); one note style (doc notes and form notes matched, red when cancelled); header actions one gap, Back first, no squeezed button column; counts as plain numbers; one date format (yyyy-MM-dd [HH:mm], seconds in logs only, was 7 formats); numbers through @num everywhere (dashboard used the locale's grouping); red tint as a theme token. Rules in CLAUDE.md "UI"
+- [x] One look per component on every screen — measured on all 81 screens (computed styles per component, the odd ones out listed), then fixed at the source: buttons and fields now use the page font (form controls were in Arial on 42 screens) and one height (42 px, small 30, filters 38, line forms 38); one monospace font; links to other records styled (some were browser-blue); one note style (doc notes and form notes matched, red when cancelled); header actions one gap, Back first, no squeezed button column; counts as plain numbers; one date format (dd/MM/yyyy [HH:mm] as NFR-15 asks, seconds in logs only, was 7 formats); numbers through @num everywhere (dashboard used the locale's grouping); red tint as a theme token. Rules in CLAUDE.md "UI"
 
 ### Page numbers on every table (2026-10-08)
 - [x] Every table that lists records shows its page numbers — the pager used to hide itself while a table fitted on one page, so most tables showed none; it now shows as soon as a table has rows ("1 - 3 / 3"). One page size, 20 rows (lists used 10, 15, 20 or 25; now `Paging.SIZE`). Lists that were never paged now are: a unit's movements and cost entries, the stock units of a receipt, a role's users, a location's sub-locations, a price list's glass prices, processing and customers, the price lists and services, tax categories, document numbering, currencies, the stock summary groups and reorder list, the three yield tables, the records changed by the same action, and every History tab (they showed only the first 20 changes). Detail pages open on the tab in the link. Shown whole on purpose: document lines with totals, forms, a cut's balance, a change's fields, dashboard previews, the location tree

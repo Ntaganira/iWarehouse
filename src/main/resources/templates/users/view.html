@@ -63,15 +63,15 @@
                     </div>
                     <div class="item">
                         <label th:text="#{user.createdAt}">Created</label>
-                        <div class="value" th:text="${#temporals.format(user.createdAt, 'dd/MM/yyyy HH:mm')}">07/10/2026 12:00</div>
+                        <div class="value" th:text="${#temporals.format(user.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 12:00</div>
                     </div>
                     <div class="item">
                         <label th:text="#{user.updatedAt}">Updated</label>
-                        <div class="value" th:text="${user.updatedAt != null} ? ${#temporals.format(user.updatedAt, 'dd/MM/yyyy HH:mm')} : '—'">—</div>
+                        <div class="value" th:text="${user.updatedAt != null} ? ${#temporals.format(user.updatedAt, 'yyyy-MM-dd HH:mm')} : '—'">—</div>
                     </div>
                     <div class="item" th:if="${user.lockedUntil != null and user.lockedUntil.isAfter(#temporals.createNow())}">
                         <label th:text="#{user.lockedUntil}">Locked until</label>
-                        <div class="value"><span class="badge badge-danger" th:text="${#temporals.format(user.lockedUntil, 'dd/MM/yyyy HH:mm')}">—</span></div>
+                        <div class="value"><span class="badge badge-danger" th:text="${#temporals.format(user.lockedUntil, 'yyyy-MM-dd HH:mm')}">—</span></div>
                     </div>
                 </div>
             </div>

@@ -42,7 +42,7 @@ Unit tests: 260, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; 
 3. Controllers with `@PreAuthorize` on every handler; every action logged with `activityLogService.record(...)`, failures too; reasons where the SRS asks for one.
 4. Screens: list, form, view with a History tab; buttons behind `sec:authorize`; EN and FR messages, ASCII properties.
 5. Business rules in plain classes with unit tests, the SRS acceptance test included when there is one.
-6. Checked in a browser: light and dark theme, phone width, French, no console errors.
+6. Checked in a browser: same components and sizes as the finished screens of its kind (CLAUDE.md "One look per component"), light and dark theme, French, no console errors, and every screen at 360, 390 (phone), 768 (tablet) and 1024 px (small laptop): no sideways page scroll, nothing cut off or squeezed, tables readable as cards on phones, dialogs fit.
 7. `TODO.md` and `CLAUDE.md` updated; test data left in the dev database listed below.
 
 ## Definition of "fully working" (go-live checklist)
@@ -244,6 +244,8 @@ Answers change what gets built; record each answer next to the question.
 - Cutting jobs CUT-WH-2026-000001 (AT-02 on U-WH-000036 for Umucyo Builders: 3 reserved pieces on WH-A-R04, off-cut U-WH-000059), -000002 (cut that off-cut, with breakage), -000003..5 (cancelled)
 - 60 stock units; MAC on CLR-6, CLR-8, MIR-4
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
+- Automated-check user qa-admin (ADMIN role, created 2026-10-08 so scripted browser checks never sign the real admin out: one session per user) — disable before go-live
+- Responsive checks: orders PO-WH-2026-000010 and -000011 and cutting jobs CUT-WH-2026-000006 and -000007, all cancelled ("Responsive check"); U-WH-000055 taken and released twice
 - Disabled test users (cashier*, auditor*, super4032); test owner user owner38648 (password kept out of the repo) — disable before go-live
 - Test prices on the RETAIL and CONTRACTOR lists
 
@@ -293,3 +295,9 @@ Answers change what gets built; record each answer next to the question.
 - [x] Recording the cut: source consumed, cut pieces and off-cuts as new units, cullet (PRD-03..PRD-05) — leftovers from the threshold (Settings) become off-cuts on an off-cut rack, smaller ones and the trim are cullet (m² and kg); pieces for a customer RESERVED, for stock AVAILABLE; rack limits checked; labels from the job page; `cutting_job_outputs` append-only
 - [x] Area conservation within 1% and cost flow by area (PRD-06, PRD-07) — the sheet cost is shared by area to the franc cent (`CUTTING` cost entries), cullet and breakage expensed, MAC via `Costing.afterCut`; live area check on the form. AT-02 checked in `CuttingTest`, `CuttingJobServiceTest` and in the browser
 - [x] Breakage with reason; yield report (PRD-08, PRD-09, RPT-03) — breakage while cutting with a reason code and note; "Cut the rest" makes a linked job; `/cutting-jobs/yield` by operator and glass for a period, breakage by reason
+
+### Responsive layout (2026-10-08)
+- [x] Every screen works from 360 px phones to desktops — all 86 reachable pages checked at 360, 390, 768, 1024 and 1280 px, plus the 7 that need a draft (order and job edit, receipt, shipment edit, taking a sheet, recording a cut) at 360 to 1024 px, with their dialogs. Phones and tablets (768 px and less) open the menu as a drawer from a button in the header (it was hidden there before, so most screens could not be reached). On phones (640 px and less) table rows become cards with each value labelled by its column, line forms included; list filters wrap two per row. Line forms keep usable field widths on tablets and scroll in their box. Known limit: a long rack choice ("WH-A-R04 · Rack R04 · 21/30 pcs · 1,234/3,000 kg") is cut short in the closed select on a phone; the phone picker shows it in full
+
+### Design consistency (2026-10-08)
+- [x] One look per component on every screen — measured on all 81 screens (computed styles per component, the odd ones out listed), then fixed at the source: buttons and fields now use the page font (form controls were in Arial on 42 screens) and one height (42 px, small 30, filters 38, line forms 38); one monospace font; links to other records styled (some were browser-blue); one note style (doc notes and form notes matched, red when cancelled); header actions one gap, Back first, no squeezed button column; counts as plain numbers; one date format (yyyy-MM-dd [HH:mm], seconds in logs only, was 7 formats); numbers through @num everywhere (dashboard used the locale's grouping); red tint as a theme token. Rules in CLAUDE.md "UI"

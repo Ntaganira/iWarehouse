@@ -23,7 +23,7 @@
                 <span class="number-preview large is-text" id="product-preview" th:attr="data-empty=#{product.previewEmpty}"><th:block
                         th:if="${productEntity != null}"><th:block th:replace="~{products/list :: productName(${productEntity})}"></th:block></th:block></span>
                 <span class="rate-previous" id="product-weight"
-                      th:text="${weightPerM2 != null} ? ${#numbers.formatDecimal(weightPerM2, 1, 'COMMA', 2, 'POINT') + ' kg/m²'} : ''"></span>
+                      th:text="${weightPerM2 != null} ? ${@num.kg(weightPerM2) + ' kg/m²'} : ''"></span>
                 <span class="rate-previous" id="product-code" th:if="${productDto.id == null}" th:attr="data-label=#{product.suggestedCode}"></span>
             </div>
 

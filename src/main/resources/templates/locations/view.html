@@ -97,11 +97,11 @@
                     </th:block>
                     <div class="item">
                         <label th:text="#{user.createdAt}">Created</label>
-                        <div class="value" th:text="${#temporals.format(location.createdAt, 'dd/MM/yyyy HH:mm') + (location.createdBy != null ? ' · ' + location.createdBy : '')}">07/10/2026 12:00 · admin</div>
+                        <div class="value" th:text="${#temporals.format(location.createdAt, 'yyyy-MM-dd HH:mm') + (location.createdBy != null ? ' · ' + location.createdBy : '')}">2026-10-07 12:00 · admin</div>
                     </div>
                     <div class="item">
                         <label th:text="#{user.updatedAt}">Updated</label>
-                        <div class="value" th:text="${location.version > 0} ? ${#temporals.format(location.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + location.updatedBy} : '—'">—</div>
+                        <div class="value" th:text="${location.version > 0} ? ${#temporals.format(location.updatedAt, 'yyyy-MM-dd HH:mm') + ' · ' + location.updatedBy} : '—'">—</div>
                     </div>
                 </div>
                 <p class="form-note" th:if="${location.rack}" th:text="#{location.limitsNote}">Receiving, transfers and trip loading will check these limits.</p>

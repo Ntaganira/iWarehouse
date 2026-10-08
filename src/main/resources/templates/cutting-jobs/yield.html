@@ -13,24 +13,29 @@
     </div>
 
     <div class="section">
+        <!--/* Period, then glass and operator with the button: the bar wraps between the two groups */-->
         <form th:action="@{/cutting-jobs/yield}" method="get" class="table-toolbar report-filters">
-            <label class="filter-field">
-                <span th:text="#{cutting.yield.from}">From</span>
-                <input type="date" name="from" class="toolbar-filter" th:value="${#temporals.format(from, 'yyyy-MM-dd')}">
-            </label>
-            <label class="filter-field">
-                <span th:text="#{cutting.yield.to}">To</span>
-                <input type="date" name="to" class="toolbar-filter" th:value="${#temporals.format(to, 'yyyy-MM-dd')}">
-            </label>
-            <select name="product" class="toolbar-filter" th:aria-label="#{product.name}">
-                <option value="" th:text="#{cutting.yield.allProducts}">All glass</option>
-                <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}" th:text="${p.code}">CLR-6</option>
-            </select>
-            <select name="operator" class="toolbar-filter" th:aria-label="#{cutting.operator}">
-                <option value="" th:text="#{cutting.yield.allOperators}">All operators</option>
-                <option th:each="o : ${operators}" th:value="${o}" th:selected="${o == operator}" th:text="${o}">operator1</option>
-            </select>
-            <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${#temporals.format(from, 'yyyy-MM-dd')}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${#temporals.format(to, 'yyyy-MM-dd')}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="product" class="toolbar-filter" th:aria-label="#{product.name}">
+                    <option value="" th:text="#{cutting.yield.allProducts}">All glass</option>
+                    <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}" th:text="${p.code}">CLR-6</option>
+                </select>
+                <select name="operator" class="toolbar-filter" th:aria-label="#{cutting.operator}">
+                    <option value="" th:text="#{cutting.yield.allOperators}">All operators</option>
+                    <option th:each="o : ${operators}" th:value="${o}" th:selected="${o == operator}" th:text="${o}">operator1</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
         </form>
     </div>
 

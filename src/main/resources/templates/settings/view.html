@@ -138,7 +138,7 @@
                                     <span th:text="#{settings.adjustmentApprovalLimit}">Stock adjustment</span>
                                     <span class="setting-hint" th:text="#{settings.adjustmentApprovalLimitHint}">Value above which an adjustment needs approval (INV-07)</span>
                                 </dt>
-                                <dd><span th:text="${#numbers.formatInteger(settings.adjustmentApprovalLimit, 1, 'COMMA')}">0</span> <span class="unit">RWF</span></dd>
+                                <dd><span th:text="${@num.money(settings.adjustmentApprovalLimit)}">0</span> <span class="unit">RWF</span></dd>
                             </div>
                             <div class="setting-row">
                                 <dt>

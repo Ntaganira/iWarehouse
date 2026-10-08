@@ -140,13 +140,30 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
 ### UI (iVura page anatomy, SRS 3.3)
 
 - Every page wraps itself in the shell: `th:replace="~{layout/sidebar :: html(#{title.key}, ~{::content})}"`.
+- **Every screen works from a 360 px phone to a desktop:** the warehouse floor uses phones and tablets.
+  - At 768 px and less the sidebar is a drawer opened from the header's menu button (`iwarehouse.js`).
+  - At 640 px and less table rows become cards. `iwarehouse.js` labels each cell with its column header, so every table needs a `<thead>`. An actions column takes `<th><span class="sr-only">…</span></th>` (no label on the card). Opt out with `data-cards="off"`.
+  - Line forms keep usable field widths on tablets and scroll in their box.
+  - Never let the page scroll sideways. Before calling a screen done, check it at 360, 390, 768 and 1024 px with its dialogs open.
 - List page: `page-header` → `section` with `section-header` + `table-toolbar` → `table-container` → `layout/pagination :: pager(page, baseUrl, query)`. Pass `query` without a leading `?`.
 - Forms in `form.html`, details in `view.html`. Use Choices.js for searchable selects: `data-multiselect` for multi-selects, `data-searchable` for long single selects (countries). Show validation errors with `layout/errors`. A `data-multiselect` select can carry `data-placeholder`, `data-no-choices` and `data-no-results` texts; never pass `addItems: false` to Choices for a select (it disables the select).
 - In templates, look a map up by a variable with `map.get(key)`, never `map[key]`: SpEL reads a bare name in brackets as the literal key "key" and returns nothing.
 - **Forms with editable rows** (document lines) use `js/line-form.js`: a `<template class="line-template">` row with `{i}` in the field names, `tbody.line-body`, a `.line-add` button. The controller drops blank rows, then validates with `SpringValidatorAdapter` (no `@Valid` on the handler), so a spare empty row is not an error. Business errors on a row use `BusinessException.onField("lines[2].quantity", ...)`. A form with several row tables (recording a cut: leftovers, breakage) uses `js/cutting-form.js`: each `tbody.line-body` carries `data-prefix`, and its `.line-add` button and `template.line-template` a matching `data-for`.
 - **Rows written in one transaction share a timestamp**, so `ORDER BY created_at, id` (a random UUID) does not keep their order. Sort them by a business key in the service, as `CuttingJobService.outcome` does.
 - **Detail pages of documents with child rows** show their History with `dataChangeService.historyWithChildren(type, id, childType, parentField, ...)` and `audit/history :: timeline-records`, so removed rows still appear. A cancel or close with a reason uses `fragments/reason-modal :: reasonModal(...)` opened by `data-modal-open`.
-- No inline colours: use the CSS variables in `iwarehouse.css`, and keep both light and dark themes working. Add new styles at the end of `iwarehouse.css` under "iWarehouse additions".
+- No inline colours: use the CSS variables in `iwarehouse.css` (tints: `--tint-blue/green/purple/orange/neutral/red`; monospace: `--font-mono`), and keep both light and dark themes working. Add new styles at the end of `iwarehouse.css` under "iWarehouse additions".
+- **One look per component on every screen.** Reuse the existing classes; never restyle a component for one page.
+  - **Sizes:** fields and buttons are 42 px (`.btn-sm` 30 px). List filters, the fit search and report filters are 38 px, buttons included. Fields in line forms are 38 px.
+  - **Page header:** the title on the left; actions in a `.btn-group` on the right, with Back first (`#{common.back}`), then the actions, then the primary one.
+  - **Links:** the record's own link in a list is `a.row-link`. A link to another record is a plain `<a>` (or `a.mono` for a code), which the stylesheet colours. Don't give it a class of its own.
+  - **Notes:** `.form-note` for help under a form or list. `.doc-note` (`.is-danger` when cancelled or rejected) for a document's status. `.hint` under a field.
+  - **Counts and numbers:** a count in a table is a plain number in `td.num`; badges are for states. Numbers go through `@num` (`money`, `amount`, `price`, `m2`, `kg`, `rate`), never `#numbers` with a locale grouping.
+  - **Dates:** `yyyy-MM-dd`, or `yyyy-MM-dd HH:mm` with a time. Seconds only in logs (activity, audit, movements).
+  - **Filters:**
+    - A list's filters sit in its table section header (`.table-toolbar`), and selects submit on change.
+    - A report's filters are a full-width `.table-toolbar.report-filters` card above the figures, left-aligned, in two `.filter-group`s: the period, then the other filters with the apply button (`btn-outline btn-sm`). The bar then wraps between the groups and never leaves the button alone. See `cutting-jobs/yield.html`.
+  - **Forms:** a single-card form uses `.form-container` (800 px) with `.form-actions` inside it. A document form with line tables uses full-width sections and a `.form-actions.sticky-actions` bar.
+  - **Check:** compare a new screen with a finished one of the same kind (list, detail, form) in light and dark themes before calling it done.
 - No CDN links. Vendor any new library under `static/vendor/`, because the warehouse LAN may have no internet.
 
 ### i18n

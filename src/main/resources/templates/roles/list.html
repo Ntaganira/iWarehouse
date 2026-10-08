@@ -38,9 +38,9 @@
                 <thead>
                     <tr>
                         <th th:text="#{role.table.role}">Role</th>
-                        <th th:text="#{role.table.users}">Users</th>
-                        <th th:text="#{role.table.pages}">Pages</th>
-                        <th th:text="#{role.table.permissions}">Permissions</th>
+                        <th class="num" th:text="#{role.table.users}">Users</th>
+                        <th class="num" th:text="#{role.table.pages}">Pages</th>
+                        <th class="num" th:text="#{role.table.permissions}">Permissions</th>
                         <th th:text="#{common.status}">Status</th>
                         <th th:text="#{common.actions}">Actions</th>
                     </tr>
@@ -61,9 +61,9 @@
                                 </div>
                             </div>
                         </td>
-                        <td th:text="${userCounts.containsKey(r.id)} ? ${userCounts.get(r.id)} : 0">0</td>
-                        <td><span class="badge badge-info" th:text="${#sets.size(r.pages)}">0</span></td>
-                        <td><span class="badge badge-secondary" th:text="${#sets.size(r.permissions)}">0</span></td>
+                        <td class="num" th:text="${userCounts.containsKey(r.id)} ? ${userCounts.get(r.id)} : 0">0</td>
+                        <td class="num" th:text="${#sets.size(r.pages)}">0</td>
+                        <td class="num" th:text="${#sets.size(r.permissions)}">0</td>
                         <td>
                             <span class="badge badge-success" th:if="${r.enabled}" th:text="#{common.active}">Active</span>
                             <span class="badge badge-secondary" th:unless="${r.enabled}" th:text="#{common.inactive}">Inactive</span>

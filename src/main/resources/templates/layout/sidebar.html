@@ -11,7 +11,8 @@
             if (t !== 'dark') t = 'light';
             document.documentElement.setAttribute('data-theme', t);
             var s = localStorage.getItem('iwarehouse-sidebar');
-            if (s === 'collapsed') document.documentElement.classList.add('sidebar-collapsed');
+            // The narrow rail is a desktop choice; phones and tablets get the drawer instead
+            if (s === 'collapsed' && window.matchMedia('(min-width: 769px)').matches) document.documentElement.classList.add('sidebar-collapsed');
         })();
     </script>
     <link rel="stylesheet" href="/css/iwarehouse.css">
@@ -44,13 +45,16 @@
 <div th:replace="~{fragments/toasts :: toasts}"></div>
 
 <!-- Sidebar -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <div class="logo-icon">iW</div>
         <div class="brand-text">
             <h2><span>i</span>Warehouse</h2>
             <div class="brand-tagline" th:text="#{app.tagline}">Glass Warehouse &amp; POS</div>
         </div>
+        <button type="button" class="nav-close" id="nav-close" th:aria-label="#{nav.closeMenu}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
     </div>
     <nav class="sidebar-menu">
         <div class="menu-label" th:text="#{menu.main}">Main Menu</div>
@@ -163,6 +167,7 @@
         </svg>
     </button>
 </aside>
+<div class="nav-backdrop" id="nav-backdrop" hidden></div>
 
 <!-- Main Content -->
 <div class="main-content">
@@ -210,6 +215,10 @@
     <!-- Header -->
     <header class="header">
         <div class="header-left">
+            <button type="button" class="nav-toggle" id="nav-toggle" aria-controls="sidebar" aria-expanded="false"
+                    th:aria-label="#{nav.openMenu}">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
             <h1 th:text="#{header.title}">iWarehouse</h1>
             <div class="search-box">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

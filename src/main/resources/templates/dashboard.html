@@ -24,7 +24,7 @@
             </div>
             <div class="kpi-body">
                 <div class="kpi-label" th:text="#{dash.kpi.actions}">Actions today</div>
-                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.actions().current(), 1, 'DEFAULT')}">0</div>
+                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.actions().current(), 1, 'COMMA')}">0</div>
                 <th:block th:replace="~{dashboard :: trend(${dash.actions()}, false)}"></th:block>
             </div>
         </div>
@@ -34,7 +34,7 @@
             </div>
             <div class="kpi-body">
                 <div class="kpi-label" th:text="#{dash.kpi.changes}">Record changes today</div>
-                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.changes().current(), 1, 'DEFAULT')}">0</div>
+                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.changes().current(), 1, 'COMMA')}">0</div>
                 <th:block th:replace="~{dashboard :: trend(${dash.changes()}, false)}"></th:block>
             </div>
         </div>
@@ -44,7 +44,7 @@
             </div>
             <div class="kpi-body">
                 <div class="kpi-label" th:text="#{dash.kpi.users}">Active users today</div>
-                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.activeUsers().current(), 1, 'DEFAULT')}">0</div>
+                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.activeUsers().current(), 1, 'COMMA')}">0</div>
                 <th:block th:replace="~{dashboard :: trend(${dash.activeUsers()}, false)}"></th:block>
             </div>
         </div>
@@ -54,7 +54,7 @@
             </div>
             <div class="kpi-body">
                 <div class="kpi-label" th:text="#{dash.kpi.failed}">Failed or denied today</div>
-                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.failed().current(), 1, 'DEFAULT')}">0</div>
+                <div class="kpi-value" th:text="${#numbers.formatInteger(dash.failed().current(), 1, 'COMMA')}">0</div>
                 <th:block th:replace="~{dashboard :: trend(${dash.failed()}, true)}"></th:block>
             </div>
         </div>
@@ -166,7 +166,7 @@
                     </thead>
                     <tbody>
                         <tr th:each="log : ${dash.recentActivity()}">
-                            <td class="cell-muted" th:text="${#temporals.format(log.createdAt, 'dd MMM yyyy HH:mm')}">07 Oct 2026 10:24</td>
+                            <td class="cell-muted" th:text="${#temporals.format(log.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 10:24</td>
                             <td th:if="${allActivity}" th:text="${log.username}">admin</td>
                             <td>
                                 <span class="action-badge"
@@ -220,7 +220,7 @@
                                       th:text="#{${'audit.op.' + c.operation.name()}}">Updated</span>
                             </td>
                             <td th:text="${c.username ?: #messages.msg('audit.system')}">admin</td>
-                            <td class="cell-muted" th:text="${#temporals.format(c.serverTime, 'dd MMM HH:mm')}">07 Oct 11:42</td>
+                            <td class="cell-muted" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm')}">2026-10-07 11:42</td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(dash.recentChanges())}">
                             <td colspan="4"><div class="dash-empty" th:text="#{dash.changes.empty}">No record changes yet</div></td>

@@ -190,7 +190,7 @@
                     </div>
                     <div class="form-container">
                         <div class="form-grid">
-                            <div class="form-group">
+                            <div class="form-group full-width">
                                 <label for="piecesLocationId" th:text="#{cutting.piecesLocation}">Rack for the pieces</label>
                                 <select id="piecesLocationId" th:field="*{piecesLocationId}" th:classappend="${#fields.hasErrors('piecesLocationId')} ? 'is-invalid'">
                                     <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
@@ -199,7 +199,7 @@
                                 </select>
                                 <span class="field-error" th:if="${#fields.hasErrors('piecesLocationId')}" th:errors="*{piecesLocationId}"></span>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group full-width">
                                 <label for="offcutLocationId" th:text="#{cutting.offcutLocation}">Off-cut rack</label>
                                 <select id="offcutLocationId" th:field="*{offcutLocationId}" th:classappend="${#fields.hasErrors('offcutLocationId')} ? 'is-invalid'">
                                     <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>

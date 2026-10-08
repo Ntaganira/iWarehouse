@@ -62,7 +62,7 @@
                     <div class="item">
                         <label th:text="#{product.weightPerM2}">Weight per m²</label>
                         <div class="value">
-                            <span th:text="${#numbers.formatDecimal(weightPerM2, 1, 'COMMA', 2, 'POINT')} + ' kg'">15.00 kg</span>
+                            <span th:text="${@num.kg(weightPerM2)} + ' kg'">15.00 kg</span>
                             <div class="hint" th:text="#{product.weightHint(${density.stripTrailingZeros().toPlainString()})}">Thickness x glass density (2.5 kg per m² per mm, see Settings)</div>
                         </div>
                     </div>
@@ -88,11 +88,11 @@
                     </div>
                     <div class="item">
                         <label th:text="#{user.createdAt}">Created</label>
-                        <div class="value" th:text="${#temporals.format(product.createdAt, 'dd/MM/yyyy HH:mm') + (product.createdBy != null ? ' · ' + product.createdBy : '')}">07/10/2026 12:00 · admin</div>
+                        <div class="value" th:text="${#temporals.format(product.createdAt, 'yyyy-MM-dd HH:mm') + (product.createdBy != null ? ' · ' + product.createdBy : '')}">2026-10-07 12:00 · admin</div>
                     </div>
                     <div class="item">
                         <label th:text="#{user.updatedAt}">Updated</label>
-                        <div class="value" th:text="${product.version > 0} ? ${#temporals.format(product.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + product.updatedBy} : '—'">—</div>
+                        <div class="value" th:text="${product.version > 0} ? ${#temporals.format(product.updatedAt, 'yyyy-MM-dd HH:mm') + ' · ' + product.updatedBy} : '—'">—</div>
                     </div>
                 </div>
             </div>

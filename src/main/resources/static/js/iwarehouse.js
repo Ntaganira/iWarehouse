@@ -273,6 +273,78 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Phones and tablets (768px and less): the sidebar is a drawer opened from the header
+    const narrow = window.matchMedia('(max-width: 768px)');
+    const navToggle = document.getElementById('nav-toggle');
+    const navClose = document.getElementById('nav-close');
+    const navBackdrop = document.getElementById('nav-backdrop');
+    const mainContent = document.querySelector('.main-content');
+    const setNav = function (open) {
+        const root = document.documentElement;
+        if (root.classList.contains('nav-open') === open) return;
+        root.classList.toggle('nav-open', open);
+        if (navToggle) navToggle.setAttribute('aria-expanded', String(open));
+        if (navBackdrop) navBackdrop.hidden = !open;
+        if (mainContent) mainContent.inert = open;
+        if (open && navClose) navClose.focus();
+        else if (!open && navToggle && narrow.matches) navToggle.focus();
+    };
+    if (navToggle) navToggle.addEventListener('click', function () { setNav(true); });
+    if (navClose) navClose.addEventListener('click', function () { setNav(false); });
+    if (navBackdrop) navBackdrop.addEventListener('click', function () { setNav(false); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && document.documentElement.classList.contains('nav-open')) setNav(false);
+    });
+    document.querySelectorAll('.sidebar-menu a').forEach(function (a) {
+        a.addEventListener('click', function () { if (narrow.matches) setNav(false); });
+    });
+    narrow.addEventListener('change', function (e) {
+        if (!e.matches) setNav(false);
+        // The narrow rail is a desktop choice: drop it in the drawer, bring it back on a wide screen
+        let collapsed = false;
+        try { collapsed = localStorage.getItem('iwarehouse-sidebar') === 'collapsed'; } catch (err) {}
+        document.documentElement.classList.toggle('sidebar-collapsed', collapsed && !e.matches);
+    });
+
+    // Tables become cards on phones: each cell is labelled with its column header (CSS shows it
+    // at 640px and less). Rows added later (line forms) are labelled as they appear.
+    // Opt out with data-cards="off" on the table.
+    const labelRows = function (table) {
+        const head = table.tHead && table.tHead.rows[table.tHead.rows.length - 1];
+        if (!head) return;
+        const labels = [];
+        Array.from(head.cells).forEach(function (th) {
+            // A header only screen readers see (the actions column) labels nothing on a card
+            const shown = th.cloneNode(true);
+            shown.querySelectorAll('.sr-only').forEach(function (s) { s.remove(); });
+            const text = shown.textContent.replace(/\s+/g, ' ').trim();
+            for (let i = 0; i < th.colSpan; i++) labels.push(text);
+        });
+        const rows = [];
+        Array.from(table.tBodies).forEach(function (body) { rows.push.apply(rows, body.rows); });
+        if (table.tFoot) rows.push.apply(rows, table.tFoot.rows);
+        rows.forEach(function (row) {
+            let col = 0;
+            Array.from(row.cells).forEach(function (cell) {
+                const label = cell.colSpan === 1 ? labels[col] : '';
+                if (label && !cell.hasAttribute('data-label')) cell.setAttribute('data-label', label);
+                // A cell holding only hidden inputs (a line's id) has nothing to show on a card
+                const hiddenOnly = cell.children.length > 0 && cell.textContent.trim() === ''
+                    && Array.from(cell.children).every(function (c) { return c.matches('input[type=hidden]'); });
+                cell.classList.toggle('cell-hidden-only', hiddenOnly);
+                col += cell.colSpan;
+            });
+        });
+    };
+    document.querySelectorAll('.page-content table').forEach(function (table) {
+        if (table.closest('[data-cards="off"]') || !table.tHead) return;
+        labelRows(table);
+        table.classList.add('as-cards');
+        Array.from(table.tBodies).forEach(function (body) {
+            new MutationObserver(function () { labelRows(table); }).observe(body, { childList: true });
+        });
+    });
+
     // Notifications bell dropdown
     const notifBtn = document.getElementById('notif-btn');
     const notifPanel = document.getElementById('notif-panel');

@@ -65,7 +65,7 @@
                             <span class="badge badge-warning" th:unless="${p.glassType.cuttable}" th:text="#{product.madeToSize}">Made to size</span>
                         </td>
                         <td class="mono" th:text="${p.code}">CLR-6</td>
-                        <td class="num nowrap" th:text="${#numbers.formatDecimal(weights[p.id], 1, 'COMMA', 2, 'POINT')} + ' kg'">15.00 kg</td>
+                        <td class="num nowrap" th:text="${@num.kg(weights[p.id])} + ' kg'">15.00 kg</td>
                         <td>
                             <span th:text="${p.taxCategory.name}">Standard rate</span>
                             <span class="text-muted" th:text="${'(' + p.taxCategory.ebmCode + ')'}">(B)</span>

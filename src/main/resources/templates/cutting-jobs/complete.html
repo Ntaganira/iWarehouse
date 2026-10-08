@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{cutting.completeTitle(${job.number})}, ~{::content})}">
+<head><title>Record the cut - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{cutting.completeTitle(${job.number})}">Record the cut of CUT-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${source.code}">U-WH-000021</span>
+                &middot; <span th:text="#{${'stock.kind.' + source.kind}}">Full sheet</span>
+                &middot; <span th:text="${source.widthMm + ' × ' + source.heightMm + ' mm · ' + @num.m2(source.areaM2) + ' m²'}">3210 × 2250 mm · 7.2225 m²</span>
+                &middot; <th:block th:replace="~{products/list :: productName(${job.product})}"></th:block>
+            </div>
+        </div>
+        <a th:href="@{/cutting-jobs/{id}(id=${job.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/cutting-jobs/{id}/complete(id=${job.id})}" th:object="${resultDto}" method="post" class="cut-form confirm-submit" novalidate
+          th:attr="data-confirm=#{cutting.completeConfirm(${source.code})},
+                   data-source-area=${source.areaM2}, data-source-w=${source.widthMm}, data-source-h=${source.heightMm},
+                   data-min-area=${threshold.minAreaM2}, data-min-side=${threshold.minSideMm},
+                   data-label-offcut=#{cutting.kindOne.OFFCUT}, data-label-cullet=#{cutting.kindOne.CULLET},
+                   data-label-toobig=#{cutting.tooBigShort}">
+        <div th:replace="~{layout/errors :: error-summary}"></div>
+
+        <div class="cut-layout">
+            <div class="cut-main">
+                <!-- Pieces cut -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 th:text="#{cutting.cutPiecesTitle}">Pieces cut</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="line-table">
+                            <thead>
+                                <tr>
+                                    <th class="num">#</th>
+                                    <th th:text="#{cutting.size}">Size (mm)</th>
+                                    <th th:text="#{cutting.processing}">Processing</th>
+                                    <th th:text="#{cutting.mark}">Mark</th>
+                                    <th class="num" th:text="#{cutting.wantedCol}">Wanted</th>
+                                    <th class="num" th:text="#{cutting.cutCol}">Cut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="piece-body">
+                                <tr th:each="row, st : *{lines}" th:with="l=${lineById.get(row.lineId)}" class="piece-row" th:attr="data-area=${l.pieceAreaM2}">
+                                    <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                    <td class="mono nowrap" th:text="${l.widthMm + ' × ' + l.heightMm}">2000 × 1000</td>
+                                    <td>
+                                        <span th:if="${#lists.isEmpty(l.processingCodes)}" class="text-muted">—</span>
+                                        <span class="badge badge-secondary proc-badge" th:each="c : ${l.processingCodes}" th:text="${names.get(c) ?: c}">Edging</span>
+                                    </td>
+                                    <td th:text="${l.mark ?: '—'}">—</td>
+                                    <td class="num" th:text="${l.quantity}">1</td>
+                                    <td class="num">
+                                        <input type="hidden" th:field="*{lines[__${st.index}__].lineId}">
+                                        <input type="number" th:field="*{lines[__${st.index}__].cutQty}" min="0" th:max="${l.quantity}" step="1" inputmode="numeric"
+                                               class="input-qty" th:aria-label="#{cutting.cutCol}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].cutQty')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].cutQty')}" th:errors="*{lines[__${st.index}__].cutQty}"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="form-note" th:text="#{cutting.cutPiecesNote}">Lower a number if a piece broke or did not fit: record the broken glass below; the pieces not cut can go on a new job.</p>
+                </div>
+
+                <!-- Leftovers -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 th:text="#{cutting.leftoversTitle}">Leftovers</h2>
+                        <button type="button" class="btn btn-outline btn-sm line-add" data-for="leftovers">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span th:text="#{cutting.addLeftover}">Add leftover</span>
+                        </button>
+                    </div>
+                    <p class="tab-intro" th:text="#{cutting.leftoversIntro(${@num.m2(threshold.minAreaM2)}, ${threshold.minSideMm})}">Measure each piece left. From 0.25 m² with both sides at least 300 mm it becomes an off-cut with its own label; smaller is cullet.</p>
+                    <div class="table-container">
+                        <table class="line-table cut-line-table">
+                            <thead>
+                                <tr>
+                                    <th class="num" th:text="#{cutting.widthMm}">Width (mm)</th>
+                                    <th class="num" th:text="#{cutting.heightMm}">Height (mm)</th>
+                                    <th class="num" th:text="#{cutting.qty}">Qty</th>
+                                    <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                                    <th th:text="#{cutting.becomes}">Becomes</th>
+                                    <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody class="line-body" data-prefix="leftovers">
+                                <tr class="line-row" th:each="row, st : *{leftovers}">
+                                    <td class="num">
+                                        <input type="number" th:field="*{leftovers[__${st.index}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.widthMm}"
+                                               th:classappend="${#fields.hasErrors('leftovers[__${st.index}__].widthMm')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('leftovers[__${st.index}__].widthMm')}" th:errors="*{leftovers[__${st.index}__].widthMm}"></span>
+                                    </td>
+                                    <td class="num">
+                                        <input type="number" th:field="*{leftovers[__${st.index}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.heightMm}"
+                                               th:classappend="${#fields.hasErrors('leftovers[__${st.index}__].heightMm')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('leftovers[__${st.index}__].heightMm')}" th:errors="*{leftovers[__${st.index}__].heightMm}"></span>
+                                    </td>
+                                    <td class="num">
+                                        <input type="number" th:field="*{leftovers[__${st.index}__].quantity}" min="1" max="999" step="1" inputmode="numeric" th:aria-label="#{cutting.qty}"
+                                               th:classappend="${#fields.hasErrors('leftovers[__${st.index}__].quantity')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('leftovers[__${st.index}__].quantity')}" th:errors="*{leftovers[__${st.index}__].quantity}"></span>
+                                    </td>
+                                    <td class="num line-area">—</td>
+                                    <td class="line-kind">—</td>
+                                    <td>
+                                        <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Broken while cutting (PRD-08) -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 th:text="#{cutting.brokenTitle}">Broken while cutting</h2>
+                        <button type="button" class="btn btn-outline btn-sm line-add" data-for="broken">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span th:text="#{cutting.addBroken}">Add breakage</span>
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="line-table cut-line-table">
+                            <thead>
+                                <tr>
+                                    <th class="num" th:text="#{cutting.widthMm}">Width (mm)</th>
+                                    <th class="num" th:text="#{cutting.heightMm}">Height (mm)</th>
+                                    <th class="num" th:text="#{cutting.qty}">Qty</th>
+                                    <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                                    <th th:text="#{cutting.reason}">Reason</th>
+                                    <th th:text="#{cutting.brokenNote}">Note</th>
+                                    <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody class="line-body" data-prefix="broken">
+                                <tr class="line-row" th:each="row, st : *{broken}">
+                                    <td class="num">
+                                        <input type="number" th:field="*{broken[__${st.index}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.widthMm}"
+                                               th:classappend="${#fields.hasErrors('broken[__${st.index}__].widthMm')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('broken[__${st.index}__].widthMm')}" th:errors="*{broken[__${st.index}__].widthMm}"></span>
+                                    </td>
+                                    <td class="num">
+                                        <input type="number" th:field="*{broken[__${st.index}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.heightMm}"
+                                               th:classappend="${#fields.hasErrors('broken[__${st.index}__].heightMm')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('broken[__${st.index}__].heightMm')}" th:errors="*{broken[__${st.index}__].heightMm}"></span>
+                                    </td>
+                                    <td class="num">
+                                        <input type="number" th:field="*{broken[__${st.index}__].quantity}" min="1" max="999" step="1" inputmode="numeric" th:aria-label="#{cutting.qty}"
+                                               th:classappend="${#fields.hasErrors('broken[__${st.index}__].quantity')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('broken[__${st.index}__].quantity')}" th:errors="*{broken[__${st.index}__].quantity}"></span>
+                                    </td>
+                                    <td class="num line-area">—</td>
+                                    <td>
+                                        <select th:field="*{broken[__${st.index}__].reason}" th:aria-label="#{cutting.reason}"
+                                                th:classappend="${#fields.hasErrors('broken[__${st.index}__].reason')} ? 'is-invalid'">
+                                            <option value="" th:text="#{cutting.chooseReason}">Choose</option>
+                                            <option th:each="r : ${reasons}" th:value="${r}" th:text="#{${'cutting.reason.' + r}}">Handling</option>
+                                        </select>
+                                        <span class="field-error" th:if="${#fields.hasErrors('broken[__${st.index}__].reason')}" th:errors="*{broken[__${st.index}__].reason}"></span>
+                                    </td>
+                                    <td>
+                                        <input type="text" th:field="*{broken[__${st.index}__].note}" maxlength="255" th:aria-label="#{cutting.brokenNote}"
+                                               th:classappend="${#fields.hasErrors('broken[__${st.index}__].note')} ? 'is-invalid'">
+                                        <span class="field-error" th:if="${#fields.hasErrors('broken[__${st.index}__].note')}" th:errors="*{broken[__${st.index}__].note}"></span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Where the new units go (PRD-04) -->
+                <div class="section">
+                    <div class="section-header">
+                        <h2 th:text="#{cutting.placesTitle}">Where they go</h2>
+                    </div>
+                    <div class="form-container">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="piecesLocationId" th:text="#{cutting.piecesLocation}">Rack for the pieces</label>
+                                <select id="piecesLocationId" th:field="*{piecesLocationId}" th:classappend="${#fields.hasErrors('piecesLocationId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
+                                    <option th:each="c : ${pieceLocations}" th:value="${c.location.id}"
+                                            th:text="${c.location.code + ' · ' + c.location.name} + ${c.rack.maxPieces != null ? ' · ' + c.load.pieces + '/' + c.rack.maxPieces + ' ' + #messages.msg('receipt.pcs') : ''} + ${c.rack.maxWeightKg != null ? ' · ' + #numbers.formatInteger(c.load.kg, 1, 'COMMA') + '/' + #numbers.formatInteger(c.rack.maxWeightKg, 1, 'COMMA') + ' kg' : ''}">WH-A-R01 · Rack 1 · 20/30 pcs · 1,084/3,000 kg</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('piecesLocationId')}" th:errors="*{piecesLocationId}"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="offcutLocationId" th:text="#{cutting.offcutLocation}">Off-cut rack</label>
+                                <select id="offcutLocationId" th:field="*{offcutLocationId}" th:classappend="${#fields.hasErrors('offcutLocationId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
+                                    <option th:each="c : ${offcutLocations}" th:value="${c.location.id}"
+                                            th:text="${c.location.code + ' · ' + c.location.name} + ${c.rack.maxPieces != null ? ' · ' + c.load.pieces + '/' + c.rack.maxPieces + ' ' + #messages.msg('receipt.pcs') : ''} + ${c.rack.maxWeightKg != null ? ' · ' + #numbers.formatInteger(c.load.kg, 1, 'COMMA') + '/' + #numbers.formatInteger(c.rack.maxWeightKg, 1, 'COMMA') + ' kg' : ''}">WH-A-OC · Off-cut rack · 0/100 pcs · 0/1,000 kg</option>
+                                </select>
+                                <span class="hint" th:text="#{cutting.offcutLocationHint}">Off-cuts go to an off-cut rack</span>
+                                <span class="field-error" th:if="${#fields.hasErrors('offcutLocationId')}" th:errors="*{offcutLocationId}"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live area balance (PRD-06); the server checks it again -->
+            <aside class="cut-side">
+                <div class="section balance-card">
+                    <div class="section-header">
+                        <h2 th:text="#{cutting.balanceLive}">Area check</h2>
+                    </div>
+                    <dl class="balance-list">
+                        <dt th:text="#{cutting.sourceTotal}">The sheet</dt><dd id="bal-source" th:text="${@num.m2(source.areaM2)}">7.2225</dd>
+                        <dt th:text="#{cutting.kind.PIECE}">Cut pieces</dt><dd id="bal-pieces">0</dd>
+                        <dt th:text="#{cutting.kind.OFFCUT}">Off-cuts</dt><dd id="bal-offcuts">0</dd>
+                        <dt th:text="#{cutting.smallLeftovers}">Small leftovers</dt><dd id="bal-small">0</dd>
+                        <dt th:text="#{cutting.kind.BROKEN}">Broken</dt><dd id="bal-broken">0</dd>
+                        <dt th:text="#{cutting.trim}">Trim</dt><dd id="bal-trim">0</dd>
+                        <dt class="strong" th:text="#{cutting.yieldKpi}">Yield</dt><dd class="strong" id="bal-yield">—</dd>
+                    </dl>
+                    <div class="balance-status" id="bal-status"
+                         th:attr="data-ok=#{cutting.balanceOk}, data-over=#{cutting.balanceOver}">—</div>
+                    <p class="form-note" th:text="#{cutting.balanceHelp}">Pieces, off-cuts, leftovers and breakage may not add up to more than the sheet (1% allowed for measuring). What is not recorded is trim, counted as cullet.</p>
+                </div>
+            </aside>
+        </div>
+
+        <template class="line-template" data-for="leftovers">
+            <tr class="line-row">
+                <td class="num"><input type="number" name="leftovers[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.widthMm}"></td>
+                <td class="num"><input type="number" name="leftovers[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.heightMm}"></td>
+                <td class="num"><input type="number" name="leftovers[{i}].quantity" min="1" max="999" step="1" value="1" inputmode="numeric" th:aria-label="#{cutting.qty}"></td>
+                <td class="num line-area">—</td>
+                <td class="line-kind">—</td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+        <template class="line-template" data-for="broken">
+            <tr class="line-row">
+                <td class="num"><input type="number" name="broken[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.widthMm}"></td>
+                <td class="num"><input type="number" name="broken[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.heightMm}"></td>
+                <td class="num"><input type="number" name="broken[{i}].quantity" min="1" max="999" step="1" value="1" inputmode="numeric" th:aria-label="#{cutting.qty}"></td>
+                <td class="num line-area">—</td>
+                <td>
+                    <select name="broken[{i}].reason" th:aria-label="#{cutting.reason}">
+                        <option value="" th:text="#{cutting.chooseReason}">Choose</option>
+                        <option th:each="r : ${reasons}" th:value="${r}" th:text="#{${'cutting.reason.' + r}}">Handling</option>
+                    </select>
+                </td>
+                <td><input type="text" name="broken[{i}].note" maxlength="255" th:aria-label="#{cutting.brokenNote}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{cutting.completeSubmit}">Record the cut</button>
+            <a th:href="@{/cutting-jobs/{id}(id=${job.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/cutting-form.js"></script>
+</div>
+</body>
+</html>

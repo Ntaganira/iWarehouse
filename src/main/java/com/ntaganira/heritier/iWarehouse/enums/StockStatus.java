@@ -10,9 +10,10 @@ import java.util.List;
  * - File      : StockStatus.java
  * - Date      : 2026. 10. 08.
  * - User      : Hntaganira
- * - Desc      : The eight states of a stock unit (SRS 6.2). A unit has one state and one location at a
- *               time. Posted receipts create units as AVAILABLE on their rack; RECEIVED is kept for a
- *               later put-away scan. Consumed, sold and broken units have left stock.
+ * - Desc      : The states of a stock unit (SRS 6.2), plus LOST (V13). A unit has one state and one
+ *               location at a time. Posted receipts create units as AVAILABLE on their rack; RECEIVED is
+ *               kept for a later put-away scan. Consumed, sold, broken and lost units have left stock;
+ *               a lost unit (written off as missing) can be found again by an adjustment.
  * </pre>
  */
 public enum StockStatus {
@@ -24,11 +25,12 @@ public enum StockStatus {
     CONSUMED,
     ON_VEHICLE,
     SOLD,
-    BROKEN;
+    BROKEN,
+    LOST;
 
     /** Still physically held by the business (valued in stock, counted on its rack or vehicle). */
     public boolean isOnHand() {
-        return this != CONSUMED && this != SOLD && this != BROKEN;
+        return this != CONSUMED && this != SOLD && this != BROKEN && this != LOST;
     }
 
     public static List<StockStatus> onHand() {

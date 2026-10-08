@@ -3,7 +3,12 @@
       th:replace="~{layout/sidebar :: html(${unit.code}, ~{::content})}">
 <head><title>Stock Unit - iWarehouse</title></head>
 <body>
-<div th:fragment="content" th:with="crate=${unit.crateBatch}">
+<div th:fragment="content" th:with="crate=${unit.crateBatch}, st=${unit.status.name()},
+        canSeeJobs=${#authorization.expression('hasAuthority(''PAGE_PRODUCTION'') and hasAuthority(''PERM_VIEW_CUTTING_JOB'')')},
+        canMove=${#authorization.expression('hasAuthority(''PAGE_STOCK_TRANSFERS'') and hasAuthority(''PERM_TRANSFER_STOCK'')')},
+        canAdjust=${#authorization.expression('hasAuthority(''PAGE_STOCK_ADJUSTMENTS'') and hasAuthority(''PERM_ADJUST_STOCK'')')},
+        canReserve=${#authorization.expression('hasAuthority(''PERM_RESERVE_STOCK'')')},
+        inStock=${st == 'RECEIVED' or st == 'AVAILABLE' or st == 'RESERVED'}">
     <div class="page-header">
         <div>
             <h1 class="mono" th:text="${unit.code}">U-WH-000001</h1>
@@ -15,11 +20,28 @@
         </div>
         <div class="btn-group">
             <a href="/stock" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${heldBy == null}">
+                <a th:if="${canMove and inStock}" th:href="@{/stock-transfers/new(codes=${unit.code})}" class="btn btn-outline" th:text="#{stock.move}">Move</a>
+                <th:block th:if="${canAdjust and inStock}">
+                    <a th:href="@{/stock-adjustments/new(unit=${unit.id}, kind='WRITE_OFF')}" class="btn btn-outline btn-danger-outline" th:text="#{stock.writeOff}">Write off</a>
+                    <a th:href="@{/stock-adjustments/new(unit=${unit.id}, kind='RESIZE')}" class="btn btn-outline" th:text="#{stock.resize}">Correct size</a>
+                </th:block>
+                <a th:if="${canAdjust and st == 'LOST'}" th:href="@{/stock-adjustments/new(unit=${unit.id}, kind='FOUND')}" class="btn btn-outline" th:text="#{stock.foundAgain}">Found again</a>
+                <button type="button" class="btn btn-outline" data-modal-open="reserve-modal" th:if="${canReserve and st == 'AVAILABLE'}" th:text="#{stock.reserve}">Reserve</button>
+                <button type="button" class="btn btn-outline" data-modal-open="release-modal" th:if="${canReserve and st == 'RESERVED'}" th:text="#{stock.release}">Release</button>
+            </th:block>
             <th:block sec:authorize="hasAuthority('PERM_PRINT_LABEL')">
                 <a th:href="@{/stock/labels.zpl(unit=${unit.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
                 <a th:href="@{/stock/labels(unit=${unit.id})}" class="btn btn-primary" th:text="#{label.print}">Print label</a>
             </th:block>
         </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${heldBy != null}" th:text="#{stock.heldNote(${heldBy})}">Held by adjustment ADJ-WH-2026-000002, waiting for approval: it cannot be moved, sold or cut until that is decided.</div>
+    <div class="doc-note" th:if="${st == 'RESERVED'}">
+        <strong th:text="#{stock.reservedFor} + ':'">Reserved for:</strong>
+        <span th:text="${unit.reservedCustomer != null} ? ${unit.reservedCustomer.name} : #{stock.reservedNoCustomer}">Umucyo Builders Ltd</span>
+        <span class="text-muted" th:if="${unit.reservedNote != null}" th:text="${'· ' + unit.reservedNote}">· CUT-WH-2026-000001</span>
     </div>
 
     <div class="section">
@@ -70,7 +92,21 @@
                 </div>
                 <div class="item" th:if="${unit.parentUnitId != null}">
                     <label th:text="#{stock.cutFrom}">Cut from</label>
-                    <div class="value"><a th:href="@{/stock/{id}(id=${unit.parentUnitId})}" th:text="#{stock.parentUnit}">Parent unit</a></div>
+                    <div class="value">
+                        <a class="mono" th:href="@{/stock/{id}(id=${unit.parentUnitId})}" th:text="${cutBy != null} ? ${cutBy.sourceCode} : #{stock.parentUnit}">U-WH-000001</a>
+                        <th:block th:if="${cutBy != null}">
+                            <span class="text-muted">&middot;</span>
+                            <a class="mono" th:if="${canSeeJobs}" th:href="@{/cutting-jobs/{id}(id=${cutBy.id})}" th:text="${cutBy.number}">CUT-WH-2026-000001</a>
+                            <span class="mono" th:unless="${canSeeJobs}" th:text="${cutBy.number}">CUT-WH-2026-000001</span>
+                        </th:block>
+                    </div>
+                </div>
+                <div class="item" th:if="${sourceOf != null}">
+                    <label th:text="${sourceOf.status.name() == 'COMPLETED'} ? #{stock.cutBy} : #{stock.takenFor}">Cut by</label>
+                    <div class="value">
+                        <a class="mono" th:if="${canSeeJobs}" th:href="@{/cutting-jobs/{id}(id=${sourceOf.id})}" th:text="${sourceOf.number}">CUT-WH-2026-000001</a>
+                        <span class="mono" th:unless="${canSeeJobs}" th:text="${sourceOf.number}">CUT-WH-2026-000001</span>
+                    </div>
                 </div>
                 <div class="item" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')">
                     <label th:text="#{stock.cost}">Cost (RWF)</label>
@@ -133,8 +169,7 @@
                                     <span th:text="#{${'stock.status.' + m.toStatus}}">Available</span>
                                 </td>
                                 <td>
-                                    <a class="mono" th:if="${m.refType == 'GOODS_RECEIPT'}" th:href="@{/goods-receipts/{id}(id=${m.refId})}" th:text="${m.refNumber}">GRN-WH-2026-000001</a>
-                                    <span class="mono" th:unless="${m.refType == 'GOODS_RECEIPT'}" th:text="${m.refNumber ?: '—'}">—</span>
+                                    <th:block th:replace="~{stock/view :: refLink(${m.refType}, ${m.refId}, ${m.refNumber})}"></th:block>
                                 </td>
                                 <td th:text="${m.username}">admin</td>
                             </tr>
@@ -161,9 +196,7 @@
                                 <td class="nowrap" th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
                                 <td th:text="#{${'stock.costType.' + e.type}}">Receipt cost</td>
                                 <td>
-                                    <a class="mono" th:if="${e.refType == 'GOODS_RECEIPT'}" th:href="@{/goods-receipts/{id}(id=${e.refId})}" th:text="${e.refNumber}">GRN-WH-2026-000001</a>
-                                    <a class="mono" th:if="${e.refType == 'SHIPMENT'}" th:href="@{/shipments/{id}(id=${e.refId})}" th:text="${e.refNumber}">SHP-WH-2026-000001</a>
-                                    <span class="mono" th:unless="${e.refType == 'GOODS_RECEIPT' or e.refType == 'SHIPMENT'}" th:text="${e.refNumber ?: '—'}">—</span>
+                                    <th:block th:replace="~{stock/view :: refLink(${e.refType}, ${e.refId}, ${e.refNumber})}"></th:block>
                                 </td>
                                 <td class="num" th:classappend="${e.amount.signum() < 0} ? 'text-danger'" th:text="${@num.money(e.amount)}">43,992.61</td>
                                 <td class="num strong" th:text="${@num.money(e.costAfter)}">43,992.61</td>
@@ -182,6 +215,47 @@
             </div>
         </div>
     </div>
+
+    <th:block th:if="${canReserve and st == 'AVAILABLE' and heldBy == null}">
+        <div class="modal-overlay" id="reserve-modal">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reserve-modal-title">
+                <div class="modal-header">
+                    <h3 id="reserve-modal-title" th:text="#{stock.reserveTitle(${unit.code})}">Reserve U-WH-000001</h3>
+                    <button type="button" class="modal-close" data-modal-close="reserve-modal" th:aria-label="#{common.cancel}">&times;</button>
+                </div>
+                <form method="post" th:action="@{/stock/{id}/reserve(id=${unit.id})}">
+                    <div class="modal-body">
+                        <p class="text-muted" th:text="#{stock.reserveText}">Nobody else can buy, load or cut it until it is released.</p>
+                        <div class="form-group">
+                            <label for="reserve-customer" th:text="#{cutting.customer}">Customer</label>
+                            <select id="reserve-customer" name="customerId" required>
+                                <option value="" th:text="#{cutting.chooseCustomer}">Choose the customer</option>
+                                <option th:each="c : ${customers}" th:value="${c.id}" th:text="${c.name + ' · ' + c.code}">Umucyo Builders Ltd · CUS-WH-00001</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reserve-note" th:text="#{transfer.note}">Note</label>
+                            <input type="text" id="reserve-note" name="note" maxlength="255" autocomplete="off" th:placeholder="#{stock.reserveNotePh}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" data-modal-close="reserve-modal" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{stock.reserve}">Reserve</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </th:block>
+    <th:block th:if="${canReserve and st == 'RESERVED'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('release-modal', #{stock.releaseTitle(${unit.code})},
+                @{/stock/{id}/release(id=${unit.id})}, #{stock.releaseText}, #{stock.release})}"></div>
+    </th:block>
 </div>
+
+<!--/* Link to the document a movement or cost entry came from. */-->
+<th:block th:fragment="refLink(type, id, number)" th:with="url=${type == 'GOODS_RECEIPT' ? '/goods-receipts/' : (type == 'SHIPMENT' ? '/shipments/' : (type == 'CUTTING_JOB' ? '/cutting-jobs/' : (type == 'TRANSFER' ? '/stock-transfers/' : (type == 'ADJUSTMENT' ? '/stock-adjustments/' : (type == 'CUSTOMER' ? '/customers/' : null)))))}">
+    <a class="mono" th:if="${url != null and id != null}" th:href="${url + id}" th:text="${number}">GRN-WH-2026-000001</a>
+    <span class="mono" th:unless="${url != null and id != null}" th:text="${number ?: '—'}">—</span>
+</th:block>
 </body>
 </html>

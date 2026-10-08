@@ -39,6 +39,9 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     boolean existsIdentity(@Param("type") GlassType type, @Param("variant") String variant,
                            @Param("thickness") BigDecimal thickness);
 
+    /** Products a document can be for, by code. */
+    List<Product> findByEnabledTrueOrderByCodeAsc();
+
     /** Thicknesses in use, for the list filter. */
     @Query("select distinct p.thicknessMm from Product p order by p.thicknessMm")
     List<BigDecimal> findThicknesses();

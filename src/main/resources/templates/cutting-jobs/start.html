@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{cutting.startTitle(${job.number})}, ~{::content})}">
+<head><title>Take a sheet - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{cutting.startTitle(${job.number})}">Take a sheet for CUT-WH-2026-000001</h1>
+            <div class="subtitle">
+                <th:block th:replace="~{products/list :: productName(${job.product})}"></th:block>
+                &middot; <span th:text="#{cutting.needLine(${need.pieces}, ${@num.m2(need.areaM2)}, ${need.longSideMm + ' × ' + need.shortSideMm})}">3 pieces, 5.0000 m²; the largest is 2000 × 1000 mm</span>
+            </div>
+        </div>
+        <a th:href="@{/cutting-jobs/{id}(id=${job.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{cutting.scanTitle}">Scan or type the label</h2>
+        </div>
+        <div class="form-container">
+            <form th:action="@{/cutting-jobs/{id}/start(id=${job.id})}" method="post" class="scan-form" novalidate>
+                <div class="form-group">
+                    <label for="code" th:text="#{cutting.unitCode}">Unit code</label>
+                    <div class="scan-row">
+                        <input type="text" id="code" name="code" th:value="${code}" maxlength="30" class="input-code" autocomplete="off"
+                               spellcheck="false" autofocus th:placeholder="#{cutting.unitCodePh}" th:classappend="${codeError != null} ? 'is-invalid'">
+                        <button type="submit" class="btn btn-primary" th:text="#{cutting.take}">Take it</button>
+                    </div>
+                    <span class="field-error" th:if="${codeError != null}" th:text="${codeError}">U-WH-000099 is not available to cut</span>
+                    <span class="hint" th:text="#{cutting.scanHint}">The unit must be the same glass, available, and every piece must fit in it either way round</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{cutting.suggestTitle}">Units the pieces fit in</span>
+                <span class="section-count" th:text="${suggestions.size()}">4</span>
+            </h2>
+        </div>
+        <p class="tab-intro" th:text="#{cutting.suggestIntro}">Smallest first, so off-cuts are used before full sheets. Left over: what remains for off-cuts and cullet.</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{cutting.unitCol}">Unit</th>
+                        <th th:text="#{stock.kind}">Kind</th>
+                        <th th:text="#{cutting.size}">Size (mm)</th>
+                        <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                        <th class="num" th:text="#{cutting.leftOverCol}">Left over</th>
+                        <th th:text="#{stock.location}">Location</th>
+                        <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="u : ${suggestions}" th:with="left=${u.areaM2.subtract(need.areaM2)}">
+                        <td><a class="mono strong" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000021</a></td>
+                        <td th:text="#{${'stock.kind.' + u.kind}}">Full sheet</td>
+                        <td class="mono nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">3210 × 2250</td>
+                        <td class="num" th:text="${@num.m2(u.areaM2)}">7.2225</td>
+                        <td class="num" th:text="${@num.m2(left)}">2.2225</td>
+                        <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R04</td>
+                        <td>
+                            <form th:action="@{/cutting-jobs/{id}/start(id=${job.id})}" method="post" class="row-action-form">
+                                <input type="hidden" name="unitId" th:value="${u.id}">
+                                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.take}">Take it</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(suggestions)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{cutting.noSuggestion}">No available unit fits these pieces</h3>
+                                <p th:text="#{cutting.noSuggestionHint}">Receive more of this glass, or split the job into smaller ones</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{cutting.piecesTitle}">Pieces wanted</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="num">#</th>
+                        <th th:text="#{cutting.size}">Size (mm)</th>
+                        <th class="num" th:text="#{cutting.qty}">Qty</th>
+                        <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                        <th th:text="#{cutting.processing}">Processing</th>
+                        <th th:text="#{cutting.mark}">Mark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${job.lines}">
+                        <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                        <td class="mono nowrap" th:text="${l.widthMm + ' × ' + l.heightMm}">2000 × 1000</td>
+                        <td class="num" th:text="${l.quantity}">1</td>
+                        <td class="num" th:text="${@num.m2(l.areaM2)}">2.0000</td>
+                        <td>
+                            <span th:if="${#lists.isEmpty(l.processingCodes)}" class="text-muted">—</span>
+                            <span class="badge badge-secondary proc-badge" th:each="c : ${l.processingCodes}" th:text="${names.get(c) ?: c}">Edging</span>
+                        </td>
+                        <td th:text="${l.mark ?: '—'}">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

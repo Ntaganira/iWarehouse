@@ -73,6 +73,14 @@ public class StockUnit extends BaseEntity {
     @JoinColumn(name = "location_id")
     private Location location;
 
+    /** Customer a RESERVED unit is held for (INV-05); none for pieces reserved before V13. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reserved_customer_id")
+    private Customer reservedCustomer;
+
+    @Column(name = "reserved_note", length = 255)
+    private String reservedNote;
+
     /** RWF: the receipt cost plus landed costs added later (PRC-05); each change is a StockCostEntry. */
     @Column(name = "unit_cost", nullable = false, precision = 18, scale = 2)
     private BigDecimal unitCost;

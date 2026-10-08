@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{adjustment.title}, ~{::content})}">
+<head><title>Stock Adjustments - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{adjustment.title}">Stock Adjustments</h1>
+            <div class="subtitle" th:text="#{adjustment.subtitle}">Units written off, found again, added or resized, with their reason and approval</div>
+        </div>
+        <a href="/stock-adjustments/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_ADJUST_STOCK')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{adjustment.add}">New adjustment</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${pending > 0}" sec:authorize="hasAuthority('PERM_APPROVE_ADJUSTMENT')">
+        <span th:text="#{adjustment.pendingNote(${pending})}">2 adjustments wait for approval.</span>
+        <a th:href="@{/stock-adjustments(status='PENDING_APPROVAL')}" th:text="#{adjustment.showPending}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{adjustment.sectionTitle}">Adjustments</span>
+                <span class="section-count" th:text="${adjustments.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/stock-adjustments}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{adjustment.searchPh}" th:aria-label="#{adjustment.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'adjustment.status.' + st}}">Posted</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{adjustment.number}">Adjustment</th>
+                        <th th:text="#{adjustment.when}">Asked</th>
+                        <th th:text="#{adjustment.reason}">Reason</th>
+                        <th class="num" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')" th:text="#{adjustment.valueChange}">Value (RWF)</th>
+                        <th th:text="#{adjustment.requestedBy}">Asked by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${adjustments.content}">
+                        <td><a class="row-link strong mono" th:href="@{/stock-adjustments/{id}(id=${a.id})}" th:text="${a.number}">ADJ-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 16:20</td>
+                        <td th:text="${a.reason}">Broken while moving</td>
+                        <td class="num" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')" th:classappend="${a.valueChange.signum() < 0} ? 'text-danger'"
+                            th:text="${@num.money(a.valueChange)}">-252,628.86</td>
+                        <td th:text="${a.requestedBy}">supervisor1</td>
+                        <td><th:block th:replace="~{stock-adjustments/list :: adjustmentStatus(${a.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(adjustments.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{adjustment.empty}">No adjustments found</h3>
+                                <p th:text="#{adjustment.emptyHint}">Write off broken or missing units, add pieces nobody recorded, or correct a wrong size</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${adjustments}, '/stock-adjustments', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of an adjustment. */-->
+<th:block th:fragment="adjustmentStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{adjustment.status.PENDING_APPROVAL}">Waiting for approval</span>
+    <span th:case="'POSTED'" class="badge badge-success" th:text="#{adjustment.status.POSTED}">Posted</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{adjustment.status.REJECTED}">Rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{adjustment.status.CANCELLED}">Withdrawn</span>
+</th:block>
+</body>
+</html>

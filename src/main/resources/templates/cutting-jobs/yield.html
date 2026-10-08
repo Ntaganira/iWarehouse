@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{cutting.yield.title}, ~{::content})}">
+<head><title>Cutting Yield - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${report.total}, seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{cutting.yield.title}">Cutting yield</h1>
+            <div class="subtitle" th:text="#{cutting.yield.subtitle}">Pieces and off-cuts as a share of the glass cut; cullet and breakage by operator, product and reason</div>
+        </div>
+        <a href="/cutting-jobs" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PRODUCTION') and hasAuthority('PERM_VIEW_CUTTING_JOB')" th:text="#{cutting.title}">Cutting Jobs</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/cutting-jobs/yield}" method="get" class="table-toolbar report-filters">
+            <label class="filter-field">
+                <span th:text="#{cutting.yield.from}">From</span>
+                <input type="date" name="from" class="toolbar-filter" th:value="${#temporals.format(from, 'yyyy-MM-dd')}">
+            </label>
+            <label class="filter-field">
+                <span th:text="#{cutting.yield.to}">To</span>
+                <input type="date" name="to" class="toolbar-filter" th:value="${#temporals.format(to, 'yyyy-MM-dd')}">
+            </label>
+            <select name="product" class="toolbar-filter" th:aria-label="#{product.name}">
+                <option value="" th:text="#{cutting.yield.allProducts}">All glass</option>
+                <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}" th:text="${p.code}">CLR-6</option>
+            </select>
+            <select name="operator" class="toolbar-filter" th:aria-label="#{cutting.operator}">
+                <option value="" th:text="#{cutting.yield.allOperators}">All operators</option>
+                <option th:each="o : ${operators}" th:value="${o}" th:selected="${o == operator}" th:text="${o}">operator1</option>
+            </select>
+            <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.yield.consumed}">m² cut</div>
+                <div class="kpi-value" th:text="${@num.m2(t.consumed)}">144.4500</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cutting.yield.jobsKpi(${t.jobs})}">20 jobs</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.yieldKpi}">Yield</div>
+                <div class="kpi-value" th:text="${t.jobs > 0} ? ${#numbers.formatDecimal(t.yieldPercent, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">94.2 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cutting.yieldSub(${@num.m2(t.stocked)})}">136.0000 m² to stock</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.yield.cullet}">Cullet</div>
+                <div class="kpi-value" th:text="${@num.m2(t.cullet)}">8.4500</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cutting.culletKgKpi(${@num.kg(t.culletKg)})}">m² · 507.00 kg of cullet</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.yield.broken}">Broken</div>
+                <div class="kpi-value" th:text="${@num.m2(t.broken)}">1.2000</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:if="${seeCost}" th:text="#{cutting.yield.spoilageKpi(${@num.money(t.spoilageCost)})}">291,433 RWF to spoilage</span>
+                    <span class="vs" th:unless="${seeCost}" th:text="#{cutting.yield.lossKpi(${#numbers.formatDecimal(t.lossPercent, 1, 'COMMA', 1, 'POINT')})}">6.7 % of the glass cut</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" th:each="block : ${ {'operator', 'product'} }" th:with="rows=${block == 'operator'} ? ${report.byOperator} : ${report.byProduct}">
+        <div class="section-header">
+            <h2 th:text="${block == 'operator'} ? #{cutting.yield.byOperator} : #{cutting.yield.byProduct}">By operator</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="${block == 'operator'} ? #{cutting.operator} : #{product.name}">Operator</th>
+                        <th class="num" th:text="#{cutting.yield.jobs}">Jobs</th>
+                        <th class="num" th:text="#{cutting.yield.consumed}">m² cut</th>
+                        <th class="num" th:text="#{cutting.kind.PIECE}">Cut pieces</th>
+                        <th class="num" th:text="#{cutting.kind.OFFCUT}">Off-cuts</th>
+                        <th class="num" th:text="#{cutting.yield.cullet}">Cullet</th>
+                        <th class="num" th:text="#{cutting.yield.broken}">Broken</th>
+                        <th class="num" th:text="#{cutting.yieldKpi}">Yield</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{cutting.yield.spoilageCol}">Spoilage (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows}">
+                        <td th:classappend="${block == 'product'} ? 'mono'" th:text="${r.label}">operator1</td>
+                        <td class="num" th:text="${r.jobs}">12</td>
+                        <td class="num" th:text="${@num.m2(r.consumed)}">86.6700</td>
+                        <td class="num" th:text="${@num.m2(r.pieces)}">60.0000</td>
+                        <td class="num" th:text="${@num.m2(r.offcuts)}">21.6000</td>
+                        <td class="num" th:text="${@num.m2(r.cullet)}">5.0700</td>
+                        <td class="num" th:text="${@num.m2(r.broken)}">0.0000</td>
+                        <td class="num strong" th:text="${#numbers.formatDecimal(r.yieldPercent, 1, 'COMMA', 1, 'POINT') + ' %'}">94.2 %</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(r.spoilageCost)}">174,800</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(rows)}">
+                        <td th:attr="colspan=${seeCost} ? 9 : 8">
+                            <div class="empty-state">
+                                <h3 th:text="#{cutting.yield.empty}">Nothing cut in this period</h3>
+                                <p th:text="#{cutting.yield.emptyHint}">Choose other dates: only jobs whose cut was recorded count</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{cutting.yield.byReason}">Breakage by reason</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{cutting.reason}">Reason</th>
+                        <th class="num" th:text="#{cutting.countCol}">Pieces</th>
+                        <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{cutting.costCol}">Cost (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${report.breakage}">
+                        <td th:text="#{${'cutting.reason.' + b.reason}}">Handling</td>
+                        <td class="num" th:text="${b.pieces}">2</td>
+                        <td class="num" th:text="${@num.m2(b.areaM2)}">0.4000</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(b.cost)}">13,791</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.breakage)}">
+                        <td th:attr="colspan=${seeCost} ? 4 : 3"><div class="empty-state"><p th:text="#{cutting.yield.noBreakage}">No glass broken while cutting in this period.</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

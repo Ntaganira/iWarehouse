@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{adjustment.addTitle}, ~{::content})}">
+<head><title>New adjustment - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{adjustment.addTitle}">New Stock Adjustment</h1>
+            <div class="subtitle" th:text="#{adjustment.formSubtitle(${@num.money(limit)})}">Up to 0 RWF it is recorded when you save; above that, a second person approves it first.</div>
+        </div>
+        <a href="/stock-adjustments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/stock-adjustments/new}" th:object="${adjustmentDto}" method="post" class="adjustment-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-group">
+                    <label for="reason" th:text="#{adjustment.reason}">Reason</label>
+                    <input type="text" id="reason" th:field="*{reason}" maxlength="255" required th:placeholder="#{adjustment.reasonPh}"
+                           th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{adjustment.linesTitle}">Changes</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add" data-for="lines">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{adjustment.addLine}">Add change</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table adjust-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{adjustment.kind}">Change</th>
+                            <th th:text="#{cutting.unitCode}">Unit code</th>
+                            <th th:text="#{adjustment.cause}">Cause</th>
+                            <th th:text="#{product.name}">Product</th>
+                            <th th:text="#{stock.kind}">Kind</th>
+                            <th class="num" th:text="#{cutting.widthMm}">Width (mm)</th>
+                            <th class="num" th:text="#{cutting.heightMm}">Height (mm)</th>
+                            <th th:text="#{adjustment.place}">Place</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body" data-prefix="lines">
+                        <tr class="line-row" th:each="row, st : *{lines}">
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].kind}" class="adjust-kind" th:aria-label="#{adjustment.kind}">
+                                    <option th:each="k : ${kinds}" th:value="${k}" th:text="#{${'adjustment.kind.' + k}}">Write off</option>
+                                </select>
+                            </td>
+                            <td data-kinds="WRITE_OFF FOUND RESIZE">
+                                <input type="text" th:field="*{lines[__${st.index}__].unitCode}" maxlength="30" class="input-code" spellcheck="false"
+                                       th:placeholder="#{cutting.unitCodePh}" th:aria-label="#{cutting.unitCode}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].unitCode')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].unitCode')}" th:errors="*{lines[__${st.index}__].unitCode}"></span>
+                            </td>
+                            <td data-kinds="WRITE_OFF">
+                                <select th:field="*{lines[__${st.index}__].cause}" th:aria-label="#{adjustment.cause}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].cause')} ? 'is-invalid'">
+                                    <option value="" th:text="#{cutting.chooseReason}">Choose</option>
+                                    <option th:each="c : ${causes}" th:value="${c}" th:text="#{${'adjustment.cause.' + c}}">Damaged</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].cause')}" th:errors="*{lines[__${st.index}__].cause}"></span>
+                            </td>
+                            <td data-kinds="NEW_UNIT">
+                                <select th:field="*{lines[__${st.index}__].productId}" th:aria-label="#{product.name}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].productId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{cutting.chooseProduct}">Choose the glass</option>
+                                    <option th:each="p : ${products}" th:value="${p.id}" th:text="${p.code}">CLR-6</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].productId')}" th:errors="*{lines[__${st.index}__].productId}"></span>
+                            </td>
+                            <td data-kinds="NEW_UNIT">
+                                <select th:field="*{lines[__${st.index}__].unitKind}" th:aria-label="#{stock.kind}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].unitKind')} ? 'is-invalid'">
+                                    <option value="" th:text="#{cutting.chooseReason}">Choose</option>
+                                    <option th:each="k : ${unitKinds}" th:value="${k}" th:text="#{${'stock.kind.' + k}}">Full sheet</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].unitKind')}" th:errors="*{lines[__${st.index}__].unitKind}"></span>
+                            </td>
+                            <td class="num" data-kinds="NEW_UNIT RESIZE">
+                                <input type="number" th:field="*{lines[__${st.index}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.widthMm}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].widthMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].widthMm')}" th:errors="*{lines[__${st.index}__].widthMm}"></span>
+                            </td>
+                            <td class="num" data-kinds="NEW_UNIT RESIZE">
+                                <input type="number" th:field="*{lines[__${st.index}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.heightMm}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].heightMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].heightMm')}" th:errors="*{lines[__${st.index}__].heightMm}"></span>
+                            </td>
+                            <td data-kinds="FOUND NEW_UNIT">
+                                <select th:field="*{lines[__${st.index}__].locationId}" th:aria-label="#{adjustment.place}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].locationId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
+                                    <option th:each="l : ${places}" th:value="${l.id}" th:text="${l.code}">WH-A-R01</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].locationId')}" th:errors="*{lines[__${st.index}__].locationId}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{adjustment.linesNote}">Write off: damaged units go to spoilage, missing ones become lost (they can be found again). Found: a lost unit back in stock. New unit: a piece nobody recorded, valued at the glass's average cost. Correct size: the unit is replaced by one of the right size at the same cost per m², with a new label.</p>
+        </div>
+
+        <template class="line-template" data-for="lines">
+            <tr class="line-row">
+                <td>
+                    <select name="lines[{i}].kind" class="adjust-kind" th:aria-label="#{adjustment.kind}">
+                        <option th:each="k : ${kinds}" th:value="${k}" th:text="#{${'adjustment.kind.' + k}}">Write off</option>
+                    </select>
+                </td>
+                <td data-kinds="WRITE_OFF FOUND RESIZE"><input type="text" name="lines[{i}].unitCode" maxlength="30" class="input-code" spellcheck="false" th:placeholder="#{cutting.unitCodePh}" th:aria-label="#{cutting.unitCode}"></td>
+                <td data-kinds="WRITE_OFF">
+                    <select name="lines[{i}].cause" th:aria-label="#{adjustment.cause}">
+                        <option value="" th:text="#{cutting.chooseReason}">Choose</option>
+                        <option th:each="c : ${causes}" th:value="${c}" th:text="#{${'adjustment.cause.' + c}}">Damaged</option>
+                    </select>
+                </td>
+                <td data-kinds="NEW_UNIT">
+                    <select name="lines[{i}].productId" th:aria-label="#{product.name}">
+                        <option value="" th:text="#{cutting.chooseProduct}">Choose the glass</option>
+                        <option th:each="p : ${products}" th:value="${p.id}" th:text="${p.code}">CLR-6</option>
+                    </select>
+                </td>
+                <td data-kinds="NEW_UNIT">
+                    <select name="lines[{i}].unitKind" th:aria-label="#{stock.kind}">
+                        <option value="" th:text="#{cutting.chooseReason}">Choose</option>
+                        <option th:each="k : ${unitKinds}" th:value="${k}" th:text="#{${'stock.kind.' + k}}">Full sheet</option>
+                    </select>
+                </td>
+                <td class="num" data-kinds="NEW_UNIT RESIZE"><input type="number" name="lines[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.widthMm}"></td>
+                <td class="num" data-kinds="NEW_UNIT RESIZE"><input type="number" name="lines[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{cutting.heightMm}"></td>
+                <td data-kinds="FOUND NEW_UNIT">
+                    <select name="lines[{i}].locationId" th:aria-label="#{adjustment.place}">
+                        <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
+                        <option th:each="l : ${places}" th:value="${l.id}" th:text="${l.code}">WH-A-R01</option>
+                    </select>
+                </td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{adjustment.save}">Save adjustment</button>
+            <a href="/stock-adjustments" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/stock-ops.js"></script>
+</div>
+</body>
+</html>

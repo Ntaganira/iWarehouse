@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{cutting.title}, ~{::content})}">
+<head><title>Cutting Jobs - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{cutting.title}">Cutting Jobs</h1>
+            <div class="subtitle" th:text="#{cutting.subtitle}">Pieces to cut from a sheet or off-cut: for stock or for a customer, with the off-cuts and cullet each cut leaves</div>
+        </div>
+        <div class="btn-group">
+            <a href="/cutting-jobs/yield" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_CUTTING_YIELD') and hasAuthority('PERM_VIEW_CUTTING_YIELD')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span th:text="#{cutting.yield.title}">Cutting yield</span>
+            </a>
+            <a href="/cutting-jobs/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_CUTTING_JOB')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{cutting.add}">New cutting job</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{cutting.sectionTitle}">Cutting jobs</span>
+                <span class="section-count" th:text="${jobs.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/cutting-jobs}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{cutting.searchPh}" th:aria-label="#{cutting.searchPh}">
+                </div>
+                <select name="purpose" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{cutting.purpose}">
+                    <option value="" th:selected="${purpose == null or purpose == ''}" th:text="#{cutting.allPurposes}">Stock and customers</option>
+                    <option th:each="p : ${purposes}" th:value="${p}" th:selected="${p.name() == purpose}" th:text="#{${'cutting.purpose.' + p}}">For stock</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'cutting.status.' + st}}">Draft</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{cutting.number}">Job</th>
+                        <th th:text="#{cutting.for}">For</th>
+                        <th th:text="#{product.name}">Product</th>
+                        <th class="num" th:text="#{cutting.piecesCol}">Pieces</th>
+                        <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                        <th th:text="#{cutting.source}">Source</th>
+                        <th class="num" th:text="#{cutting.yieldCol}">Yield</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="j : ${jobs.content}" th:with="n=${needs.get(j.id)}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/cutting-jobs/{id}(id=${j.id})}" th:text="${j.number}">CUT-WH-2026-000001</a>
+                            <div class="cell-sub" th:if="${j.dueDate != null}" th:text="#{cutting.dueOn(${#temporals.format(j.dueDate, 'yyyy-MM-dd')})}">due 2026-10-10</div>
+                        </td>
+                        <td>
+                            <span th:if="${j.purpose.name() == 'STOCK'}" class="text-muted" th:text="#{cutting.purpose.STOCK}">For stock</span>
+                            <th:block th:if="${j.purpose.name() == 'CUSTOMER'}">
+                                <span th:text="${j.customer.name}">Kigali Builders</span>
+                                <div class="cell-sub mono" th:if="${j.customerRef != null}" th:text="${j.customerRef}">Q-0017</div>
+                            </th:block>
+                        </td>
+                        <td>
+                            <th:block th:replace="~{products/list :: productName(${j.product})}"></th:block>
+                            <div class="cell-sub mono" th:text="${j.product.code}">CLR-6</div>
+                        </td>
+                        <td class="num" th:text="${n != null} ? ${n.pieces} : 0">3</td>
+                        <td class="num" th:text="${n != null} ? ${@num.m2(n.areaM2)} : '—'">5.0000</td>
+                        <td class="mono" th:text="${j.sourceCode ?: '—'}">U-WH-000021</td>
+                        <td class="num" th:text="${j.yieldPercent != null} ? ${#numbers.formatDecimal(j.yieldPercent, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">94.2 %</td>
+                        <td><th:block th:replace="~{cutting-jobs/list :: jobStatus(${j.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(jobs.content)}">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3 th:text="#{cutting.empty}">No cutting jobs found</h3>
+                                <p th:text="#{cutting.emptyHint}">Add a job with the sizes wanted; the operator then takes a sheet or off-cut for it and records the cut</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${jobs}, '/cutting-jobs', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a cutting job. */-->
+<th:block th:fragment="jobStatus(s)" th:switch="${s.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{cutting.status.DRAFT}">Draft</span>
+    <span th:case="'IN_PROGRESS'" class="badge badge-warning" th:text="#{cutting.status.IN_PROGRESS}">Being cut</span>
+    <span th:case="'COMPLETED'" class="badge badge-success" th:text="#{cutting.status.COMPLETED}">Cut</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{cutting.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

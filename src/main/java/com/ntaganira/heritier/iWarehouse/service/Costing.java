@@ -63,4 +63,29 @@ public final class Costing {
         return currentMac.add(addedValue.divide(heldM2, RATE_SCALE + 6, RoundingMode.HALF_UP))
                 .setScale(RATE_SCALE, RoundingMode.HALF_UP);
     }
+
+    /**
+     * Moving average cost per m² after a cut (PRD-07): the m² held change by the pieces and off-cuts less
+     * the source, and the value by what was expensed (cullet and breakage, negative). (m² held x MAC +
+     * value change) / (m² held + area change), 4 decimals. A sheet cut at the MAC leaves the MAC as it was.
+     * Without a MAC, or with nothing left held, it stays as it was.
+     */
+    public static BigDecimal afterCut(BigDecimal heldM2, BigDecimal currentMac, BigDecimal areaChange,
+                                      BigDecimal valueChange) {
+        return afterStockChange(heldM2, currentMac, areaChange, valueChange);
+    }
+
+    /**
+     * Moving average cost per m² after m² and value leave or enter stock at a unit's own cost (cuts, write-offs,
+     * units found or resized, INV-07): (m² held x MAC + value change) / (m² held + area change), 4 decimals.
+     * Without a MAC, or with nothing left held, it stays as it was.
+     */
+    public static BigDecimal afterStockChange(BigDecimal heldM2, BigDecimal currentMac, BigDecimal areaChange,
+                                              BigDecimal valueChange) {
+        BigDecimal heldAfter = heldM2.add(areaChange);
+        if (currentMac == null || heldAfter.signum() <= 0) {
+            return currentMac;
+        }
+        return heldM2.multiply(currentMac).add(valueChange).divide(heldAfter, RATE_SCALE, RoundingMode.HALF_UP);
+    }
 }

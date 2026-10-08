@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${adjustment.number}, ~{::content})}">
+<head><title>Adjustment - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${adjustment.status.name()},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_ADJUSTMENT'')')},
+        canAdjust=${#authorization.expression('hasAuthority(''PERM_ADJUST_STOCK'')')},
+        seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${adjustment.number}">ADJ-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{adjustment.askedBy(${adjustment.requestedBy}, ${#temporals.format(adjustment.createdAt, 'yyyy-MM-dd HH:mm')})}">asked by supervisor1 on 2026-10-08 16:20</span>
+                &middot; <th:block th:replace="~{stock-adjustments/list :: adjustmentStatus(${adjustment.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock-adjustments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'PENDING_APPROVAL'}">
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canAdjust and mine}" th:text="#{adjustment.cancel}">Withdraw</button>
+                <th:block th:if="${canApprove and !mine}">
+                    <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{adjustment.reject}">Reject</button>
+                    <form th:action="@{/stock-adjustments/{id}/approve(id=${adjustment.id})}" method="post" class="row-action-form confirm-submit"
+                          th:attr="data-confirm=#{adjustment.approveConfirm(${adjustment.number}, ${@num.money(adjustment.valueMoved)})}">
+                        <button type="submit" class="btn btn-primary" th:text="#{adjustment.approve}">Approve and post</button>
+                    </form>
+                </th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="#{adjustment.reason} + ':'">Reason:</strong> <span th:text="${adjustment.reason}">Broken while moving</span></div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
+        <span th:text="#{adjustment.waitingNote(${@num.money(adjustment.valueMoved)}, ${@num.money(limit)})}">Moves 252,629 RWF, above the 0 RWF limit: another person with approval rights must approve it. Its units are held meanwhile.</span>
+        <span th:if="${mine}" th:text="#{adjustment.notYourOwn}">You cannot approve your own adjustment.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{adjustment.rejectedBy(${adjustment.decidedBy})} : #{adjustment.cancelledBy(${adjustment.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${adjustment.decisionNote}">Unit is on rack R02</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'POSTED'}">
+        <strong th:text="#{adjustment.postedOn(${#temporals.format(adjustment.postedAt, 'yyyy-MM-dd HH:mm')})}">Posted on 2026-10-08 16:21</strong>
+        <span th:if="${adjustment.decidedBy != null}" th:text="#{adjustment.approvedBy(${adjustment.decidedBy})}">approved by owner</span>
+        <span th:if="${adjustment.decisionNote != null}" th:text="${'· ' + adjustment.decisionNote}">· ok</span>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{adjustment.linesTitle}">Changes</span>
+                <span class="section-count" th:text="${adjustment.lines.size()}">1</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{adjustment.kind}">Change</th>
+                                <th th:text="#{cutting.unitCol}">Unit</th>
+                                <th th:text="#{adjustment.detail}">Detail</th>
+                                <th th:text="#{adjustment.result}">Result</th>
+                                <th class="num" th:if="${seeCost}" th:text="#{adjustment.valueChange}">Value (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${adjustment.lines}" th:with="u=${l.stockUnitId != null} ? ${units.get(l.stockUnitId)} : null,
+                                    r=${l.resultUnitId != null} ? ${units.get(l.resultUnitId)} : null">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td th:text="#{${'adjustment.kind.' + l.kind}}">Write off</td>
+                                <td>
+                                    <a class="mono" th:if="${l.stockUnitId != null}" th:href="@{/stock/{id}(id=${l.stockUnitId})}" th:text="${l.unitCode}">U-WH-000021</a>
+                                    <span th:if="${l.stockUnitId == null}" class="text-muted">—</span>
+                                    <div class="cell-sub" th:if="${u != null}" th:text="${u.product.code + ' · ' + u.widthMm + ' × ' + u.heightMm + ' mm'}">CLR-6 · 3210 × 2250 mm</div>
+                                </td>
+                                <td th:switch="${l.kind.name()}">
+                                    <span th:case="'WRITE_OFF'" th:text="#{${'adjustment.cause.' + l.cause}}">Damaged</span>
+                                    <span th:case="'FOUND'" th:text="#{adjustment.foundAt(${l.location.code})}">found at WH-A-R01</span>
+                                    <span th:case="'NEW_UNIT'" th:text="${l.product.code + ' · ' + #messages.msg('stock.kind.' + l.unitKind) + ' · ' + l.widthMm + ' × ' + l.heightMm + ' mm · ' + l.location.code}">CLR-6 · Off-cut · 1000 × 500 mm · WH-A-OC</span>
+                                    <span th:case="'RESIZE'" th:text="#{adjustment.resizeTo(${l.widthMm + ' × ' + l.heightMm})}">to 3200 × 2250 mm</span>
+                                </td>
+                                <td>
+                                    <th:block th:if="${r != null}">
+                                        <a class="mono" th:href="@{/stock/{id}(id=${r.id})}" th:text="${r.code}">U-WH-000062</a>
+                                        <th:block th:replace="~{stock/list :: stockStatus(${r.status})}"></th:block>
+                                    </th:block>
+                                    <th:block th:if="${r == null and u != null and s == 'POSTED'}">
+                                        <th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block>
+                                    </th:block>
+                                    <span th:if="${r == null and (u == null or s != 'POSTED')}" class="text-muted">—</span>
+                                </td>
+                                <td class="num" th:if="${seeCost}" th:classappend="${l.valueChange.signum() < 0} ? 'text-danger'" th:text="${@num.money(l.valueChange)}">-252,628.86</td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:if="${seeCost}">
+                            <tr>
+                                <th colspan="5" th:text="#{adjustment.total}">Stock value change</th>
+                                <th class="num" th:text="${@num.money(adjustment.valueChange)}">-252,628.86</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/stock-adjustments/' + ${adjustment.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'PENDING_APPROVAL' and canApprove and !mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{adjustment.rejectTitle(${adjustment.number})},
+                @{/stock-adjustments/{id}/reject(id=${adjustment.id})}, #{adjustment.rejectText}, #{adjustment.reject})}"></div>
+    </th:block>
+    <th:block th:if="${s == 'PENDING_APPROVAL' and canAdjust and mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{adjustment.cancelTitle(${adjustment.number})},
+                @{/stock-adjustments/{id}/cancel(id=${adjustment.id})}, #{adjustment.cancelText}, #{adjustment.cancel})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

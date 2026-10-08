@@ -29,4 +29,7 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID>, JpaSp
     long countByPriceList_IdAndEnabledTrue(UUID priceListId);
 
     List<Customer> findByPriceList_IdOrderByNameAsc(UUID priceListId);
+
+    /** Customers a document can be for, by name. */
+    List<Customer> findByEnabledTrueOrderByNameAsc();
 }

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{transfer.addTitle}, ~{::content})}">
+<head><title>Move units - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{transfer.addTitle}">Move Units</h1>
+            <div class="subtitle" th:text="#{transfer.formSubtitle}">Scan the labels of the units you move, then choose where they go. The transfer is recorded when you save.</div>
+        </div>
+        <a href="/stock-transfers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/stock-transfers/new}" th:object="${transferDto}" method="post" class="transfer-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="codes" th:text="#{transfer.codes}">Unit codes</label>
+                        <textarea id="codes" th:field="*{codes}" rows="6" class="input-code" spellcheck="false" autofocus
+                                  th:placeholder="#{transfer.codesPh}" th:classappend="${#fields.hasErrors('codes')} ? 'is-invalid'"></textarea>
+                        <span class="hint"><span id="transfer-count">0</span> <span th:text="#{transfer.codesHint}">unit(s): scan one label per line; spaces and commas also separate codes</span></span>
+                        <span class="field-error" th:if="${#fields.hasErrors('codes')}" th:errors="*{codes}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="toLocationId" th:text="#{transfer.to}">To</label>
+                        <select id="toLocationId" th:field="*{toLocationId}" th:classappend="${#fields.hasErrors('toLocationId')} ? 'is-invalid'">
+                            <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
+                            <option th:each="p : ${places}" th:value="${p.location.id}"
+                                    th:text="${p.location.code + ' · ' + p.location.name + (p.rack.offcut ? ' · ' + #messages.msg('location.offcut') : '')} + ${p.rack.maxPieces != null ? ' · ' + p.load.pieces + '/' + p.rack.maxPieces + ' ' + #messages.msg('receipt.pcs') : ''} + ${p.rack.maxWeightKg != null ? ' · ' + #numbers.formatInteger(p.load.kg, 1, 'COMMA') + '/' + #numbers.formatInteger(p.rack.maxWeightKg, 1, 'COMMA') + ' kg' : ''}">WH-A-R02 · Rack 2 · 18/30 pcs · 1,950/3,000 kg</option>
+                        </select>
+                        <span class="hint" th:text="#{transfer.toHint}">Full sheets never go to an off-cut rack; the rack must take the extra pieces and kg</span>
+                        <span class="field-error" th:if="${#fields.hasErrors('toLocationId')}" th:errors="*{toLocationId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="note" th:text="#{transfer.note}">Note</label>
+                        <input type="text" id="note" th:field="*{note}" maxlength="255" th:placeholder="#{transfer.notePh}"
+                               th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{transfer.save}">Move units</button>
+            <a href="/stock-transfers" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/stock-ops.js"></script>
+</div>
+</body>
+</html>

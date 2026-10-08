@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${transfer.number}, ~{::content})}">
+<head><title>Transfer - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${transfer.number}">TRF-WH-2026-000001</h1>
+            <div class="subtitle"
+                 th:text="#{transfer.subtitleOne(${transfer.lines.size()}, ${transfer.toLocation.code}, ${#temporals.format(transfer.postedAt, 'yyyy-MM-dd HH:mm')}, ${transfer.postedBy})}">3 units to WH-A-R02 on 2026-10-08 16:20 by admin</div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock-transfers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a href="/stock-transfers/new" class="btn btn-outline" sec:authorize="hasAuthority('PERM_TRANSFER_STOCK')" th:text="#{transfer.add}">Move units</a>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${transfer.note != null}"><strong th:text="#{transfer.note} + ':'">Note:</strong> <span th:text="${transfer.note}">—</span></div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-units" th:classappend="${tab == 'units'} ? 'active'">
+                <span th:text="#{transfer.units}">Units</span>
+                <span class="section-count" th:text="${transfer.lines.size()}">3</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-units" th:classappend="${tab == 'units'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{cutting.unitCol}">Unit</th>
+                                <th th:text="#{product.name}">Product</th>
+                                <th th:text="#{cutting.size}">Size (mm)</th>
+                                <th th:text="#{transfer.fromTo}">From → to</th>
+                                <th th:text="#{transfer.nowAt}">Now</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${transfer.lines}" th:with="u=${units.get(l.stockUnitId)}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td><a class="mono" th:href="@{/stock/{id}(id=${l.stockUnitId})}" th:text="${l.unitCode}">U-WH-000021</a></td>
+                                <td><th:block th:if="${u != null}" th:replace="~{products/list :: productName(${u.product})}"></th:block></td>
+                                <td class="mono nowrap" th:text="${u != null} ? ${u.widthMm + ' × ' + u.heightMm} : '—'">3210 × 2250</td>
+                                <td class="mono nowrap">
+                                    <span th:text="${locations.get(l.fromLocationId) != null} ? ${locations.get(l.fromLocationId).code} : '—'">WH-A-R04</span>
+                                    → <span th:text="${transfer.toLocation.code}">WH-A-R02</span>
+                                </td>
+                                <td class="nowrap" th:if="${u != null}">
+                                    <span class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R02</span>
+                                    <th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/stock-transfers/' + ${transfer.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

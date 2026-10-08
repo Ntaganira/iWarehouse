@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{summary.title}, ~{::content})}">
+<head><title>Stock Summary - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="g=${group.name()}, seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{summary.title}">Stock Summary</h1>
+            <div class="subtitle" th:text="#{summary.subtitle}">Glass held in pieces, m² and value at the average cost (MAC), by glass, place or state</div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock" class="btn btn-outline" th:text="#{nav.stock}">Inventory</a>
+            <a th:href="@{'/stock/summary.csv?' + ${csvQuery}}" class="btn btn-outline" th:text="#{summary.csv}">Download CSV</a>
+        </div>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{summary.pieces}">Pieces</div>
+                <div class="kpi-value" th:text="${view.total.pieces}">60</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{summary.inStock}">in stock</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{summary.area}">m²</div>
+                <div class="kpi-value" th:text="${@num.m2(view.total.areaM2)}">274.06</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{summary.inStock}">in stock</span></div>
+            </div>
+        </div>
+        <div class="kpi-card" th:if="${seeCost}">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{summary.value}">Value at MAC (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(view.total.value)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">6,161,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{summary.valueHint}">m² x average cost</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${#lists.isEmpty(view.reorder)} ? 'green' : 'orange'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{summary.reorderKpi}">Below reorder level</div>
+                <div class="kpi-value" th:text="${view.reorder.size()}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{summary.reorderHint}">glass to order</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" th:if="${!#lists.isEmpty(view.reorder)}">
+        <div class="section-header">
+            <h2 th:text="#{summary.reorderTitle}">Below reorder level</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{product.name}">Product</th>
+                        <th class="num" th:text="#{summary.available}">Available m²</th>
+                        <th class="num" th:text="#{summary.reorderLevel}">Reorder level m²</th>
+                        <th class="num" th:text="#{summary.short}">Short m²</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${view.reorder}">
+                        <td>
+                            <th:block th:replace="~{products/list :: productName(${r.product})}"></th:block>
+                            <div class="cell-sub mono" th:text="${r.product.code}">CLR-4</div>
+                        </td>
+                        <td class="num" th:text="${@num.m2(r.availableM2)}">0</td>
+                        <td class="num" th:text="${@num.m2(r.levelM2)}">50</td>
+                        <td class="num strong text-danger" th:text="${@num.m2(r.shortM2)}">50</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{summary.byTitle}">Stock held</h2>
+            <form th:action="@{/stock/summary}" method="get" class="table-toolbar party-filters">
+                <div class="segmented" role="group" th:aria-label="#{summary.groupBy}">
+                    <a th:each="gr : ${groups}" th:href="@{/stock/summary(group=${gr}, product=${product})}"
+                       class="segmented-link" th:classappend="${gr == group} ? 'active'" th:text="#{${'summary.by.' + gr}}">By glass</a>
+                </div>
+                <input type="hidden" name="group" th:value="${g}">
+                <select name="product" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{product.name}">
+                    <option value="" th:text="#{cutting.yield.allProducts}">All glass</option>
+                    <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}" th:text="${p.code}">CLR-6</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{${'summary.group.' + g}}">Glass</th>
+                        <th class="num" th:text="#{summary.pieces}">Pieces</th>
+                        <th class="num" th:text="#{summary.area}">m²</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{summary.value}">Value at MAC (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${view.rows}">
+                        <td th:switch="${g}">
+                            <th:block th:case="'PRODUCT'">
+                                <a th:if="${r.product != null}" th:href="@{/stock(product=${r.product.id})}">
+                                    <th:block th:replace="~{products/list :: productName(${r.product})}"></th:block>
+                                </a>
+                                <div class="cell-sub mono" th:if="${r.product != null}" th:text="${r.product.code}">CLR-6</div>
+                            </th:block>
+                            <th:block th:case="'LOCATION'">
+                                <a class="mono" th:if="${r.location != null}" th:href="@{/stock(location=${r.location.id})}" th:text="${r.location.code}">WH-A-R01</a>
+                                <span class="cell-sub" th:if="${r.location != null}" th:text="${r.location.name}">Rack 1</span>
+                            </th:block>
+                            <th:block th:case="*">
+                                <a th:href="@{/stock(status=${r.status})}"><th:block th:replace="~{stock/list :: stockStatus(${r.status})}"></th:block></a>
+                            </th:block>
+                        </td>
+                        <td class="num" th:text="${r.pieces}">20</td>
+                        <td class="num" th:text="${@num.m2(r.areaM2)}">144.45</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(r.value)}">3,256,000</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(view.rows)}">
+                        <td th:attr="colspan=${seeCost} ? 4 : 3"><div class="empty-state"><h3 th:text="#{stock.empty}">No stock units found</h3></div></td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${!#lists.isEmpty(view.rows)}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${view.total.pieces}">60</th>
+                        <th class="num" th:text="${@num.m2(view.total.areaM2)}">274.06</th>
+                        <th class="num" th:if="${seeCost}" th:text="${@num.money(view.total.value)}">6,161,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{summary.note}">Units in stock: received, available, reserved, being cut and on vehicles. Value is each glass's m² times its moving average cost, the value the accounts carry.</p>
+    </div>
+</div>
+</body>
+</html>

@@ -4118,3 +4118,91 @@ table tfoot th.num { text-align: right; }
 .form-group .multiselect-choices.is-invalid .choices__inner, .form-group select.is-invalid + .choices__list { border-color: var(--danger); }
 /* Native scrollbars, date pickers and form controls follow the dark theme */
 [data-theme="dark"] { color-scheme: dark; }
+
+/* Cutting jobs: pieces, the cut, area check, yield (PRD-01..09) */
+.cutting-form.for-stock .customer-only { display: none; }
+.cut-line-table td.num:nth-child(-n+3) { width: 110px; }
+.cut-line-table td.num.line-area { width: 90px; white-space: nowrap; }
+.proc-checks { display: flex; flex-wrap: wrap; gap: 4px; min-width: 200px; }
+.proc-check { position: relative; display: inline-flex; cursor: pointer; }
+.proc-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.proc-check span { padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; line-height: 1.4;
+  color: var(--gray-600); background: var(--surface); white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
+.proc-check:hover span { border-color: var(--gray-300); color: var(--gray-800); }
+.proc-check input:checked + span { background: var(--tint-blue); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.proc-check input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 1px; }
+.proc-badge + .proc-badge { margin-left: 4px; }
+.input-qty { max-width: 90px; text-align: right; }
+.doc-note.is-warning { border-left-color: var(--warning); }
+.doc-note a { margin-left: 4px; }
+.doc-kpis .kpi-value.is-code { font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-kpis .kpi-card:has(.is-code) .kpi-body { min-width: 0; }
+.kpi-icon.red { background: #fee2e2; color: var(--danger); }
+[data-theme="dark"] .kpi-icon.red { background: #3d2226; color: #fca5a5; }
+.cut-kind { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cut-kind.is-piece { background: var(--tint-blue); color: var(--primary); }
+.cut-kind.is-offcut { background: var(--tint-green); color: var(--success); }
+.cut-kind.is-cullet { background: var(--tint-orange); color: var(--orange); }
+.cut-kind.is-broken { background: #fee2e2; color: #991b1b; }
+[data-theme="dark"] .cut-kind.is-broken { background: #3d2226; color: #fca5a5; }
+.section > .tab-intro { margin: 0; padding: 14px 24px 0; }
+.balance-table tfoot th.text-muted { font-weight: 400; font-size: 13px; }
+.line-table td.line-kind { vertical-align: middle; }
+.line-kind { font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--gray-500); }
+.line-kind.is-offcut { color: var(--success); }
+.line-kind.is-cullet { color: var(--orange); }
+.line-kind.is-over { color: var(--danger); }
+.balance-table + .form-note { margin-top: 10px; }
+.form-note + .detail-heading, .table-container + .detail-heading { margin-top: 24px; }
+.tab-content > .detail-list + .detail-heading { margin-top: 24px; }
+/* Recording a cut: the form beside a sticky area check */
+.cut-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.cut-layout > *, .cut-form .form-grid > .form-group { min-width: 0; }
+.cut-form .form-grid select { width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+.cut-line-table input[type=number] { min-width: 72px; }
+.cut-side { position: sticky; top: 16px; }
+.balance-card { margin-bottom: 0; }
+.balance-list { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; margin: 0; padding: 4px 24px 12px; font-size: 14px; }
+.balance-list dt { color: var(--gray-600); }
+.balance-list dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--gray-800); }
+.balance-list .strong { font-weight: 700; color: var(--gray-800); }
+.balance-status { margin: 0 24px 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  background: var(--tint-neutral); color: var(--gray-600); }
+.balance-status.is-ok { background: var(--tint-green); color: var(--success); }
+.balance-status.is-over { background: #fee2e2; color: #991b1b; }
+[data-theme="dark"] .balance-status.is-over { background: #3d2226; color: #fca5a5; }
+.balance-card .form-note { margin: 0 24px 20px; }
+/* Taking a sheet: scan field and button on one line */
+.scan-row { display: flex; gap: 8px; max-width: 520px; }
+.scan-row input { flex: 1; min-width: 0; }
+/* Yield report filters */
+.report-filters { flex-wrap: wrap; gap: 10px; padding: 16px 24px; }
+.filter-field { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-600); }
+.filter-field input { width: auto; }
+@media (max-width: 1100px) {
+  .cut-layout { grid-template-columns: minmax(0, 1fr); }
+  .cut-side { position: static; order: -1; }
+}
+@media (max-width: 640px) {
+  .scan-row { flex-direction: column; }
+  .report-filters { padding: 12px 16px; }
+  .balance-list { padding: 4px 16px 12px; }
+  .balance-status, .balance-card .form-note { margin-left: 16px; margin-right: 16px; }
+}
+
+/* Stock operations: transfers, adjustments, summary (INV-05, INV-07, INV-09) */
+.adjust-line-table td:nth-child(1) { min-width: 150px; }
+.adjust-line-table td:nth-child(2) { min-width: 150px; }
+.adjust-line-table td:nth-child(3), .adjust-line-table td:nth-child(5) { min-width: 120px; }
+.adjust-line-table td:nth-child(4), .adjust-line-table td:nth-child(8) { min-width: 175px; }
+.adjust-line-table td.num:nth-child(6), .adjust-line-table td.num:nth-child(7) { width: 105px; }
+.adjust-line-table input[type=number] { min-width: 80px; }
+.line-table td.field-off > * { visibility: hidden; }
+.segmented .segmented-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--gray-500);
+  padding: 7px 14px; border-radius: 7px; text-decoration: none; transition: var(--transition); white-space: nowrap; }
+.segmented .segmented-link:hover { color: var(--gray-800); }
+.segmented .segmented-link.active { background: var(--primary); color: #ffffff; }
+.transfer-form textarea { font-family: var(--font-mono, ui-monospace, monospace); min-height: 140px; }
+.transfer-form .form-grid > .form-group { min-width: 0; }
+.transfer-form select, .transfer-form textarea { width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+.doc-note .btn, .doc-note a + a { margin-left: 8px; }

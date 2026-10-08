@@ -22,7 +22,7 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
     @EntityGraph(attributePaths = {"product", "location", "crateBatch"})
     Page<StockUnit> findAll(Specification<StockUnit> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"product", "location", "crateBatch", "crateBatch.goodsReceipt",
+    @EntityGraph(attributePaths = {"product", "location", "reservedCustomer", "crateBatch", "crateBatch.goodsReceipt",
             "crateBatch.goodsReceipt.purchaseOrder", "crateBatch.goodsReceipt.purchaseOrder.supplier"})
     Optional<StockUnit> findDetailedById(UUID id);
 
@@ -36,6 +36,23 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
 
     /** Units of some crates by code (landed cost allocation). */
     List<StockUnit> findByCrateBatch_IdInOrderByCode(Collection<UUID> crateIds);
+
+    /** Units by id, with product and location (documents listing units). */
+    @EntityGraph(attributePaths = {"product", "location"})
+    List<StockUnit> findByIdIn(Collection<UUID> ids);
+
+    /** Units by label code (scanned lists), with product and location. */
+    @EntityGraph(attributePaths = {"product", "location"})
+    List<StockUnit> findByCodeIn(Collection<String> codes);
+
+    /** Rows of (product id, location id, status, pieces, m²) of units in some states (INV-09, INV-10). */
+    @Query("select u.product.id, u.location.id, u.status, count(u), coalesce(sum(u.areaM2), 0) from StockUnit u"
+            + " where u.status in :statuses group by u.product.id, u.location.id, u.status")
+    List<Object[]> summarize(@Param("statuses") Collection<StockStatus> statuses);
+
+    /** Units cut from a unit (PRD-03), by code. */
+    @EntityGraph(attributePaths = {"product", "location", "crateBatch"})
+    List<StockUnit> findByParentUnitIdOrderByCode(UUID parentUnitId);
 
     long countByLocation_IdAndStatusIn(UUID locationId, Collection<StockStatus> statuses);
 

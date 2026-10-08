@@ -1,9 +1,12 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.entity.CuttingJob;
+import com.ntaganira.heritier.iWarehouse.entity.CuttingJobOutput;
 import com.ntaganira.heritier.iWarehouse.entity.GoodsReceipt;
 import com.ntaganira.heritier.iWarehouse.entity.Location;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.CuttingJobStatus;
 import com.ntaganira.heritier.iWarehouse.enums.GoodsReceiptStatus;
 import com.ntaganira.heritier.iWarehouse.enums.StockStatus;
 import com.ntaganira.heritier.iWarehouse.enums.UnitKind;
@@ -11,11 +14,18 @@ import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
+import com.ntaganira.heritier.iWarehouse.service.CuttingJobService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.GoodsReceiptService;
 import com.ntaganira.heritier.iWarehouse.service.Labels;
 import com.ntaganira.heritier.iWarehouse.service.LocationService;
+import com.ntaganira.heritier.iWarehouse.service.StockReservationService;
 import com.ntaganira.heritier.iWarehouse.service.StockService;
+import com.ntaganira.heritier.iWarehouse.service.StockSummary;
+import com.ntaganira.heritier.iWarehouse.service.StockSummaryService;
+import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
@@ -38,8 +48,9 @@ import java.util.*;
  * - Date      : 2026. 10. 08.
  * - User      : Hntaganira
  * - Desc      : Inventory screens (INV-01..04, INV-06): stock units with filters and the "smallest piece
- *               that fits" search, a unit's detail with its movements and History, and labels (INV-03)
- *               as a printable page or ZPL. A scanned label code in the search opens the unit.
+ *               that fits" search, a unit's detail with its movements, the cut it came from or went
+ *               to, and History, and labels (INV-03) of a receipt, crate, cutting job or unit, as a
+ *               printable page or ZPL. A scanned label code in the search opens the unit.
  *               PAGE_STOCK + PERM_VIEW_STOCK; costs need PERM_VIEW_STOCK_COST, labels PERM_PRINT_LABEL.
  * </pre>
  */
@@ -52,20 +63,29 @@ public class StockController {
 
     private final StockService stockService;
     private final GoodsReceiptService receiptService;
+    private final CuttingJobService jobService;
     private final LocationService locationService;
     private final ProductRepository productRepo;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
+    private final StockReservationService reservationService;
+    private final StockSummaryService summaryService;
+    private final Messages messages;
 
-    public StockController(StockService stockService, GoodsReceiptService receiptService, LocationService locationService,
-                           ProductRepository productRepo, DataChangeService dataChangeService,
-                           ActivityLogService activityLogService) {
+    public StockController(StockService stockService, GoodsReceiptService receiptService, CuttingJobService jobService,
+                           LocationService locationService, ProductRepository productRepo, DataChangeService dataChangeService,
+                           ActivityLogService activityLogService, StockReservationService reservationService,
+                           StockSummaryService summaryService, Messages messages) {
         this.stockService = stockService;
         this.receiptService = receiptService;
+        this.jobService = jobService;
         this.locationService = locationService;
         this.productRepo = productRepo;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
+        this.reservationService = reservationService;
+        this.summaryService = summaryService;
+        this.messages = messages;
     }
 
     @GetMapping
@@ -124,17 +144,119 @@ public class StockController {
         model.addAttribute("costEntries", seeCost ? stockService.costEntries(id) : List.of());
         model.addAttribute("locations", locations);
         model.addAttribute("path", unit.getLocation() == null ? List.of() : locationService.ancestors(unit.getLocation()));
+        // The cut it was taken for or cut by, and the cut it came out of (PRD-03).
+        model.addAttribute("sourceOf", jobService.jobOfSource(id).orElse(null));
+        model.addAttribute("cutBy", jobService.jobOfOutput(id).orElse(null));
+        // A pending adjustment holds the unit (INV-05); customers for the reserve dialog.
+        model.addAttribute("heldBy", stockService.holds(List.of(id)).get(id));
+        model.addAttribute("customers", unit.getStatus() == StockStatus.AVAILABLE && AppUserPrincipal.currentHas("PERM_RESERVE_STOCK")
+                ? reservationService.customers() : List.of());
         model.addAttribute("history", dataChangeService.history("StockUnit", id.toString(), 0, 20));
         model.addAttribute("tab", List.of("movements", "cost", "history").contains(tab) && (seeCost || !tab.equals("cost")) ? tab : "movements");
         return "stock/view";
     }
 
-    /** Printable labels (50 x 30 mm) of a posted receipt, one crate, or one unit. */
+    // ---------------------------------------------------------------- reservations (INV-05)
+
+    @PostMapping("/{id}/reserve")
+    @PreAuthorize("hasAuthority('PAGE_STOCK') and hasAuthority('PERM_RESERVE_STOCK')")
+    public String reserve(@PathVariable UUID id, @RequestParam(required = false) UUID customerId,
+                          @RequestParam(required = false) String note, RedirectAttributes redirect) {
+        try {
+            StockUnit unit = reservationService.reserve(id, customerId, note);
+            activityLogService.record(MODULE, "RESERVE_STOCK", "Reserved " + unit.getCode() + " for "
+                    + unit.getReservedCustomer().getName() + (unit.getReservedNote() == null ? "" : ": " + unit.getReservedNote()),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("reservation.reserved", unit.getCode(),
+                    unit.getReservedCustomer().getName()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "RESERVE_STOCK", "Failed to reserve a unit: " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/stock/" + id;
+    }
+
+    @PostMapping("/{id}/release")
+    @PreAuthorize("hasAuthority('PAGE_STOCK') and hasAuthority('PERM_RESERVE_STOCK')")
+    public String release(@PathVariable UUID id, @RequestParam(required = false) String reason, RedirectAttributes redirect) {
+        if (!StringUtils.hasText(reason) || reason.trim().length() > 255) {
+            redirect.addFlashAttribute("flashError", messages.get("po.reason.required"));
+            return "redirect:/stock/" + id;
+        }
+        try {
+            StockUnit unit = com.ntaganira.heritier.iWarehouse.audit.AuditContext.withReason(reason.trim(),
+                    () -> reservationService.release(id, reason));
+            activityLogService.record(MODULE, "RELEASE_STOCK", "Released " + unit.getCode() + ": " + reason.trim(),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("reservation.released", unit.getCode()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "RELEASE_STOCK", "Failed to release a unit: " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/stock/" + id;
+    }
+
+    // ---------------------------------------------------------------- summary (INV-09, INV-10)
+
+    @GetMapping("/summary")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
+    public String summary(@RequestParam(defaultValue = "PRODUCT") StockSummary.GroupBy group,
+                          @RequestParam(required = false) UUID product, Model model) {
+        model.addAttribute("view", summaryService.summary(group, product));
+        model.addAttribute("groups", StockSummary.GroupBy.values());
+        model.addAttribute("products", summaryService.products());
+        model.addAttribute("group", group);
+        model.addAttribute("product", product);
+        model.addAttribute("csvQuery", QueryString.of("group", group.name(), "product", product == null ? null : product.toString()));
+        return "stock/summary";
+    }
+
+    /** The same summary as CSV (opens in Excel); values only for those who may see costs. */
+    @GetMapping(value = "/summary.csv")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
+    public ResponseEntity<byte[]> summaryCsv(@RequestParam(defaultValue = "PRODUCT") StockSummary.GroupBy group,
+                                             @RequestParam(required = false) UUID product) {
+        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
+        StockSummaryService.View view = summaryService.summary(group, product);
+        StringBuilder csv = new StringBuilder("﻿");
+        csv.append(messages.get("summary.group." + group)).append(',').append(messages.get("summary.pieces")).append(',')
+                .append(messages.get("summary.area"));
+        if (seeCost) {
+            csv.append(',').append(messages.get("summary.value"));
+        }
+        csv.append("\r\n");
+        for (StockSummary.Row r : view.rows()) {
+            String label = switch (group) {
+                case PRODUCT -> r.product() == null ? r.key() : r.product().getCode();
+                case LOCATION -> r.location() == null ? r.key() : r.location().getCode();
+                case STATUS -> messages.get("stock.status." + r.status());
+            };
+            csv.append(csvCell(label)).append(',').append(r.pieces()).append(',').append(r.areaM2().toPlainString());
+            if (seeCost) {
+                csv.append(',').append(r.value().toPlainString());
+            }
+            csv.append("\r\n");
+        }
+        activityLogService.record(MODULE, "EXPORT_STOCK_SUMMARY", "Downloaded the stock summary by " + group + " as CSV",
+                ActivityStatus.SUCCESS);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"stock-summary-" + group.name().toLowerCase() + ".csv\"")
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String csvCell(String value) {
+        return value.contains(",") || value.contains("\"") ? "\"" + value.replace("\"", "\"\"") + "\"" : value;
+    }
+
+    /** Printable labels (50 x 30 mm) of a posted receipt, one crate, a completed cutting job, or one unit. */
     @GetMapping("/labels")
     @PreAuthorize("hasAuthority('PAGE_STOCK') and hasAuthority('PERM_PRINT_LABEL')")
     public String labels(@RequestParam(required = false) UUID receipt, @RequestParam(required = false) UUID crate,
-                         @RequestParam(required = false) UUID unit, Model model) {
-        LabelSet set = labelSet(receipt, crate, unit);
+                         @RequestParam(required = false) UUID job, @RequestParam(required = false) UUID unit, Model model) {
+        LabelSet set = labelSet(receipt, crate, job, unit);
         Map<UUID, String> qr = new HashMap<>();
         for (StockUnit u : set.units()) {
             qr.put(u.getId(), Labels.qrSvg(u.getCode()));
@@ -154,8 +276,9 @@ public class StockController {
     @PreAuthorize("hasAuthority('PAGE_STOCK') and hasAuthority('PERM_PRINT_LABEL')")
     public ResponseEntity<byte[]> labelsZpl(@RequestParam(required = false) UUID receipt,
                                             @RequestParam(required = false) UUID crate,
+                                            @RequestParam(required = false) UUID job,
                                             @RequestParam(required = false) UUID unit) {
-        LabelSet set = labelSet(receipt, crate, unit);
+        LabelSet set = labelSet(receipt, crate, job, unit);
         List<Labels.Label> labels = set.units().stream()
                 .map(u -> new Labels.Label(u.getCode(), u.getProduct().getCode(), u.getProduct().getThicknessLabel(),
                         u.getWidthMm(), u.getHeightMm(), u.getCrateBatch() == null ? null : u.getCrateBatch().getBatchNo()))
@@ -174,11 +297,23 @@ public class StockController {
     private record LabelSet(List<StockUnit> units, String title, String backUrl, String query) {
     }
 
-    /** The units to label: of a posted receipt, of one crate, or one unit. */
-    private LabelSet labelSet(UUID receiptId, UUID crateId, UUID unitId) {
+    /** The units to label: of a posted receipt, of one crate, cut by a completed job (PRD-04), or one unit. */
+    private LabelSet labelSet(UUID receiptId, UUID crateId, UUID jobId, UUID unitId) {
         if (unitId != null) {
             StockUnit unit = stockService.findDetailed(unitId);
             return new LabelSet(List.of(unit), unit.getCode(), "/stock/" + unitId, "unit=" + unitId);
+        }
+        if (jobId != null) {
+            CuttingJob job = jobService.findById(jobId);
+            if (job.getStatus() != CuttingJobStatus.COMPLETED) {
+                throw new NotFoundException("CuttingJob", jobId);
+            }
+            CuttingJobService.Outcome outcome = jobService.outcome(job);
+            List<StockUnit> units = outcome.outputs().stream()
+                    .map(CuttingJobOutput::getStockUnitId).filter(Objects::nonNull)
+                    .map(id -> outcome.units().get(id)).filter(Objects::nonNull)
+                    .toList();
+            return new LabelSet(units, job.getNumber(), "/cutting-jobs/" + jobId + "?tab=cut", "job=" + jobId);
         }
         if (receiptId != null) {
             GoodsReceipt receipt = receiptService.findById(receiptId);

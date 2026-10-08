@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.*;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.LocationRepository;
+import com.ntaganira.heritier.iWarehouse.repository.StockAdjustmentLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCostEntryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockMovementRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
@@ -59,7 +60,7 @@ class StockServiceTest {
             return u;
         });
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
-        service = new StockService(unitRepo, movementRepo, costEntryRepo, locationRepo, numbers, clock);
+        service = new StockService(unitRepo, movementRepo, costEntryRepo, mock(StockAdjustmentLineRepository.class), locationRepo, numbers, clock);
     }
 
     @Test

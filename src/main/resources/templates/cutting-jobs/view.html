@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${job.number}, ~{::content})}">
+<head><title>Cutting Job - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${job.status.name()},
+        canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_CUTTING_JOB'')')},
+        canCut=${#authorization.expression('hasAuthority(''PERM_EXECUTE_CUTTING_JOB'')')},
+        canLabel=${#authorization.expression('hasAuthority(''PAGE_STOCK'') and hasAuthority(''PERM_PRINT_LABEL'')')},
+        seeStock=${#authorization.expression('hasAuthority(''PAGE_STOCK'') and hasAuthority(''PERM_VIEW_STOCK'')')},
+        seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
+        taken=${s == 'IN_PROGRESS' or s == 'COMPLETED'}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${job.number}">CUT-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:if="${job.purpose.name() == 'STOCK'}" th:text="#{cutting.purpose.STOCK}">For stock</span>
+                <span th:if="${job.purpose.name() == 'CUSTOMER'}" th:text="#{cutting.forCustomer(${job.customer.name})}">For Kigali Builders</span>
+                <span class="mono" th:if="${job.customerRef != null}" th:text="${'(' + job.customerRef + ')'}">(Q-0017)</span>
+                &middot; <th:block th:replace="~{products/list :: productName(${job.product})}"></th:block>
+                &middot; <th:block th:replace="~{cutting-jobs/list :: jobStatus(${job.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/cutting-jobs" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${canManage and (s == 'DRAFT' or s == 'IN_PROGRESS')}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{cutting.cancel}">Cancel job</button>
+            </th:block>
+            <a th:if="${canManage and s == 'DRAFT'}" th:href="@{/cutting-jobs/{id}/edit(id=${job.id})}" class="btn btn-outline" th:text="#{cutting.edit}">Edit</a>
+            <button type="button" class="btn btn-outline" data-modal-open="release-modal" th:if="${canCut and s == 'IN_PROGRESS'}" th:text="#{cutting.release}">Put the sheet back</button>
+            <a th:if="${canCut and s == 'DRAFT'}" th:href="@{/cutting-jobs/{id}/start(id=${job.id})}" class="btn btn-primary" th:text="#{cutting.start}">Take a sheet</a>
+            <a th:if="${canCut and s == 'IN_PROGRESS'}" th:href="@{/cutting-jobs/{id}/complete(id=${job.id})}" class="btn btn-primary" th:text="#{cutting.complete}">Record the cut</a>
+            <a th:if="${canLabel and s == 'COMPLETED' and !outcome.units.isEmpty()}" th:href="@{/stock/labels(job=${job.id})}" class="btn btn-outline" th:text="#{cutting.printLabels}">Print labels</a>
+            <form th:if="${canManage and job.short and #lists.isEmpty(restJobs)}" th:action="@{/cutting-jobs/{id}/rest(id=${job.id})}" method="post"
+                  class="row-action-form confirm-submit" th:attr="data-confirm=#{cutting.restConfirm(${job.pieces - job.piecesCut})}">
+                <button type="submit" class="btn btn-primary" th:text="#{cutting.rest}">Cut the rest</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{cutting.cancelledNote}">Cancelled:</strong> <span th:text="${job.cancelReason}">Customer changed the order</span>
+    </div>
+    <div class="doc-note" th:if="${parent != null}">
+        <span th:text="#{cutting.restOf}">Cuts the pieces not cut by</span>
+        <a class="mono" th:href="@{/cutting-jobs/{id}(id=${parent.id})}" th:text="${parent.number}">CUT-WH-2026-000001</a>
+    </div>
+    <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{cutting.draftNote}">No sheet taken yet: the operator takes a sheet or off-cut the pieces fit in, then records the cut.</div>
+    <div class="doc-note" th:if="${s == 'IN_PROGRESS'}"
+         th:text="#{cutting.inProgressNote(${job.sourceCode}, ${job.operatorName}, ${#temporals.format(job.startedAt, 'yyyy-MM-dd HH:mm')})}">U-WH-000021 taken by operator1 on 2026-10-08 10:12: it is reserved for this job. Record the cut when it is done.</div>
+    <div class="doc-note is-warning" th:if="${job.short}">
+        <span th:text="#{cutting.shortNote(${job.pieces - job.piecesCut})}">2 pieces were not cut.</span>
+        <th:block th:each="r : ${restJobs}">
+            <span th:text="#{cutting.restIn}">They are on</span>
+            <a class="mono" th:href="@{/cutting-jobs/{id}(id=${r.id})}" th:text="${r.number}">CUT-WH-2026-000002</a>
+        </th:block>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.piecesKpi}">Pieces wanted</div>
+                <div class="kpi-value" th:text="${need.pieces}">3</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cutting.m2Kpi(${@num.m2(need.areaM2)})}">5.0000 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.sourceKpi}">Source</div>
+                <div class="kpi-value mono" th:classappend="${job.sourceCode != null} ? 'is-code'" th:text="${job.sourceCode ?: '—'}">U-WH-000021</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:if="${job.sourceAreaM2 != null}" th:text="${job.sourceWidthMm + ' × ' + job.sourceHeightMm + ' mm · ' + @num.m2(job.sourceAreaM2) + ' m²'}">3210 × 2250 mm · 7.2225 m²</span>
+                    <span class="vs" th:if="${job.sourceAreaM2 == null}" th:text="#{cutting.noSourceYet}">no sheet taken yet</span>
+                </div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.yieldKpi}">Yield</div>
+                <div class="kpi-value" th:text="${job.yieldPercent != null} ? ${#numbers.formatDecimal(job.yieldPercent, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">94.2 %</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:if="${s == 'COMPLETED'}" th:text="#{cutting.yieldSub(${@num.m2(job.stockedAreaM2)})}">6.8000 m² to stock</span>
+                    <span class="vs" th:if="${s == 'IN_PROGRESS'}" th:text="#{cutting.leftEstimate(${@num.m2(job.leftOverM2)})}">2.2225 m² left over: off-cuts or cullet</span>
+                    <span class="vs" th:if="${!taken}" th:text="#{cutting.yieldLater}">known once cut</span>
+                </div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cutting.spoilageKpi}">Cullet and breakage</div>
+                <div class="kpi-value" th:text="${job.spoilageM2 != null} ? ${@num.m2(job.spoilageM2)} : '—'">0.4225</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:if="${s == 'COMPLETED'}" th:text="#{cutting.culletKgKpi(${@num.kg(job.culletKg)})}">m² · 25.35 kg of cullet</span>
+                    <span class="vs" th:if="${s != 'COMPLETED'}" th:text="#{cutting.yieldLater}">known once cut</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-pieces" th:classappend="${tab == 'pieces'} ? 'active'">
+                <span th:text="#{cutting.piecesTab}">Pieces</span>
+                <span class="section-count" th:text="${job.lines.size()}">2</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-cut" th:classappend="${tab == 'cut'} ? 'active'" th:if="${taken}" th:text="#{cutting.cutTab}">The cut</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <!-- Pieces wanted -->
+            <div class="tab-content" id="tab-pieces" th:classappend="${tab == 'pieces'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{cutting.purpose}">Cut for</label>
+                        <div class="value">
+                            <span th:if="${job.purpose.name() == 'STOCK'}" th:text="#{cutting.purpose.STOCK}">For stock</span>
+                            <th:block th:if="${job.purpose.name() == 'CUSTOMER'}">
+                                <span th:text="${job.customer.name}">Kigali Builders</span>
+                                <span class="cell-sub mono" th:text="${job.customer.code}">CUS-WH-00002</span>
+                            </th:block>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{cutting.customerRef}">Customer's reference</label>
+                        <div class="value mono" th:text="${job.customerRef ?: '—'}">Q-0017</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{cutting.dueDate}">Wanted by</label>
+                        <div class="value" th:text="${job.dueDate != null} ? ${#temporals.format(job.dueDate, 'yyyy-MM-dd')} : '—'">2026-10-10</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${job.notes ?: '—'}">—</div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{cutting.size}">Size (mm)</th>
+                                <th class="num" th:text="#{cutting.qty}">Qty</th>
+                                <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                                <th th:text="#{cutting.processing}">Processing</th>
+                                <th th:text="#{cutting.mark}">Mark</th>
+                                <th class="num" th:if="${s == 'COMPLETED'}" th:text="#{cutting.cutCol}">Cut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${job.lines}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td class="mono nowrap" th:text="${l.widthMm + ' × ' + l.heightMm}">2000 × 1000</td>
+                                <td class="num" th:text="${l.quantity}">1</td>
+                                <td class="num" th:text="${@num.m2(l.areaM2)}">2.0000</td>
+                                <td>
+                                    <span th:if="${#lists.isEmpty(l.processingCodes)}" class="text-muted">—</span>
+                                    <span class="badge badge-secondary proc-badge" th:each="c : ${l.processingCodes}" th:text="${names.get(c) ?: c}">Edging</span>
+                                </td>
+                                <td th:text="${l.mark ?: '—'}">Kitchen window</td>
+                                <td class="num" th:if="${s == 'COMPLETED'}">
+                                    <span th:text="${l.cutQty}">1</span>
+                                    <span class="badge badge-warning" th:if="${l.shortQty > 0}" th:text="#{cutting.shortBadge(${l.shortQty})}">2 short</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="line-total">
+                                <th colspan="2" th:text="#{cutting.total}">Total</th>
+                                <th class="num" th:text="${need.pieces}">3</th>
+                                <th class="num" th:text="${@num.m2(need.areaM2)}">5.0000</th>
+                                <th colspan="2"></th>
+                                <th class="num" th:if="${s == 'COMPLETED'}" th:text="${job.piecesCut}">3</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- The source and what the cut produced -->
+            <div class="tab-content" id="tab-cut" th:classappend="${tab == 'cut'} ? 'active'" th:if="${taken}">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{cutting.source}">Source</label>
+                        <div class="value">
+                            <a class="mono strong" th:if="${seeStock}" th:href="@{/stock/{id}(id=${job.sourceUnitId})}" th:text="${job.sourceCode}">U-WH-000021</a>
+                            <span class="mono strong" th:unless="${seeStock}" th:text="${job.sourceCode}">U-WH-000021</span>
+                            <span class="cell-sub" th:if="${source != null}"
+                                  th:text="${#messages.msg('stock.kind.' + source.kind) + ' · ' + job.sourceWidthMm + ' × ' + job.sourceHeightMm + ' mm · ' + @num.m2(job.sourceAreaM2) + ' m²'}">Full sheet · 3210 × 2250 mm · 7.2225 m²</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="${s == 'COMPLETED'} ? #{cutting.cutOn} : #{cutting.takenOn}">Taken</label>
+                        <div class="value">
+                            <span th:text="${#temporals.format(s == 'COMPLETED' ? job.completedAt : job.startedAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</span>
+                            <span class="cell-sub" th:text="#{cutting.byOperator(${job.operatorName})}">by operator1</span>
+                        </div>
+                    </div>
+                    <div class="item" th:if="${s == 'IN_PROGRESS' and source != null}">
+                        <label th:text="#{stock.location}">Location</label>
+                        <div class="value mono" th:text="${source.location != null} ? ${source.location.code} : '—'">WH-A-R04</div>
+                    </div>
+                    <div class="item" th:if="${seeCost and s == 'COMPLETED'}">
+                        <label th:text="#{cutting.sourceCost}">Sheet cost (RWF)</label>
+                        <div class="value">
+                            <span th:text="${@num.money(job.sourceCost)}">249,017.61</span>
+                            <span class="text-muted" th:text="#{stock.costPerM2(${@num.price(job.sourceCostPerM2)})}">(34,478.04 per m²)</span>
+                        </div>
+                    </div>
+                    <div class="item" th:if="${seeCost and s == 'IN_PROGRESS' and source != null}">
+                        <label th:text="#{cutting.sourceCost}">Sheet cost (RWF)</label>
+                        <div class="value">
+                            <span th:text="${@num.money(source.unitCost)}">249,017.61</span>
+                            <span class="text-muted" th:text="#{stock.costPerM2(${@num.price(source.costPerM2)})}">(34,478.04 per m²)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <th:block th:if="${s == 'COMPLETED'}">
+                    <h3 class="detail-heading" th:text="#{cutting.balanceTitle}">Where the sheet went</h3>
+                    <div class="table-container">
+                        <table class="balance-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th class="num" th:text="#{cutting.countCol}">Pieces</th>
+                                    <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                                    <th class="num" th:text="#{cutting.shareCol}">Share</th>
+                                    <th class="num" th:if="${seeCost}" th:text="#{cutting.costCol}">Cost (RWF)</th>
+                                    <th th:text="#{cutting.goesTo}">Goes to</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="r : ${outcome.rows}">
+                                    <td><span class="cut-kind" th:classappend="${'is-' + #strings.toLowerCase(r.kind)}" th:text="#{${'cutting.kind.' + r.kind}}">Cut pieces</span></td>
+                                    <td class="num" th:text="${r.kind.name() == 'CULLET'} ? '—' : ${r.count}">3</td>
+                                    <td class="num" th:text="${@num.m2(r.areaM2)}">5.0000</td>
+                                    <td class="num" th:text="${#numbers.formatDecimal(r.sharePercent, 1, 'COMMA', 1, 'POINT') + ' %'}">69.2 %</td>
+                                    <td class="num" th:if="${seeCost}" th:text="${@num.money(r.cost)}">172,390.17</td>
+                                    <td class="text-muted" th:text="#{${'cutting.goesTo.' + r.kind}}">Stock</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="line-total">
+                                    <th th:text="#{cutting.sourceTotal}">The sheet</th>
+                                    <th></th>
+                                    <th class="num" th:text="${@num.m2(job.sourceAreaM2)}">7.2225</th>
+                                    <th class="num">100 %</th>
+                                    <th class="num" th:if="${seeCost}" th:text="${@num.money(outcome.totalCost)}">249,017.61</th>
+                                    <th class="text-muted" th:text="#{cutting.culletKgNote(${@num.kg(job.culletKg)})}">25.35 kg of cullet</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <p class="form-note" th:text="#{cutting.balanceNote}">Leftovers below the off-cut size and the trim are cullet. Cullet and broken glass leave stock at the sheet's cost per m² (spoilage); pieces and off-cuts carry it into stock.</p>
+
+                    <h3 class="detail-heading" th:text="#{cutting.outputsTitle}">What came out</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{cutting.kindCol}">Kind</th>
+                                    <th th:text="#{cutting.unitCol}">Unit</th>
+                                    <th th:text="#{cutting.size}">Size (mm)</th>
+                                    <th class="num" th:text="#{cutting.qty}">Qty</th>
+                                    <th class="num" th:text="#{cutting.areaCol}">m²</th>
+                                    <th class="num" th:text="#{cutting.kgCol}">kg</th>
+                                    <th th:text="#{cutting.whereCol}">Where / why</th>
+                                    <th class="num" th:if="${seeCost}" th:text="#{cutting.costCol}">Cost (RWF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="o : ${outcome.outputs}" th:with="u=${o.stockUnitId != null} ? ${outcome.units.get(o.stockUnitId)} : null">
+                                    <td><span class="cut-kind" th:classappend="${'is-' + #strings.toLowerCase(o.kind)}" th:text="#{${'cutting.kindOne.' + o.kind}}">Cut piece</span></td>
+                                    <td class="nowrap">
+                                        <th:block th:if="${u != null}">
+                                            <a class="mono" th:if="${seeStock}" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000041</a>
+                                            <span class="mono" th:unless="${seeStock}" th:text="${u.code}">U-WH-000041</span>
+                                        </th:block>
+                                        <span th:if="${u == null}" class="text-muted">—</span>
+                                    </td>
+                                    <td class="mono nowrap" th:text="${o.widthMm != null} ? ${o.widthMm + ' × ' + o.heightMm} : #{cutting.trim}">2000 × 1000</td>
+                                    <td class="num" th:text="${o.quantity}">1</td>
+                                    <td class="num" th:text="${@num.m2(o.areaM2)}">2.0000</td>
+                                    <td class="num" th:text="${@num.kg(o.weightKg)}">30.00</td>
+                                    <td>
+                                        <th:block th:if="${u != null}">
+                                            <span class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R04</span>
+                                            <th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block>
+                                        </th:block>
+                                        <th:block th:if="${o.kind.name() == 'BROKEN'}">
+                                            <span th:text="#{${'cutting.reason.' + o.reason}}">Handling</span>
+                                            <span class="cell-sub" th:if="${o.note != null}" th:text="${o.note}">slipped</span>
+                                        </th:block>
+                                        <span th:if="${o.kind.name() == 'CULLET'}" class="text-muted" th:text="#{cutting.goesTo.CULLET}">Spoilage</span>
+                                    </td>
+                                    <td class="num" th:if="${seeCost}" th:text="${@num.money(o.cost)}">68,956.07</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <p class="tab-intro" th:text="#{cutting.historyIntro}">Changes to the job and its pieces, newest first.</p>
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/cutting-jobs/' + ${job.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${canManage and (s == 'DRAFT' or s == 'IN_PROGRESS')}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{cutting.cancelTitle(${job.number})},
+                @{/cutting-jobs/{id}/cancel(id=${job.id})}, ${s == 'IN_PROGRESS'} ? #{cutting.cancelTextTaken(${job.sourceCode})} : #{cutting.cancelText}, #{cutting.cancel})}"></div>
+    </th:block>
+    <th:block th:if="${canCut and s == 'IN_PROGRESS'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('release-modal', #{cutting.releaseTitle(${job.sourceCode})},
+                @{/cutting-jobs/{id}/release(id=${job.id})}, #{cutting.releaseText}, #{cutting.release})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

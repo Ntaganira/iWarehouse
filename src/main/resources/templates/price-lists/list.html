@@ -19,7 +19,7 @@
         <div class="section-header">
             <h2>
                 <span th:text="#{pricelist.sectionTitle}">Price lists</span>
-                <span class="section-count" th:text="${#lists.size(summaries)}">1</span>
+                <span class="section-count" th:text="${summaries.totalElements}">1</span>
             </h2>
         </div>
         <div class="table-container">
@@ -36,7 +36,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="s : ${summaries}" th:with="l=${s.list}">
+                    <tr th:each="s : ${summaries.content}" th:with="l=${s.list}">
                         <td>
                             <a class="row-link strong" th:href="@{/price-lists/{id}(id=${l.id})}" th:text="${l.name}">Retail (counter)</a>
                             <span class="you-badge" th:if="${l.defaultList}" th:text="#{pricelist.defaultBadge}">Default</span>
@@ -61,6 +61,7 @@
                 </tbody>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${summaries}, '/price-lists', ${'spage=' + services.number}, 'page')}"></th:block>
         <p class="form-note price-rule" th:text="#{pricelist.rule}">A customer without a price list, or a product their list does not price, uses the default list.</p>
     </div>
 
@@ -68,7 +69,7 @@
         <div class="section-header">
             <h2>
                 <span th:text="#{service.sectionTitle}">Processing services</span>
-                <span class="section-count" th:text="${#lists.size(services)}">5</span>
+                <span class="section-count" th:text="${services.totalElements}">5</span>
             </h2>
             <a href="/price-lists/services/new" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')" th:text="#{service.add}">Add service</a>
         </div>
@@ -84,7 +85,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="sv : ${services}" th:classappend="${!sv.enabled} ? 'row-inactive'">
+                    <tr th:each="sv : ${services.content}" th:classappend="${!sv.enabled} ? 'row-inactive'">
                         <td class="mono strong" th:text="${sv.code}">EDGING</td>
                         <td th:text="${sv.name}">Edging</td>
                         <td th:text="#{${'service.unit.' + sv.chargeUnit}}">metre of edge</td>
@@ -115,6 +116,7 @@
                 </tbody>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${services}, '/price-lists', ${'page=' + summaries.number}, 'spage')}"></th:block>
     </div>
 </div>
 </body>

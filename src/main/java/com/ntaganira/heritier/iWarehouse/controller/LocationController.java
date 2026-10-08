@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.LocationDto;
 import com.ntaganira.heritier.iWarehouse.entity.Location;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -64,12 +65,15 @@ public class LocationController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_LOCATIONS') and hasAuthority('PERM_VIEW_LOCATION')")
-    public String view(@PathVariable UUID id, Model model) {
+    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = List.of("details", "children", "history").contains(tab) ? tab : "details";
         Location location = locationService.findById(id);
         model.addAttribute("location", location);
         model.addAttribute("ancestors", locationService.ancestors(location));
-        model.addAttribute("children", locationService.children(id));
-        model.addAttribute("history", dataChangeService.history("Location", id.toString(), 0, 20));
+        model.addAttribute("children", Paging.of(locationService.children(id), Paging.pageOf("children", open, page)));
+        model.addAttribute("history", dataChangeService.history("Location", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "locations/view";
     }
 

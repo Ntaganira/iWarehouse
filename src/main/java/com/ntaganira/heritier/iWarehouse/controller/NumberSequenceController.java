@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.NumberSequenceDto;
 import com.ntaganira.heritier.iWarehouse.entity.NumberSequence;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -91,7 +92,7 @@ public class NumberSequenceController {
 
     @GetMapping("/{id}/edit")
     @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_EDIT_SETTINGS')")
-    public String editForm(@PathVariable UUID id, Model model) {
+    public String editForm(@PathVariable UUID id, @RequestParam(defaultValue = "0") int page, Model model) {
         NumberSequence sequence = documentNumberService.findById(id);
         NumberSequenceDto dto = new NumberSequenceDto();
         dto.setId(id);
@@ -101,7 +102,7 @@ public class NumberSequenceController {
         dto.setResetPolicy(sequence.getResetPolicy());
         dto.setPadding(sequence.getPadding());
         dto.setNextValue(documentNumberService.nextValue(sequence));
-        return form(model, dto);
+        return form(model, dto, page);
     }
 
     @PostMapping("/{id}/edit")
@@ -135,6 +136,10 @@ public class NumberSequenceController {
     }
 
     private String form(Model model, NumberSequenceDto dto) {
+        return form(model, dto, 0);
+    }
+
+    private String form(Model model, NumberSequenceDto dto, int historyPage) {
         model.addAttribute("sequenceDto", dto);
         model.addAttribute("docTypes", DocumentType.values());
         model.addAttribute("resetPolicies", ResetPolicy.values());
@@ -145,7 +150,7 @@ public class NumberSequenceController {
         if (dto.getId() != null) {
             NumberSequence sequence = documentNumberService.findById(dto.getId());
             model.addAttribute("sequence", sequence);
-            model.addAttribute("history", dataChangeService.history("NumberSequence", dto.getId().toString(), 0, 10));
+            model.addAttribute("history", dataChangeService.history("NumberSequence", dto.getId().toString(), Paging.page(historyPage), Paging.SIZE));
         }
         return "settings/numbering-form";
     }

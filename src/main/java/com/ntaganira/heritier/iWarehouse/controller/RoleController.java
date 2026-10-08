@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.RoleDto;
 import com.ntaganira.heritier.iWarehouse.entity.AppPage;
 import com.ntaganira.heritier.iWarehouse.entity.Role;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * <pre>
@@ -31,8 +33,6 @@ import java.util.Comparator;
 @Controller
 @RequestMapping("/roles")
 public class RoleController {
-
-    private static final int PAGE_SIZE = 10;
     private static final String MODULE = "Role Management";
 
     private final RoleService roleService;
@@ -59,7 +59,7 @@ public class RoleController {
                        @RequestParam(required = false) String search,
                        @RequestParam(required = false) String status,
                        Model model) {
-        model.addAttribute("roles", roleService.findPage(search, status, Math.max(page, 0), PAGE_SIZE));
+        model.addAttribute("roles", roleService.findPage(search, status, Paging.page(page), Paging.SIZE));
         model.addAttribute("userCounts", roleService.userCounts());
         model.addAttribute("search", search);
         model.addAttribute("status", status);
@@ -69,7 +69,9 @@ public class RoleController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_ROLES') and hasAuthority('PERM_VIEW_ROLE')")
-    public String view(@PathVariable Long id, Model model) {
+    public String view(@PathVariable Long id, @RequestParam(defaultValue = "access") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = List.of("access", "members", "history").contains(tab) ? tab : "access";
         Role role = roleService.findById(id);
         model.addAttribute("role", role);
         model.addAttribute("isAdminRole", RoleService.isAdmin(role));
@@ -77,8 +79,9 @@ public class RoleController {
         model.addAttribute("grantedPages", role.getPages().stream()
                 .sorted(Comparator.comparingInt(AppPage::getSortOrder))
                 .toList());
-        model.addAttribute("members", userService.findByRole(id));
-        model.addAttribute("history", dataChangeService.history("Role", id.toString(), 0, 20));
+        model.addAttribute("members", Paging.of(userService.findByRole(id), Paging.pageOf("members", open, page)));
+        model.addAttribute("history", dataChangeService.history("Role", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "roles/view";
     }
 

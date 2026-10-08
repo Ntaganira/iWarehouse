@@ -3,6 +3,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.StockAdjustmentDto;
 import com.ntaganira.heritier.iWarehouse.entity.StockAdjustment;
 import com.ntaganira.heritier.iWarehouse.entity.StockAdjustmentLine;
@@ -49,7 +50,6 @@ import java.util.stream.Collectors;
 public class StockAdjustmentController {
 
     static final String MODULE = "Stock Adjustments";
-    private static final int PAGE_SIZE = 20;
     private static final int REASON_MAX = 255;
 
     private final StockAdjustmentService adjustmentService;
@@ -76,7 +76,7 @@ public class StockAdjustmentController {
     @PreAuthorize("hasAuthority('PAGE_STOCK_ADJUSTMENTS') and hasAuthority('PERM_VIEW_STOCK_ADJUSTMENT')")
     public String list(@RequestParam(required = false) String search, @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page, Model model) {
-        Page<StockAdjustment> adjustments = adjustmentService.findPage(search, status, Math.max(page, 0), PAGE_SIZE);
+        Page<StockAdjustment> adjustments = adjustmentService.findPage(search, status, Paging.page(page), Paging.SIZE);
         model.addAttribute("adjustments", adjustments);
         model.addAttribute("statuses", AdjustmentStatus.values());
         model.addAttribute("pending", adjustmentService.pendingCount());
@@ -96,7 +96,7 @@ public class StockAdjustmentController {
         model.addAttribute("limit", adjustmentService.approvalLimit());
         model.addAttribute("mine", isMine(adjustment));
         model.addAttribute("history", dataChangeService.historyWithChildren("StockAdjustment", id.toString(),
-                List.of("StockAdjustmentLine"), "adjustment", Math.max(page, 0), 20));
+                List.of("StockAdjustmentLine"), "adjustment", Paging.page(page), Paging.SIZE));
         model.addAttribute("tab", "history".equals(tab) ? tab : "lines");
         return "stock-adjustments/view";
     }

@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.DataChangeLog;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import org.springframework.data.domain.Page;
@@ -29,8 +30,6 @@ import java.util.StringJoiner;
 @PreAuthorize("hasAuthority('PERM_VIEW_DATA_CHANGES')")
 public class DataChangeController {
 
-    private static final int PAGE_SIZE = 20;
-
     private final DataChangeService service;
 
     public DataChangeController(DataChangeService service) {
@@ -47,7 +46,7 @@ public class DataChangeController {
                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                        Model model) {
         Page<DataChangeLog> changes = service.findPage(entityType, entityId, operation, username, from, to,
-                Math.max(page, 0), PAGE_SIZE);
+                Paging.page(page), Paging.SIZE);
         model.addAttribute("changes", changes);
         model.addAttribute("entityTypes", service.entityTypes());
         model.addAttribute("entityType", entityType);
@@ -61,13 +60,14 @@ public class DataChangeController {
     }
 
     @GetMapping("/{id}")
-    public String view(@PathVariable Long id, Model model) {
+    public String view(@PathVariable Long id, @RequestParam(defaultValue = "0") int page, Model model) {
         DataChangeLog change = service.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("change", change);
         model.addAttribute("fields", DataChangeService.fieldChanges(change));
-        model.addAttribute("related", service.sameRequest(change.getRequestId()).stream()
-                .filter(c -> !c.getId().equals(change.getId())).toList());
+        // One action can change hundreds of records (posting a receipt): paged like every list
+        model.addAttribute("related", Paging.of(service.sameRequest(change.getRequestId()).stream()
+                .filter(c -> !c.getId().equals(change.getId())).toList(), page));
         return "audit/view";
     }
 
@@ -76,7 +76,7 @@ public class DataChangeController {
                           @RequestParam(defaultValue = "0") int page, Model model) {
         model.addAttribute("entityType", entityType);
         model.addAttribute("entityId", entityId);
-        model.addAttribute("changes", service.history(entityType, entityId, Math.max(page, 0), PAGE_SIZE));
+        model.addAttribute("changes", service.history(entityType, entityId, Paging.page(page), Paging.SIZE));
         return "audit/history";
     }
 

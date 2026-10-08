@@ -37,13 +37,13 @@
 
     <div class="section">
         <div class="tabs">
-            <button type="button" class="tab active" data-tab="tab-account" th:text="#{user.general}">Account</button>
-            <button type="button" class="tab" data-tab="tab-access" th:text="#{user.rolePermissions}">Roles &amp; Access</button>
-            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+            <button type="button" class="tab" data-tab="tab-account" th:classappend="${tab == 'account'} ? 'active'" th:text="#{user.general}">Account</button>
+            <button type="button" class="tab" data-tab="tab-access" th:classappend="${tab == 'access'} ? 'active'" th:text="#{user.rolePermissions}">Roles &amp; Access</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
 
         <div class="section-body">
-            <div class="tab-content active" id="tab-account">
+            <div class="tab-content" id="tab-account" th:classappend="${tab == 'account'} ? 'active'">
                 <div class="detail-list">
                     <div class="item">
                         <label th:text="#{user.username}">Username</label>
@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <div class="tab-content" id="tab-access">
+            <div class="tab-content" id="tab-access" th:classappend="${tab == 'access'} ? 'active'">
                 <div class="role-card" th:each="r : ${user.roles}">
                     <div class="role-card-header">
                         <div>
@@ -111,8 +111,9 @@
                 </div>
             </div>
 
-            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/users/' + user.id}, 'tab=history')}"></th:block>
                 <a class="link-more" th:href="@{/audit/history/User/{id}(id=${user.id})}" th:text="#{audit.fullHistory}">Full history</a>
             </div>
         </div>

@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Countries;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.SupplierDto;
 import com.ntaganira.heritier.iWarehouse.entity.Supplier;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -38,7 +40,6 @@ import java.util.UUID;
 public class SupplierController {
 
     static final String MODULE = "Suppliers";
-    private static final int PAGE_SIZE = 20;
 
     private final SupplierService supplierService;
     private final DataChangeService dataChangeService;
@@ -63,7 +64,7 @@ public class SupplierController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        model.addAttribute("suppliers", supplierService.findPage(search, country, currency, status, Math.max(page, 0), PAGE_SIZE));
+        model.addAttribute("suppliers", supplierService.findPage(search, country, currency, status, Paging.page(page), Paging.SIZE));
         model.addAttribute("countryOptions", supplierService.countryCodes().stream()
                 .map(code -> new Countries.Country(code, countries.name(code)))
                 .sorted(Comparator.comparing(Countries.Country::name)).toList());
@@ -79,9 +80,12 @@ public class SupplierController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_SUPPLIERS') and hasAuthority('PERM_VIEW_SUPPLIER')")
-    public String view(@PathVariable UUID id, Model model) {
+    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = List.of("details", "history").contains(tab) ? tab : "details";
         model.addAttribute("supplier", supplierService.findById(id));
-        model.addAttribute("history", dataChangeService.history("Supplier", id.toString(), 0, 20));
+        model.addAttribute("history", dataChangeService.history("Supplier", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "suppliers/view";
     }
 

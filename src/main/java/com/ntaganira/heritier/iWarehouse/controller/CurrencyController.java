@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.CurrencyDto;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -44,7 +45,6 @@ public class CurrencyController {
     static final String MODULE = "Currencies";
     private static final Set<String> TABS = Set.of("rates", "currencies", "history");
     private static final List<String> AUDITED_TYPES = List.of("Currency", "ExchangeRate");
-    private static final int PAGE_SIZE = 20;
 
     private final CurrencyService currencyService;
     private final ExchangeRateService rateService;
@@ -77,8 +77,11 @@ public class CurrencyController {
         model.addAttribute("defaultSource", rateService.defaultSource());
         model.addAttribute("maxAgeDays", rateService.maxAgeDays());
         model.addAttribute("rates", rateService.findPage(currency, source, from, to,
-                "rates".equals(activeTab) ? Math.max(page, 0) : 0, PAGE_SIZE));
-        model.addAttribute("currencies", currencyService.findAll());
+                "rates".equals(activeTab) ? Paging.page(page) : 0, Paging.SIZE));
+        // All currencies for the rate filter; the Currencies tab pages them
+        List<Currency> currencies = currencyService.findAll();
+        model.addAttribute("currencies", currencies);
+        model.addAttribute("currencyPage", Paging.of(currencies, Paging.pageOf("currencies", activeTab, page)));
         model.addAttribute("sources", RateSource.values());
         model.addAttribute("currency", currency);
         model.addAttribute("source", source);
@@ -88,7 +91,7 @@ public class CurrencyController {
                 "from", from, "to", to));
         if (AppUserPrincipal.currentHas("PERM_VIEW_DATA_CHANGES")) {
             model.addAttribute("history", dataChangeService.historyOfTypes(AUDITED_TYPES,
-                    "history".equals(activeTab) ? Math.max(page, 0) : 0, PAGE_SIZE));
+                    "history".equals(activeTab) ? Paging.page(page) : 0, Paging.SIZE));
         }
         return "currencies/view";
     }
@@ -121,7 +124,7 @@ public class CurrencyController {
 
     @GetMapping("/{id}/edit")
     @PreAuthorize("hasAuthority('PAGE_CURRENCIES') and hasAuthority('PERM_MANAGE_CURRENCY')")
-    public String editForm(@PathVariable UUID id, Model model) {
+    public String editForm(@PathVariable UUID id, @RequestParam(defaultValue = "0") int page, Model model) {
         Currency currency = currencyService.findById(id);
         CurrencyDto dto = new CurrencyDto();
         dto.setId(id);
@@ -129,7 +132,7 @@ public class CurrencyController {
         dto.setName(currency.getName());
         dto.setSymbol(currency.getSymbol());
         dto.setDecimals(currency.getDecimals());
-        return form(model, dto);
+        return form(model, dto, page);
     }
 
     @PostMapping("/{id}/edit")
@@ -183,11 +186,15 @@ public class CurrencyController {
     }
 
     private String form(Model model, CurrencyDto dto) {
+        return form(model, dto, 0);
+    }
+
+    private String form(Model model, CurrencyDto dto, int historyPage) {
         model.addAttribute("currencyDto", dto);
         if (dto.getId() != null) {
             Currency currency = currencyService.findById(dto.getId());
             model.addAttribute("currencyEntity", currency);
-            model.addAttribute("history", dataChangeService.history("Currency", dto.getId().toString(), 0, 10));
+            model.addAttribute("history", dataChangeService.history("Currency", dto.getId().toString(), Paging.page(historyPage), Paging.SIZE));
         }
         return "currencies/form";
     }

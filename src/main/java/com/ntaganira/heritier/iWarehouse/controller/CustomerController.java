@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.CustomerDto;
 import com.ntaganira.heritier.iWarehouse.entity.Customer;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -44,7 +45,6 @@ public class CustomerController {
 
     static final String MODULE = "Customers";
     static final String TERMS = "PERM_MANAGE_CUSTOMER_TERMS";
-    private static final int PAGE_SIZE = 20;
 
     private final CustomerService customerService;
     private final PriceListService priceListService;
@@ -68,7 +68,7 @@ public class CustomerController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        model.addAttribute("customers", customerService.findPage(search, type, status, Math.max(page, 0), PAGE_SIZE));
+        model.addAttribute("customers", customerService.findPage(search, type, status, Paging.page(page), Paging.SIZE));
         model.addAttribute("types", CustomerType.values());
         model.addAttribute("defaultList", priceListService.defaultList());
         model.addAttribute("search", search);
@@ -80,10 +80,13 @@ public class CustomerController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_CUSTOMERS') and hasAuthority('PERM_VIEW_CUSTOMER')")
-    public String view(@PathVariable UUID id, Model model) {
+    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = List.of("details", "history").contains(tab) ? tab : "details";
         model.addAttribute("customer", customerService.findById(id));
         model.addAttribute("defaultList", priceListService.defaultList());
-        model.addAttribute("history", dataChangeService.history("Customer", id.toString(), 0, 20));
+        model.addAttribute("history", dataChangeService.history("Customer", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "customers/view";
     }
 

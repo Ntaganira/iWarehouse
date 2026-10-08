@@ -77,7 +77,7 @@
         </div>
     </div>
 
-    <div class="section" th:each="block : ${ {'operator', 'product'} }" th:with="rows=${block == 'operator'} ? ${report.byOperator} : ${report.byProduct}">
+    <div class="section" th:each="block : ${ {'operator', 'product'} }" th:with="rows=${block == 'operator'} ? ${operatorPage} : ${productPage}">
         <div class="section-header">
             <h2 th:text="${block == 'operator'} ? #{cutting.yield.byOperator} : #{cutting.yield.byProduct}">By operator</h2>
         </div>
@@ -97,7 +97,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="r : ${rows}">
+                    <tr th:each="r : ${rows.content}">
                         <td th:classappend="${block == 'product'} ? 'mono'" th:text="${r.label}">operator1</td>
                         <td class="num" th:text="${r.jobs}">12</td>
                         <td class="num" th:text="${@num.m2(r.consumed)}">86.6700</td>
@@ -108,7 +108,7 @@
                         <td class="num strong" th:text="${#numbers.formatDecimal(r.yieldPercent, 1, 'COMMA', 1, 'POINT') + ' %'}">94.2 %</td>
                         <td class="num" th:if="${seeCost}" th:text="${@num.money(r.spoilageCost)}">174,800</td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(rows)}">
+                    <tr th:if="${rows.totalElements == 0}">
                         <td th:attr="colspan=${seeCost} ? 9 : 8">
                             <div class="empty-state">
                                 <h3 th:text="#{cutting.yield.empty}">Nothing cut in this period</h3>
@@ -119,6 +119,7 @@
                 </tbody>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${rows}, '/cutting-jobs/yield', ${block == 'operator'} ? ${operatorQuery} : ${productQuery}, ${block == 'operator'} ? 'opage' : 'gpage')}"></th:block>
     </div>
 
     <div class="section">
@@ -136,18 +137,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="b : ${report.breakage}">
+                    <tr th:each="b : ${breakagePage.content}">
                         <td th:text="#{${'cutting.reason.' + b.reason}}">Handling</td>
                         <td class="num" th:text="${b.pieces}">2</td>
                         <td class="num" th:text="${@num.m2(b.areaM2)}">0.4000</td>
                         <td class="num" th:if="${seeCost}" th:text="${@num.money(b.cost)}">13,791</td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(report.breakage)}">
+                    <tr th:if="${breakagePage.totalElements == 0}">
                         <td th:attr="colspan=${seeCost} ? 4 : 3"><div class="empty-state"><p th:text="#{cutting.yield.noBreakage}">No glass broken while cutting in this period.</p></div></td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${breakagePage}, '/cutting-jobs/yield', ${breakageQuery}, 'bpage')}"></th:block>
     </div>
 </div>
 </body>

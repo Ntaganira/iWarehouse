@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.SettingsDto;
 import com.ntaganira.heritier.iWarehouse.entity.NumberSequence;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -38,7 +39,6 @@ public class SettingsController {
     private static final Set<String> TABS = Set.of("general", "tax", "numbering", "history");
     /** Entity types whose changes the History tab lists. */
     private static final List<String> AUDITED_TYPES = List.of("Setting", "TaxCategory", "NumberSequence");
-    private static final int HISTORY_PAGE_SIZE = 15;
 
     private final SettingService settingService;
     private final TaxCategoryService taxCategoryService;
@@ -62,6 +62,7 @@ public class SettingsController {
     @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_VIEW_SETTINGS')")
     public String view(@RequestParam(defaultValue = "general") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = TABS.contains(tab) ? tab : "general";
         List<NumberSequence> sequences = documentNumberService.findAll();
         Map<UUID, String> previews = new HashMap<>();
         Map<UUID, Long> nextValues = new HashMap<>();
@@ -70,14 +71,15 @@ public class SettingsController {
             nextValues.put(s.getId(), documentNumberService.nextValue(s));
         }
         model.addAttribute("settings", settingService.load());
-        model.addAttribute("taxCategories", taxCategoryService.findAll());
-        model.addAttribute("sequences", sequences);
+        // The open tab shows the page asked for; the others start at their first page.
+        model.addAttribute("taxCategories", Paging.of(taxCategoryService.findAll(), Paging.pageOf("tax", open, page)));
+        model.addAttribute("sequences", Paging.of(sequences, Paging.pageOf("numbering", open, page)));
         model.addAttribute("previews", previews);
         model.addAttribute("nextValues", nextValues);
         if (AppUserPrincipal.currentHas("PERM_VIEW_DATA_CHANGES")) {
-            model.addAttribute("history", dataChangeService.historyOfTypes(AUDITED_TYPES, Math.max(page, 0), HISTORY_PAGE_SIZE));
+            model.addAttribute("history", dataChangeService.historyOfTypes(AUDITED_TYPES, Paging.pageOf("history", open, page), Paging.SIZE));
         }
-        model.addAttribute("tab", TABS.contains(tab) ? tab : "general");
+        model.addAttribute("tab", open);
         return "settings/view";
     }
 

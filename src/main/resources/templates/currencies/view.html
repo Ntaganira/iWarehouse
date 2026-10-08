@@ -87,7 +87,7 @@
             </button>
             <button type="button" class="tab" data-tab="tab-currencies" th:classappend="${tab == 'currencies'} ? 'active'">
                 <span th:text="#{currency.tab}">Currencies</span>
-                <span class="section-count" th:text="${#lists.size(currencies)}">10</span>
+                <span class="section-count" th:text="${currencyPage.totalElements}">10</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
@@ -179,7 +179,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="c : ${currencies}">
+                            <tr th:each="c : ${currencyPage.content}">
                                 <td>
                                     <span class="mono strong" th:text="${c.code}">RWF</span>
                                     <span class="you-badge" th:if="${c.baseCurrency}" th:text="#{currency.base}">Base</span>
@@ -214,6 +214,7 @@
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${currencyPage}, '/currencies', 'tab=currencies')}"></th:block>
             </div>
 
             <!-- History (AUD-10) -->

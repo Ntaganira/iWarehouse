@@ -33,7 +33,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 260, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
+Unit tests: 266, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -301,3 +301,6 @@ Answers change what gets built; record each answer next to the question.
 
 ### Design consistency (2026-10-08)
 - [x] One look per component on every screen — measured on all 81 screens (computed styles per component, the odd ones out listed), then fixed at the source: buttons and fields now use the page font (form controls were in Arial on 42 screens) and one height (42 px, small 30, filters 38, line forms 38); one monospace font; links to other records styled (some were browser-blue); one note style (doc notes and form notes matched, red when cancelled); header actions one gap, Back first, no squeezed button column; counts as plain numbers; one date format (yyyy-MM-dd [HH:mm], seconds in logs only, was 7 formats); numbers through @num everywhere (dashboard used the locale's grouping); red tint as a theme token. Rules in CLAUDE.md "UI"
+
+### Page numbers on every table (2026-10-08)
+- [x] Every table that lists records shows its page numbers — the pager used to hide itself while a table fitted on one page, so most tables showed none; it now shows as soon as a table has rows ("1 - 3 / 3"). One page size, 20 rows (lists used 10, 15, 20 or 25; now `Paging.SIZE`). Lists that were never paged now are: a unit's movements and cost entries, the stock units of a receipt, a role's users, a location's sub-locations, a price list's glass prices, processing and customers, the price lists and services, tax categories, document numbering, currencies, the stock summary groups and reorder list, the three yield tables, the records changed by the same action, and every History tab (they showed only the first 20 changes). Detail pages open on the tab in the link. Shown whole on purpose: document lines with totals, forms, a cut's balance, a change's fields, dashboard previews, the location tree

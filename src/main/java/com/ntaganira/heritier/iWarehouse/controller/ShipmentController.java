@@ -3,6 +3,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.ShipmentDto;
 import com.ntaganira.heritier.iWarehouse.entity.Shipment;
 import com.ntaganira.heritier.iWarehouse.entity.ShipmentCost;
@@ -48,7 +49,6 @@ import java.util.stream.Collectors;
 public class ShipmentController {
 
     static final String MODULE = "Shipments";
-    private static final int PAGE_SIZE = 20;
     private static final int REASON_MAX = 255;
 
     private final ShipmentService shipmentService;
@@ -75,7 +75,7 @@ public class ShipmentController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        Page<Shipment> shipments = shipmentService.findPage(search, status, Math.max(page, 0), PAGE_SIZE);
+        Page<Shipment> shipments = shipmentService.findPage(search, status, Paging.page(page), Paging.SIZE);
         model.addAttribute("shipments", shipments);
         model.addAttribute("totals", shipmentService.totals(shipments.getContent()));
         model.addAttribute("statuses", ShipmentStatus.values());
@@ -95,7 +95,7 @@ public class ShipmentController {
         model.addAttribute("base", shipmentService.baseCurrency());
         model.addAttribute("today", shipmentService.today());
         model.addAttribute("history", dataChangeService.historyWithChildren("Shipment", id.toString(),
-                List.of("ShipmentCost", "ShipmentReceipt"), "shipment", Math.max(page, 0), 20));
+                List.of("ShipmentCost", "ShipmentReceipt"), "shipment", Paging.page(page), Paging.SIZE));
         model.addAttribute("tab", List.of("costs", "crates", "claim", "history").contains(tab) ? tab : "costs");
         return "shipments/view";
     }

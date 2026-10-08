@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.PriceListDto;
 import com.ntaganira.heritier.iWarehouse.dto.ProcessingServiceDto;
 import com.ntaganira.heritier.iWarehouse.entity.PriceList;
@@ -41,7 +42,6 @@ public class PriceListController {
 
     static final String MODULE = "Price Lists";
     private static final Set<String> TABS = Set.of("prices", "processing", "customers", "history");
-    private static final int HISTORY_SIZE = 25;
     private static final String PRODUCT_FIELD = "p_";
     private static final String SERVICE_FIELD = "s_";
 
@@ -57,9 +57,10 @@ public class PriceListController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('PAGE_PRICE_LISTS') and hasAuthority('PERM_VIEW_PRICE_LIST')")
-    public String list(Model model) {
-        model.addAttribute("summaries", priceListService.summaries());
-        model.addAttribute("services", priceListService.services());
+    public String list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "0") int spage, Model model) {
+        // Two tables, each with its own page: price lists (page) and processing services (spage)
+        model.addAttribute("summaries", Paging.of(priceListService.summaries(), page));
+        model.addAttribute("services", Paging.of(priceListService.services(), spage));
         model.addAttribute("productCount", priceListService.activeProductCount());
         model.addAttribute("settingMinArea", priceListService.settingMinChargeableArea());
         return "price-lists/list";
@@ -70,15 +71,21 @@ public class PriceListController {
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "prices") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
         PriceList list = priceListService.findById(id);
+        String open = TABS.contains(tab) ? tab : "prices";
         model.addAttribute("list", list);
-        model.addAttribute("tab", TABS.contains(tab) ? tab : "prices");
+        model.addAttribute("tab", open);
         model.addAttribute("defaultList", list.isDefaultList() ? list : priceListService.defaultList());
         model.addAttribute("minArea", priceListService.minChargeableArea(list));
-        model.addAttribute("productRows", priceListService.productRows(list));
-        model.addAttribute("serviceRows", priceListService.serviceRows(list));
-        model.addAttribute("customers", priceListService.customers(id));
+        // The open tab shows the page asked for; the others start at their first page.
+        var productRows = priceListService.productRows(list);
+        var serviceRows = priceListService.serviceRows(list);
+        model.addAttribute("productRows", Paging.of(productRows, Paging.pageOf("prices", open, page)));
+        model.addAttribute("serviceRows", Paging.of(serviceRows, Paging.pageOf("processing", open, page)));
+        model.addAttribute("pricedProducts", productRows.stream().filter(r -> r.price() != null).count());
+        model.addAttribute("pricedServices", serviceRows.stream().filter(r -> r.price() != null).count());
+        model.addAttribute("customers", Paging.of(priceListService.customers(id), Paging.pageOf("customers", open, page)));
         if (AppUserPrincipal.currentHas("PERM_VIEW_DATA_CHANGES")) {
-            model.addAttribute("history", priceListService.history(list, Math.max(page, 0), HISTORY_SIZE));
+            model.addAttribute("history", priceListService.history(list, Paging.pageOf("history", open, page), Paging.SIZE));
             model.addAttribute("subjects", priceListService.historySubjects(id));
         }
         return "price-lists/view";

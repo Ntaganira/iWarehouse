@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.UserDto;
 import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -18,6 +19,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 /**
  * <pre>
  * - Project   : iWarehouse - Glass Warehouse &amp; Mobile POS (ERP-Lite)
@@ -32,8 +35,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/users")
 public class UserController {
-
-    private static final int PAGE_SIZE = 10;
     private static final String MODULE = "User Management";
 
     private final UserService userService;
@@ -58,7 +59,7 @@ public class UserController {
                        @RequestParam(required = false) String status,
                        @RequestParam(required = false) Long roleId,
                        Model model) {
-        model.addAttribute("users", userService.findPage(search, status, roleId, Math.max(page, 0), PAGE_SIZE));
+        model.addAttribute("users", userService.findPage(search, status, roleId, Paging.page(page), Paging.SIZE));
         model.addAttribute("roles", roleService.findAll());
         model.addAttribute("currentUserId", currentUserId());
         model.addAttribute("search", search);
@@ -70,11 +71,14 @@ public class UserController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_USERS') and hasAuthority('PERM_VIEW_USER')")
-    public String view(@PathVariable Long id, Model model) {
+    public String view(@PathVariable Long id, @RequestParam(defaultValue = "account") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = List.of("account", "access", "history").contains(tab) ? tab : "account";
         User user = userService.findById(id);
         model.addAttribute("user", user);
         model.addAttribute("isSelf", id.equals(currentUserId()));
-        model.addAttribute("history", dataChangeService.history("User", id.toString(), 0, 20));
+        model.addAttribute("history", dataChangeService.history("User", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "users/view";
     }
 

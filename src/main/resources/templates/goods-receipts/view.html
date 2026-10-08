@@ -101,7 +101,7 @@
             </button>
             <button type="button" class="tab" data-tab="tab-units" th:classappend="${tab == 'units'} ? 'active'" th:if="${s == 'POSTED'}">
                 <span th:text="#{receipt.unitsTab}">Stock units</span>
-                <span class="section-count" th:text="${#lists.size(units)}">38</span>
+                <span class="section-count" th:text="${units.totalElements}">38</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
@@ -170,7 +170,8 @@
             </div>
 
             <div class="tab-content" id="tab-units" th:classappend="${tab == 'units'} ? 'active'" th:if="${s == 'POSTED'}">
-                <th:block th:replace="~{stock/list :: unitTable(${units}, false)}"></th:block>
+                <th:block th:replace="~{stock/list :: unitTable(${units.content}, false)}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${units}, ${'/goods-receipts/' + receipt.id}, 'tab=units')}"></th:block>
             </div>
 
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">

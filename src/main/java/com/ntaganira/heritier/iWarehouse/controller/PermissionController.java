@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.PermissionDto;
 import com.ntaganira.heritier.iWarehouse.entity.Permission;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -30,8 +31,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/permissions")
 public class PermissionController {
-
-    private static final int PAGE_SIZE = 15;
     private static final String MODULE = "Permission Management";
 
     private final PermissionService permissionService;
@@ -53,7 +52,7 @@ public class PermissionController {
                        @RequestParam(required = false) String search,
                        @RequestParam(required = false) String module,
                        Model model) {
-        model.addAttribute("permissions", permissionService.findPage(search, module, Math.max(page, 0), PAGE_SIZE));
+        model.addAttribute("permissions", permissionService.findPage(search, module, Paging.page(page), Paging.SIZE));
         model.addAttribute("roleCounts", permissionService.roleCounts());
         model.addAttribute("protectedModules", PermissionService.PROTECTED_MODULES);
         model.addAttribute("modules", permissionService.findModules());
@@ -65,13 +64,13 @@ public class PermissionController {
 
     @GetMapping("/{id}/edit")
     @PreAuthorize("hasAuthority('PAGE_PERMISSIONS') and hasAuthority('PERM_EDIT_PERMISSION')")
-    public String editForm(@PathVariable Long id, Model model) {
+    public String editForm(@PathVariable Long id, @RequestParam(defaultValue = "0") int page, Model model) {
         Permission permission = permissionService.findById(id);
         PermissionDto dto = new PermissionDto();
         dto.setId(id);
         dto.setName(permission.getName());
         dto.setDescription(permission.getDescription());
-        return form(model, dto, permission);
+        return form(model, dto, permission, page);
     }
 
     @PostMapping("/{id}/edit")
@@ -123,9 +122,13 @@ public class PermissionController {
     }
 
     private String form(Model model, PermissionDto dto, Permission permission) {
+        return form(model, dto, permission, 0);
+    }
+
+    private String form(Model model, PermissionDto dto, Permission permission, int historyPage) {
         model.addAttribute("permissionDto", dto);
         model.addAttribute("permission", permission);
-        model.addAttribute("history", dataChangeService.history("Permission", permission.getId().toString(), 0, 10));
+        model.addAttribute("history", dataChangeService.history("Permission", permission.getId().toString(), Paging.page(historyPage), Paging.SIZE));
         return "permissions/form";
     }
 }

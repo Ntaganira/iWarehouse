@@ -56,7 +56,7 @@
         </div>
     </div>
 
-    <div class="section" th:unless="${#lists.isEmpty(related)}">
+    <div class="section" th:unless="${related.totalElements == 0}">
         <div class="section-header">
             <h2 th:text="#{audit.sameRequest}">Other changes in the same action</h2>
         </div>
@@ -71,7 +71,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="r : ${related}">
+                    <tr th:each="r : ${related.content}">
                         <td th:text="${r.entityType}">StockUnit</td>
                         <td class="mono" th:text="${r.entityRef ?: r.entityId}">GL-000123</td>
                         <td th:text="#{${'audit.op.' + r.operation.name()}}">Updated</td>
@@ -80,6 +80,7 @@
                 </tbody>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pager(${related}, ${'/audit/' + change.id}, '')}"></th:block>
     </div>
 </div>
 </body>

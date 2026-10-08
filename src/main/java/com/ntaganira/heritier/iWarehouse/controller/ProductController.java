@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.ProductDto;
 import com.ntaganira.heritier.iWarehouse.entity.Product;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -22,6 +23,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,7 +43,6 @@ import java.util.UUID;
 public class ProductController {
 
     static final String MODULE = "Products";
-    private static final int PAGE_SIZE = 20;
 
     private final ProductService productService;
     private final DataChangeService dataChangeService;
@@ -64,7 +65,7 @@ public class ProductController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        Page<Product> products = productService.findPage(search, type, thickness, status, Math.max(page, 0), PAGE_SIZE);
+        Page<Product> products = productService.findPage(search, type, thickness, status, Paging.page(page), Paging.SIZE);
         BigDecimal density = productService.density();
         Map<UUID, BigDecimal> weights = new HashMap<>();
         products.forEach(p -> weights.put(p.getId(), GlassProducts.weightPerM2(p.getThicknessMm(), density)));
@@ -83,12 +84,15 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_PRODUCTS') and hasAuthority('PERM_VIEW_PRODUCT')")
-    public String view(@PathVariable UUID id, Model model) {
+    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        String open = List.of("details", "history").contains(tab) ? tab : "details";
         Product product = productService.findById(id);
         model.addAttribute("product", product);
         model.addAttribute("weightPerM2", GlassProducts.weightPerM2(product.getThicknessMm(), productService.density()));
         model.addAttribute("density", productService.density());
-        model.addAttribute("history", dataChangeService.history("Product", id.toString(), 0, 20));
+        model.addAttribute("history", dataChangeService.history("Product", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "products/view";
     }
 

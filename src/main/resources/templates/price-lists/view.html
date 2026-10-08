@@ -42,15 +42,15 @@
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-prices" th:classappend="${tab == 'prices'} ? 'active'">
                 <span th:text="#{pricelist.glassTab}">Glass prices</span>
-                <span class="section-count" th:text="${#lists.size(productRows.?[price != null])}">0</span>
+                <span class="section-count" th:text="${pricedProducts}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-processing" th:classappend="${tab == 'processing'} ? 'active'">
                 <span th:text="#{pricelist.processingTab}">Processing</span>
-                <span class="section-count" th:text="${#lists.size(serviceRows.?[price != null])}">0</span>
+                <span class="section-count" th:text="${pricedServices}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-customers" th:classappend="${tab == 'customers'} ? 'active'" th:unless="${list.defaultList}">
                 <span th:text="#{pricelist.customers}">Customers</span>
-                <span class="section-count" th:text="${#lists.size(customers)}">0</span>
+                <span class="section-count" th:text="${customers.totalElements}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{pricelist.priceHistory}">Price history</button>
@@ -71,7 +71,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="r : ${productRows}">
+                            <tr th:each="r : ${productRows.content}">
                                 <td><th:block th:replace="~{products/list :: productName(${r.product})}"></th:block></td>
                                 <td class="mono" th:text="${r.product.code}">CLR-6</td>
                                 <td class="num nowrap">
@@ -81,12 +81,13 @@
                                 </td>
                                 <td class="num nowrap text-muted" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">24,000</td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(productRows)}">
+                            <tr th:if="${productRows.totalElements == 0}">
                                 <td colspan="4"><div class="empty-state"><h3 th:text="#{product.empty}">No glass products found</h3></div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${productRows}, ${'/price-lists/' + list.id}, 'tab=prices')}"></th:block>
             </div>
 
             <!-- Processing prices per charge unit -->
@@ -102,7 +103,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="r : ${serviceRows}">
+                            <tr th:each="r : ${serviceRows.content}">
                                 <td><span th:text="${r.service.name}">Edging</span> <span class="cell-sub mono" th:text="${r.service.code}">EDGING</span></td>
                                 <td th:text="#{${'service.unit.' + r.service.chargeUnit}}">metre of edge</td>
                                 <td class="num nowrap">
@@ -115,6 +116,7 @@
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${serviceRows}, ${'/price-lists/' + list.id}, 'tab=processing')}"></th:block>
             </div>
 
             <!-- Customers on this list -->
@@ -129,7 +131,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="c : ${customers}" th:classappend="${!c.enabled} ? 'row-inactive'">
+                            <tr th:each="c : ${customers.content}" th:classappend="${!c.enabled} ? 'row-inactive'">
                                 <td>
                                     <a class="row-link strong" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:href="@{/customers/{id}(id=${c.id})}" th:text="${c.name}">Kigali Glaziers</a>
                                     <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${c.name}">Kigali Glaziers</span>
@@ -141,12 +143,13 @@
                                     <span class="badge badge-secondary" th:unless="${c.enabled}" th:text="#{common.inactive}">Inactive</span>
                                 </td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(customers)}">
+                            <tr th:if="${customers.totalElements == 0}">
                                 <td colspan="3"><div class="empty-state"><h3 th:text="#{pricelist.noCustomers}">No customer uses this list yet</h3></div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${customers}, ${'/price-lists/' + list.id}, 'tab=customers')}"></th:block>
             </div>
 
             <!-- Price history: the list's details and every price row (AUD-10) -->

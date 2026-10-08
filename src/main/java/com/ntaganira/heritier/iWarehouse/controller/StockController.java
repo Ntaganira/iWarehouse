@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.CuttingJob;
 import com.ntaganira.heritier.iWarehouse.entity.CuttingJobOutput;
 import com.ntaganira.heritier.iWarehouse.entity.GoodsReceipt;
@@ -59,7 +60,6 @@ import java.util.*;
 public class StockController {
 
     static final String MODULE = "Inventory";
-    private static final int PAGE_SIZE = 25;
 
     private final StockService stockService;
     private final GoodsReceiptService receiptService;
@@ -109,7 +109,7 @@ public class StockController {
         Integer w = positive(minWidth);
         Integer h = positive(minHeight);
         StockService.UnitFilter filter = new StockService.UnitFilter(search, product, location, status, kind, w, h);
-        Page<StockUnit> units = stockService.findPage(filter, Math.max(page, 0), PAGE_SIZE);
+        Page<StockUnit> units = stockService.findPage(filter, Paging.page(page), Paging.SIZE);
         model.addAttribute("units", units);
         model.addAttribute("fitSearch", filter.fitSearch());
         model.addAttribute("products", productRepo.findAll(Sort.by("glassType", "variant", "thicknessMm")));
@@ -133,15 +133,18 @@ public class StockController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_STOCK') and hasAuthority('PERM_VIEW_STOCK')")
-    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "movements") String tab, Model model) {
+    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "movements") String tab,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
         StockUnit unit = stockService.findDetailed(id);
+        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
+        String open = List.of("movements", "cost", "history").contains(tab) && (seeCost || !tab.equals("cost")) ? tab : "movements";
         Map<UUID, Location> locations = stockService.locationsById();
         model.addAttribute("unit", unit);
         model.addAttribute("qr", Labels.qrSvg(unit.getCode()));
-        model.addAttribute("movements", stockService.movements(id));
+        // The open tab shows the page asked for; the others start at their first page.
+        model.addAttribute("movements", Paging.of(stockService.movements(id), Paging.pageOf("movements", open, page)));
         // How the cost was built up (receipt, landed costs): only for those who may see costs.
-        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
-        model.addAttribute("costEntries", seeCost ? stockService.costEntries(id) : List.of());
+        model.addAttribute("costEntries", Paging.of(seeCost ? stockService.costEntries(id) : List.of(), Paging.pageOf("cost", open, page)));
         model.addAttribute("locations", locations);
         model.addAttribute("path", unit.getLocation() == null ? List.of() : locationService.ancestors(unit.getLocation()));
         // The cut it was taken for or cut by, and the cut it came out of (PRD-03).
@@ -151,8 +154,8 @@ public class StockController {
         model.addAttribute("heldBy", stockService.holds(List.of(id)).get(id));
         model.addAttribute("customers", unit.getStatus() == StockStatus.AVAILABLE && AppUserPrincipal.currentHas("PERM_RESERVE_STOCK")
                 ? reservationService.customers() : List.of());
-        model.addAttribute("history", dataChangeService.history("StockUnit", id.toString(), 0, 20));
-        model.addAttribute("tab", List.of("movements", "cost", "history").contains(tab) && (seeCost || !tab.equals("cost")) ? tab : "movements");
+        model.addAttribute("history", dataChangeService.history("StockUnit", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "stock/view";
     }
 
@@ -203,8 +206,13 @@ public class StockController {
     @GetMapping("/summary")
     @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
     public String summary(@RequestParam(defaultValue = "PRODUCT") StockSummary.GroupBy group,
-                          @RequestParam(required = false) UUID product, Model model) {
-        model.addAttribute("view", summaryService.summary(group, product));
+                          @RequestParam(required = false) UUID product, @RequestParam(defaultValue = "0") int page,
+                          @RequestParam(defaultValue = "0") int rpage, Model model) {
+        StockSummaryService.View view = summaryService.summary(group, product);
+        model.addAttribute("view", view);
+        // Two tables, each with its own page: the groups (page) and glass to reorder (rpage); totals stay overall
+        model.addAttribute("rowPage", Paging.of(view.rows(), page));
+        model.addAttribute("reorderPage", Paging.of(view.reorder(), rpage));
         model.addAttribute("groups", StockSummary.GroupBy.values());
         model.addAttribute("products", summaryService.products());
         model.addAttribute("group", group);

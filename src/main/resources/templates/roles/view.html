@@ -34,16 +34,16 @@
 
     <div class="section">
         <div class="tabs">
-            <button type="button" class="tab active" data-tab="tab-access" th:text="#{role.access}">Access</button>
-            <button type="button" class="tab" data-tab="tab-members">
+            <button type="button" class="tab" data-tab="tab-access" th:classappend="${tab == 'access'} ? 'active'" th:text="#{role.access}">Access</button>
+            <button type="button" class="tab" data-tab="tab-members" th:classappend="${tab == 'members'} ? 'active'">
                 <span th:text="#{role.members}">Users</span>
-                <span class="section-count" th:text="${#lists.size(members)}">0</span>
+                <span class="section-count" th:text="${members.totalElements}">0</span>
             </button>
-            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
 
         <div class="section-body">
-            <div class="tab-content active" id="tab-access">
+            <div class="tab-content" id="tab-access" th:classappend="${tab == 'access'} ? 'active'">
                 <div class="role-card">
                     <div class="role-card-header">
                         <div>
@@ -79,7 +79,7 @@
                 </div>
             </div>
 
-            <div class="tab-content" id="tab-members">
+            <div class="tab-content" id="tab-members" th:classappend="${tab == 'members'} ? 'active'">
                 <div class="table-container">
                     <table>
                         <thead>
@@ -90,7 +90,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="u : ${members}">
+                            <tr th:each="u : ${members.content}">
                                 <td>
                                     <div class="info">
                                         <div class="name">
@@ -106,17 +106,19 @@
                                     <span class="badge badge-secondary" th:unless="${u.enabled}" th:text="#{common.inactive}">Inactive</span>
                                 </td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(members)}">
+                            <tr th:if="${members.totalElements == 0}">
                                 <td colspan="3"><div class="empty-state"><h3 th:text="#{role.noMembers}">No users have this role</h3></div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${members}, ${'/roles/' + role.id}, 'tab=members')}"></th:block>
             </div>
 
-            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <p class="form-note" th:text="#{role.historyNote}">Grant changes are in the activity log.</p>
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/roles/' + role.id}, 'tab=history')}"></th:block>
                 <a class="link-more" th:href="@{/audit/history/Role/{id}(id=${role.id})}" th:text="#{audit.fullHistory}">Full history</a>
             </div>
         </div>

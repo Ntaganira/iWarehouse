@@ -127,11 +127,11 @@
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-movements" th:classappend="${tab == 'movements'} ? 'active'">
                 <span th:text="#{stock.movements}">Movements</span>
-                <span class="section-count" th:text="${#lists.size(movements)}">1</span>
+                <span class="section-count" th:text="${movements.totalElements}">1</span>
             </button>
             <button type="button" class="tab" data-tab="tab-cost" th:classappend="${tab == 'cost'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')">
                 <span th:text="#{stock.costTab}">Cost</span>
-                <span class="section-count" th:text="${#lists.size(costEntries)}">2</span>
+                <span class="section-count" th:text="${costEntries.totalElements}">2</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
@@ -152,7 +152,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="m : ${movements}">
+                            <tr th:each="m : ${movements.content}">
                                 <td class="nowrap" th:text="${#temporals.format(m.movedAt, 'yyyy-MM-dd HH:mm:ss')}">2026-10-08 10:12:04</td>
                                 <td>
                                     <span th:text="#{${'stock.movement.' + m.type}}">Received</span>
@@ -176,6 +176,7 @@
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${movements}, ${'/stock/' + unit.id}, 'tab=movements')}"></th:block>
             </div>
             <div class="tab-content" id="tab-cost" th:classappend="${tab == 'cost'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')">
                 <p class="tab-intro" th:text="#{stock.costIntro}">How the cost was built up: the order price at the receipt rate, then the import costs of its shipment. Never changed or deleted.</p>
@@ -192,7 +193,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="e : ${costEntries}">
+                            <tr th:each="e : ${costEntries.content}">
                                 <td class="nowrap" th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
                                 <td th:text="#{${'stock.costType.' + e.type}}">Receipt cost</td>
                                 <td>
@@ -202,15 +203,17 @@
                                 <td class="num strong" th:text="${@num.money(e.costAfter)}">43,992.61</td>
                                 <td th:text="${e.username}">admin</td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(costEntries)}">
+                            <tr th:if="${costEntries.totalElements == 0}">
                                 <td colspan="6"><div class="empty-state"><p th:text="#{stock.costNone}">No cost recorded.</p></div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${costEntries}, ${'/stock/' + unit.id}, 'tab=cost')}"></th:block>
             </div>
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/stock/' + unit.id}, 'tab=history')}"></th:block>
                 <a class="link-more" th:href="@{/audit/history/StockUnit/{id}(id=${unit.id})}" th:text="#{audit.fullHistory}">Full history</a>
             </div>
         </div>

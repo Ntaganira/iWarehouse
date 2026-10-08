@@ -16,11 +16,11 @@
             <button type="button" class="tab" data-tab="tab-general" th:classappend="${tab == 'general'} ? 'active'" th:text="#{settings.tab.general}">General</button>
             <button type="button" class="tab" data-tab="tab-tax" th:classappend="${tab == 'tax'} ? 'active'">
                 <span th:text="#{settings.tab.tax}">Tax categories</span>
-                <span class="section-count" th:text="${#lists.size(taxCategories)}">3</span>
+                <span class="section-count" th:text="${taxCategories.totalElements}">3</span>
             </button>
             <button type="button" class="tab" data-tab="tab-numbering" th:classappend="${tab == 'numbering'} ? 'active'">
                 <span th:text="#{settings.tab.numbering}">Document numbering</span>
-                <span class="section-count" th:text="${#lists.size(sequences)}">14</span>
+                <span class="section-count" th:text="${sequences.totalElements}">14</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
@@ -207,7 +207,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="t : ${taxCategories}">
+                            <tr th:each="t : ${taxCategories.content}">
                                 <td>
                                     <span class="mono strong" th:text="${t.code}">STANDARD</span>
                                     <span class="you-badge" th:if="${t.defaultCategory}" th:text="#{tax.default}">Default</span>
@@ -242,12 +242,13 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(taxCategories)}">
+                            <tr th:if="${taxCategories.totalElements == 0}">
                                 <td colspan="6"><div class="empty-state"><h3 th:text="#{tax.empty}">No tax categories yet</h3></div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${taxCategories}, '/settings', 'tab=tax')}"></th:block>
             </div>
 
             <!-- Document numbering (MD-07) -->
@@ -272,7 +273,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="s : ${sequences}">
+                            <tr th:each="s : ${sequences.content}">
                                 <td>
                                     <div class="strong" th:text="#{${'doc.type.' + s.docType}}">Sales invoice</div>
                                     <div class="text-muted mono" th:text="${s.docType}">INVOICE</div>
@@ -290,12 +291,13 @@
                                     </a>
                                 </td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(sequences)}">
+                            <tr th:if="${sequences.totalElements == 0}">
                                 <td colspan="6"><div class="empty-state"><h3 th:text="#{numbering.empty}">No numbering sequences yet</h3></div></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${sequences}, '/settings', 'tab=numbering')}"></th:block>
             </div>
 
             <!-- History (AUD-10): changes to settings, tax categories and numbering formats -->

@@ -32,12 +32,12 @@
 
     <div class="section">
         <div class="tabs">
-            <button type="button" class="tab active" data-tab="tab-details" th:text="#{product.details}">Details</button>
-            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
 
         <div class="section-body">
-            <div class="tab-content active" id="tab-details">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
                 <div class="detail-list">
                     <div class="item">
                         <label th:text="#{product.code}">Code</label>
@@ -97,8 +97,9 @@
                 </div>
             </div>
 
-            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/products/' + product.id}, 'tab=history')}"></th:block>
                 <a class="link-more" th:href="@{/audit/history/Product/{id}(id=${product.id})}" th:text="#{audit.fullHistory}">Full history</a>
             </div>
         </div>

@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.PurchaseOrderDto;
 import com.ntaganira.heritier.iWarehouse.entity.GoodsReceipt;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrder;
@@ -52,7 +53,6 @@ import java.util.UUID;
 public class PurchaseOrderController {
 
     static final String MODULE = "Purchase Orders";
-    private static final int PAGE_SIZE = 20;
     private static final int REASON_MAX = 255;
 
     private final PurchaseOrderService orderService;
@@ -82,7 +82,7 @@ public class PurchaseOrderController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        Page<PurchaseOrder> orders = orderService.findPage(search, supplier, status, Math.max(page, 0), PAGE_SIZE);
+        Page<PurchaseOrder> orders = orderService.findPage(search, supplier, status, Paging.page(page), Paging.SIZE);
         model.addAttribute("orders", orders);
         model.addAttribute("totals", orderService.totals(orders.getContent()));
         model.addAttribute("decimals", currencyDecimals());
@@ -108,7 +108,7 @@ public class PurchaseOrderController {
         model.addAttribute("receipts", receipts);
         model.addAttribute("draftReceipts", receipts.stream().filter(r -> r.getStatus() == GoodsReceiptStatus.DRAFT).count());
         model.addAttribute("history", dataChangeService.historyWithChildren("PurchaseOrder", id.toString(),
-                "PurchaseOrderLine", "purchaseOrder", Math.max(page, 0), 20));
+                "PurchaseOrderLine", "purchaseOrder", Paging.page(page), Paging.SIZE));
         model.addAttribute("tab", List.of("lines", "receipts", "history").contains(tab) ? tab : "lines");
         return "purchase-orders/view";
     }

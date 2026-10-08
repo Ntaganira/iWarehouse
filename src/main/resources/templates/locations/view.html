@@ -45,16 +45,16 @@
 
     <div class="section">
         <div class="tabs">
-            <button type="button" class="tab active" data-tab="tab-details" th:text="#{product.details}">Details</button>
-            <button type="button" class="tab" data-tab="tab-children" th:if="${child != null}">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-children" th:classappend="${tab == 'children'} ? 'active'" th:if="${child != null}">
                 <span th:text="#{location.subLocations}">Sub-locations</span>
-                <span class="section-count" th:text="${#lists.size(children)}">0</span>
+                <span class="section-count" th:text="${children.totalElements}">0</span>
             </button>
-            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
 
         <div class="section-body">
-            <div class="tab-content active" id="tab-details">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
                 <div class="detail-list">
                     <div class="item">
                         <label th:text="#{location.code}">Code</label>
@@ -107,7 +107,7 @@
                 <p class="form-note" th:if="${location.rack}" th:text="#{location.limitsNote}">Receiving, transfers and trip loading will check these limits.</p>
             </div>
 
-            <div class="tab-content" id="tab-children" th:if="${child != null}">
+            <div class="tab-content" id="tab-children" th:classappend="${tab == 'children'} ? 'active'" th:if="${child != null}">
                 <div class="table-container">
                     <table>
                         <thead>
@@ -119,7 +119,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="c : ${children}" th:classappend="${!c.enabled} ? 'row-inactive'">
+                            <tr th:each="c : ${children.content}" th:classappend="${!c.enabled} ? 'row-inactive'">
                                 <td><a class="row-link mono strong" th:href="@{/locations/{id}(id=${c.id})}" th:text="${c.code}">WH-A-R01</a></td>
                                 <td th:text="${c.name ?: '—'}">Rack 1</td>
                                 <td th:if="${child.name() == 'RACK'}"><th:block th:replace="~{locations/list :: limits(${c})}"></th:block></td>
@@ -128,7 +128,7 @@
                                     <span class="badge badge-secondary" th:unless="${c.enabled}" th:text="#{common.inactive}">Inactive</span>
                                 </td>
                             </tr>
-                            <tr th:if="${#lists.isEmpty(children)}">
+                            <tr th:if="${children.totalElements == 0}">
                                 <td th:colspan="${child.name() == 'RACK'} ? 4 : 3">
                                     <div class="empty-state">
                                         <h3 th:text="#{location.noChildren}">No sub-locations yet</h3>
@@ -138,10 +138,12 @@
                         </tbody>
                     </table>
                 </div>
+                <th:block th:replace="~{layout/pagination :: pager(${children}, ${'/locations/' + location.id}, 'tab=children')}"></th:block>
             </div>
 
-            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/locations/' + location.id}, 'tab=history')}"></th:block>
                 <a class="link-more" th:href="@{/audit/history/Location/{id}(id=${location.id})}" th:text="#{audit.fullHistory}">Full history</a>
             </div>
         </div>

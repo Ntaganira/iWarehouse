@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.ExchangeRateDto;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.entity.ExchangeRate;
@@ -89,14 +90,14 @@ public class ExchangeRateController {
 
     @GetMapping("/{id}/edit")
     @PreAuthorize("hasAuthority('PAGE_CURRENCIES') and hasAuthority('PERM_MANAGE_EXCHANGE_RATE')")
-    public String editForm(@PathVariable UUID id, Model model) {
+    public String editForm(@PathVariable UUID id, @RequestParam(defaultValue = "0") int page, Model model) {
         ExchangeRate rate = rateService.findById(id);
         ExchangeRateDto dto = new ExchangeRateDto();
         dto.setId(id);
         fixed(dto, rate);
         dto.setRate(rate.getRate().stripTrailingZeros());
         dto.setNote(rate.getNote());
-        return form(model, dto);
+        return form(model, dto, page);
     }
 
     @PostMapping("/{id}/edit")
@@ -191,6 +192,10 @@ public class ExchangeRateController {
     }
 
     private String form(Model model, ExchangeRateDto dto) {
+        return form(model, dto, 0);
+    }
+
+    private String form(Model model, ExchangeRateDto dto, int historyPage) {
         model.addAttribute("rateDto", dto);
         model.addAttribute("currencies", currencyService.findActiveForeign());
         model.addAttribute("sources", RateSource.values());
@@ -204,7 +209,7 @@ public class ExchangeRateController {
                 .toList());
         model.addAttribute("defaultSource", rateService.defaultSource());
         if (dto.getId() != null) {
-            model.addAttribute("history", dataChangeService.history("ExchangeRate", dto.getId().toString(), 0, 10));
+            model.addAttribute("history", dataChangeService.history("ExchangeRate", dto.getId().toString(), Paging.page(historyPage), Paging.SIZE));
         }
         return "currencies/rate-form";
     }

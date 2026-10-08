@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.ActivityLog;
 import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
@@ -22,8 +23,6 @@ import java.time.LocalDate;
 @Controller
 @RequestMapping("/activity")
 public class ActivityLogController {
-
-    private static final int PAGE_SIZE = 10;
 
     private final ActivityLogService activityLogService;
     private final UserRepository userRepo;
@@ -49,7 +48,7 @@ public class ActivityLogController {
             return "redirect:/login";
         }
         Page<ActivityLog> logs = activityLogService.findPage(userId, module, action,
-                status, from, to, Math.max(page, 0), PAGE_SIZE);
+                status, from, to, Paging.page(page), Paging.SIZE);
         populate(model, logs, null, module, action, status, from, to);
         return "activity/my";
     }
@@ -67,7 +66,7 @@ public class ActivityLogController {
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                        Model model) {
         Page<ActivityLog> logs = activityLogService.findPage(userId, module, action,
-                status, from, to, Math.max(page, 0), PAGE_SIZE);
+                status, from, to, Paging.page(page), Paging.SIZE);
         model.addAttribute("users", userRepo.findAll(Sort.by(Sort.Direction.ASC, "fullName")));
         model.addAttribute("selectedUserId", userId);
         populate(model, logs, userId, module, action, status, from, to);

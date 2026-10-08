@@ -3,6 +3,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.CuttingJobDto;
 import com.ntaganira.heritier.iWarehouse.dto.CuttingResultDto;
 import com.ntaganira.heritier.iWarehouse.entity.CuttingJob;
@@ -14,6 +15,7 @@ import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.CuttingJobService;
+import com.ntaganira.heritier.iWarehouse.service.CuttingYield;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.StockService;
 import jakarta.validation.Validator;
@@ -52,7 +54,6 @@ import java.util.stream.Collectors;
 public class CuttingJobController {
 
     static final String MODULE = "Cutting Jobs";
-    private static final int PAGE_SIZE = 20;
     private static final int REASON_MAX = 255;
 
     private final CuttingJobService jobService;
@@ -82,7 +83,7 @@ public class CuttingJobController {
                        @RequestParam(required = false) String purpose,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        Page<CuttingJob> jobs = jobService.findPage(search, status, purpose, Math.max(page, 0), PAGE_SIZE);
+        Page<CuttingJob> jobs = jobService.findPage(search, status, purpose, Paging.page(page), Paging.SIZE);
         model.addAttribute("jobs", jobs);
         model.addAttribute("needs", jobService.needs(jobs.getContent()));
         model.addAttribute("statuses", CuttingJobStatus.values());
@@ -108,7 +109,7 @@ public class CuttingJobController {
         model.addAttribute("restJobs", jobService.restJobs(id));
         model.addAttribute("locations", stockService.locationsById());
         model.addAttribute("history", dataChangeService.historyWithChildren("CuttingJob", id.toString(),
-                List.of("CuttingJobLine"), "job", Math.max(page, 0), 20));
+                List.of("CuttingJobLine"), "job", Paging.page(page), Paging.SIZE));
         boolean cut = job.getStatus() == CuttingJobStatus.IN_PROGRESS || job.getStatus() == CuttingJobStatus.COMPLETED;
         model.addAttribute("tab", "history".equals(tab) || ("cut".equals(tab) && cut) ? tab : "pieces");
         return "cutting-jobs/view";
@@ -343,7 +344,8 @@ public class CuttingJobController {
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                         @RequestParam(required = false) UUID product,
                         @RequestParam(required = false) String operator,
-                        Model model) {
+                        @RequestParam(defaultValue = "0") int opage, @RequestParam(defaultValue = "0") int gpage,
+                        @RequestParam(defaultValue = "0") int bpage, Model model) {
         LocalDate today = jobService.today();
         LocalDate end = to == null ? today : to;
         LocalDate start = from == null ? end.withDayOfMonth(1) : from;
@@ -352,7 +354,19 @@ public class CuttingJobController {
             start = end;
             end = swap;
         }
-        model.addAttribute("report", jobService.yieldReport(start, end, product, operator));
+        CuttingJobService.YieldReport report = jobService.yieldReport(start, end, product, operator);
+        model.addAttribute("report", report);
+        // Three tables, each with its own page (operator, glass, breakage); each pager keeps the filters and the other pages
+        Page<CuttingYield.Row> operators = Paging.of(report.byOperator(), opage);
+        Page<CuttingYield.Row> products = Paging.of(report.byProduct(), gpage);
+        Page<CuttingYield.Breakage> breakage = Paging.of(report.breakage(), bpage);
+        String filters = QueryString.of("from", start, "to", end, "product", product, "operator", operator);
+        model.addAttribute("operatorPage", operators);
+        model.addAttribute("productPage", products);
+        model.addAttribute("breakagePage", breakage);
+        model.addAttribute("operatorQuery", filters + "&gpage=" + products.getNumber() + "&bpage=" + breakage.getNumber());
+        model.addAttribute("productQuery", filters + "&opage=" + operators.getNumber() + "&bpage=" + breakage.getNumber());
+        model.addAttribute("breakageQuery", filters + "&opage=" + operators.getNumber() + "&gpage=" + products.getNumber());
         model.addAttribute("from", start);
         model.addAttribute("to", end);
         model.addAttribute("product", product);

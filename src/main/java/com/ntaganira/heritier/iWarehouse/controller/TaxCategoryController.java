@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.TaxCategoryDto;
 import com.ntaganira.heritier.iWarehouse.entity.TaxCategory;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -76,7 +77,7 @@ public class TaxCategoryController {
 
     @GetMapping("/{id}/edit")
     @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_EDIT_SETTINGS')")
-    public String editForm(@PathVariable UUID id, Model model) {
+    public String editForm(@PathVariable UUID id, @RequestParam(defaultValue = "0") int page, Model model) {
         TaxCategory category = taxCategoryService.findById(id);
         TaxCategoryDto dto = new TaxCategoryDto();
         dto.setId(id);
@@ -86,7 +87,7 @@ public class TaxCategoryController {
         dto.setEbmCode(category.getEbmCode());
         dto.setDescription(category.getDescription());
         dto.setDefaultCategory(category.isDefaultCategory());
-        return form(model, dto);
+        return form(model, dto, page);
     }
 
     @PostMapping("/{id}/edit")
@@ -146,11 +147,15 @@ public class TaxCategoryController {
     }
 
     private String form(Model model, TaxCategoryDto dto) {
+        return form(model, dto, 0);
+    }
+
+    private String form(Model model, TaxCategoryDto dto, int historyPage) {
         model.addAttribute("taxCategoryDto", dto);
         if (dto.getId() != null) {
             TaxCategory category = taxCategoryService.findById(dto.getId());
             model.addAttribute("category", category);
-            model.addAttribute("history", dataChangeService.history("TaxCategory", dto.getId().toString(), 0, 10));
+            model.addAttribute("history", dataChangeService.history("TaxCategory", dto.getId().toString(), Paging.page(historyPage), Paging.SIZE));
         }
         return "settings/tax-form";
     }

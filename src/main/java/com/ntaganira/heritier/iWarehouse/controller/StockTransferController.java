@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.StockTransferDto;
 import com.ntaganira.heritier.iWarehouse.entity.StockTransfer;
 import com.ntaganira.heritier.iWarehouse.entity.StockTransferLine;
@@ -41,7 +42,6 @@ import java.util.stream.Collectors;
 public class StockTransferController {
 
     static final String MODULE = "Stock Transfers";
-    private static final int PAGE_SIZE = 20;
 
     private final StockTransferService transferService;
     private final StockService stockService;
@@ -64,7 +64,7 @@ public class StockTransferController {
     @GetMapping
     @PreAuthorize("hasAuthority('PAGE_STOCK_TRANSFERS') and hasAuthority('PERM_VIEW_STOCK_TRANSFER')")
     public String list(@RequestParam(required = false) String search, @RequestParam(defaultValue = "0") int page, Model model) {
-        Page<StockTransfer> transfers = transferService.findPage(search, Math.max(page, 0), PAGE_SIZE);
+        Page<StockTransfer> transfers = transferService.findPage(search, Paging.page(page), Paging.SIZE);
         model.addAttribute("transfers", transfers);
         model.addAttribute("counts", transferService.unitCounts(transfers.getContent()));
         model.addAttribute("search", search);
@@ -81,7 +81,7 @@ public class StockTransferController {
         model.addAttribute("units", transferService.unitsOf(transfer));
         model.addAttribute("locations", stockService.locationsById());
         model.addAttribute("history", dataChangeService.historyWithChildren("StockTransfer", id.toString(),
-                List.of("StockTransferLine"), "transfer", Math.max(page, 0), 20));
+                List.of("StockTransferLine"), "transfer", Paging.page(page), Paging.SIZE));
         model.addAttribute("tab", "history".equals(tab) ? tab : "units");
         return "stock-transfers/view";
     }

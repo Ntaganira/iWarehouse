@@ -65,7 +65,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="r : ${view.reorder}">
+                    <tr th:each="r : ${reorderPage.content}">
                         <td>
                             <th:block th:replace="~{products/list :: productName(${r.product})}"></th:block>
                             <div class="cell-sub mono" th:text="${r.product.code}">CLR-4</div>
@@ -77,6 +77,7 @@
                 </tbody>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reorderPage}, '/stock/summary', ${csvQuery + '&page=' + rowPage.number}, 'rpage')}"></th:block>
     </div>
 
     <div class="section">
@@ -105,7 +106,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="r : ${view.rows}">
+                    <tr th:each="r : ${rowPage.content}">
                         <td th:switch="${g}">
                             <th:block th:case="'PRODUCT'">
                                 <a th:if="${r.product != null}" th:href="@{/stock(product=${r.product.id})}">
@@ -139,6 +140,7 @@
                 </tfoot>
             </table>
         </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/summary', ${csvQuery + '&rpage=' + reorderPage.number}, 'page')}"></th:block>
         <p class="form-note" th:text="#{summary.note}">Units in stock: received, available, reserved, being cut and on vehicles. Value is each glass's m² times its moving average cost, the value the accounts carry.</p>
     </div>
 </div>

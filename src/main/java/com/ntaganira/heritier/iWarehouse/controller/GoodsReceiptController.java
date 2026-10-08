@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.GoodsReceiptDto;
 import com.ntaganira.heritier.iWarehouse.entity.CrateBatch;
 import com.ntaganira.heritier.iWarehouse.entity.GoodsReceipt;
@@ -48,7 +49,6 @@ import java.util.stream.Collectors;
 public class GoodsReceiptController {
 
     static final String MODULE = "Goods Receipts";
-    private static final int PAGE_SIZE = 20;
     private static final int REASON_MAX = 255;
 
     private final GoodsReceiptService receiptService;
@@ -80,7 +80,7 @@ public class GoodsReceiptController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        Page<GoodsReceipt> receipts = receiptService.findPage(search, status, Math.max(page, 0), PAGE_SIZE);
+        Page<GoodsReceipt> receipts = receiptService.findPage(search, status, Paging.page(page), Paging.SIZE);
         model.addAttribute("receipts", receipts);
         model.addAttribute("totals", receiptService.totals(receipts.getContent()));
         model.addAttribute("statuses", GoodsReceiptStatus.values());
@@ -95,13 +95,15 @@ public class GoodsReceiptController {
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "crates") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
         GoodsReceipt receipt = receiptService.findDetailed(id);
+        String open = List.of("crates", "units", "history").contains(tab) ? tab : "crates";
         model.addAttribute("receipt", receipt);
-        model.addAttribute("units", receipt.getStatus() == GoodsReceiptStatus.POSTED ? stockService.unitsOfReceipt(id) : List.of());
+        model.addAttribute("units", Paging.of(receipt.getStatus() == GoodsReceiptStatus.POSTED ? stockService.unitsOfReceipt(id) : List.of(),
+                Paging.pageOf("units", open, page)));
         // The shipment it came in and the landed cost per m² posted to its crates (PRC-05).
         model.addAttribute("landing", shipmentService.landingOf(receipt).orElse(null));
         model.addAttribute("history", dataChangeService.historyWithChildren("GoodsReceipt", id.toString(),
-                "CrateBatch", "goodsReceipt", Math.max(page, 0), 20));
-        model.addAttribute("tab", List.of("crates", "units", "history").contains(tab) ? tab : "crates");
+                "CrateBatch", "goodsReceipt", Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "goods-receipts/view";
     }
 

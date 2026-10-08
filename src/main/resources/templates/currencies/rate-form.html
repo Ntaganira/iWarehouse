@@ -118,6 +118,7 @@
     <div class="section" th:if="${history != null}" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
         <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
         <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/currencies/rates/' + rateDto.id + '/edit'}, '')}"></th:block>
     </div>
     <script defer src="/js/rate-form.js"></script>
 </div>

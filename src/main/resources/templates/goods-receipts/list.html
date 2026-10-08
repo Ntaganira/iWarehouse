@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{receipt.title}, ~{::content})}">
+<head><title>Goods Receipts - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{receipt.title}">Goods Receipts</h1>
+            <div class="subtitle" th:text="#{receipt.subtitle}">Crates received against purchase orders; posting puts each sheet into stock with its label</div>
+        </div>
+        <a href="/purchase-orders?status=open" class="btn btn-primary" sec:authorize="hasAuthority('PERM_RECEIVE_GOODS') and hasAuthority('PAGE_PROCUREMENT')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{receipt.add}">Receive against an order</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{receipt.sectionTitle}">Receipts</span>
+                <span class="section-count" th:text="${receipts.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/goods-receipts}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{receipt.searchPh}" th:aria-label="#{receipt.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'receipt.status.' + st}}">Draft</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{receipt.number}">Receipt</th>
+                        <th th:text="#{receipt.order}">Order</th>
+                        <th th:text="#{receipt.date}">Received on</th>
+                        <th class="num" th:text="#{receipt.crates}">Crates</th>
+                        <th class="num" th:text="#{receipt.sheets}">Good sheets</th>
+                        <th class="num" th:text="#{receipt.broken}">Broken</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${receipts.content}" th:with="t=${totals.get(r.id)}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/goods-receipts/{id}(id=${r.id})}" th:text="${r.number}">GRN-WH-2026-000001</a>
+                            <div class="cell-sub" th:if="${r.deliveryRef != null}" th:text="${r.deliveryRef}">MSKU 123456-7</div>
+                        </td>
+                        <td>
+                            <a class="mono" th:href="@{/purchase-orders/{id}(id=${r.purchaseOrder.id})}" th:text="${r.purchaseOrder.number}">PO-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${r.purchaseOrder.supplier.name}">Shandong Glass Co.</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(r.receivedDate, 'yyyy-MM-dd')}">2026-10-08</td>
+                        <td class="num" th:text="${t != null} ? ${t.crates} : 0">2</td>
+                        <td class="num" th:text="${t != null} ? ${t.sheets} : 0">38</td>
+                        <td class="num" th:text="${t != null} ? ${t.broken} : 0">2</td>
+                        <td><th:block th:replace="~{goods-receipts/list :: receiptStatus(${r.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(receipts.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{receipt.empty}">No goods receipts found</h3>
+                                <p th:text="#{receipt.emptyHint}">Crates are received from a placed purchase order</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${receipts}, '/goods-receipts', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a goods receipt. */-->
+<th:block th:fragment="receiptStatus(s)" th:switch="${s.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{receipt.status.DRAFT}">Draft</span>
+    <span th:case="'POSTED'" class="badge badge-success" th:text="#{receipt.status.POSTED}">Posted</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{receipt.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

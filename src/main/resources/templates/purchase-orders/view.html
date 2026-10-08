@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${order.number}, ~{::content})}">
+<head><title>Purchase Order - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${order.status}, canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_PURCHASE_ORDER'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${order.number}">PO-WH-2026-000001</h1>
+            <div class="subtitle">
+                <a th:href="@{/suppliers/{id}(id=${order.supplier.id})}" th:text="${order.supplier.name}"
+                   sec:authorize="hasAuthority('PAGE_SUPPLIERS') and hasAuthority('PERM_VIEW_SUPPLIER')">Shandong Glass Co.</a>
+                <span sec:authorize="!(hasAuthority('PAGE_SUPPLIERS') and hasAuthority('PERM_VIEW_SUPPLIER'))" th:text="${order.supplier.name}">Shandong Glass Co.</span>
+                &middot; <span class="mono" th:text="${order.currencyCode}">USD</span>
+                &middot; <th:block th:replace="~{purchase-orders/list :: poStatus(${s})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/purchase-orders" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${canManage}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
+                        th:if="${(s.name() == 'DRAFT' or (s.name() == 'ORDERED' and totals.received == 0)) and draftReceipts == 0}" th:text="#{po.cancel}">Cancel order</button>
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="close-modal"
+                        th:if="${s.name() == 'PARTIALLY_RECEIVED' and draftReceipts == 0}" th:text="#{po.close}">Close short</button>
+                <a th:if="${s.editable}" th:href="@{/purchase-orders/{id}/edit(id=${order.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <form th:if="${s.editable}" th:action="@{/purchase-orders/{id}/place(id=${order.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{po.placeConfirm(${order.number}, ${order.supplier.name})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{po.place}">Place order</button>
+                </form>
+            </th:block>
+            <a th:if="${s.receivable and totals.outstanding > 0}" sec:authorize="hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_RECEIVE_GOODS')"
+               th:href="@{/goods-receipts/new(po=${order.id})}" class="btn btn-primary" th:text="#{po.receive}">Receive crates</a>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${order.closedReason != null}" th:classappend="${s.name() == 'CANCELLED'} ? 'is-danger'">
+        <strong th:text="${s.name() == 'CANCELLED'} ? #{po.cancelledNote} : #{po.closedNote}">Cancelled:</strong>
+        <span th:text="${order.closedReason}">Supplier out of stock</span>
+    </div>
+    <div class="doc-note" th:if="${s.editable}" th:text="#{po.draftNote}">Draft: check it, then place it with the supplier. Once placed it can no longer be changed.</div>
+    <div class="doc-note" th:if="${draftReceipts > 0}" th:text="#{po.draftReceiptsNote(${draftReceipts})}">1 draft receipt waits to be posted.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{po.kpi.ordered}">Sheets ordered</div>
+                <div class="kpi-value" th:text="${totals.sheets}">40</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${@num.m2(totals.areaM2)} + ' m²'">288.9 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{po.kpi.received}">Received</div>
+                <div class="kpi-value" th:text="${totals.received}">20</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{po.kpi.receivedHint}">good and broken sheets</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${s.receivable and totals.outstanding > 0} ? 'orange' : 'purple'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{po.kpi.outstanding}">Still to come</div>
+                <div class="kpi-value" th:text="${s.receivable or s.editable} ? ${totals.outstanding} : 0">20</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:if="${order.expectedDate != null and (s.receivable or s.editable)}" th:text="#{po.expectedShort(${#temporals.format(order.expectedDate, 'yyyy-MM-dd')})}">due 2026-11-20</span>
+                    <span class="vs" th:if="${s.name() == 'CLOSED'}" th:text="#{po.kpi.notComing(${totals.outstanding})}">20 will not come</span>
+                </div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{po.kpi.amount(${order.currencyCode})}">Amount (USD)</div>
+                <div class="kpi-value" th:with="amountText=${@num.amount(totals.amount, decimals)}" th:classappend="${#strings.length(amountText) > 9} ? 'is-long'"
+                     th:text="${amountText}">1,256.72</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${order.incoterm != null} ? #{${'incoterm.' + order.incoterm}} : #{supplier.noIncoterm}">FOB - Free on board</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{po.linesTab}">Lines</span>
+                <span class="section-count" th:text="${#lists.size(order.lines)}">2</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-receipts" th:classappend="${tab == 'receipts'} ? 'active'">
+                <span th:text="#{po.receiptsTab}">Receipts</span>
+                <span class="section-count" th:text="${#lists.size(receipts)}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{po.orderDate}">Ordered</label>
+                        <div class="value" th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd')}">2026-10-08</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{po.expectedDate}">Expected</label>
+                        <div class="value" th:text="${order.expectedDate != null} ? ${#temporals.format(order.expectedDate, 'yyyy-MM-dd')} : '—'">2026-11-20</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{po.supplierRef}">Supplier reference</label>
+                        <div class="value mono" th:text="${order.supplierRef ?: '—'}">PI-2026-114</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{po.placed}">Placed</label>
+                        <div class="value" th:text="${order.orderedAt != null} ? ${#temporals.format(order.orderedAt, 'yyyy-MM-dd HH:mm') + ' · ' + order.orderedBy} : '—'">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${order.notes ?: '—'}">—</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="po-lines-table">
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{product.name}">Product</th>
+                                <th th:text="#{po.size}">Size (mm)</th>
+                                <th class="num" th:text="#{po.sheets}">Sheets</th>
+                                <th class="num" th:text="#{po.received}">Received</th>
+                                <th class="num" th:text="#{po.toCome}">To come</th>
+                                <th class="num">m²</th>
+                                <th class="num" th:text="#{po.pricePerM2(${order.currencyCode})}">Price per m² (USD)</th>
+                                <th class="num" th:text="#{po.amount}">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${order.lines}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td>
+                                    <th:block th:replace="~{products/list :: productName(${l.product})}"></th:block>
+                                    <div class="cell-sub mono" th:text="${l.product.code}">CLR-6</div>
+                                </td>
+                                <td class="nowrap" th:text="${l.widthMm + ' × ' + l.heightMm}">3210 × 2250</td>
+                                <td class="num" th:text="${l.quantity}">20</td>
+                                <td class="num" th:text="${l.receivedQty}">0</td>
+                                <td class="num" th:text="${s.receivable or s.editable} ? ${l.outstanding} : '—'">20</td>
+                                <td class="num" th:text="${@num.m2(l.area)}">144.45</td>
+                                <td class="num" th:text="${@num.price(l.pricePerM2)}">4.35</td>
+                                <td class="num" th:text="${@num.amount(l.amount, decimals)}">628.36</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th></th>
+                                <th colspan="2" th:text="#{po.total}">Total</th>
+                                <th class="num" th:text="${totals.sheets}">40</th>
+                                <th class="num" th:text="${totals.received}">0</th>
+                                <th class="num" th:text="${s.receivable or s.editable} ? ${totals.outstanding} : '—'">40</th>
+                                <th class="num" th:text="${@num.m2(totals.areaM2)}">288.9</th>
+                                <th></th>
+                                <th class="num" th:text="${@num.amount(totals.amount, decimals) + ' ' + order.currencyCode}">1,256.72 USD</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-receipts" th:classappend="${tab == 'receipts'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{receipt.number}">Receipt</th>
+                                <th th:text="#{receipt.date}">Received on</th>
+                                <th class="num" th:text="#{receipt.crates}">Crates</th>
+                                <th class="num" th:text="#{receipt.sheets}">Good sheets</th>
+                                <th class="num" th:text="#{receipt.broken}">Broken</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${receipts}">
+                                <td>
+                                    <a class="row-link strong mono" th:href="@{/goods-receipts/{id}(id=${r.id})}" th:text="${r.number}"
+                                       sec:authorize="hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT')">GRN-WH-2026-000001</a>
+                                    <span class="mono" sec:authorize="!(hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT'))" th:text="${r.number}">GRN-WH-2026-000001</span>
+                                    <div class="cell-sub" th:if="${r.deliveryRef != null}" th:text="${r.deliveryRef}">MSKU 123456-7</div>
+                                </td>
+                                <td class="nowrap" th:text="${#temporals.format(r.receivedDate, 'yyyy-MM-dd')}">2026-10-08</td>
+                                <td class="num" th:text="${#lists.size(r.crates)}">2</td>
+                                <td class="num" th:text="${r.sheets}">38</td>
+                                <td class="num" th:text="${r.broken}">2</td>
+                                <td><th:block th:replace="~{goods-receipts/list :: receiptStatus(${r.status})}"></th:block></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(receipts)}">
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{po.noReceipts}">Nothing received yet</h3>
+                                        <p th:text="${s.editable} ? #{po.noReceiptsDraft} : #{po.noReceiptsHint}">Crates are received against the order once it is placed</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <p class="tab-intro" th:text="#{po.historyIntro}">Changes to the order and its lines, newest first.</p>
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/purchase-orders/' + ${order.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${canManage}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{po.cancelTitle(${order.number})},
+                @{/purchase-orders/{id}/cancel(id=${order.id})}, #{po.cancelText}, #{po.cancel})}"></div>
+        <div th:replace="~{fragments/reason-modal :: reasonModal('close-modal', #{po.closeTitle(${order.number})},
+                @{/purchase-orders/{id}/close(id=${order.id})}, #{po.closeText(${totals.outstanding})}, #{po.close})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${locationDto.id == null} ? #{${'location.addTitle.' + locationDto.type}} : #{location.editTitle}, ~{::content})}">
+<head><title>Location - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${locationDto.id == null} ? #{${'location.addTitle.' + locationDto.type}} : #{location.editTitle}">Add Rack</h1>
+            <div class="subtitle" th:text="#{location.formSubtitle}">Site › Zone › Rack › Slot (MD-02)</div>
+        </div>
+        <a th:href="${locationDto.id != null} ? @{/locations/{id}(id=${locationDto.id})} : (${parent != null} ? @{/locations/{id}(id=${parent.id})} : @{/locations})"
+           class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${locationDto.id == null} ? @{/locations/new} : @{/locations/{id}/edit(id=${locationDto.id})}"
+              th:object="${locationDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <input type="hidden" th:field="*{parentId}">
+
+            <div class="detail-list fixed-fields">
+                <div class="item">
+                    <label th:text="#{location.type}">Type</label>
+                    <div class="value"><span class="loc-type" th:classappend="${'loc-' + #strings.toLowerCase(locationDto.type)}"
+                                             th:text="#{${'location.type.' + locationDto.type}}">Rack</span></div>
+                </div>
+                <div class="item" th:if="${parentPath != null}">
+                    <label th:text="#{location.parent}">Under</label>
+                    <div class="value loc-path-inline">
+                        <th:block th:each="p, st : ${parentPath}">
+                            <span class="sep" th:unless="${st.first}" aria-hidden="true">›</span>
+                            <span class="mono" th:text="${p.code}">WH</span>
+                        </th:block>
+                        <span class="text-muted" th:if="${parent.name != null}" th:text="${'(' + parent.name + ')'}">(Zone A)</span>
+                    </div>
+                </div>
+            </div>
+            <p class="form-note" th:if="${locationDto.id != null}" th:text="#{location.fixedNote}">Type and parent are fixed. To move a location, add it in the right place and deactivate this one.</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{location.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="30" required
+                           autocapitalize="characters" spellcheck="false" th:placeholder="#{location.codePh}"
+                           th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="#{location.codeHint}">Printed on labels and scanned; unique across all locations</span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{location.name}">Name</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="60" th:placeholder="#{${'location.namePh.' + locationDto.type}}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+            </div>
+
+            <!-- MD-03: limits and orientation, racks only -->
+            <th:block th:if="${locationDto.type != null and locationDto.type.name() == 'RACK'}">
+                <h3 class="form-section-title" th:text="#{location.limits}">Rack limits</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="maxWeightKg" th:text="#{location.maxWeight}">Maximum weight</label>
+                        <div class="input-unit">
+                            <input type="number" id="maxWeightKg" th:field="*{maxWeightKg}" min="1" max="1000000" step="1" inputmode="numeric"
+                                   th:classappend="${#fields.hasErrors('maxWeightKg')} ? 'is-invalid'">
+                            <span>kg</span>
+                        </div>
+                        <span class="field-error" th:if="${#fields.hasErrors('maxWeightKg')}" th:errors="*{maxWeightKg}"></span>
+                        <span class="hint" th:text="#{location.limitHint}">Leave empty for no limit</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="maxPieces" th:text="#{location.maxPieces}">Maximum pieces</label>
+                        <div class="input-unit">
+                            <input type="number" id="maxPieces" th:field="*{maxPieces}" min="1" max="100000" step="1" inputmode="numeric"
+                                   th:classappend="${#fields.hasErrors('maxPieces')} ? 'is-invalid'">
+                            <span th:text="#{location.piecesUnit}">pieces</span>
+                        </div>
+                        <span class="field-error" th:if="${#fields.hasErrors('maxPieces')}" th:errors="*{maxPieces}"></span>
+                        <span class="hint" th:text="#{location.limitHint}">Leave empty for no limit</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="orientation" th:text="#{location.orientation}">Sheet orientation</label>
+                        <select id="orientation" th:field="*{orientation}" required>
+                            <option th:each="o : ${orientations}" th:value="${o}" th:text="#{${'location.orientation.' + o}}">Vertical (on edge)</option>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="checkbox-item">
+                            <input type="checkbox" class="checkbox" th:field="*{offcut}">
+                            <span th:text="#{location.offcutLabel}">Reserved for off-cuts</span>
+                        </label>
+                        <span class="hint" th:text="#{location.offcutHint}">Cutting jobs put re-usable off-cuts on off-cut racks</span>
+                    </div>
+                </div>
+            </th:block>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{location.save}">Save Location</button>
+                <a th:href="${locationDto.id != null} ? @{/locations/{id}(id=${locationDto.id})} : (${parent != null} ? @{/locations/{id}(id=${parent.id})} : @{/locations})"
+                   class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

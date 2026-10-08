@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${supplierDto.id == null} ? #{supplier.addTitle} : #{supplier.editTitle}, ~{::content})}">
+<head><title>Supplier - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${supplierDto.id == null} ? #{supplier.addTitle} : #{supplier.editTitle}">Add Supplier</h1>
+            <div class="subtitle" th:text="${supplierEntity != null} ? ${supplierEntity.code} : #{supplier.formSubtitle}">The code is given when the supplier is saved (MD-05)</div>
+        </div>
+        <a th:href="${supplierDto.id == null} ? @{/suppliers} : @{/suppliers/{id}(id=${supplierDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${supplierDto.id == null} ? @{/suppliers/new} : @{/suppliers/{id}/edit(id=${supplierDto.id})}"
+              th:object="${supplierDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="name" th:text="#{supplier.name}">Supplier</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="120" required th:placeholder="#{supplier.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="countryCode" th:text="#{supplier.country}">Country</label>
+                    <select id="countryCode" th:field="*{countryCode}" required data-searchable
+                            th:attr="data-search-placeholder=#{supplier.countrySearch}, data-no-results=#{supplier.countryNone}"
+                            th:classappend="${#fields.hasErrors('countryCode')} ? 'is-invalid'">
+                        <option value="" th:text="#{supplier.chooseCountry}">Choose a country</option>
+                        <option th:each="c : ${countryList}" th:value="${c.code}" th:text="${c.name}">China</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('countryCode')}" th:errors="*{countryCode}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="currencyCode" th:text="#{supplier.currency}">Currency</label>
+                    <select id="currencyCode" th:field="*{currencyCode}" required th:classappend="${#fields.hasErrors('currencyCode')} ? 'is-invalid'">
+                        <option value="" th:text="#{supplier.chooseCurrency}">Choose a currency</option>
+                        <option th:each="c : ${currencies}" th:value="${c.code}" th:text="${c.code + ' - ' + c.name}">USD - US dollar</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('currencyCode')}" th:errors="*{currencyCode}"></span>
+                    <span class="hint" th:text="#{supplier.currencyHint}">Purchase orders to this supplier are raised in this currency</span>
+                </div>
+                <div class="form-group">
+                    <label for="incoterm" th:text="#{supplier.incoterm}">Incoterm</label>
+                    <select id="incoterm" th:field="*{incoterm}">
+                        <option value="" th:text="#{supplier.noIncoterm}">None (local supplier)</option>
+                        <option th:each="i : ${incoterms}" th:value="${i}" th:text="#{${'incoterm.' + i}}">FOB - Free on board</option>
+                    </select>
+                    <span class="hint" th:text="#{supplier.incotermHint}">Default delivery term: which import costs the supplier's price already covers</span>
+                </div>
+                <div class="form-group">
+                    <label for="paymentTermsDays" th:text="#{party.terms}">Payment terms</label>
+                    <div class="input-unit">
+                        <input type="number" id="paymentTermsDays" th:field="*{paymentTermsDays}" min="0" max="365" step="1" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('paymentTermsDays')} ? 'is-invalid'">
+                        <span th:text="#{party.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('paymentTermsDays')}" th:errors="*{paymentTermsDays}"></span>
+                    <span class="hint" th:text="#{supplier.termsHint}">0 = paid in advance or on delivery</span>
+                </div>
+                <div class="form-group">
+                    <label for="tin" th:text="#{party.tin}">TIN</label>
+                    <input type="text" id="tin" th:field="*{tin}" maxlength="30" class="input-code" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('tin')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('tin')}" th:errors="*{tin}"></span>
+                    <span class="hint" th:text="#{supplier.tinHint}">Tax number; 9 digits for a Rwandan supplier</span>
+                </div>
+            </div>
+
+            <h3 class="form-section-title" th:text="#{party.contactSection}">Contact</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="contactName" th:text="#{party.contact}">Contact</label>
+                    <input type="text" id="contactName" th:field="*{contactName}" maxlength="100"
+                           th:classappend="${#fields.hasErrors('contactName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('contactName')}" th:errors="*{contactName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="phone" th:text="#{party.phone}">Phone</label>
+                    <input type="tel" id="phone" th:field="*{phone}" maxlength="30" th:placeholder="#{party.phonePh}"
+                           th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="email" th:text="#{party.email}">Email</label>
+                    <input type="email" id="email" th:field="*{email}" maxlength="120"
+                           th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="address" th:text="#{party.address}">Address</label>
+                    <input type="text" id="address" th:field="*{address}" maxlength="255"
+                           th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="notes" th:text="#{product.notes}">Notes</label>
+                    <input type="text" id="notes" th:field="*{notes}" maxlength="255"
+                           th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{supplier.save}">Save Supplier</button>
+                <a th:href="${supplierDto.id == null} ? @{/suppliers} : @{/suppliers/{id}(id=${supplierDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

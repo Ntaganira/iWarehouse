@@ -47,7 +47,10 @@
 <aside class="sidebar">
     <div class="sidebar-brand">
         <div class="logo-icon">iW</div>
-        <h2><span>i</span>Warehouse</h2>
+        <div class="brand-text">
+            <h2><span>i</span>Warehouse</h2>
+            <div class="brand-tagline" th:text="#{app.tagline}">Glass Warehouse &amp; POS</div>
+        </div>
     </div>
     <nav class="sidebar-menu">
         <div class="menu-label" th:text="#{menu.main}">Main Menu</div>
@@ -57,11 +60,26 @@
         <a sec:authorize="hasAuthority('PAGE_STOCK')" th:classappend="${#strings.startsWith(requestURI, '/stock')} ? 'active' : ''" href="/stock">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.stock}">Inventory</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_PRODUCTS')" th:classappend="${#strings.startsWith(requestURI, '/products')} ? 'active' : ''" href="/products">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span> <span th:text="#{nav.products}">Glass Products</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_LOCATIONS')" th:classappend="${#strings.startsWith(requestURI, '/locations')} ? 'active' : ''" href="/locations">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span> <span th:text="#{nav.locations}">Locations</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_PRODUCTION')" th:classappend="${#strings.startsWith(requestURI, '/cutting-jobs')} ? 'active' : ''" href="/cutting-jobs">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.production}">Production</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_PROCUREMENT')" th:classappend="${#strings.startsWith(requestURI, '/purchase-orders')} ? 'active' : ''" href="/purchase-orders">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"></path><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"></path><path d="M12 10v4"></path></svg></span> <span th:text="#{nav.procurement}">Procurement</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_RECEIVING')" th:classappend="${#strings.startsWith(requestURI, '/goods-receipts')} ? 'active' : ''" href="/goods-receipts">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg></span> <span th:text="#{nav.goodsReceipts}">Goods Receipts</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_SHIPMENTS')" th:classappend="${#strings.startsWith(requestURI, '/shipments')} ? 'active' : ''" href="/shipments">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="5" r="3"></circle><line x1="12" y1="22" x2="12" y2="8"></line><path d="M5 12H2a10 10 0 0 0 20 0h-3"></path></svg></span> <span th:text="#{nav.shipments}">Shipments</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:classappend="${#strings.startsWith(requestURI, '/suppliers')} ? 'active' : ''" href="/suppliers">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 20h20"></path><path d="M4 20V9l5 3V9l5 3V9l5 3v8"></path><path d="M17 5V3h3v6"></path></svg></span> <span th:text="#{nav.suppliers}">Suppliers</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_FLEET')" th:classappend="${#strings.startsWith(requestURI, '/trips')} ? 'active' : ''" href="/trips">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></span> <span th:text="#{nav.fleet}">Fleet & Trips</span>
@@ -75,8 +93,14 @@
         <a sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:classappend="${#strings.startsWith(requestURI, '/customers')} ? 'active' : ''" href="/customers">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span> <span th:text="#{nav.customers}">Customers</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_PRICE_LISTS')" th:classappend="${#strings.startsWith(requestURI, '/price-lists')} ? 'active' : ''" href="/price-lists">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span> <span th:text="#{nav.priceLists}">Price Lists</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:classappend="${#strings.startsWith(requestURI, '/accounting')} ? 'active' : ''" href="/accounting">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span> <span th:text="#{nav.accounting}">Accounting</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_CURRENCIES')" th:classappend="${#strings.startsWith(requestURI, '/currencies')} ? 'active' : ''" href="/currencies">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></span> <span th:text="#{nav.currencies}">Currencies &amp; Rates</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports')} ? 'active' : ''" href="/reports">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> <span th:text="#{nav.reports}">Reports</span>
@@ -175,15 +199,15 @@
     <header class="header">
         <div class="header-left">
             <h1 th:text="#{header.title}">iWarehouse</h1>
-        </div>
-        <div class="header-right">
             <div class="search-box">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" th:placeholder="#{header.search}">
+                <input type="text" th:placeholder="#{header.search}" th:aria-label="#{header.search}">
             </div>
+        </div>
+        <div class="header-right">
             <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Dark Mode">
                 <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
@@ -200,45 +224,7 @@
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                 </svg>
             </button>
-            <div class="lang-dropdown" id="lang-dropdown">
-                <button type="button" class="lang-btn" id="lang-btn" aria-haspopup="true" aria-expanded="false" aria-label="Language">
-                    <span class="flag">
-                        <th:block th:switch="${#locale.language}">
-                            <th:block th:case="'fr'"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagFr}" viewBox="0 0 24 18"></svg></th:block>
-                            <th:block th:case="'rw'"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagRw}" viewBox="0 0 24 18"></svg></th:block>
-                            <th:block th:case="*"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagUs}" viewBox="0 0 24 18"></svg></th:block>
-                        </th:block>
-                    </span>
-                    <span class="lang-code" th:switch="${#locale.language}">
-                        <span th:case="'fr'">FR</span>
-                        <span th:case="'rw'">RW</span>
-                        <span th:case="*">EN</span>
-                    </span>
-                    <svg class="lang-caret" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M6 9l6 6 6-6"></path>
-                    </svg>
-                </button>
-                <ul class="lang-menu" id="lang-menu">
-                    <li>
-                        <a th:href="@{${requestURI}(lang='en')}" class="lang-option" th:classappend="${#locale.language == 'en'} ? 'active'" th:title="#{login.lang.en}">
-                            <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagUs}" viewBox="0 0 24 18"></svg></span>
-                            <span>English</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a th:href="@{${requestURI}(lang='fr')}" class="lang-option" th:classappend="${#locale.language == 'fr'} ? 'active'" th:title="#{login.lang.fr}">
-                            <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagFr}" viewBox="0 0 24 18"></svg></span>
-                            <span>Français</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a th:href="@{${requestURI}(lang='rw')}" class="lang-option" th:classappend="${#locale.language == 'rw'} ? 'active'" th:title="#{login.lang.rw}">
-                            <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagRw}" viewBox="0 0 24 18"></svg></span>
-                            <span>Kinyarwanda</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <div th:replace="~{fragments/lang :: dropdown(${requestURI})}"></div>
             <div class="profile" sec:authorize="isAuthenticated()">
                 <div class="avatar">
                     <img th:if="${profilePhotoUrl != null}" th:src="${profilePhotoUrl}" alt="Profile" class="avatar-img">

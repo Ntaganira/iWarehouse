@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${customer.name}, ~{::content})}">
+<head><title>Customer - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1>
+                <span th:text="${customer.name}">Kigali Glaziers Ltd</span>
+                <span class="you-badge" th:if="${customer.defaultCustomer}" th:text="#{customer.defaultBadge}">Counter default</span>
+            </h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${customer.code}">CUS-WH-00001</span> &middot;
+                <span class="cust-type" th:classappend="${'cust-' + #strings.toLowerCase(customer.type)}" th:text="#{${'customer.type.' + customer.type}}">Account</span>
+                <span class="badge badge-success" th:if="${customer.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${customer.enabled}" th:text="#{common.inactive}">Inactive</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/customers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_CUSTOMER')">
+                <form th:if="${customer.enabled and !customer.defaultCustomer}" th:action="@{/customers/{id}/disable(id=${customer.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{customer.disableConfirm(${customer.name})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{product.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${customer.enabled}" th:action="@{/customers/{id}/enable(id=${customer.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{customer.enableConfirm(${customer.name})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{product.enable}">Activate</button>
+                </form>
+                <a th:href="@{/customers/{id}/edit(id=${customer.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="tab-details" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content active" id="tab-details">
+                <h3 class="detail-heading" th:text="#{customer.termsSection}">Credit and prices</h3>
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{customer.creditLimit}">Credit limit</label>
+                        <div class="value strong" th:text="${customer.creditLimit.signum() > 0} ? ${@num.money(customer.creditLimit) + ' RWF'} : #{customer.cashOnly}">Cash only</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.terms}">Payment terms</label>
+                        <div class="value" th:text="${customer.paymentTermsDays == 0} ? #{party.termsNone} : #{party.termsDays(${customer.paymentTermsDays})}">On the spot</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customer.priceList}">Price list</label>
+                        <div class="value">
+                            <a th:if="${customer.priceList != null}" class="row-link" sec:authorize="hasAuthority('PAGE_PRICE_LISTS')"
+                               th:href="@{/price-lists/{id}(id=${customer.priceList.id})}" th:text="${customer.priceList.name}">Contractors</a>
+                            <span th:if="${customer.priceList != null}" sec:authorize="!hasAuthority('PAGE_PRICE_LISTS')" th:text="${customer.priceList.name}">Contractors</span>
+                            <span th:if="${customer.priceList == null}" th:text="#{customer.defaultList(${defaultList.name})}">Default (Retail)</span>
+                            <div class="hint" th:if="${customer.priceList != null}" th:text="#{customer.listFallback(${defaultList.name})}">Products this list does not price use the Retail price</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{customer.detailsSection}">Customer details</h3>
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{party.tin}">TIN</label>
+                        <div class="value mono" th:text="${customer.tin ?: '—'}">100200300</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.phone}">Phone</label>
+                        <div class="value" th:text="${customer.phone ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.email}">Email</label>
+                        <div class="value" th:text="${customer.email ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.contact}">Contact</label>
+                        <div class="value" th:text="${customer.contactName ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.address}">Address</label>
+                        <div class="value" th:text="${customer.address ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${customer.notes ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(customer.createdAt, 'dd/MM/yyyy HH:mm') + (customer.createdBy != null ? ' · ' + customer.createdBy : '')}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${customer.version > 0} ? ${#temporals.format(customer.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + customer.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Customer/{id}(id=${customer.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

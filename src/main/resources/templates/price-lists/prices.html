@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{pricelist.editPricesTitle(${list.name})}, ~{::content})}">
+<head><title>Edit Prices - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{pricelist.editPricesTitle(${list.name})}">Prices: Retail (counter)</h1>
+            <div class="subtitle" th:text="${list.pricesIncludeVat} ? #{pricelist.vatIncludedLong} : #{pricelist.vatExcludedLong}">Prices include VAT</div>
+        </div>
+        <a th:href="@{/price-lists/{id}(id=${list.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/price-lists/{id}/prices(id=${list.id})}" method="post" class="price-form" novalidate>
+        <p class="form-note" th:text="${list.defaultList} ? #{pricelist.editNoteDefault} : #{pricelist.editNote(${defaultList.name})}">Type the price in RWF. Leave a price empty when the product is not sold on this list.</p>
+
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{pricelist.glassPerM2}">Glass, per m²</h2></div>
+            <div class="table-container">
+                <table class="price-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{product.name}">Product</th>
+                            <th th:text="#{product.code}">Code</th>
+                            <th class="num" th:unless="${list.defaultList}" th:text="${defaultList.name}">Retail (counter)</th>
+                            <th class="price-col" th:text="#{pricelist.pricePerM2}">Price per m²</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="r : ${productRows}" th:with="field=${'p_' + r.product.id}">
+                            <td><label th:for="${field}"><th:block th:replace="~{products/list :: productName(${r.product})}"></th:block></label></td>
+                            <td class="mono" th:text="${r.product.code}">CLR-6</td>
+                            <td class="num text-muted nowrap" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">24,000</td>
+                            <td class="price-col">
+                                <div class="input-unit">
+                                    <input type="text" inputmode="decimal" th:id="${field}" th:name="${field}" autocomplete="off"
+                                           th:value="${typed != null} ? ${typed.get(field)} : ${@num.plain(r.price)}"
+                                           th:classappend="${errors.get(field) != null} ? 'is-invalid'">
+                                    <span>RWF</span>
+                                </div>
+                                <span class="field-error" th:if="${errors.get(field) != null}" th:text="${errors.get(field)}"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{pricelist.processingTab}">Processing</h2></div>
+            <div class="table-container">
+                <table class="price-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{service.name}">Name</th>
+                            <th th:text="#{service.unit}">Charged per</th>
+                            <th class="num" th:unless="${list.defaultList}" th:text="${defaultList.name}">Retail (counter)</th>
+                            <th class="price-col" th:text="#{pricelist.price}">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="r : ${serviceRows}" th:with="field=${'s_' + r.service.id}">
+                            <td><label th:for="${field}" th:text="${r.service.name}">Edging</label></td>
+                            <td th:text="#{${'service.unit.' + r.service.chargeUnit}}">metre of edge</td>
+                            <td class="num text-muted nowrap" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">1,500</td>
+                            <td class="price-col">
+                                <div class="input-unit">
+                                    <input type="text" inputmode="decimal" th:id="${field}" th:name="${field}" autocomplete="off"
+                                           th:value="${typed != null} ? ${typed.get(field)} : ${@num.plain(r.price)}"
+                                           th:classappend="${errors.get(field) != null} ? 'is-invalid'">
+                                    <span>RWF</span>
+                                </div>
+                                <span class="field-error" th:if="${errors.get(field) != null}" th:text="${errors.get(field)}"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{pricelist.savePrices}">Save prices</button>
+            <a th:href="@{/price-lists/{id}(id=${list.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

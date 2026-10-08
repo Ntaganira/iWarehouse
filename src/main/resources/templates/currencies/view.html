@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{currency.title}, ~{::content})}">
+<head><title>Currencies &amp; Rates - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{currency.title}">Currencies &amp; Rates</h1>
+            <div class="subtitle" th:text="#{currency.subtitle}">Exchange rates to RWF by date and source; ledgers are always in RWF</div>
+        </div>
+        <div class="btn-group" sec:authorize="hasAuthority('PERM_MANAGE_EXCHANGE_RATE')">
+            <a href="/currencies/rates/import" class="btn btn-outline">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span th:text="#{rate.import}">Import rates</span>
+            </a>
+            <a href="/currencies/rates/new" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{rate.add}">Record rate</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Latest rate per active currency (default source), on the dashboard KPI card.
+         Icon colours rotate like the dashboard; orange is kept for a missing or out-of-date rate.
+         Trend colours take the importer's view: a dearer foreign currency (rate up) is bad news. -->
+    <div class="kpi-grid rate-kpis">
+        <div class="kpi-card rate-kpi" th:each="lr, st : ${latestRates}"
+             th:with="glyph=${(!#strings.isEmpty(lr.currency.symbol) and #strings.length(lr.currency.symbol) le 3) ? lr.currency.symbol : lr.currency.code},
+                      attention=${lr.rate == null or lr.stale}">
+            <div class="kpi-icon" th:classappend="${attention} ? 'orange' : (${st.index % 3 == 0} ? 'blue' : (${st.index % 3 == 1} ? 'green' : 'purple'))">
+                <span class="kpi-glyph" th:classappend="${#strings.length(glyph) > 1} ? 'long'" th:text="${glyph}">$</span>
+            </div>
+            <div class="kpi-body">
+                <div class="kpi-label">
+                    <span th:text="${lr.currency.name}">US dollar</span>
+                    <span class="kpi-code" th:text="${lr.currency.code}">USD</span>
+                    <span class="badge badge-warning" th:if="${lr.rate == null}" th:text="#{rate.none}">No rate yet</span>
+                    <span class="badge badge-warning" th:if="${lr.rate != null and lr.stale}" th:text="#{rate.outOfDate}">Out of date</span>
+                </div>
+                <th:block th:if="${lr.rate != null}" th:with="rateText=${@num.rate(lr.rate.rate)}">
+                    <div class="kpi-value" th:classappend="${#strings.length(rateText) > 9} ? 'is-long'">
+                        <span th:text="${rateText}">1,450.25</span>
+                        <span class="kpi-unit">RWF</span>
+                    </div>
+                    <div class="kpi-trend" th:if="${lr.changePercent != null}"
+                         th:classappend="${lr.changePercent.signum() > 0} ? 'bad' : (${lr.changePercent.signum() < 0} ? 'good' : 'flat')">
+                        <svg th:if="${lr.changePercent.signum() > 0}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                        <svg th:if="${lr.changePercent.signum() < 0}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="7" y1="7" x2="17" y2="17"></line><polyline points="17 7 17 17 7 17"></polyline></svg>
+                        <svg th:if="${lr.changePercent.signum() == 0}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span th:text="${@num.signedPercent(lr.changePercent)} + '%'">+0.15%</span>
+                        <span class="vs" th:text="#{rate.trend.vsPrevious}">vs previous rate</span>
+                    </div>
+                    <div class="kpi-trend flat" th:if="${lr.changePercent == null}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span class="vs" th:text="#{rate.trend.none}">No earlier rate to compare</span>
+                    </div>
+                    <div class="rate-meta">
+                        <span th:text="${#temporals.format(lr.rate.rateDate, 'yyyy-MM-dd')}">2026-10-07</span>
+                        &middot; <span th:text="#{${'rate.source.' + lr.rate.source}}">BNR</span>
+                    </div>
+                </th:block>
+                <th:block th:if="${lr.rate == null}">
+                    <div class="kpi-value is-empty">&mdash;</div>
+                    <div class="rate-meta" th:text="#{rate.noneHint(${#messages.msg('rate.source.' + defaultSource)})}">No BNR rate yet. Documents in this currency are blocked until one is recorded.</div>
+                </th:block>
+                <a class="rate-card-action" sec:authorize="hasAuthority('PERM_MANAGE_EXCHANGE_RATE')"
+                   th:href="@{/currencies/rates/new(currency=${lr.currency.code})}" th:text="#{rate.addFor(${lr.currency.code})}">Record USD rate</a>
+            </div>
+        </div>
+        <div class="kpi-card rate-kpi rate-kpi-empty" th:if="${#lists.isEmpty(latestRates)}">
+            <div class="kpi-icon blue">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            </div>
+            <div class="kpi-body">
+                <div class="rate-meta" th:text="#{rate.noForeign}">Only RWF is active. Activate a currency on the Currencies tab.</div>
+            </div>
+        </div>
+    </div>
+    <p class="list-note rate-rule" th:text="#{rate.rule(${#messages.msg('rate.source.' + defaultSource)}, ${maxAgeDays})}">Documents use the latest BNR rate on or before their date, if it is at most 7 days old.</p>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-rates" th:classappend="${tab == 'rates'} ? 'active'">
+                <span th:text="#{rate.tab}">Exchange rates</span>
+                <span class="section-count" th:text="${rates.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-currencies" th:classappend="${tab == 'currencies'} ? 'active'">
+                <span th:text="#{currency.tab}">Currencies</span>
+                <span class="section-count" th:text="${#lists.size(currencies)}">10</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <!-- Exchange rates -->
+            <div class="tab-content" id="tab-rates" th:classappend="${tab == 'rates'} ? 'active'">
+                <form th:action="@{/currencies}" method="get" class="table-toolbar rate-filters">
+                    <input type="hidden" name="tab" value="rates">
+                    <select name="currency" class="toolbar-filter" th:aria-label="#{rate.currency}">
+                        <option value="" th:text="#{rate.allCurrencies}">All currencies</option>
+                        <option th:each="c : ${currencies}" th:unless="${c.baseCurrency}" th:value="${c.code}"
+                                th:selected="${c.code == currency}" th:text="${c.code}">USD</option>
+                    </select>
+                    <select name="source" class="toolbar-filter" th:aria-label="#{rate.source}">
+                        <option value="" th:text="#{rate.allSources}">All sources</option>
+                        <option th:each="s : ${sources}" th:value="${s}" th:selected="${s == source}"
+                                th:text="#{${'rate.source.' + s}}">BNR</option>
+                    </select>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${from}" th:aria-label="#{rate.from}" th:title="#{rate.from}">
+                    <input type="date" name="to" class="toolbar-filter" th:value="${to}" th:aria-label="#{rate.to}" th:title="#{rate.to}">
+                    <button type="submit" class="btn btn-outline btn-sm" th:text="#{rate.filter}">Filter</button>
+                    <a href="/currencies" class="btn btn-outline btn-sm" th:if="${currency != null or source != null or from != null or to != null}" th:text="#{rate.clear}">Clear</a>
+                </form>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{rate.date}">Date</th>
+                                <th th:text="#{rate.currency}">Currency</th>
+                                <th th:text="#{rate.source}">Source</th>
+                                <th class="num" th:text="#{rate.rateRwf}">RWF for 1 unit</th>
+                                <th th:text="#{rate.note}">Note</th>
+                                <th th:text="#{rate.recordedBy}">Recorded by</th>
+                                <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_MANAGE_EXCHANGE_RATE')">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${rates.content}">
+                                <td class="nowrap" th:text="${#temporals.format(r.rateDate, 'yyyy-MM-dd')}">2026-10-07</td>
+                                <td><span class="strong" th:text="${r.currencyCode}">USD</span></td>
+                                <td><span class="badge badge-secondary" th:text="#{${'rate.source.' + r.source}}">BNR</span></td>
+                                <td class="num mono" th:text="${@num.rate(r.rate)}">1,450.25</td>
+                                <td class="cell-truncate text-muted" th:text="${r.note}">Imported from rates.csv</td>
+                                <td>
+                                    <div th:text="${r.createdBy}">accountant</div>
+                                    <div class="text-muted" th:if="${r.version > 0}" th:text="#{rate.correctedOn(${#temporals.format(r.updatedAt, 'yyyy-MM-dd')})}">corrected</div>
+                                </td>
+                                <td sec:authorize="hasAuthority('PERM_MANAGE_EXCHANGE_RATE')">
+                                    <a th:href="@{/currencies/rates/{id}/edit(id=${r.id})}" class="action-icon edit" th:title="#{rate.correct}" th:aria-label="#{rate.correct}">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(rates.content)}">
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{rate.empty}">No exchange rates yet</h3>
+                                        <p th:text="#{rate.emptyHint}">Record today's rates or import a file.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${rates}, '/currencies', ${ratesQuery})}"></th:block>
+            </div>
+
+            <!-- Currencies -->
+            <div class="tab-content" id="tab-currencies" th:classappend="${tab == 'currencies'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{currency.intro}">Activate a currency when the business starts buying or selling in it. RWF is the base currency.</p>
+                    <a href="/currencies/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_CURRENCY')">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span th:text="#{currency.add}">Add currency</span>
+                    </a>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{currency.code}">Code</th>
+                                <th th:text="#{currency.name}">Name</th>
+                                <th th:text="#{currency.symbol}">Symbol</th>
+                                <th class="num" th:text="#{currency.decimals}">Decimals</th>
+                                <th th:text="#{common.status}">Status</th>
+                                <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_MANAGE_CURRENCY')">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${currencies}">
+                                <td>
+                                    <span class="mono strong" th:text="${c.code}">RWF</span>
+                                    <span class="you-badge" th:if="${c.baseCurrency}" th:text="#{currency.base}">Base</span>
+                                </td>
+                                <td th:text="${c.name}">Rwandan franc</td>
+                                <td th:text="${c.symbol}">FRw</td>
+                                <td class="num" th:text="${c.decimals}">0</td>
+                                <td>
+                                    <span class="badge badge-success" th:if="${c.enabled}" th:text="#{common.active}">Active</span>
+                                    <span class="badge badge-secondary" th:unless="${c.enabled}" th:text="#{common.inactive}">Inactive</span>
+                                </td>
+                                <td sec:authorize="hasAuthority('PERM_MANAGE_CURRENCY')">
+                                    <div class="btn-group">
+                                        <a th:href="@{/currencies/{id}/edit(id=${c.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                        </a>
+                                        <form th:if="${c.enabled and !c.baseCurrency}" th:action="@{/currencies/{id}/disable(id=${c.id})}" method="post"
+                                              class="row-action-form confirm-submit danger" th:attr="data-confirm=#{currency.disableConfirm(${c.code})}">
+                                            <button type="submit" class="action-icon delete" th:title="#{currency.disable}" th:aria-label="#{currency.disable}">
+                                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                            </button>
+                                        </form>
+                                        <form th:unless="${c.enabled}" th:action="@{/currencies/{id}/enable(id=${c.id})}" method="post"
+                                              class="row-action-form confirm-submit" th:attr="data-confirm=#{currency.enableConfirm(${c.code})}">
+                                            <button type="submit" class="action-icon pay" th:title="#{currency.enable}" th:aria-label="#{currency.enable}">
+                                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History (AUD-10) -->
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                 sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/currencies', 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

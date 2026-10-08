@@ -41,6 +41,12 @@ public class AppUserPrincipal extends User {
         return Optional.empty();
     }
 
+    /** True when the current request holds the authority, e.g. "PERM_ASSIGN_ROLE". */
+    public static boolean currentHas(String authority) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream().anyMatch(a -> authority.equals(a.getAuthority()));
+    }
+
     /** Username of the current user, or null for anonymous / system work. */
     public static String currentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

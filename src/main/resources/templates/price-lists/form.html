@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${priceListDto.id == null} ? #{pricelist.addTitle} : #{pricelist.editTitle}, ~{::content})}">
+<head><title>Price List - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${priceListDto.id == null} ? #{pricelist.addTitle} : #{pricelist.editTitle}">Add Price List</h1>
+            <div class="subtitle" th:text="#{pricelist.formSubtitle}">Prices are entered on the list's price page once it is saved (MD-06)</div>
+        </div>
+        <a th:href="${priceListDto.id == null} ? @{/price-lists} : @{/price-lists/{id}(id=${priceListDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${priceListDto.id == null} ? @{/price-lists/new} : @{/price-lists/{id}/edit(id=${priceListDto.id})}"
+              th:object="${priceListDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{pricelist.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="20" required
+                           th:readonly="${priceListDto.id != null}" th:placeholder="#{pricelist.codePh}" autocapitalize="characters" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="${priceListDto.id == null} ? #{pricelist.codeHint} : #{currency.codeFixed}">Capital letters, digits, hyphens</span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{pricelist.name}">Price list</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="60" required th:placeholder="#{pricelist.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="minChargeableM2" th:text="#{pricelist.minArea}">Minimum area</label>
+                    <div class="input-unit">
+                        <input type="number" id="minChargeableM2" th:field="*{minChargeableM2}" min="0.0001" step="0.01" inputmode="decimal"
+                               th:placeholder="${settingMinArea.stripTrailingZeros().toPlainString()}"
+                               th:classappend="${#fields.hasErrors('minChargeableM2')} ? 'is-invalid'">
+                        <span>m²</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('minChargeableM2')}" th:errors="*{minChargeableM2}"></span>
+                    <span class="hint" th:text="#{pricelist.minAreaHint(${settingMinArea.stripTrailingZeros().toPlainString()})}">Smallest area charged per piece; empty = 0.25 m² from Settings</span>
+                </div>
+                <div class="form-group">
+                    <label th:text="#{pricelist.vat}">VAT</label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="checkbox" th:field="*{pricesIncludeVat}">
+                        <span th:text="#{pricelist.vatLabel}">Prices include VAT (what the customer pays)</span>
+                    </label>
+                    <span class="hint" th:text="#{pricelist.vatHint}">Usual for counter prices; trade lists are often without VAT</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="notes" th:text="#{product.notes}">Notes</label>
+                    <input type="text" id="notes" th:field="*{notes}" maxlength="255" th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{pricelist.save}">Save Price List</button>
+                <a th:href="${priceListDto.id == null} ? @{/price-lists} : @{/price-lists/{id}(id=${priceListDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{customer.title}, ~{::content})}">
+<head><title>Customers - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{customer.title}">Customers</h1>
+            <div class="subtitle" th:text="#{customer.subtitle}">Walk-in, account and contractor customers, their credit terms and price list</div>
+        </div>
+        <a href="/customers/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_CUSTOMER')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{customer.add}">Add customer</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{customer.sectionTitle}">Customers</span>
+                <span class="section-count" th:text="${customers.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/customers}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{customer.searchPh}" th:aria-label="#{customer.searchPh}">
+                </div>
+                <select name="type" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{customer.type}">
+                    <option value="" th:text="#{customer.allTypes}">All types</option>
+                    <option th:each="t : ${types}" th:value="${t}" th:selected="${t == type}" th:text="#{${'customer.type.' + t}}">Account</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{customer.name}">Customer</th>
+                        <th th:text="#{customer.type}">Type</th>
+                        <th th:text="#{party.phone}">Phone</th>
+                        <th th:text="#{party.tin}">TIN</th>
+                        <th class="num" th:text="#{customer.creditLimit}">Credit limit</th>
+                        <th th:text="#{customer.priceList}">Price list</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${customers.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/customers/{id}(id=${c.id})}" th:text="${c.name}">Kigali Glaziers Ltd</a>
+                            <span class="you-badge" th:if="${c.defaultCustomer}" th:text="#{customer.defaultBadge}">Counter default</span>
+                            <div class="cell-sub mono" th:text="${c.code}">CUS-WH-00001</div>
+                        </td>
+                        <td><span class="cust-type" th:classappend="${'cust-' + #strings.toLowerCase(c.type)}" th:text="#{${'customer.type.' + c.type}}">Account</span></td>
+                        <td th:text="${c.phone ?: '—'}">+250 788 000 000</td>
+                        <td class="mono" th:text="${c.tin ?: '—'}">100200300</td>
+                        <td class="num nowrap">
+                            <span th:if="${c.creditLimit.signum() > 0}" th:text="${@num.money(c.creditLimit) + ' RWF'}">2,000,000 RWF</span>
+                            <span class="text-muted" th:unless="${c.creditLimit.signum() > 0}" th:text="#{customer.cashOnly}">Cash only</span>
+                            <div class="cell-sub" th:if="${c.paymentTermsDays > 0}" th:text="#{party.termsDays(${c.paymentTermsDays})}">30 days</div>
+                        </td>
+                        <td>
+                            <span th:if="${c.priceList != null}" th:text="${c.priceList.name}">Contractors</span>
+                            <span class="text-muted" th:if="${c.priceList == null}" th:text="#{customer.defaultList(${defaultList.name})}">Default (Retail)</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-success" th:if="${c.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${c.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a th:href="@{/customers/{id}(id=${c.id})}" class="action-icon edit" th:title="#{common.view}" th:aria-label="#{common.view}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </a>
+                                <a th:href="@{/customers/{id}/edit(id=${c.id})}" class="action-icon edit" sec:authorize="hasAuthority('PERM_MANAGE_CUSTOMER')"
+                                   th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(customers.content)}">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3 th:text="#{customer.empty}">No customers found</h3>
+                                <p th:text="#{customer.emptyHint}">Try other filters or add a customer</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${customers}, '/customers', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

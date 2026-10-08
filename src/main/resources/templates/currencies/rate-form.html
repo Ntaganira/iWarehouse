@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${rateDto.id == null} ? #{rate.addTitle} : #{rate.editTitle}, ~{::content})}">
+<head><title>Exchange Rate - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${rateDto.id == null} ? #{rate.addTitle} : #{rate.editTitle}">Record Exchange Rate</h1>
+            <div class="subtitle" th:text="${rateDto.id == null} ? #{rate.addSubtitle} : #{rate.editSubtitle}">RWF for 1 unit of the currency, on a date, from a source</div>
+        </div>
+        <a href="/currencies" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${rateDto.id == null} ? @{/currencies/rates/new} : @{/currencies/rates/{id}/edit(id=${rateDto.id})}"
+              th:object="${rateDto}" method="post" class="form-container" id="rate-form" novalidate
+              th:attr="data-default-source=${defaultSource}">
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="number-preview-box">
+                <span class="label" th:text="#{rate.preview}">Rate</span>
+                <span class="number-preview large" id="rate-preview">1 USD = 1,450.25 RWF</span>
+                <span class="rate-previous" id="rate-previous"></span>
+            </div>
+
+            <!-- New rate: everything editable -->
+            <div class="form-grid" th:if="${rateDto.id == null}">
+                <div class="form-group">
+                    <label for="currencyCode" th:text="#{rate.currency}">Currency</label>
+                    <select id="currencyCode" th:field="*{currencyCode}" required th:classappend="${#fields.hasErrors('currencyCode')} ? 'is-invalid'">
+                        <option th:each="c : ${currencies}" th:value="${c.code}" th:text="${c.code + ' - ' + c.name}">USD - US dollar</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('currencyCode')}" th:errors="*{currencyCode}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="rateDate" th:text="#{rate.date}">Date</label>
+                    <input type="date" id="rateDate" th:field="*{rateDate}" th:max="${today}" required
+                           th:classappend="${#fields.hasErrors('rateDate')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('rateDate')}" th:errors="*{rateDate}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="source" th:text="#{rate.source}">Source</label>
+                    <select id="source" th:field="*{source}" required th:classappend="${#fields.hasErrors('source')} ? 'is-invalid'">
+                        <option th:each="s : ${sources}" th:value="${s}" th:text="#{${'rate.source.' + s}}">BNR</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('source')}" th:errors="*{source}"></span>
+                    <span class="hint" th:text="#{rate.sourceHint}">BNR for daily documents, Customs for import duty, Bank for an actual deal</span>
+                </div>
+            </div>
+
+            <!-- Correction: currency, date and source are fixed -->
+            <th:block th:if="${rateDto.id != null}">
+                <div class="detail-list fixed-fields">
+                    <div class="item">
+                        <label th:text="#{rate.currency}">Currency</label>
+                        <div class="value mono" th:text="*{currencyCode}">USD</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{rate.date}">Date</label>
+                        <div class="value" th:text="*{rateDate}">2026-10-07</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{rate.source}">Source</label>
+                        <div class="value" th:text="#{${'rate.source.' + rateDto.source}}">BNR</div>
+                    </div>
+                </div>
+                <input type="hidden" th:field="*{currencyCode}">
+                <input type="hidden" th:field="*{rateDate}">
+                <input type="hidden" th:field="*{source}">
+                <p class="form-note" th:text="#{rate.correctNote}">Documents that already used this rate keep it. The correction and its reason are kept in the change log.</p>
+            </th:block>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="rate" th:text="#{rate.rate}">Rate</label>
+                    <div class="input-unit">
+                        <input type="number" id="rate" th:field="*{rate}" step="0.000001" min="0.000001" required inputmode="decimal"
+                               th:classappend="${#fields.hasErrors('rate')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('rate')}" th:errors="*{rate}"></span>
+                    <span class="hint" th:text="#{rate.rateHint}">RWF for 1 unit of the currency, up to 6 decimals</span>
+                </div>
+                <div class="form-group">
+                    <label for="note" th:text="#{rate.note}">Note</label>
+                    <input type="text" id="note" th:field="*{note}" maxlength="255" th:placeholder="#{rate.notePh}"
+                           th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                </div>
+                <div class="form-group full-width" th:if="${rateDto.id != null}">
+                    <label for="reason" th:text="#{rate.reason}">Reason for the correction</label>
+                    <input type="text" id="reason" th:field="*{reason}" maxlength="255" required th:placeholder="#{rate.reasonPh}"
+                           th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                </div>
+                <div class="form-group full-width" th:if="${largeChange}">
+                    <label class="checkbox-item confirm-check">
+                        <input type="checkbox" class="checkbox" th:field="*{confirmed}">
+                        <span th:text="#{rate.confirmLabel}">I checked this rate against its source; save it anyway</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="${rateDto.id == null} ? #{rate.save} : #{rate.saveCorrection}">Save Rate</button>
+                <a href="/currencies" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+
+        <!-- Latest default-source rates, for the live comparison in rate-form.js -->
+        <script type="application/json" id="latest-rates" th:inline="javascript">
+            /*[[${latestJson}]]*/ []
+        </script>
+        <span hidden id="rate-msg-previous" th:text="#{rate.previousLive}">Latest {source} rate: {rate} on {date} ({change}%)</span>
+    </div>
+
+    <div class="section" th:if="${history != null}" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+    </div>
+    <script defer src="/js/rate-form.js"></script>
+</div>
+</body>
+</html>

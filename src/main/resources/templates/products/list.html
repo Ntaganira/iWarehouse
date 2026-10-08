@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{product.title}, ~{::content})}">
+<head><title>Glass Products - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{product.title}">Glass Products</h1>
+            <div class="subtitle" th:text="#{product.subtitle}">Glass types and thicknesses the warehouse stocks and sells by the m²</div>
+        </div>
+        <a href="/products/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_PRODUCT')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{product.add}">Add product</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{product.sectionTitle}">Products</span>
+                <span class="section-count" th:text="${products.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/products}" method="get" class="table-toolbar product-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{product.searchPh}" th:aria-label="#{product.searchPh}">
+                </div>
+                <select name="type" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{product.glassType}">
+                    <option value="" th:text="#{product.allTypes}">All types</option>
+                    <option th:each="t : ${glassTypes}" th:value="${t}" th:selected="${t == type}" th:text="#{${'glass.type.' + t}}">Clear</option>
+                </select>
+                <select name="thickness" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{product.thickness}">
+                    <option value="" th:text="#{product.allThicknesses}">All thicknesses</option>
+                    <option th:each="t : ${thicknesses}" th:value="${t.stripTrailingZeros().toPlainString()}"
+                            th:selected="${thickness != null and t.compareTo(thickness) == 0}"
+                            th:text="${t.stripTrailingZeros().toPlainString() + ' mm'}">6 mm</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{product.name}">Product</th>
+                        <th th:text="#{product.code}">Code</th>
+                        <th class="num" th:text="#{product.weightPerM2}">Weight per m²</th>
+                        <th th:text="#{product.taxCategory}">VAT category</th>
+                        <th class="num" th:text="#{product.reorderLevel}">Reorder level</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${products.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/products/{id}(id=${p.id})}">
+                                <th:block th:replace="~{products/list :: productName(${p})}"></th:block>
+                            </a>
+                            <span class="badge badge-warning" th:unless="${p.glassType.cuttable}" th:text="#{product.madeToSize}">Made to size</span>
+                        </td>
+                        <td class="mono" th:text="${p.code}">CLR-6</td>
+                        <td class="num nowrap" th:text="${#numbers.formatDecimal(weights[p.id], 1, 'COMMA', 2, 'POINT')} + ' kg'">15.00 kg</td>
+                        <td>
+                            <span th:text="${p.taxCategory.name}">Standard rate</span>
+                            <span class="text-muted" th:text="${'(' + p.taxCategory.ebmCode + ')'}">(B)</span>
+                        </td>
+                        <td class="num nowrap" th:text="${p.reorderLevelM2 != null} ? ${p.reorderLevelM2.stripTrailingZeros().toPlainString() + ' m²'} : '—'">—</td>
+                        <td>
+                            <span class="badge badge-success" th:if="${p.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${p.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a th:href="@{/products/{id}(id=${p.id})}" class="action-icon edit" th:title="#{common.view}" th:aria-label="#{common.view}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </a>
+                                <a th:href="@{/products/{id}/edit(id=${p.id})}" class="action-icon edit" sec:authorize="hasAuthority('PERM_MANAGE_PRODUCT')"
+                                   th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(products.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{product.empty}">No glass products found</h3>
+                                <p th:text="#{product.emptyHint}">Try other filters or add a product</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${products}, '/products', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!-- "Tinted Bronze 6 mm": type in the reader's language, colour or finish as entered, thickness. -->
+<th:block th:fragment="productName(p)"><span
+        th:text="${#messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">Tinted Bronze 6 mm</span></th:block>
+</body>
+</html>

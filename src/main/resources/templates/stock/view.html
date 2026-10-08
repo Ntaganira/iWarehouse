@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${unit.code}, ~{::content})}">
+<head><title>Stock Unit - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="crate=${unit.crateBatch}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${unit.code}">U-WH-000001</h1>
+            <div class="subtitle">
+                <th:block th:replace="~{products/list :: productName(${unit.product})}"></th:block>
+                &middot; <span th:text="${unit.widthMm + ' × ' + unit.heightMm + ' mm'}">3210 × 2250 mm</span>
+                &middot; <th:block th:replace="~{stock/list :: stockStatus(${unit.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_PRINT_LABEL')">
+                <a th:href="@{/stock/labels.zpl(unit=${unit.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+                <a th:href="@{/stock/labels(unit=${unit.id})}" class="btn btn-primary" th:text="#{label.print}">Print label</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body unit-summary">
+            <div class="unit-qr" th:utext="${qr}" th:title="${unit.code}"></div>
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{product.name}">Product</label>
+                    <div class="value">
+                        <a th:href="@{/products/{id}(id=${unit.product.id})}" sec:authorize="hasAuthority('PAGE_PRODUCTS')"><th:block th:replace="~{products/list :: productName(${unit.product})}"></th:block></a>
+                        <th:block sec:authorize="!hasAuthority('PAGE_PRODUCTS')">
+                            <th:block th:replace="~{products/list :: productName(${unit.product})}"></th:block>
+                        </th:block>
+                        <span class="text-muted mono" th:text="${'(' + unit.product.code + ')'}">(CLR-6)</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stock.kind}">Kind</label>
+                    <div class="value" th:text="#{${'stock.kind.' + unit.kind}}">Full sheet</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{po.size}">Size (mm)</label>
+                    <div class="value" th:text="${unit.widthMm + ' × ' + unit.heightMm}">3210 × 2250</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stock.areaWeight}">Area and weight</label>
+                    <div class="value" th:text="${@num.m2(unit.areaM2) + ' m² · ' + @num.kg(unit.weightKg) + ' kg'}">7.2225 m² · 108.34 kg</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stock.location}">Location</label>
+                    <div class="value">
+                        <th:block th:if="${unit.location != null}">
+                            <span class="text-muted" th:each="p : ${path}" th:text="${p.code + ' › '}">WH › </span><strong class="mono" th:text="${unit.location.code}">WH-A-R01</strong>
+                        </th:block>
+                        <span th:if="${unit.location == null}">—</span>
+                    </div>
+                </div>
+                <div class="item" th:if="${crate != null}">
+                    <label th:text="#{receipt.crate}">Crate</label>
+                    <div class="value">
+                        <span class="mono strong" th:text="${crate.batchNo}">C-01</span>
+                        <span class="text-muted">&middot;</span>
+                        <a class="mono" th:href="@{/goods-receipts/{id}(id=${crate.goodsReceipt.id})}" th:text="${crate.goodsReceipt.number}"
+                           sec:authorize="hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT')">GRN-WH-2026-000001</a>
+                        <span class="mono" sec:authorize="!(hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_VIEW_GOODS_RECEIPT'))" th:text="${crate.goodsReceipt.number}">GRN-WH-2026-000001</span>
+                        <div class="cell-sub" th:text="${crate.goodsReceipt.purchaseOrder.supplier.name + ' · ' + crate.goodsReceipt.purchaseOrder.number + ' · ' + #temporals.format(crate.goodsReceipt.receivedDate, 'yyyy-MM-dd')}">Shandong Glass Co. · PO-WH-2026-000001 · 2026-10-08</div>
+                    </div>
+                </div>
+                <div class="item" th:if="${unit.parentUnitId != null}">
+                    <label th:text="#{stock.cutFrom}">Cut from</label>
+                    <div class="value"><a th:href="@{/stock/{id}(id=${unit.parentUnitId})}" th:text="#{stock.parentUnit}">Parent unit</a></div>
+                </div>
+                <div class="item" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')">
+                    <label th:text="#{stock.cost}">Cost (RWF)</label>
+                    <div class="value">
+                        <span th:text="${@num.money(unit.unitCost)}">45,563.89</span>
+                        <span class="text-muted" th:text="#{stock.costPerM2(${@num.price(unit.costPerM2)})}">(6,308.59 per m²)</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stock.inSince}">In stock since</label>
+                    <div class="value" th:text="${#temporals.format(unit.createdAt, 'yyyy-MM-dd HH:mm') + ' · ' + unit.createdBy}">2026-10-08 10:12 · admin</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-movements" th:classappend="${tab == 'movements'} ? 'active'">
+                <span th:text="#{stock.movements}">Movements</span>
+                <span class="section-count" th:text="${#lists.size(movements)}">1</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-cost" th:classappend="${tab == 'cost'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')">
+                <span th:text="#{stock.costTab}">Cost</span>
+                <span class="section-count" th:text="${#lists.size(costEntries)}">2</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-movements" th:classappend="${tab == 'movements'} ? 'active'">
+                <p class="tab-intro" th:text="#{stock.movementsIntro}">Every change of place or status, oldest first. Movements are never changed or deleted.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                                <th th:text="#{stock.movementType}">Movement</th>
+                                <th th:text="#{stock.fromTo}">From → to</th>
+                                <th th:text="#{common.status}">Status</th>
+                                <th th:text="#{stock.reference}">Reference</th>
+                                <th th:text="#{activity.user}">User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="m : ${movements}">
+                                <td class="nowrap" th:text="${#temporals.format(m.movedAt, 'yyyy-MM-dd HH:mm:ss')}">2026-10-08 10:12:04</td>
+                                <td>
+                                    <span th:text="#{${'stock.movement.' + m.type}}">Received</span>
+                                    <div class="cell-sub" th:if="${m.reason != null}" th:text="${m.reason}">—</div>
+                                </td>
+                                <td class="mono nowrap">
+                                    <span th:text="${m.fromLocationId != null and locations.get(m.fromLocationId) != null} ? ${locations.get(m.fromLocationId).code} : '—'">—</span>
+                                    →
+                                    <span th:text="${m.toLocationId != null and locations.get(m.toLocationId) != null} ? ${locations.get(m.toLocationId).code} : '—'">WH-A-R01</span>
+                                </td>
+                                <td class="nowrap">
+                                    <span class="text-muted" th:text="${m.fromStatus != null} ? #{${'stock.status.' + m.fromStatus}} : #{stock.new}">New</span>
+                                    →
+                                    <span th:text="#{${'stock.status.' + m.toStatus}}">Available</span>
+                                </td>
+                                <td>
+                                    <a class="mono" th:if="${m.refType == 'GOODS_RECEIPT'}" th:href="@{/goods-receipts/{id}(id=${m.refId})}" th:text="${m.refNumber}">GRN-WH-2026-000001</a>
+                                    <span class="mono" th:unless="${m.refType == 'GOODS_RECEIPT'}" th:text="${m.refNumber ?: '—'}">—</span>
+                                </td>
+                                <td th:text="${m.username}">admin</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-cost" th:classappend="${tab == 'cost'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')">
+                <p class="tab-intro" th:text="#{stock.costIntro}">How the cost was built up: the order price at the receipt rate, then the import costs of its shipment. Never changed or deleted.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                                <th th:text="#{stock.costEntry}">Cost</th>
+                                <th th:text="#{stock.reference}">Reference</th>
+                                <th class="num" th:text="#{stock.costAdded}">Added (RWF)</th>
+                                <th class="num" th:text="#{stock.costAfter}">Cost after (RWF)</th>
+                                <th th:text="#{activity.user}">User</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="e : ${costEntries}">
+                                <td class="nowrap" th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
+                                <td th:text="#{${'stock.costType.' + e.type}}">Receipt cost</td>
+                                <td>
+                                    <a class="mono" th:if="${e.refType == 'GOODS_RECEIPT'}" th:href="@{/goods-receipts/{id}(id=${e.refId})}" th:text="${e.refNumber}">GRN-WH-2026-000001</a>
+                                    <a class="mono" th:if="${e.refType == 'SHIPMENT'}" th:href="@{/shipments/{id}(id=${e.refId})}" th:text="${e.refNumber}">SHP-WH-2026-000001</a>
+                                    <span class="mono" th:unless="${e.refType == 'GOODS_RECEIPT' or e.refType == 'SHIPMENT'}" th:text="${e.refNumber ?: '—'}">—</span>
+                                </td>
+                                <td class="num" th:classappend="${e.amount.signum() < 0} ? 'text-danger'" th:text="${@num.money(e.amount)}">43,992.61</td>
+                                <td class="num strong" th:text="${@num.money(e.costAfter)}">43,992.61</td>
+                                <td th:text="${e.username}">admin</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(costEntries)}">
+                                <td colspan="6"><div class="empty-state"><p th:text="#{stock.costNone}">No cost recorded.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/StockUnit/{id}(id=${unit.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

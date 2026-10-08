@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{pricelist.title}, ~{::content})}">
+<head><title>Price Lists - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{pricelist.title}">Price Lists</h1>
+            <div class="subtitle" th:text="#{pricelist.subtitle}">Selling prices per m² by product, and processing charges, in RWF</div>
+        </div>
+        <a href="/price-lists/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{pricelist.add}">Add price list</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{pricelist.sectionTitle}">Price lists</span>
+                <span class="section-count" th:text="${#lists.size(summaries)}">1</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{pricelist.name}">Price list</th>
+                        <th th:text="#{pricelist.vat}">VAT</th>
+                        <th class="num" th:text="#{pricelist.minArea}">Minimum area</th>
+                        <th th:text="#{pricelist.glassPriced}">Glass priced</th>
+                        <th class="num" th:text="#{pricelist.processingPriced}">Processing priced</th>
+                        <th class="num" th:text="#{pricelist.customers}">Customers</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${summaries}" th:with="l=${s.list}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/price-lists/{id}(id=${l.id})}" th:text="${l.name}">Retail (counter)</a>
+                            <span class="you-badge" th:if="${l.defaultList}" th:text="#{pricelist.defaultBadge}">Default</span>
+                            <div class="cell-sub mono" th:text="${l.code}">RETAIL</div>
+                        </td>
+                        <td th:text="${l.pricesIncludeVat} ? #{pricelist.vatIncluded} : #{pricelist.vatExcluded}">Included</td>
+                        <td class="num nowrap" th:text="${(l.minChargeableM2 != null ? l.minChargeableM2 : settingMinArea).stripTrailingZeros().toPlainString() + ' m²'}">0.25 m²</td>
+                        <td>
+                            <div class="priced-bar" th:with="pct=${productCount == 0 ? 0 : s.pricedProducts * 100 / productCount}">
+                                <span class="priced-track"><span class="priced-fill" th:classappend="${pct >= 100} ? 'full'"
+                                                                 th:style="'width:' + ${pct} + '%'"></span></span>
+                                <span class="priced-text" th:text="#{pricelist.pricedOf(${s.pricedProducts}, ${productCount})}">12 of 18</span>
+                            </div>
+                        </td>
+                        <td class="num" th:text="${s.pricedServices}">0</td>
+                        <td class="num" th:text="${l.defaultList} ? #{pricelist.allOthers} : ${s.customers}">0</td>
+                        <td>
+                            <span class="badge badge-success" th:if="${l.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${l.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="list-note price-rule" th:text="#{pricelist.rule}">A customer without a price list, or a product their list does not price, uses the default list.</p>
+    </div>
+
+    <div class="section" id="services">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{service.sectionTitle}">Processing services</span>
+                <span class="section-count" th:text="${#lists.size(services)}">5</span>
+            </h2>
+            <a href="/price-lists/services/new" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')" th:text="#{service.add}">Add service</a>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{service.code}">Code</th>
+                        <th th:text="#{service.name}">Name</th>
+                        <th th:text="#{service.unit}">Charged per</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sv : ${services}" th:classappend="${!sv.enabled} ? 'row-inactive'">
+                        <td class="mono strong" th:text="${sv.code}">EDGING</td>
+                        <td th:text="${sv.name}">Edging</td>
+                        <td th:text="#{${'service.unit.' + sv.chargeUnit}}">metre of edge</td>
+                        <td>
+                            <span class="badge badge-success" th:if="${sv.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${sv.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')">
+                            <div class="btn-group">
+                                <a th:href="@{/price-lists/services/{id}/edit(id=${sv.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                                <form th:if="${sv.enabled}" th:action="@{/price-lists/services/{id}/disable(id=${sv.id})}" method="post"
+                                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{service.disableConfirm(${sv.name})}">
+                                    <button type="submit" class="action-icon delete" th:title="#{product.disable}" th:aria-label="#{product.disable}">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                    </button>
+                                </form>
+                                <form th:unless="${sv.enabled}" th:action="@{/price-lists/services/{id}/enable(id=${sv.id})}" method="post"
+                                      class="row-action-form confirm-submit" th:attr="data-confirm=#{service.enableConfirm(${sv.name})}">
+                                    <button type="submit" class="action-icon pay" th:title="#{product.enable}" th:aria-label="#{product.enable}">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

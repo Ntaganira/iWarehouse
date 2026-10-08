@@ -70,6 +70,34 @@ public class DataChangeService {
         return repo.findByEntityTypeAndEntityIdOrderByServerTimeDesc(entityType, entityId, PageRequest.of(page, size));
     }
 
+    /** History of every record of the given types, newest first (e.g. the Settings History tab). */
+    public Page<DataChangeLog> historyOfTypes(Collection<String> entityTypes, int page, int size) {
+        return repo.findByEntityTypeInOrderByServerTimeDescIdDesc(entityTypes, PageRequest.of(page, size));
+    }
+
+    /** History of a group of records (e.g. a price list and its price rows), newest first. */
+    public Page<DataChangeLog> historyOf(Collection<String> entityTypes, Collection<String> entityIds, int page, int size) {
+        if (entityIds.isEmpty()) {
+            return Page.empty(PageRequest.of(page, size));
+        }
+        return repo.findByEntityTypeInAndEntityIdInOrderByServerTimeDescIdDesc(entityTypes, entityIds, PageRequest.of(page, size));
+    }
+
+    /**
+     * History of a record and its child records, newest first, deleted children included (e.g. a
+     * purchase order and its lines: "PurchaseOrderLine" whose snapshot field "purchaseOrder" is the id).
+     */
+    public Page<DataChangeLog> historyWithChildren(String entityType, String entityId, String childType,
+                                                   String parentField, int page, int size) {
+        return historyWithChildren(entityType, entityId, List.of(childType), parentField, page, size);
+    }
+
+    /** The same with several kinds of children that all name the parent in parentField (e.g. a shipment's bills and receipts). */
+    public Page<DataChangeLog> historyWithChildren(String entityType, String entityId, Collection<String> childTypes,
+                                                   String parentField, int page, int size) {
+        return repo.findWithChildren(entityType, entityId, childTypes, parentField, PageRequest.of(page, size));
+    }
+
     /** All changes made by the same request (e.g. one sale touching invoice, stock units and journal). */
     public List<DataChangeLog> sameRequest(String requestId) {
         return StringUtils.hasText(requestId) ? repo.findByRequestIdOrderByIdAsc(requestId) : List.of();

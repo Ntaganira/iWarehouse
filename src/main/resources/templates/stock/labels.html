@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{label.pageTitle(${title})} + ' - ' + #{app.name}">Labels - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{label.pageTitle(${title})}">Labels: GRN-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{label.pageHint(${#lists.size(units)})}">38 labels, 50 × 30 mm each. Print on the label printer, one label per page, at 100% (no scaling).</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="${backUrl}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="${zplUrl}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <div class="label-sheet">
+        <div class="stock-label" th:each="u : ${units}">
+            <div class="stock-label-qr" th:utext="${qr.get(u.id)}"></div>
+            <div class="stock-label-text">
+                <div class="stock-label-code" th:text="${u.code}">U-WH-000001</div>
+                <div class="stock-label-product">
+                    <span th:text="${u.product.code}">CLR-6</span>
+                    <span th:text="${#messages.msg('glass.type.' + u.product.glassType) + (u.product.variant != null ? ' ' + u.product.variant : '') + ' ' + u.product.thicknessLabel + ' mm'}">Clear 6 mm</span>
+                </div>
+                <div class="stock-label-size" th:text="${u.widthMm + ' × ' + u.heightMm + ' mm'}">3210 × 2250 mm</div>
+                <div class="stock-label-crate" th:if="${u.crateBatch != null}" th:text="#{label.crate(${u.crateBatch.batchNo})}">Crate C-01</div>
+            </div>
+        </div>
+        <p class="label-empty" th:if="${#lists.isEmpty(units)}" th:text="#{label.none}">No units to label.</p>
+    </div>
+</body>
+</html>

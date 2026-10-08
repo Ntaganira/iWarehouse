@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${poDto.id == null} ? #{po.addTitle} : #{po.editTitle(${order.number})}, ~{::content})}">
+<head><title>Purchase Order - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${poDto.id == null} ? #{po.addTitle} : #{po.editTitle(${order.number})}">New Purchase Order</h1>
+            <div class="subtitle" th:text="#{po.formSubtitle}">Saved as a draft; place it with the supplier when it is right.</div>
+        </div>
+        <a th:href="${poDto.id == null} ? @{/purchase-orders} : @{/purchase-orders/{id}(id=${poDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${poDto.id == null} ? @{/purchase-orders/new} : @{/purchase-orders/{id}/edit(id=${poDto.id})}"
+          th:object="${poDto}" method="post" class="po-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="supplierId" th:text="#{po.supplier}">Supplier</label>
+                        <select id="supplierId" th:field="*{supplierId}" required th:classappend="${#fields.hasErrors('supplierId')} ? 'is-invalid'">
+                            <option value="" th:text="#{po.chooseSupplier}">Choose a supplier</option>
+                            <option th:each="sup : ${suppliers}" th:value="${sup.id}"
+                                    th:attr="data-currency=${sup.currencyCode}, data-incoterm=${sup.incoterm}, data-decimals=${decimals.getOrDefault(sup.currencyCode, 2)}"
+                                    th:text="${sup.name + ' (' + sup.currencyCode + ')'}">Shandong Glass Co. (USD)</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('supplierId')}" th:errors="*{supplierId}"></span>
+                        <span class="hint" th:text="#{po.currencyHint}">The order is in the supplier's currency</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="incoterm" th:text="#{supplier.incoterm}">Incoterm</label>
+                        <select id="incoterm" th:field="*{incoterm}">
+                            <option value="" th:text="#{supplier.noIncoterm}">None (local supplier)</option>
+                            <option th:each="i : ${incoterms}" th:value="${i}" th:text="#{${'incoterm.' + i}}">FOB - Free on board</option>
+                        </select>
+                        <span class="hint" th:text="#{po.incotermHint}">The supplier's default; change it if this order differs</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="orderDate" th:text="#{po.orderDate}">Order date</label>
+                        <input type="date" id="orderDate" th:field="*{orderDate}" required th:classappend="${#fields.hasErrors('orderDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('orderDate')}" th:errors="*{orderDate}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="expectedDate" th:text="#{po.expectedDate}">Expected</label>
+                        <input type="date" id="expectedDate" th:field="*{expectedDate}" th:classappend="${#fields.hasErrors('expectedDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('expectedDate')}" th:errors="*{expectedDate}"></span>
+                        <span class="hint" th:text="#{po.expectedHint}">When the crates should arrive</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="supplierRef" th:text="#{po.supplierRef}">Supplier reference</label>
+                        <input type="text" id="supplierRef" th:field="*{supplierRef}" maxlength="60" class="input-code" spellcheck="false"
+                               th:placeholder="#{po.supplierRefPh}" th:classappend="${#fields.hasErrors('supplierRef')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('supplierRef')}" th:errors="*{supplierRef}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes" th:text="#{product.notes}">Notes</label>
+                        <input type="text" id="notes" th:field="*{notes}" maxlength="500" th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{po.linesTitle}">Sheets ordered</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{po.addLine}">Add line</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table po-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{product.name}">Product</th>
+                            <th class="num" th:text="#{po.width}">Width (mm)</th>
+                            <th class="num" th:text="#{po.height}">Height (mm)</th>
+                            <th class="num" th:text="#{po.sheets}">Sheets</th>
+                            <th class="num" th:text="#{po.pricePerM2Short}">Price per m²</th>
+                            <th class="num">m²</th>
+                            <th class="num" th:text="#{po.amount}">Amount</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body">
+                        <tr class="line-row" th:each="line, st : *{lines}">
+                            <td class="line-product">
+                                <input type="hidden" th:field="*{lines[__${st.index}__].id}">
+                                <select th:field="*{lines[__${st.index}__].productId}" th:aria-label="#{product.name}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].productId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{po.chooseProduct}">Choose glass</option>
+                                    <option th:each="p : ${products}" th:value="${p.id}"
+                                            th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].productId')}" th:errors="*{lines[__${st.index}__].productId}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric" data-calc="w"
+                                       th:aria-label="#{po.width}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].widthMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].widthMm')}" th:errors="*{lines[__${st.index}__].widthMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric" data-calc="h"
+                                       th:aria-label="#{po.height}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].heightMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].heightMm')}" th:errors="*{lines[__${st.index}__].heightMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].quantity}" min="1" max="100000" step="1" inputmode="numeric" data-calc="q"
+                                       th:aria-label="#{po.sheets}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].quantity')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].quantity')}" th:errors="*{lines[__${st.index}__].quantity}"></span>
+                            </td>
+                            <td class="num">
+                                <div class="input-unit">
+                                    <input type="number" th:field="*{lines[__${st.index}__].pricePerM2}" min="0" step="0.0001" inputmode="decimal" data-calc="p"
+                                           th:aria-label="#{po.pricePerM2Short}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].pricePerM2')} ? 'is-invalid'">
+                                    <span class="po-currency">USD</span>
+                                </div>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].pricePerM2')}" th:errors="*{lines[__${st.index}__].pricePerM2}"></span>
+                            </td>
+                            <td class="num line-area">—</td>
+                            <td class="num line-amount">—</td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{po.removeLine}" th:aria-label="#{po.removeLine}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th th:text="#{po.total}">Total</th>
+                            <th></th>
+                            <th></th>
+                            <th class="num" id="po-total-sheets">0</th>
+                            <th></th>
+                            <th class="num" id="po-total-area">0</th>
+                            <th class="num" id="po-total-amount">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{po.linesNote}">Price per m² in the order's currency. Amounts are rounded once, at the total. Empty lines are ignored.</p>
+        </div>
+
+        <!-- A new line (copied by js/po-form.js; {i} becomes the row number) -->
+        <template class="line-template">
+            <tr class="line-row">
+                <td class="line-product">
+                    <input type="hidden" name="lines[{i}].id" value="">
+                    <select name="lines[{i}].productId" th:aria-label="#{product.name}">
+                        <option value="" th:text="#{po.chooseProduct}">Choose glass</option>
+                        <option th:each="p : ${products}" th:value="${p.id}"
+                                th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                    </select>
+                </td>
+                <td class="num"><input type="number" name="lines[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" data-calc="w" th:aria-label="#{po.width}"></td>
+                <td class="num"><input type="number" name="lines[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" data-calc="h" th:aria-label="#{po.height}"></td>
+                <td class="num"><input type="number" name="lines[{i}].quantity" min="1" max="100000" step="1" inputmode="numeric" data-calc="q" th:aria-label="#{po.sheets}"></td>
+                <td class="num">
+                    <div class="input-unit">
+                        <input type="number" name="lines[{i}].pricePerM2" min="0" step="0.0001" inputmode="decimal" data-calc="p" th:aria-label="#{po.pricePerM2Short}">
+                        <span class="po-currency">USD</span>
+                    </div>
+                </td>
+                <td class="num line-area">—</td>
+                <td class="num line-amount">—</td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{po.removeLine}" th:aria-label="#{po.removeLine}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{po.saveDraft}">Save draft</button>
+            <a th:href="${poDto.id == null} ? @{/purchase-orders} : @{/purchase-orders/{id}(id=${poDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

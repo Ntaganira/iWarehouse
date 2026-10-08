@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${location.code}, ~{::content})}">
+<head><title>Location - iWarehouse</title></head>
+<body>
+<div th:fragment="content"><th:block th:with="child=${location.type.childType}">
+    <nav class="loc-path" th:if="${!#lists.isEmpty(ancestors)}" th:aria-label="#{location.path}">
+        <a href="/locations" th:text="#{location.title}">Locations</a>
+        <th:block th:each="a : ${ancestors}">
+            <span class="sep" aria-hidden="true">›</span>
+            <a th:href="@{/locations/{id}(id=${a.id})}" class="mono" th:text="${a.code}">WH</a>
+        </th:block>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h1>
+                <span class="mono" th:text="${location.code}">WH-A-R01</span>
+                <span class="page-title-name" th:if="${location.name != null}" th:text="${location.name}">Rack 1</span>
+            </h1>
+            <div class="subtitle">
+                <span class="loc-type" th:classappend="${'loc-' + #strings.toLowerCase(location.type)}" th:text="#{${'location.type.' + location.type}}">Rack</span>
+                <span class="badge badge-success" th:if="${location.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${location.enabled}" th:text="#{common.inactive}">Inactive</span>
+                <span class="badge badge-warning" th:if="${location.offcut}" th:text="#{location.offcut}">Off-cut rack</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/locations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_LOCATION')" th:if="${location.type.manual}">
+                <a th:if="${child != null and location.enabled}" th:href="@{/locations/new(parent=${location.id})}" class="btn btn-outline"
+                   th:text="#{${'location.add.' + child}}">Add slot</a>
+                <form th:if="${location.enabled}" th:action="@{/locations/{id}/disable(id=${location.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{location.disableConfirm(${location.code})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{location.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${location.enabled}" th:action="@{/locations/{id}/enable(id=${location.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{location.enableConfirm(${location.code})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{location.enable}">Activate</button>
+                </form>
+                <a th:href="@{/locations/{id}/edit(id=${location.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="tab-details" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-children" th:if="${child != null}">
+                <span th:text="#{location.subLocations}">Sub-locations</span>
+                <span class="section-count" th:text="${#lists.size(children)}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <div class="tab-content active" id="tab-details">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{location.code}">Code</label>
+                        <div class="value mono" th:text="${location.code}">WH-A-R01</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{location.name}">Name</label>
+                        <div class="value" th:text="${location.name ?: '—'}">Rack 1</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{location.type}">Type</label>
+                        <div class="value" th:text="#{${'location.type.' + location.type}}">Rack</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{location.parent}">Under</label>
+                        <div class="value">
+                            <a th:if="${!#lists.isEmpty(ancestors)}" class="row-link" th:with="p=${ancestors[#lists.size(ancestors) - 1]}"
+                               th:href="@{/locations/{id}(id=${p.id})}"><span class="mono" th:text="${p.code}">WH-A</span><span
+                                    th:if="${p.name != null}" th:text="${' · ' + p.name}"> · Zone A</span></a>
+                            <span th:if="${#lists.isEmpty(ancestors)}">—</span>
+                        </div>
+                    </div>
+                    <th:block th:if="${location.rack}">
+                        <div class="item">
+                            <label th:text="#{location.maxWeight}">Maximum weight</label>
+                            <div class="value" th:text="${location.maxWeightKg != null} ? #{location.kg(${location.maxWeightKg})} : #{location.noLimit}">3,000 kg</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{location.maxPieces}">Maximum pieces</label>
+                            <div class="value" th:text="${location.maxPieces != null} ? #{location.pieces(${location.maxPieces})} : #{location.noLimit}">30 pieces</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{location.orientation}">Sheet orientation</label>
+                            <div class="value" th:text="#{${'location.orientation.' + location.orientation}}">Vertical (on edge)</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{location.offcut}">Off-cut rack</label>
+                            <div class="value" th:text="${location.offcut} ? #{common.yes} : #{common.no}">No</div>
+                        </div>
+                    </th:block>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(location.createdAt, 'dd/MM/yyyy HH:mm') + (location.createdBy != null ? ' · ' + location.createdBy : '')}">07/10/2026 12:00 · admin</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${location.version > 0} ? ${#temporals.format(location.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + location.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+                <p class="form-note" th:if="${location.rack}" th:text="#{location.limitsNote}">Receiving, transfers and trip loading will check these limits.</p>
+            </div>
+
+            <div class="tab-content" id="tab-children" th:if="${child != null}">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{location.code}">Code</th>
+                                <th th:text="#{location.name}">Name</th>
+                                <th th:text="#{location.limits}" th:if="${child.name() == 'RACK'}">Rack limits</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${children}" th:classappend="${!c.enabled} ? 'row-inactive'">
+                                <td><a class="row-link mono strong" th:href="@{/locations/{id}(id=${c.id})}" th:text="${c.code}">WH-A-R01</a></td>
+                                <td th:text="${c.name ?: '—'}">Rack 1</td>
+                                <td th:if="${child.name() == 'RACK'}"><th:block th:replace="~{locations/list :: limits(${c})}"></th:block></td>
+                                <td>
+                                    <span class="badge badge-success" th:if="${c.enabled}" th:text="#{common.active}">Active</span>
+                                    <span class="badge badge-secondary" th:unless="${c.enabled}" th:text="#{common.inactive}">Inactive</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(children)}">
+                                <td th:colspan="${child.name() == 'RACK'} ? 4 : 3">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{location.noChildren}">No sub-locations yet</h3>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Location/{id}(id=${location.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</th:block></div>
+</body>
+</html>

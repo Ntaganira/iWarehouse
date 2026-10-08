@@ -55,5 +55,45 @@
         </tbody>
     </table>
 </div>
+
+<!--/*
+  Same timeline for changes across several records (e.g. the Settings History tab), with a Record column:
+    <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+  where history = dataChangeService.historyOfTypes(List.of("Setting", "TaxCategory"), page, 15)
+*/-->
+<div th:fragment="timeline-records(changes)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                <th th:text="#{activity.user}">User</th>
+                <th th:text="#{audit.record}">Record</th>
+                <th th:text="#{audit.operation}">Operation</th>
+                <th th:text="#{audit.changedFields}">Changed fields</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="c : ${changes.content}">
+                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm:ss')}">2026-10-07 11:42:05</td>
+                <td th:text="${c.username ?: #messages.msg('audit.system')}">admin</td>
+                <td>
+                    <div class="mono" th:text="${c.entityRef ?: c.entityId}">production.glass-density</div>
+                    <div class="text-muted" th:text="${c.entityType}">Setting</div>
+                </td>
+                <td>
+                    <span class="action-badge"
+                          th:classappend="${c.operation.name() == 'CREATE'} ? 'action-create' : (${c.operation.name() == 'DELETE'} ? 'action-delete' : 'action-update')"
+                          th:text="#{${'audit.op.' + c.operation.name()}}">Updated</span>
+                </td>
+                <td class="cell-truncate" th:text="${c.changedFields == null ? '' : #strings.arrayJoin(c.changedFields, ', ')}">settingValue</td>
+                <td><a th:href="@{/audit/{id}(id=${c.id})}" class="btn btn-outline btn-sm" th:text="#{audit.viewChange}">View</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(changes.content)}">
+                <td colspan="6"><div class="empty-state"><h3 th:text="#{audit.empty.title}">No changes found</h3></div></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 </body>
 </html>

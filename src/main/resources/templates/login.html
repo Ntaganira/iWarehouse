@@ -13,105 +13,287 @@
     </script>
     <link rel="stylesheet" href="/css/iwarehouse.css">
     <script defer src="/js/iwarehouse.js"></script>
+    <script defer src="/js/login.js"></script>
 </head>
 <body class="login-page">
     <div th:replace="~{fragments/toasts :: toasts}"></div>
 
-    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Dark Mode">
-        <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-    </button>
+    <!-- Shared gradients for the illustrations (not display:none, or the gradients stop rendering) -->
+    <svg class="ill-defs" width="0" height="0" aria-hidden="true" focusable="false">
+        <defs>
+            <linearGradient id="ill-blue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#3d8bff"></stop><stop offset="1" stop-color="#1565e0"></stop>
+            </linearGradient>
+            <linearGradient id="ill-navy" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1d4b94"></stop><stop offset="1" stop-color="#0b2a5b"></stop>
+            </linearGradient>
+            <linearGradient id="ill-gold" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffd166"></stop><stop offset="1" stop-color="#f5a524"></stop>
+            </linearGradient>
+            <linearGradient id="ill-green" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#34d399"></stop><stop offset="1" stop-color="#10b981"></stop>
+            </linearGradient>
+            <linearGradient id="ill-glass" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#e3f3ff" stop-opacity=".95"></stop>
+                <stop offset=".55" stop-color="#a9d6ff" stop-opacity=".78"></stop>
+                <stop offset="1" stop-color="#6fb5ff" stop-opacity=".72"></stop>
+            </linearGradient>
+            <filter id="ill-drop" x="-25%" y="-25%" width="150%" height="160%">
+                <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#0b2a5b" flood-opacity=".18"></feDropShadow>
+            </filter>
+        </defs>
+    </svg>
 
-    <div class="login-split">
-        <div class="login-brand">
-            <div class="brand-header">
-                <div class="brand-logo">iW</div>
-                <div>
-                    <h2>iWarehouse</h2>
-                    <p th:text="#{login.brand.tagline}">Glass Warehouse &amp; Mobile POS</p>
-                </div>
-            </div>
-
-            <div class="brand-copy">
-                <h1 th:text="#{login.brand.title}">Every sheet, cut and sale in one place</h1>
-                <p th:text="#{login.brand.subtitle}">iWarehouse tracks glass from crate to customer: stock, cutting, fleet, POS and accounting.</p>
-                <ul class="brand-features">
-                    <li>
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        <span th:text="#{login.brand.feat1}">Sheets, off-cuts &amp; cutting jobs</span>
-                    </li>
-                    <li>
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        <span th:text="#{login.brand.feat2}">Moving shops with offline POS</span>
-                    </li>
-                    <li>
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        <span th:text="#{login.brand.feat3}">Before/after audit trail</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="brand-stats">
-                <div class="stat">
-                    <div class="num">24/7</div>
-                    <div class="lbl" th:text="#{login.brand.stat1}">Traceable</div>
-                </div>
-                <div class="stat">
-                    <div class="num">100%</div>
-                    <div class="lbl" th:text="#{login.brand.stat2}">Secure</div>
-                </div>
-                <div class="stat">
-                    <div class="num">3</div>
-                    <div class="lbl" th:text="#{login.brand.stat3}">Languages</div>
-                </div>
-            </div>
-
-            <div class="brand-footer" th:text="#{login.brand.copyright}">© 2026 iWarehouse</div>
-        </div>
-
-        <div class="login-form-side">
-            <div class="login-card">
-                <div class="login-header">
-                    <h1 th:text="#{login.welcome}">Welcome to iWarehouse</h1>
-                    <p th:text="#{login.subtitle}">Sign in to your warehouse dashboard</p>
-                </div>
-                <form th:action="@{/login}" method="post">
-                    <div class="form-group">
-                        <label for="username" th:text="#{login.username}">Username</label>
-                        <input type="text" id="username" name="username" th:placeholder="#{login.usernamePh}" required autofocus>
-                    </div>
-                    <div class="form-group">
-                        <label for="password" th:text="#{login.password}">Password</label>
-                        <input type="password" id="password" name="password" th:placeholder="#{login.passwordPh}" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" th:text="#{login.signIn}">Sign In</button>
-                </form>
-                <div class="login-footer">
-                    <p th:text="#{login.defaultCredentials}">Default: admin / password123</p>
-                </div>
+    <header class="auth-topbar">
+        <div class="auth-brand">
+            <div class="logo-icon">iW</div>
+            <div>
+                <div class="name"><span>i</span>Warehouse</div>
+                <div class="tag" th:text="#{app.tagline}">Glass Warehouse &amp; POS</div>
             </div>
         </div>
-    </div>
+        <div class="auth-tools">
+            <div th:replace="~{fragments/lang :: dropdown('/login')}"></div>
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Dark Mode">
+                <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <svg class="icon-sun" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="auth-card" th:classappend="${param.error} ? 'has-error'">
+        <!-- Sign-in form -->
+        <section class="auth-form-pane">
+            <div class="auth-head">
+                <div class="auth-badge">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <h1 th:text="#{login.welcome}">Welcome to iWarehouse</h1>
+                <p th:text="#{login.subtitle}">Sign in to your warehouse dashboard</p>
+            </div>
+
+            <form th:action="@{/login}" method="post" class="auth-form" id="login-form">
+                <div class="float-field">
+                    <span class="ff-icon">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </span>
+                    <input type="text" id="username" name="username" placeholder=" " autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+                    <label for="username" th:text="#{login.username}">Username</label>
+                </div>
+
+                <div class="float-field has-toggle">
+                    <span class="ff-icon">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
+                    <input type="password" id="password" name="password" placeholder=" " autocomplete="current-password" required aria-describedby="caps-hint">
+                    <label for="password" th:text="#{login.password}">Password</label>
+                    <button type="button" class="ff-toggle" id="password-toggle" aria-pressed="false"
+                            th:aria-label="#{login.showPassword}"
+                            th:data-label-show="#{login.showPassword}" th:data-label-hide="#{login.hidePassword}">
+                        <svg class="icon-eye" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg class="icon-eye-off" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </button>
+                </div>
+                <div class="caps-hint" id="caps-hint" role="status" hidden>
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <span th:text="#{login.capsLock}">Caps Lock is on</span>
+                </div>
+
+                <button type="submit" class="btn btn-primary auth-submit" id="login-submit" th:data-loading="#{login.signingIn}">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="submit-label" th:text="#{login.signIn}">Sign In</span>
+                    <svg class="submit-arrow" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </form>
+
+            <div class="auth-foot">
+                <p th:text="#{login.noAccount}">No account yet? Ask your administrator.</p>
+                <p class="hint" th:text="#{login.defaultCredentials}">Default: admin / password123</p>
+            </div>
+        </section>
+
+        <!-- Highlights carousel -->
+        <section class="auth-showcase" aria-roledescription="carousel" th:aria-label="#{login.slides}">
+            <div class="slides">
+                <!-- 1. Sheets on a rack in front of a stock board -->
+                <figure class="slide is-active" aria-hidden="false">
+                    <svg class="ill" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                        <ellipse cx="205" cy="276" rx="165" ry="12" class="ill-ground"></ellipse>
+                        <g class="ill-float-slow">
+                            <rect x="96" y="34" width="236" height="206" rx="18" class="ill-panel" filter="url(#ill-drop)"></rect>
+                            <rect x="160" y="52" width="110" height="16" rx="8" class="ill-soft"></rect>
+                            <circle cx="172" cy="60" r="3.5" fill="#1565e0"></circle>
+                            <rect x="180" y="58" width="44" height="4" rx="2" class="ill-line"></rect>
+                            <rect x="116" y="86" width="16" height="16" rx="5" fill="url(#ill-blue)"></rect>
+                            <polyline points="120,94 123,97.5 128.5,90.5" class="ill-tick"></polyline>
+                            <rect x="140" y="88" width="54" height="5" rx="2.5" class="ill-line"></rect>
+                            <rect x="140" y="97" width="36" height="4" rx="2" class="ill-line-soft"></rect>
+                            <rect x="116" y="114" width="16" height="16" rx="5" fill="url(#ill-blue)"></rect>
+                            <polyline points="120,122 123,125.5 128.5,118.5" class="ill-tick"></polyline>
+                            <rect x="140" y="116" width="48" height="5" rx="2.5" class="ill-line"></rect>
+                            <rect x="140" y="125" width="30" height="4" rx="2" class="ill-line-soft"></rect>
+                            <rect x="116" y="142" width="16" height="16" rx="5" class="ill-soft"></rect>
+                            <rect x="140" y="144" width="52" height="5" rx="2.5" class="ill-line"></rect>
+                            <rect x="140" y="153" width="38" height="4" rx="2" class="ill-line-soft"></rect>
+                            <circle cx="282" cy="112" r="24" class="ill-donut-track"></circle>
+                            <circle cx="282" cy="112" r="24" fill="none" stroke="url(#ill-blue)" stroke-width="11" stroke-dasharray="90 151" stroke-linecap="round" transform="rotate(-90 282 112)"></circle>
+                            <circle cx="282" cy="112" r="24" fill="none" stroke="url(#ill-gold)" stroke-width="11" stroke-dasharray="30 151" stroke-dashoffset="-102" stroke-linecap="round" transform="rotate(-90 282 112)"></circle>
+                            <rect x="200" y="186" width="18" height="36" rx="5" fill="url(#ill-navy)"></rect>
+                            <rect x="226" y="164" width="18" height="58" rx="5" fill="url(#ill-blue)"></rect>
+                            <rect x="252" y="176" width="18" height="46" rx="5" fill="url(#ill-gold)"></rect>
+                            <rect x="278" y="150" width="18" height="72" rx="5" fill="url(#ill-blue)"></rect>
+                            <line x1="194" y1="224" x2="306" y2="224" class="ill-line-stroke"></line>
+                            <path d="M116 200 q10 -14 20 0 t20 0 t20 0" class="ill-wave"></path>
+                        </g>
+                        <g class="ill-float">
+                            <rect x="40" y="252" width="128" height="10" rx="5" fill="url(#ill-navy)"></rect>
+                            <rect x="52" y="146" width="66" height="106" rx="4" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="58,152 74,152 60,232 58,232" fill="#ffffff" opacity=".55"></polygon>
+                            <rect x="72" y="134" width="66" height="118" rx="4" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="78,140 96,140 80,224 78,224" fill="#ffffff" opacity=".55"></polygon>
+                            <rect x="92" y="158" width="66" height="94" rx="4" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="98,164 114,164 100,238 98,238" fill="#ffffff" opacity=".5"></polygon>
+                        </g>
+                        <g class="ill-float-alt">
+                            <rect x="262" y="234" width="94" height="34" rx="17" class="ill-panel" filter="url(#ill-drop)"></rect>
+                            <circle cx="281" cy="251" r="9" fill="url(#ill-green)"></circle>
+                            <polyline points="277,251 280,254 285,248" class="ill-tick"></polyline>
+                            <text x="297" y="256" class="ill-text">+24 m²</text>
+                        </g>
+                        <path d="M356 70 h14 M363 63 v14" class="ill-plus blue"></path>
+                        <path d="M58 96 h12 M64 90 v12" class="ill-plus gold"></path>
+                        <circle cx="352" cy="186" r="5" class="ill-dot"></circle>
+                        <circle cx="84" cy="62" r="4" class="ill-dot gold"></circle>
+                    </svg>
+                    <figcaption>
+                        <h2 th:text="#{login.slide1.title}">Every sheet in its place</h2>
+                        <p th:text="#{login.slide1.text}">Crates, sheets and off-cuts with their rack, size and landed cost.</p>
+                    </figcaption>
+                </figure>
+
+                <!-- 2. A sheet being cut, one piece lifted out -->
+                <figure class="slide" aria-hidden="true">
+                    <svg class="ill" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                        <ellipse cx="200" cy="278" rx="165" ry="12" class="ill-ground"></ellipse>
+                        <g class="ill-float-slow">
+                            <rect x="50" y="232" width="300" height="14" rx="7" fill="url(#ill-navy)"></rect>
+                            <rect x="78" y="246" width="12" height="24" rx="3" fill="url(#ill-navy)"></rect>
+                            <rect x="310" y="246" width="12" height="24" rx="3" fill="url(#ill-navy)"></rect>
+                            <rect x="70" y="72" width="260" height="160" rx="6" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="232,80 248,80 214,224 198,224" fill="#ffffff" opacity=".4"></polygon>
+                            <polygon points="262,80 270,80 236,224 228,224" fill="#ffffff" opacity=".3"></polygon>
+                            <rect x="70" y="72" width="130" height="80" rx="4" class="ill-slot"></rect>
+                            <line x1="200" y1="72" x2="200" y2="232" class="ill-cut"></line>
+                            <line x1="70" y1="152" x2="200" y2="152" class="ill-cut"></line>
+                            <line x1="200" y1="182" x2="330" y2="182" class="ill-cut"></line>
+                        </g>
+                        <g class="ill-float">
+                            <rect x="50" y="44" width="130" height="80" rx="5" fill="url(#ill-glass)" stroke="#1565e0" stroke-width="2.5" filter="url(#ill-drop)"></rect>
+                            <polygon points="58,50 82,50 64,118 58,118" fill="#ffffff" opacity=".6"></polygon>
+                            <rect x="69" y="16" width="92" height="24" rx="12" fill="url(#ill-blue)"></rect>
+                            <text x="115" y="32" text-anchor="middle" class="ill-text light">1200 × 800</text>
+                        </g>
+                        <g class="ill-float-alt">
+                            <line x1="214" y1="186" x2="262" y2="124" stroke="url(#ill-gold)" stroke-width="15" stroke-linecap="round"></line>
+                            <line x1="212" y1="189" x2="222" y2="176" stroke="#0b2a5b" stroke-width="15" stroke-linecap="round"></line>
+                            <circle cx="205" cy="198" r="10" fill="url(#ill-navy)"></circle>
+                            <circle cx="205" cy="198" r="3.5" fill="#ffffff"></circle>
+                        </g>
+                        <g class="ill-float">
+                            <rect x="262" y="196" width="72" height="28" rx="14" class="ill-panel" filter="url(#ill-drop)"></rect>
+                            <circle cx="278" cy="210" r="7.5" fill="url(#ill-green)"></circle>
+                            <polyline points="274.5,210 277,212.5 281.5,207.5" class="ill-tick"></polyline>
+                            <text x="292" y="215" class="ill-text">94%</text>
+                        </g>
+                        <path d="M352 64 h14 M359 57 v14" class="ill-plus gold"></path>
+                        <path d="M30 170 h12 M36 164 v12" class="ill-plus blue"></path>
+                        <circle cx="356" cy="132" r="5" class="ill-dot"></circle>
+                    </svg>
+                    <figcaption>
+                        <h2 th:text="#{login.slide2.title}">Cut more, waste less</h2>
+                        <p th:text="#{login.slide2.text}">Cutting jobs start from the smallest sheet that fits, and usable off-cuts go back to stock.</p>
+                    </figcaption>
+                </figure>
+
+                <!-- 3. Moving shop: truck with a glass rack, phone POS, sync -->
+                <figure class="slide" aria-hidden="true">
+                    <svg class="ill" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                        <ellipse cx="200" cy="278" rx="172" ry="12" class="ill-ground"></ellipse>
+                        <line x1="26" y1="266" x2="374" y2="266" class="ill-road"></line>
+                        <g class="ill-float-slow">
+                            <rect x="34" y="118" width="170" height="108" rx="12" fill="url(#ill-blue)"></rect>
+                            <rect x="52" y="104" width="54" height="104" rx="3" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="58,110 70,110 60,196 58,196" fill="#ffffff" opacity=".55"></polygon>
+                            <rect x="96" y="96" width="54" height="112" rx="3" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="102,102 116,102 104,196 102,196" fill="#ffffff" opacity=".55"></polygon>
+                            <rect x="140" y="110" width="50" height="98" rx="3" fill="url(#ill-glass)" class="ill-glass-edge"></rect>
+                            <polygon points="146,116 158,116 148,196 146,196" fill="#ffffff" opacity=".5"></polygon>
+                            <rect x="44" y="196" width="152" height="8" rx="4" fill="url(#ill-navy)"></rect>
+                            <path d="M204 150 h40 a10 10 0 0 1 9 6 l20 38 a12 12 0 0 1 1 5 v27 h-70 z" fill="url(#ill-navy)"></path>
+                            <path d="M214 160 h26 a6 6 0 0 1 5 3 l14 27 h-45 z" fill="#cfe6ff"></path>
+                            <rect x="30" y="222" width="250" height="12" rx="6" fill="#0b2a5b"></rect>
+                            <circle cx="82" cy="238" r="20" fill="#13254a"></circle>
+                            <circle cx="82" cy="238" r="8" fill="#cfd8e6"></circle>
+                            <circle cx="236" cy="238" r="20" fill="#13254a"></circle>
+                            <circle cx="236" cy="238" r="8" fill="#cfd8e6"></circle>
+                        </g>
+                        <g class="ill-float">
+                            <rect x="288" y="64" width="82" height="152" rx="16" fill="url(#ill-navy)" filter="url(#ill-drop)"></rect>
+                            <rect x="295" y="78" width="68" height="128" rx="10" class="ill-panel"></rect>
+                            <rect x="316" y="70" width="26" height="4" rx="2" fill="#2a4f8f"></rect>
+                            <rect x="304" y="90" width="40" height="5" rx="2.5" class="ill-line"></rect>
+                            <rect x="304" y="102" width="50" height="4" rx="2" class="ill-line-soft"></rect>
+                            <rect x="304" y="112" width="44" height="4" rx="2" class="ill-line-soft"></rect>
+                            <rect x="304" y="122" width="50" height="4" rx="2" class="ill-line-soft"></rect>
+                            <rect x="304" y="136" width="22" height="22" rx="3" fill="#0b2a5b"></rect>
+                            <rect x="308" y="140" width="5" height="5" fill="#ffffff"></rect>
+                            <rect x="317" y="140" width="5" height="5" fill="#ffffff"></rect>
+                            <rect x="308" y="149" width="5" height="5" fill="#ffffff"></rect>
+                            <rect x="317" y="149" width="3" height="3" fill="#ffffff"></rect>
+                            <rect x="332" y="140" width="22" height="5" rx="2.5" class="ill-line"></rect>
+                            <rect x="332" y="150" width="16" height="4" rx="2" class="ill-line-soft"></rect>
+                            <rect x="304" y="172" width="50" height="22" rx="8" fill="url(#ill-blue)"></rect>
+                            <polyline points="322,183 327,188 336,178" class="ill-tick"></polyline>
+                        </g>
+                        <g class="ill-float-alt">
+                            <circle cx="364" cy="64" r="18" fill="url(#ill-green)" filter="url(#ill-drop)"></circle>
+                            <g transform="translate(353.8 53.8) scale(.85)" class="ill-sync">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </g>
+                        </g>
+                        <path d="M40 72 h14 M47 65 v14" class="ill-plus blue"></path>
+                        <path d="M250 56 h12 M256 50 v12" class="ill-plus gold"></path>
+                        <circle cx="270" cy="110" r="4" class="ill-dot"></circle>
+                    </svg>
+                    <figcaption>
+                        <h2 th:text="#{login.slide3.title}">Moving shops, even offline</h2>
+                        <p th:text="#{login.slide3.text}">Drivers sell from the vehicle, and sales sync as soon as the signal is back.</p>
+                    </figcaption>
+                </figure>
+            </div>
+
+            <div class="slide-dots">
+                <button type="button" class="slide-dot is-active" aria-current="true" th:aria-label="#{login.slideGo(1)}"></button>
+                <button type="button" class="slide-dot" aria-current="false" th:aria-label="#{login.slideGo(2)}"></button>
+                <button type="button" class="slide-dot" aria-current="false" th:aria-label="#{login.slideGo(3)}"></button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="auth-copy" th:text="#{login.brand.copyright}">© 2026 iWarehouse. All rights reserved.</footer>
 </body>
 </html>

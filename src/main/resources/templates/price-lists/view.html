@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${list.name}, ~{::content})}">
+<head><title>Price List - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1>
+                <span th:text="${list.name}">Retail (counter)</span>
+                <span class="you-badge" th:if="${list.defaultList}" th:text="#{pricelist.defaultBadge}">Default</span>
+            </h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${list.code}">RETAIL</span> &middot;
+                <span th:text="${list.pricesIncludeVat} ? #{pricelist.vatIncludedLong} : #{pricelist.vatExcludedLong}">Prices include VAT</span> &middot;
+                <span th:text="#{pricelist.minAreaLong(${minArea.stripTrailingZeros().toPlainString()})}">Minimum 0.25 m² charged per piece</span>
+                <span class="badge badge-secondary" th:unless="${list.enabled}" th:text="#{common.inactive}">Inactive</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/price-lists" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')">
+                <form th:if="${!list.defaultList and list.enabled}" th:action="@{/price-lists/{id}/default(id=${list.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{pricelist.defaultConfirm(${list.name})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{pricelist.makeDefault}">Make default</button>
+                </form>
+                <form th:if="${!list.defaultList and list.enabled}" th:action="@{/price-lists/{id}/disable(id=${list.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{pricelist.disableConfirm(${list.name})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{product.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${list.enabled}" th:action="@{/price-lists/{id}/enable(id=${list.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{pricelist.enableConfirm(${list.name})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{product.enable}">Activate</button>
+                </form>
+                <a th:href="@{/price-lists/{id}/edit(id=${list.id})}" class="btn btn-outline" th:text="#{pricelist.editDetails}">Edit details</a>
+                <a th:href="@{/price-lists/{id}/prices(id=${list.id})}" class="btn btn-primary" th:text="#{pricelist.editPrices}">Edit prices</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-prices" th:classappend="${tab == 'prices'} ? 'active'">
+                <span th:text="#{pricelist.glassTab}">Glass prices</span>
+                <span class="section-count" th:text="${#lists.size(productRows.?[price != null])}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-processing" th:classappend="${tab == 'processing'} ? 'active'">
+                <span th:text="#{pricelist.processingTab}">Processing</span>
+                <span class="section-count" th:text="${#lists.size(serviceRows.?[price != null])}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-customers" th:classappend="${tab == 'customers'} ? 'active'" th:unless="${list.defaultList}">
+                <span th:text="#{pricelist.customers}">Customers</span>
+                <span class="section-count" th:text="${#lists.size(customers)}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{pricelist.priceHistory}">Price history</button>
+        </div>
+
+        <div class="section-body">
+            <!-- Glass prices per m² -->
+            <div class="tab-content" id="tab-prices" th:classappend="${tab == 'prices'} ? 'active'">
+                <p class="tab-intro" th:unless="${list.defaultList}" th:text="#{pricelist.fallbackIntro(${defaultList.name})}">Products without a price here use the Retail price.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{product.name}">Product</th>
+                                <th th:text="#{product.code}">Code</th>
+                                <th class="num" th:text="#{pricelist.pricePerM2}">Price per m²</th>
+                                <th class="num" th:unless="${list.defaultList}" th:text="${defaultList.name}">Retail (counter)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${productRows}">
+                                <td><th:block th:replace="~{products/list :: productName(${r.product})}"></th:block></td>
+                                <td class="mono" th:text="${r.product.code}">CLR-6</td>
+                                <td class="num nowrap">
+                                    <span class="strong" th:if="${r.price != null}" th:text="${@num.money(r.price)}">25,000</span>
+                                    <span class="badge badge-warning" th:if="${r.price == null and (list.defaultList or r.defaultPrice == null)}" th:text="#{pricelist.notPriced}">Not priced</span>
+                                    <span class="text-muted" th:if="${r.price == null and !list.defaultList and r.defaultPrice != null}" th:text="#{pricelist.usesDefault}">uses default</span>
+                                </td>
+                                <td class="num nowrap text-muted" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">24,000</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(productRows)}">
+                                <td colspan="4"><div class="empty-state"><h3 th:text="#{product.empty}">No glass products found</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Processing prices per charge unit -->
+            <div class="tab-content" id="tab-processing" th:classappend="${tab == 'processing'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{service.name}">Name</th>
+                                <th th:text="#{service.unit}">Charged per</th>
+                                <th class="num" th:text="#{pricelist.price}">Price</th>
+                                <th class="num" th:unless="${list.defaultList}" th:text="${defaultList.name}">Retail (counter)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${serviceRows}">
+                                <td><span th:text="${r.service.name}">Edging</span> <span class="cell-sub mono" th:text="${r.service.code}">EDGING</span></td>
+                                <td th:text="#{${'service.unit.' + r.service.chargeUnit}}">metre of edge</td>
+                                <td class="num nowrap">
+                                    <span class="strong" th:if="${r.price != null}" th:text="${@num.money(r.price)}">1,500</span>
+                                    <span class="badge badge-warning" th:if="${r.price == null and (list.defaultList or r.defaultPrice == null)}" th:text="#{pricelist.notPriced}">Not priced</span>
+                                    <span class="text-muted" th:if="${r.price == null and !list.defaultList and r.defaultPrice != null}" th:text="#{pricelist.usesDefault}">uses default</span>
+                                </td>
+                                <td class="num nowrap text-muted" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">1,500</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Customers on this list -->
+            <div class="tab-content" id="tab-customers" th:classappend="${tab == 'customers'} ? 'active'" th:unless="${list.defaultList}">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{customer.name}">Customer</th>
+                                <th th:text="#{customer.type}">Type</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${customers}" th:classappend="${!c.enabled} ? 'row-inactive'">
+                                <td>
+                                    <a class="row-link strong" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:href="@{/customers/{id}(id=${c.id})}" th:text="${c.name}">Kigali Glaziers</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${c.name}">Kigali Glaziers</span>
+                                    <div class="cell-sub mono" th:text="${c.code}">CUS-WH-00002</div>
+                                </td>
+                                <td><span class="cust-type" th:classappend="${'cust-' + #strings.toLowerCase(c.type)}" th:text="#{${'customer.type.' + c.type}}">Contractor</span></td>
+                                <td>
+                                    <span class="badge badge-success" th:if="${c.enabled}" th:text="#{common.active}">Active</span>
+                                    <span class="badge badge-secondary" th:unless="${c.enabled}" th:text="#{common.inactive}">Inactive</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(customers)}">
+                                <td colspan="3"><div class="empty-state"><h3 th:text="#{pricelist.noCustomers}">No customer uses this list yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Price history: the list's details and every price row (AUD-10) -->
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <div class="table-container">
+                    <table class="price-history">
+                        <thead>
+                            <tr>
+                                <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                                <th th:text="#{activity.user}">User</th>
+                                <th th:text="#{pricelist.historyWhat}">What</th>
+                                <th th:text="#{pricelist.historyChange}">Change</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${history.content}"
+                                th:with="subject=${subjects[c.entityId]},
+                                         field=${c.entityType == 'PriceListItem' ? 'pricePerM2' : (c.entityType == 'ServicePrice' ? 'price' : null)},
+                                         before=${field != null and c.beforeData != null ? c.beforeData.get(field) : null},
+                                         after=${field != null and c.afterData != null ? c.afterData.get(field) : null}">
+                                <td class="nowrap" th:text="${#temporals.format(c.serverTime, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
+                                <td th:text="${c.username ?: #messages.msg('audit.system')}">admin</td>
+                                <td>
+                                    <th:block th:if="${c.entityType == 'PriceListItem' and subject != null}">
+                                        <th:block th:replace="~{products/list :: productName(${subject})}"></th:block>
+                                    </th:block>
+                                    <span th:if="${c.entityType == 'ServicePrice' and subject != null}" th:text="${subject.name}">Edging</span>
+                                    <span th:if="${c.entityType == 'PriceList'}" th:text="#{pricelist.historyList}">Price list details</span>
+                                </td>
+                                <td>
+                                    <th:block th:if="${field != null}">
+                                        <span class="price-old" th:text="${before != null} ? ${@num.moneyText(before)} : #{pricelist.notPriced}">24,000</span>
+                                        <span class="price-arrow" aria-hidden="true">→</span>
+                                        <span class="price-new" th:text="${after != null} ? ${@num.moneyText(after)} : #{pricelist.cleared}">25,000</span>
+                                    </th:block>
+                                    <span th:if="${field == null}" class="text-muted"
+                                          th:text="${c.changedFields == null ? '' : #strings.arrayJoin(c.changedFields, ', ')}">name</span>
+                                </td>
+                                <td><a th:href="@{/audit/{id}(id=${c.id})}" class="btn btn-outline btn-sm" th:text="#{audit.viewChange}">View</a></td>
+                            </tr>
+                            <tr th:if="${history.totalElements == 0}">
+                                <td colspan="5"><div class="empty-state"><h3 th:text="#{pricelist.noHistory}">No changes yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/price-lists/' + ${list.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

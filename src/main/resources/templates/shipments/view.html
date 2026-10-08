@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${shipment.number}, ~{::content})}">
+<head><title>Shipment - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${shipment.status.name()}, sum=${sheet.summary}, claim=${shipment.claimStatus.name()},
+        canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_SHIPMENT'')')},
+        canPost=${#authorization.expression('hasAuthority(''PERM_POST_LANDED_COST'')')},
+        seeReceipts=${#authorization.expression('hasAuthority(''PAGE_RECEIVING'') and hasAuthority(''PERM_VIEW_GOODS_RECEIPT'')')},
+        showClaim=${sum.broken > 0 or claim != 'NONE'}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${shipment.number}">SHP-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span class="mono" th:if="${shipment.reference != null}" th:text="${shipment.reference + ' · '}">MSKU 123456-7 · </span>
+                <span th:text="#{shipment.arrivedOn(${#temporals.format(shipment.arrivalDate, 'yyyy-MM-dd')})}">arrived 2026-10-01</span>
+                &middot; <th:block th:replace="~{shipments/list :: shipmentStatus(${shipment.status})}"></th:block>
+                <th:block th:if="${claim != 'NONE'}">
+                    <th:block th:replace="~{shipments/list :: claimStatus(${shipment.claimStatus})}"></th:block>
+                </th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/shipments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${canManage and s == 'OPEN'}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
+                        th:if="${!shipment.hasPostedCosts()}" th:text="#{shipment.cancel}">Cancel shipment</button>
+                <a th:href="@{/shipments/{id}/edit(id=${shipment.id})}" class="btn btn-outline" th:text="#{shipment.edit}">Edit and add bills</a>
+                <form th:if="${!shipment.hasDraftCosts() and shipment.hasPostedCosts()}" th:action="@{/shipments/{id}/close(id=${shipment.id})}"
+                      method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{shipment.closeConfirm(${shipment.number})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{shipment.close}">Costs complete</button>
+                </form>
+            </th:block>
+            <form th:if="${canPost and s == 'OPEN' and shipment.hasDraftCosts()}" th:action="@{/shipments/{id}/post(id=${shipment.id})}"
+                  method="post" class="row-action-form confirm-submit"
+                  th:attr="data-confirm=${sum.pending != null} ? #{shipment.postConfirm(${sum.draftLines}, ${@num.money(sum.pending)}, ${sum.crates})} : #{shipment.postConfirmNoRate(${sum.draftLines})}">
+                <button type="submit" class="btn btn-primary" th:text="#{shipment.post}">Post bills to stock cost</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{shipment.cancelledNote}">Cancelled:</strong> <span th:text="${shipment.cancelReason}">Entered twice</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'OPEN' and shipment.hasDraftCosts()}" th:text="#{shipment.draftNote(${sum.draftLines})}">2 bills are not posted yet: they are not in the unit costs. Check them, then post.</div>
+    <div class="doc-note" th:if="${s == 'OPEN' and #lists.isEmpty(shipment.receipts)}" th:text="#{shipment.noReceiptsNote}">No receipt linked yet: link the posted receipts of the crates that came in this shipment before posting.</div>
+    <div class="doc-note" th:if="${s == 'CLOSED'}">
+        <strong th:text="#{shipment.closedNote}">Costs complete:</strong>
+        <span th:text="${#temporals.format(shipment.closedAt, 'yyyy-MM-dd HH:mm') + ' · ' + shipment.closedBy}">2026-10-08 10:00 · admin</span>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receipt.crates}">Crates</div>
+                <div class="kpi-value" th:text="${sum.crates}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{shipment.sheetsKpi(${sum.sheets}, ${sum.broken})}">38 good · 2 broken</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{shipment.areaKpi}">m² shipped</div>
+                <div class="kpi-value" th:text="${@num.m2(sum.area)}">288.9</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{${'shipment.method.' + shipment.allocationMethod}}">Shared by area</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{shipment.postedKpi(${base.code})}">Import costs posted (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(sum.posted)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">4,104,200</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{shipment.perM2Kpi(${@num.price(sum.extraPerM2)})}">+28,412.67 per m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${sum.draftLines > 0} ? 'orange' : 'green'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{shipment.draftKpi}">Bills not posted</div>
+                <div class="kpi-value" th:text="${sum.draftLines}">2</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:if="${sum.draftLines > 0 and sum.pending != null}" th:text="#{shipment.pendingKpi(${@num.money(sum.pending)})}">about 1,200,000 RWF at their rates</span>
+                    <span class="vs" th:if="${sum.draftLines > 0 and sum.pending == null}" th:text="#{shipment.pendingNoRate}">a rate is missing: see the bills</span>
+                    <span class="vs" th:if="${sum.draftLines == 0}" th:text="#{shipment.allPosted}">all posted</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-costs" th:classappend="${tab == 'costs'} ? 'active'">
+                <span th:text="#{shipment.costsTab}">Bills</span>
+                <span class="section-count" th:text="${shipment.costs.size()}">3</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-crates" th:classappend="${tab == 'crates'} ? 'active'">
+                <span th:text="#{shipment.cratesTab}">Landed cost</span>
+                <span class="section-count" th:text="${sum.crates}">2</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-claim" th:classappend="${tab == 'claim'} ? 'active'" th:if="${showClaim}">
+                <span th:text="#{shipment.claimTab}">Broken on arrival</span>
+                <span class="section-count" th:text="${sum.broken}">2</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <!-- Bills -->
+            <div class="tab-content" id="tab-costs" th:classappend="${tab == 'costs' or (tab == 'claim' and !showClaim)} ? 'active'">
+                <div class="detail-list">
+                    <div class="item item-full">
+                        <label th:text="#{shipment.receipts}">Receipts</label>
+                        <div class="value">
+                            <span th:if="${#lists.isEmpty(shipment.receipts)}">—</span>
+                            <div th:each="r : ${shipment.receipts}" class="shipment-receipt">
+                                <a class="mono" th:if="${seeReceipts}" th:href="@{/goods-receipts/{id}(id=${r.goodsReceipt.id})}" th:text="${r.receiptNumber}">GRN-WH-2026-000001</a>
+                                <span class="mono" th:unless="${seeReceipts}" th:text="${r.receiptNumber}">GRN-WH-2026-000001</span>
+                                <span class="cell-sub" th:text="${r.goodsReceipt.purchaseOrder.supplier.name + ' · ' + r.goodsReceipt.purchaseOrder.number + ' · ' + #temporals.format(r.goodsReceipt.receivedDate, 'yyyy-MM-dd')}">Shandong Glass Co. · PO-WH-2026-000001 · 2026-10-08</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{shipment.method}">Shared by</label>
+                        <div class="value" th:text="#{${'shipment.method.' + shipment.allocationMethod}}">By area</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{shipment.reference}">Container / B/L</label>
+                        <div class="value mono" th:text="${shipment.reference ?: '—'}">MSKU 123456-7</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${shipment.notes ?: '—'}">—</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="cost-table">
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{shipment.cost}">Cost</th>
+                                <th th:text="#{shipment.bill}">Bill</th>
+                                <th class="num" th:text="#{shipment.amount}">Amount</th>
+                                <th th:text="#{shipment.rate}">Rate</th>
+                                <th class="num" th:text="${base.code}">RWF</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${shipment.costs}" th:with="draft=${c.status.name() == 'DRAFT'}, p=${sheet.previews.get(c.id)}">
+                                <td class="num text-muted" th:text="${c.lineNo}">1</td>
+                                <td>
+                                    <strong th:text="#{${'shipment.costType.' + c.costType}}">Freight</strong>
+                                    <div class="cell-sub" th:if="${c.description != null}" th:text="${c.description}">Sea freight Qingdao - Mombasa</div>
+                                    <div class="cell-sub" th:if="${c.supplier != null}" th:text="#{shipment.paidTo(${c.supplier.name})}">to Bolloré</div>
+                                </td>
+                                <td class="nowrap">
+                                    <span class="mono" th:text="${c.invoiceRef ?: '—'}">INV-2231</span>
+                                    <div class="cell-sub" th:text="${#temporals.format(c.invoiceDate, 'yyyy-MM-dd')}">2026-10-01</div>
+                                </td>
+                                <td class="num nowrap" th:classappend="${c.amount.signum() < 0} ? 'text-danger'"
+                                    th:text="${@num.amount(c.amount, 2) + ' ' + c.currencyCode}">2,000.00 USD</td>
+                                <td class="nowrap">
+                                    <th:block th:if="${!draft}">
+                                        <span th:text="${c.rateSource == null} ? #{shipment.baseRate} : ${@num.rate(c.rate)}">1,452.10</span>
+                                        <div class="cell-sub" th:if="${c.rateSource != null}" th:text="${#messages.msg('rate.source.' + c.rateSource) + ' · ' + #temporals.format(c.rateDate, 'yyyy-MM-dd')}">BNR · 2026-10-01</div>
+                                    </th:block>
+                                    <th:block th:if="${draft and p != null and p.ok()}">
+                                        <span class="text-muted" th:text="${p.rate.source == null} ? #{shipment.baseRate} : ${@num.rate(p.rate.rate)}">1,452.10</span>
+                                        <div class="cell-sub" th:if="${p.rate.source != null}" th:text="${#messages.msg('rate.source.' + p.rate.source) + ' · ' + #temporals.format(p.rate.rateDate, 'yyyy-MM-dd')}">BNR · 2026-10-01</div>
+                                    </th:block>
+                                    <span th:if="${draft and p != null and !p.ok()}" class="text-danger cell-wrap" th:text="${#messages.msgWithParams(p.errorKey, p.errorArgs)}">No BNR rate for USD on or before 2026-10-01</span>
+                                </td>
+                                <td class="num nowrap">
+                                    <span th:if="${!draft}" th:text="${@num.amount(c.amountBase, base.decimals)}">2,904,200</span>
+                                    <span th:if="${draft and p != null and p.ok()}" class="text-muted" th:text="${'≈ ' + @num.amount(p.base, base.decimals)}">≈ 2,904,200</span>
+                                </td>
+                                <td>
+                                    <span th:if="${!draft}" class="badge badge-success" th:text="#{shipment.costPosted(${c.postingNo})}">Posted #1</span>
+                                    <span th:if="${draft}" class="badge badge-warning" th:text="#{shipment.costDraft}">Draft</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${shipment.costs.isEmpty()}">
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{shipment.noCosts}">No bills yet</h3>
+                                        <p th:text="#{shipment.noCostsHint}">Add the freight, insurance, duty, clearing and transport bills with Edit</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:if="${!shipment.costs.isEmpty()}">
+                            <tr>
+                                <th colspan="5" th:text="#{shipment.totalPosted}">Posted (rounded once per posting)</th>
+                                <th class="num" th:text="${@num.money(sum.posted)}">4,104,200</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{shipment.costsNote}">Each bill is converted at the rate of its own date; customs duty at the customs rate. Draft amounts use the rate posting would take now. Posting rounds the RWF total once and shares it over the crates.</p>
+
+                <th:block th:if="${!#lists.isEmpty(sheet.postings)}">
+                    <h3 class="detail-heading" th:text="#{shipment.postings}">Postings</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="num">#</th>
+                                    <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                                    <th th:text="#{activity.user}">User</th>
+                                    <th class="num" th:text="#{shipment.postingTotal}">Total</th>
+                                    <th class="num" th:text="#{shipment.toStock}">To units in stock</th>
+                                    <th class="num" th:text="#{shipment.expensed}">Expensed</th>
+                                    <th class="num" th:text="#{shipment.brokenShare}">Broken on arrival</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="p : ${sheet.postings}">
+                                    <td class="num" th:text="${p.number}">1</td>
+                                    <td class="nowrap" th:text="${#temporals.format(p.at, 'yyyy-MM-dd HH:mm')}">2026-10-08 10:12</td>
+                                    <td th:text="${p.username}">admin</td>
+                                    <td class="num strong" th:text="${@num.money(p.amount)}">4,104,200</td>
+                                    <td class="num" th:text="${@num.money(p.toStock)}">3,899,000</td>
+                                    <td class="num" th:text="${@num.money(p.expensed)}">0</td>
+                                    <td class="num" th:text="${@num.money(p.broken)}">205,200</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="form-note" th:text="#{shipment.postingsNote}">Units sold, cut or broken before a bill was posted keep their cost: their share is expensed. The share of sheets broken on arrival goes to the claim.</p>
+                </th:block>
+            </div>
+
+            <!-- Crates and landed cost per m² -->
+            <div class="tab-content" id="tab-crates" th:classappend="${tab == 'crates'} ? 'active'">
+                <p class="tab-intro" th:text="#{shipment.cratesIntro}">Landed cost per m² = purchase cost per m² (order price at the receipt's rate) + import costs per m² shipped. Broken sheets were shipped too, so they carry their share.</p>
+                <div class="table-container">
+                    <table class="landed-table">
+                        <thead>
+                            <tr>
+                                <th th:text="#{receipt.crate}">Crate</th>
+                                <th th:text="#{product.name}">Product</th>
+                                <th th:text="#{po.size}">Size (mm)</th>
+                                <th class="num" th:text="#{shipment.sheetsCol}">Sheets</th>
+                                <th class="num" th:text="#{shipment.m2Shipped}">m² shipped</th>
+                                <th class="num" th:if="${shipment.allocationMethod.name() == 'VALUE'}" th:text="#{shipment.basis.VALUE}">Value (RWF)</th>
+                                <th class="num" th:if="${shipment.allocationMethod.name() == 'WEIGHT'}" th:text="#{shipment.basis.WEIGHT}">Weight (kg)</th>
+                                <th class="num" th:text="#{shipment.purchasePerM2}">Purchase per m²</th>
+                                <th class="num" th:text="#{shipment.importPerM2}">Import costs per m²</th>
+                                <th class="num" th:text="#{shipment.landedPerM2}">Landed per m²</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${sheet.crates}" th:with="c=${l.crate}">
+                                <td>
+                                    <span class="mono strong" th:text="${c.batchNo}">C-01</span>
+                                    <div class="cell-sub mono" th:text="${c.goodsReceipt.number}">GRN-WH-2026-000001</div>
+                                </td>
+                                <td><th:block th:replace="~{products/list :: productName(${c.product})}"></th:block></td>
+                                <td class="nowrap" th:text="${c.widthMm + ' × ' + c.heightMm}">3210 × 2250</td>
+                                <td class="num nowrap">
+                                    <span th:text="${c.sheets}">19</span><span class="text-danger" th:if="${c.broken > 0}" th:text="${' + ' + c.broken}"> + 1</span>
+                                </td>
+                                <td class="num" th:text="${@num.m2(l.basis.area())}">144.45</td>
+                                <td class="num" th:if="${shipment.allocationMethod.name() == 'VALUE'}" th:text="${@num.amount(l.basis.value(), base.decimals)}">879,867</td>
+                                <td class="num" th:if="${shipment.allocationMethod.name() == 'WEIGHT'}" th:text="${@num.kg(l.basis.weight())}">2,166.75</td>
+                                <td class="num" th:text="${@num.price(c.costPerM2)}">6,091.05</td>
+                                <td class="num" th:text="${@num.price(l.extraPerM2)}">28,412.67</td>
+                                <td class="num">
+                                    <strong th:text="${@num.price(l.landedPerM2)}">34,503.72</strong>
+                                    <div class="cell-sub" th:if="${sum.pending != null}" th:text="#{shipment.pendingSub(${@num.price(l.pendingPerM2)})}">+1,200.00 with the draft bills</div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(sheet.crates)}">
+                                <td colspan="10">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{shipment.noCrates}">No crates yet</h3>
+                                        <p th:text="#{shipment.noCratesHint}">Link the posted receipts of this shipment with Edit</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:if="${!#lists.isEmpty(sheet.crates)}">
+                            <tr>
+                                <th colspan="3" th:text="#{po.total}">Total</th>
+                                <th class="num nowrap"><span th:text="${sum.sheets}">38</span><span class="text-danger" th:if="${sum.broken > 0}" th:text="${' + ' + sum.broken}"> + 2</span></th>
+                                <th class="num" th:text="${@num.m2(sum.area)}">288.9</th>
+                                <th th:if="${shipment.allocationMethod.name() != 'AREA'}"></th>
+                                <th></th>
+                                <th class="num" th:text="${@num.price(sum.extraPerM2)}">28,412.67</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Broken on arrival and the claim (PRC-06) -->
+            <div class="tab-content" id="tab-claim" th:classappend="${tab == 'claim'} ? 'active'" th:if="${showClaim}">
+                <p class="tab-intro" th:text="#{shipment.claimIntro}">Sheets found broken on arrival never entered stock. Their value is their purchase cost plus their share of the posted import costs.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{receipt.crate}">Crate</th>
+                                <th th:text="#{product.name}">Product</th>
+                                <th th:text="#{po.size}">Size (mm)</th>
+                                <th class="num" th:text="#{receipt.broken}">Broken</th>
+                                <th class="num">m²</th>
+                                <th class="num" th:text="#{shipment.brokenValue(${base.code})}">Value (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${sheet.crates}" th:if="${l.crate.broken > 0}" th:with="c=${l.crate}">
+                                <td>
+                                    <span class="mono strong" th:text="${c.batchNo}">C-01</span>
+                                    <div class="cell-sub mono" th:text="${c.goodsReceipt.number}">GRN-WH-2026-000001</div>
+                                </td>
+                                <td><th:block th:replace="~{products/list :: productName(${c.product})}"></th:block></td>
+                                <td class="nowrap" th:text="${c.widthMm + ' × ' + c.heightMm}">3210 × 2250</td>
+                                <td class="num text-danger" th:text="${c.broken}">1</td>
+                                <td class="num" th:text="${@num.m2(c.brokenArea)}">7.2225</td>
+                                <td class="num" th:text="${@num.amount(l.brokenValue, base.decimals)}">249,203</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="3" th:text="#{po.total}">Total</th>
+                                <th class="num" th:text="${sum.broken}">2</th>
+                                <th></th>
+                                <th class="num" th:text="${@num.money(sum.brokenValue)}">498,406</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="claim-box">
+                    <h3 class="detail-heading" th:text="#{shipment.claimTitle}">Claim</h3>
+                    <th:block th:if="${claim == 'NONE'}">
+                        <p class="text-muted" th:text="#{shipment.claimNone}">No claim recorded. Record it when it is sent to the supplier or the insurer.</p>
+                        <button type="button" class="btn btn-primary btn-sm" data-modal-open="claim-modal"
+                                th:if="${canManage and s != 'CANCELLED' and sum.broken > 0}" th:text="#{shipment.claimOpen}">Record claim</button>
+                    </th:block>
+                    <th:block th:if="${claim != 'NONE'}">
+                        <div class="detail-list">
+                            <div class="item">
+                                <label th:text="#{common.status}">Status</label>
+                                <div class="value"><th:block th:replace="~{shipments/list :: claimStatus(${shipment.claimStatus})}"></th:block></div>
+                            </div>
+                            <div class="item">
+                                <label th:text="#{shipment.claimParty}">Claimed from</label>
+                                <div class="value" th:text="${shipment.claimParty}">Shandong Glass Co.</div>
+                            </div>
+                            <div class="item">
+                                <label th:text="#{shipment.claimRefDate}">Reference and date</label>
+                                <div class="value" th:text="${(shipment.claimRef != null ? shipment.claimRef + ' · ' : '') + #temporals.format(shipment.claimDate, 'yyyy-MM-dd')}">CLM-77 · 2026-10-08</div>
+                            </div>
+                            <div class="item">
+                                <label th:text="#{shipment.claimAmount(${base.code})}">Claimed (RWF)</label>
+                                <div class="value strong" th:text="${@num.money(shipment.claimAmount)}">498,406</div>
+                            </div>
+                            <div class="item" th:if="${claim == 'SETTLED'}">
+                                <label th:text="#{shipment.claimReceived(${base.code})}">Received (RWF)</label>
+                                <div class="value strong" th:text="${@num.money(shipment.claimSettledAmount)}">450,000</div>
+                            </div>
+                            <div class="item" th:if="${shipment.claimNote != null}">
+                                <label th:text="${claim == 'REJECTED'} ? #{shipment.claimWhyRejected} : #{shipment.claimNote}">Note</label>
+                                <div class="value" th:text="${shipment.claimNote}">Credit note CN-12</div>
+                            </div>
+                        </div>
+                        <div class="btn-group" th:if="${canManage and claim == 'OPEN'}">
+                            <button type="button" class="btn btn-outline btn-danger-outline btn-sm" data-modal-open="reject-modal" th:text="#{shipment.claimReject}">Rejected</button>
+                            <button type="button" class="btn btn-primary btn-sm" data-modal-open="settle-modal" th:text="#{shipment.claimSettle}">Settled</button>
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <p class="tab-intro" th:text="#{shipment.historyIntro}">Changes to the shipment, its bills and its receipts, newest first.</p>
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/shipments/' + ${shipment.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${canManage and s == 'OPEN' and !shipment.hasPostedCosts()}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{shipment.cancelTitle(${shipment.number})},
+                @{/shipments/{id}/cancel(id=${shipment.id})}, #{shipment.cancelText}, #{shipment.cancel})}"></div>
+    </th:block>
+
+    <th:block th:if="${canManage and claim == 'NONE' and s != 'CANCELLED' and sum.broken > 0}">
+        <div class="modal-overlay" id="claim-modal">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="claim-modal-title">
+                <div class="modal-header">
+                    <h3 id="claim-modal-title" th:text="#{shipment.claimOpenTitle(${shipment.number})}">Claim for broken sheets</h3>
+                    <button type="button" class="modal-close" data-modal-close="claim-modal" th:aria-label="#{common.cancel}">&times;</button>
+                </div>
+                <form method="post" th:action="@{/shipments/{id}/claim(id=${shipment.id})}">
+                    <div class="modal-body">
+                        <p class="text-muted" th:text="#{shipment.claimOpenText(${sum.broken}, ${@num.money(sum.brokenValue)})}">2 sheets broken on arrival, worth 498,406 RWF at landed cost.</p>
+                        <div class="form-group">
+                            <label for="claim-party" th:text="#{shipment.claimParty}">Claimed from</label>
+                            <input type="text" id="claim-party" name="party" maxlength="100" required autocomplete="off"
+                                   th:value="${#lists.isEmpty(shipment.receipts)} ? '' : ${shipment.receipts.iterator().next().goodsReceipt.purchaseOrder.supplier.name}">
+                            <span class="hint" th:text="#{shipment.claimPartyHint}">The supplier, or the insurer</span>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="claim-ref" th:text="#{shipment.claimRef}">Claim reference</label>
+                                <input type="text" id="claim-ref" name="ref" maxlength="60" class="input-code" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="claim-date" th:text="#{shipment.claimDate}">Sent on</label>
+                                <input type="date" id="claim-date" name="date" required th:value="${#temporals.format(today, 'yyyy-MM-dd')}"
+                                       th:min="${#temporals.format(shipment.arrivalDate, 'yyyy-MM-dd')}" th:max="${#temporals.format(today, 'yyyy-MM-dd')}">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="claim-amount" th:text="#{shipment.claimAmount(${base.code})}">Claimed (RWF)</label>
+                            <input type="number" id="claim-amount" name="amount" min="0.01" step="0.01" required inputmode="decimal"
+                                   th:value="${@num.plain(sum.brokenValue)}">
+                            <span class="hint" th:text="#{shipment.claimAmountHint}">Proposed: the broken sheets at landed cost</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" data-modal-close="claim-modal" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{shipment.claimOpen}">Record claim</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </th:block>
+
+    <th:block th:if="${canManage and claim == 'OPEN'}">
+        <div class="modal-overlay" id="settle-modal">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settle-modal-title">
+                <div class="modal-header">
+                    <h3 id="settle-modal-title" th:text="#{shipment.claimSettleTitle}">Claim settled</h3>
+                    <button type="button" class="modal-close" data-modal-close="settle-modal" th:aria-label="#{common.cancel}">&times;</button>
+                </div>
+                <form method="post" th:action="@{/shipments/{id}/claim/settle(id=${shipment.id})}">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="settle-amount" th:text="#{shipment.claimReceived(${base.code})}">Received (RWF)</label>
+                            <input type="number" id="settle-amount" name="received" min="0" step="0.01" required inputmode="decimal"
+                                   th:value="${@num.plain(shipment.claimAmount)}">
+                            <span class="hint" th:text="#{shipment.claimReceivedHint}">Paid or credited by the supplier or insurer</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="settle-note" th:text="#{shipment.claimNote}">Note</label>
+                            <input type="text" id="settle-note" name="note" maxlength="255" autocomplete="off" th:placeholder="#{shipment.claimNotePh}">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" data-modal-close="settle-modal" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{shipment.claimSettle}">Settled</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{shipment.claimRejectTitle},
+                @{/shipments/{id}/claim/reject(id=${shipment.id})}, #{shipment.claimRejectText}, #{shipment.claimReject})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

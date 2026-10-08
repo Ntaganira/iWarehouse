@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Reason</title></head>
+<body>
+<!--/*
+  A dialog that posts an action with a mandatory reason (Audit rule 4: cancellations, closures...).
+  Open it with a button carrying data-modal-open="<id>".
+    <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{po.cancelTitle}, @{/purchase-orders/{id}/cancel(id=${order.id})}, #{po.cancelText}, #{po.cancel})}"></div>
+*/-->
+<div th:fragment="reasonModal(id, title, action, message, submitLabel)" class="modal-overlay" th:id="${id}">
+    <div class="modal" role="dialog" aria-modal="true" th:attr="aria-labelledby=${id + '-title'}">
+        <div class="modal-header">
+            <h3 th:id="${id + '-title'}" th:text="${title}">Cancel order</h3>
+            <button type="button" class="modal-close" th:attr="data-modal-close=${id}" th:aria-label="#{common.cancel}">&times;</button>
+        </div>
+        <form method="post" th:action="${action}" class="reason-form">
+            <div class="modal-body">
+                <p class="text-muted" th:text="${message}">Why is this order cancelled?</p>
+                <div class="form-group">
+                    <label th:for="${id + '-reason'}" th:text="#{reason.label}">Reason</label>
+                    <input type="text" th:id="${id + '-reason'}" name="reason" maxlength="255" required autocomplete="off"
+                           th:placeholder="#{reason.placeholder}">
+                    <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" th:attr="data-modal-close=${id}" th:text="#{common.confirmCancel}">Not now</button>
+                <button type="submit" class="btn btn-danger" th:text="${submitLabel}">Cancel order</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

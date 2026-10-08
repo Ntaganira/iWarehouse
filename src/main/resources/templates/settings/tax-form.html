@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${taxCategoryDto.id == null} ? #{tax.addTitle} : #{tax.editTitle}, ~{::content})}">
+<head><title>Tax Category - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${taxCategoryDto.id == null} ? #{tax.addTitle} : #{tax.editTitle}">Add Tax Category</h1>
+            <div class="subtitle" th:text="#{tax.formSubtitle}">VAT rate applied to products in this category (TAX-01)</div>
+        </div>
+        <a href="/settings?tab=tax" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${taxCategoryDto.id == null} ? @{/settings/tax-categories/new} : @{/settings/tax-categories/{id}/edit(id=${taxCategoryDto.id})}"
+              th:object="${taxCategoryDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{tax.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="20" required
+                           th:readonly="${taxCategoryDto.id != null}" th:placeholder="#{tax.codePh}"
+                           autocapitalize="characters" spellcheck="false" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="${taxCategoryDto.id == null} ? #{tax.codeHint} : #{tax.codeFixed}">Capital letters, digits and underscores</span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{tax.name}">Name</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="100" required th:placeholder="#{tax.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="rate" th:text="#{tax.rate}">Rate</label>
+                    <div class="input-unit">
+                        <input type="number" id="rate" th:field="*{rate}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('rate')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('rate')}" th:errors="*{rate}"></span>
+                    <span class="hint" th:if="${taxCategoryDto.id != null}" th:text="#{tax.rateHint}">A new rate applies to new invoices only.</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmCode" th:text="#{tax.ebmCode}">EBM tax type</label>
+                    <input type="text" id="ebmCode" th:field="*{ebmCode}" class="input-code" maxlength="1" required
+                           autocapitalize="characters" spellcheck="false" th:classappend="${#fields.hasErrors('ebmCode')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmCode')}" th:errors="*{ebmCode}"></span>
+                    <span class="hint" th:text="#{tax.ebmCodeHint}">Letter sent to RRA EBM for each invoice line (A, B, C or D)</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description" th:text="#{tax.description}">Description</label>
+                    <input type="text" id="description" th:field="*{description}" maxlength="255"
+                           th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="checkbox" th:field="*{defaultCategory}"
+                               th:disabled="${category != null and category.defaultCategory}">
+                        <span th:text="#{tax.defaultLabel}">Default category for new products</span>
+                    </label>
+                    <!-- A disabled box is not submitted: keep the value so the default is not lost -->
+                    <input type="hidden" name="defaultCategory" value="true" th:if="${category != null and category.defaultCategory}">
+                    <span class="field-error" th:if="${#fields.hasErrors('defaultCategory')}" th:errors="*{defaultCategory}"></span>
+                    <span class="hint" th:if="${category != null and category.defaultCategory}" th:text="#{tax.defaultFixed}">To change the default, make another category the default.</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{tax.save}">Save Tax Category</button>
+                <a href="/settings?tab=tax" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="section" th:if="${history != null}" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

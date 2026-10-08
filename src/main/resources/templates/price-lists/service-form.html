@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${serviceDto.id == null} ? #{service.addTitle} : #{service.editTitle}, ~{::content})}">
+<head><title>Processing Service - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${serviceDto.id == null} ? #{service.addTitle} : #{service.editTitle}">Add Processing Service</h1>
+            <div class="subtitle" th:text="#{service.formSubtitle}">Work charged on top of the glass, priced on each list (MD-06)</div>
+        </div>
+        <a href="/price-lists#services" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${serviceDto.id == null} ? @{/price-lists/services/new} : @{/price-lists/services/{id}/edit(id=${serviceDto.id})}"
+              th:object="${serviceDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{service.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="20" required
+                           th:readonly="${serviceDto.id != null}" th:placeholder="#{service.codePh}" autocapitalize="characters" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:if="${serviceDto.id != null}" th:text="#{currency.codeFixed}">Fixed after creation</span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{service.name}">Name</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="60" required th:placeholder="#{service.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="chargeUnit" th:text="#{service.unit}">Charged per</label>
+                    <select id="chargeUnit" th:field="*{chargeUnit}" required th:classappend="${#fields.hasErrors('chargeUnit')} ? 'is-invalid'">
+                        <option th:each="u : ${units}" th:value="${u}" th:text="#{${'service.unit.' + u}}">metre of edge</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('chargeUnit')}" th:errors="*{chargeUnit}"></span>
+                    <span class="hint" th:text="${unitFixed} ? #{service.unitFixedHint} : #{service.unitHint}">What one unit of the price covers</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{service.save}">Save Service</button>
+                <a href="/price-lists#services" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

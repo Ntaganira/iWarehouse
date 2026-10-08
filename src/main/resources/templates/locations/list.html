@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{location.title}, ~{::content})}">
+<head><title>Locations - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{location.title}">Locations</h1>
+            <div class="subtitle" th:text="#{location.subtitle}">Sites, zones, racks and slots where glass is stored</div>
+        </div>
+        <a href="/locations/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_LOCATION')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{location.add.SITE}">Add site</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{location.sectionTitle}">Location tree</span>
+                <span class="section-count" th:text="${#lists.size(rows)}">0</span>
+            </h2>
+            <div class="table-toolbar location-toolbar">
+                <button type="button" class="btn btn-outline btn-sm" data-tree="expand" th:text="#{location.expandAll}">Expand all</button>
+                <button type="button" class="btn btn-outline btn-sm" data-tree="collapse" th:text="#{location.collapseAll}">Collapse all</button>
+                <a class="btn btn-outline btn-sm" th:href="${inactive} ? @{/locations} : @{/locations(inactive=true)}"
+                   th:text="${inactive} ? #{location.hideInactive} : #{location.showInactive}">Show inactive</a>
+            </div>
+        </div>
+        <div class="table-container">
+            <table class="location-tree">
+                <thead>
+                    <tr>
+                        <th th:text="#{location.code}">Code</th>
+                        <th th:text="#{location.name}">Name</th>
+                        <th th:text="#{location.type}">Type</th>
+                        <th th:text="#{location.limits}">Rack limits</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_MANAGE_LOCATION')">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${rows}" th:with="l=${row.item}, child=${row.item.type.childType}"
+                        th:attr="data-id=${l.id}, data-parent=${l.parentId}" th:classappend="${!l.enabled} ? 'row-inactive'">
+                        <td>
+                            <div class="tree-cell" th:classappend="${'depth-' + (row.depth > 4 ? 4 : row.depth)}">
+                                <button type="button" class="tree-toggle" th:if="${row.children > 0}" aria-expanded="true"
+                                        th:aria-label="#{location.toggle(${l.code})}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <span class="tree-leaf" th:unless="${row.children > 0}"></span>
+                                <a class="row-link mono strong" th:href="@{/locations/{id}(id=${l.id})}" th:text="${l.code}">WH-A-R01</a>
+                            </div>
+                        </td>
+                        <td th:text="${l.name ?: '—'}">Rack 1</td>
+                        <td><span class="loc-type" th:classappend="${'loc-' + #strings.toLowerCase(l.type)}" th:text="#{${'location.type.' + l.type}}">Rack</span></td>
+                        <td><th:block th:replace="~{locations/list :: limits(${l})}"></th:block></td>
+                        <td>
+                            <span class="badge badge-success" th:if="${l.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${l.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td sec:authorize="hasAuthority('PERM_MANAGE_LOCATION')">
+                            <div class="btn-group" th:if="${l.type.manual}">
+                                <a th:if="${child != null and l.enabled}" th:href="@{/locations/new(parent=${l.id})}" class="action-icon edit"
+                                   th:title="#{${'location.add.' + child}}" th:aria-label="#{${'location.add.' + child}}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </a>
+                                <a th:href="@{/locations/{id}/edit(id=${l.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                                <form th:if="${l.enabled}" th:action="@{/locations/{id}/disable(id=${l.id})}" method="post"
+                                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{location.disableConfirm(${l.code})}">
+                                    <input type="hidden" name="from" value="list">
+                                    <button type="submit" class="action-icon delete" th:title="#{location.disable}" th:aria-label="#{location.disable}">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                    </button>
+                                </form>
+                                <form th:unless="${l.enabled}" th:action="@{/locations/{id}/enable(id=${l.id})}" method="post"
+                                      class="row-action-form confirm-submit" th:attr="data-confirm=#{location.enableConfirm(${l.code})}">
+                                    <input type="hidden" name="from" value="list">
+                                    <button type="submit" class="action-icon pay" th:title="#{location.enable}" th:aria-label="#{location.enable}">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(rows)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{location.empty}">No locations yet</h3>
+                                <p th:text="#{location.emptyHint}">Add the first site, then its zones and racks</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script defer src="/js/location-tree.js"></script>
+</div>
+
+<!-- Rack limits in one line: "3,000 kg · 30 pieces · Vertical" and an off-cut badge; a dash for other types. -->
+<th:block th:fragment="limits(l)">
+    <span th:unless="${l.rack}" class="text-muted">—</span>
+    <span th:if="${l.rack}" class="rack-limits"
+          th:text="${(l.maxWeightKg != null ? #messages.msg('location.kg', l.maxWeightKg) : #messages.msg('location.noWeightLimit'))
+                  + ' · ' + (l.maxPieces != null ? #messages.msg('location.pieces', l.maxPieces) : #messages.msg('location.noPieceLimit'))
+                  + ' · ' + #messages.msg('location.orientation.short.' + l.orientation)}">3,000 kg · 30 pieces · Vertical</span>
+    <div class="rack-offcut" th:if="${l.offcut}"><span class="badge badge-warning" th:text="#{location.offcut}">Off-cut rack</span></div>
+</th:block>
+</body>
+</html>

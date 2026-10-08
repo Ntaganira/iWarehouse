@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{stock.title}, ~{::content})}">
+<head><title>Inventory - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{stock.title}">Inventory</h1>
+            <div class="subtitle" th:text="#{stock.subtitle}">Every piece of glass in stock, where it is and its label</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/stock}" method="get" class="stock-filters">
+            <div class="section-header">
+                <h2>
+                    <span th:text="${fitSearch} ? #{stock.fitTitle} : #{stock.sectionTitle}">Stock units</span>
+                    <span class="section-count" th:text="${units.totalElements}">0</span>
+                </h2>
+                <div class="table-toolbar party-filters">
+                    <div class="toolbar-search">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" name="search" th:value="${search}" th:placeholder="#{stock.searchPh}" th:aria-label="#{stock.searchPh}" autocomplete="off">
+                    </div>
+                    <select name="product" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{product.name}">
+                        <option value="" th:text="#{stock.allProducts}">All glass</option>
+                        <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}"
+                                th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                    </select>
+                    <select name="location" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{stock.location}">
+                        <option value="" th:text="#{stock.allLocations}">All locations</option>
+                        <option th:each="row : ${locationRows}" th:value="${row.item.id}" th:selected="${row.item.id == location}"
+                                th:text="${#strings.repeat('— ', row.depth) + row.item.code}">WH-A-R01</option>
+                    </select>
+                    <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                        <option value="" th:selected="${status == null or status == ''}" th:text="${fitSearch} ? #{stock.status.AVAILABLE} : #{stock.inStock}">In stock</option>
+                        <option value="all" th:selected="${status == 'all'}" th:text="#{common.allStatus}">All statuses</option>
+                        <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'stock.status.' + st}}">Available</option>
+                    </select>
+                    <select name="kind" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{stock.kind}">
+                        <option value="" th:text="#{stock.allKinds}">Sheets and pieces</option>
+                        <option th:each="k : ${kinds}" th:value="${k}" th:selected="${k == kind}" th:text="#{${'stock.kind.' + k}}">Full sheet</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fit-search">
+                <label for="minWidth" th:text="#{stock.fitLabel}">Find a piece at least</label>
+                <input type="number" id="minWidth" name="minWidth" th:value="${minWidth}" min="1" max="10000" step="1" inputmode="numeric"
+                       th:placeholder="#{po.widthShort}" th:aria-label="#{po.width}">
+                <span aria-hidden="true">×</span>
+                <input type="number" id="minHeight" name="minHeight" th:value="${minHeight}" min="1" max="10000" step="1" inputmode="numeric"
+                       th:placeholder="#{po.heightShort}" th:aria-label="#{po.height}">
+                <span class="text-muted">mm</span>
+                <button type="submit" class="btn btn-primary btn-sm" th:text="#{stock.fitFind}">Find</button>
+                <a th:if="${fitSearch}" class="btn btn-outline btn-sm" th:href="@{/stock(product=${product})}" th:text="#{stock.fitClear}">Clear size</a>
+                <span class="hint" th:text="${fitSearch} ? #{stock.fitActive(${minWidth}, ${minHeight})} : #{stock.fitHint}">Either way round; the smallest fitting sheet or off-cut comes first</span>
+            </div>
+        </form>
+
+        <th:block th:replace="~{stock/list :: unitTable(${units.content}, true)}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${units}, '/stock', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Table of stock units; showCrate adds the crate column (not needed on a receipt). */-->
+<div th:fragment="unitTable(rows, showCrate)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{stock.code}">Label</th>
+                <th th:text="#{product.name}">Product</th>
+                <th th:text="#{po.size}">Size (mm)</th>
+                <th class="num">m²</th>
+                <th class="num">kg</th>
+                <th th:text="#{stock.location}">Location</th>
+                <th th:text="#{common.status}">Status</th>
+                <th th:if="${showCrate}" th:text="#{receipt.crate}">Crate</th>
+                <th class="num" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')" th:text="#{stock.cost}">Cost (RWF)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="u : ${rows}">
+                <td>
+                    <a class="row-link strong mono" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}"
+                       sec:authorize="hasAuthority('PAGE_STOCK') and hasAuthority('PERM_VIEW_STOCK')">U-WH-000001</a>
+                    <span class="mono" sec:authorize="!(hasAuthority('PAGE_STOCK') and hasAuthority('PERM_VIEW_STOCK'))" th:text="${u.code}">U-WH-000001</span>
+                    <div class="cell-sub" th:unless="${u.kind.name() == 'SHEET'}" th:text="#{${'stock.kind.' + u.kind}}">Off-cut</div>
+                </td>
+                <td>
+                    <th:block th:replace="~{products/list :: productName(${u.product})}"></th:block>
+                    <div class="cell-sub mono" th:text="${u.product.code}">CLR-6</div>
+                </td>
+                <td class="nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">3210 × 2250</td>
+                <td class="num" th:text="${@num.m2(u.areaM2)}">7.2225</td>
+                <td class="num" th:text="${@num.kg(u.weightKg)}">108.34</td>
+                <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R01</td>
+                <td><th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block></td>
+                <td th:if="${showCrate}" class="mono" th:text="${u.crateBatch != null} ? ${u.crateBatch.batchNo} : '—'">C-01</td>
+                <td class="num" sec:authorize="hasAuthority('PERM_VIEW_STOCK_COST')" th:text="${@num.money(u.unitCost)}">45,563.89</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}">
+                <td colspan="9">
+                    <div class="empty-state">
+                        <h3 th:text="#{stock.empty}">No stock units found</h3>
+                        <p th:text="#{stock.emptyHint}">Sheets enter stock when a goods receipt is posted</p>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!--/* Status badge of a stock unit (SRS 6.2). */-->
+<th:block th:fragment="stockStatus(s)" th:switch="${s.name()}">
+    <span th:case="'AVAILABLE'" class="badge badge-success" th:text="#{stock.status.AVAILABLE}">Available</span>
+    <span th:case="'RESERVED'" class="badge badge-warning" th:text="#{stock.status.RESERVED}">Reserved</span>
+    <span th:case="'IN_CUTTING'" class="badge badge-info" th:text="#{stock.status.IN_CUTTING}">In cutting</span>
+    <span th:case="'ON_VEHICLE'" class="badge badge-info" th:text="#{stock.status.ON_VEHICLE}">On vehicle</span>
+    <span th:case="'BROKEN'" class="badge badge-danger" th:text="#{stock.status.BROKEN}">Broken</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{${'stock.status.' + s}}">Sold</span>
+</th:block>
+</body>
+</html>

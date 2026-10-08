@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{shipment.title}, ~{::content})}">
+<head><title>Shipments - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{shipment.title}">Shipments</h1>
+            <div class="subtitle" th:text="#{shipment.subtitle}">Import costs per container: freight, duty and clearing shared over the crates for the landed cost per m²</div>
+        </div>
+        <a href="/shipments/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_SHIPMENT')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{shipment.add}">New shipment</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{shipment.sectionTitle}">Shipments</span>
+                <span class="section-count" th:text="${shipments.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/shipments}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{shipment.searchPh}" th:aria-label="#{shipment.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'shipment.status.' + st}}">Open</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{shipment.number}">Shipment</th>
+                        <th th:text="#{shipment.arrivalDate}">Arrived</th>
+                        <th class="num" th:text="#{shipment.receipts}">Receipts</th>
+                        <th th:text="#{shipment.method}">Shared by</th>
+                        <th class="num" th:text="#{shipment.postedRwf}">Posted (RWF)</th>
+                        <th class="num" th:text="#{shipment.draftBills}">Draft bills</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${shipments.content}" th:with="t=${totals.get(s.id)}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/shipments/{id}(id=${s.id})}" th:text="${s.number}">SHP-WH-2026-000001</a>
+                            <div class="cell-sub mono" th:if="${s.reference != null}" th:text="${s.reference}">MSKU 123456-7</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(s.arrivalDate, 'yyyy-MM-dd')}">2026-10-08</td>
+                        <td class="num" th:text="${t != null} ? ${t.receipts} : 0">1</td>
+                        <td th:text="#{${'shipment.method.' + s.allocationMethod}}">By area</td>
+                        <td class="num" th:text="${t != null} ? ${@num.money(t.posted)} : 0">4,104,200</td>
+                        <td class="num">
+                            <span th:if="${t != null and t.drafts > 0}" class="badge badge-warning" th:text="${t.drafts}">2</span>
+                            <span th:unless="${t != null and t.drafts > 0}" class="text-muted">0</span>
+                        </td>
+                        <td>
+                            <th:block th:replace="~{shipments/list :: shipmentStatus(${s.status})}"></th:block>
+                            <th:block th:if="${s.claimStatus.name() != 'NONE'}">
+                                <th:block th:replace="~{shipments/list :: claimStatus(${s.claimStatus})}"></th:block>
+                            </th:block>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(shipments.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{shipment.empty}">No shipments found</h3>
+                                <p th:text="#{shipment.emptyHint}">Add a shipment when its crates are received, then enter its freight, duty and clearing bills</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${shipments}, '/shipments', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a shipment. */-->
+<th:block th:fragment="shipmentStatus(s)" th:switch="${s.name()}">
+    <span th:case="'OPEN'" class="badge badge-info" th:text="#{shipment.status.OPEN}">Open</span>
+    <span th:case="'CLOSED'" class="badge badge-success" th:text="#{shipment.status.CLOSED}">Costs complete</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{shipment.status.CANCELLED}">Cancelled</span>
+</th:block>
+
+<!--/* Status badge of a shipment's claim for sheets broken on arrival. */-->
+<th:block th:fragment="claimStatus(s)" th:switch="${s.name()}">
+    <span th:case="'OPEN'" class="badge badge-warning" th:text="#{shipment.claimStatus.OPEN}">Claim open</span>
+    <span th:case="'SETTLED'" class="badge badge-success" th:text="#{shipment.claimStatus.SETTLED}">Claim settled</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{shipment.claimStatus.REJECTED}">Claim rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{shipment.claimStatus.NONE}">No claim</span>
+</th:block>
+</body>
+</html>

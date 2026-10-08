@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${customerDto.id == null} ? #{customer.addTitle} : #{customer.editTitle}, ~{::content})}">
+<head><title>Customer - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${customerDto.id == null} ? #{customer.addTitle} : #{customer.editTitle}">Add Customer</h1>
+            <div class="subtitle" th:text="${customerEntity != null} ? ${customerEntity.code} : #{customer.formSubtitle}">The code is given when the customer is saved (MD-04)</div>
+        </div>
+        <a th:href="${customerDto.id == null} ? @{/customers} : @{/customers/{id}(id=${customerDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${customerDto.id == null} ? @{/customers/new} : @{/customers/{id}/edit(id=${customerDto.id})}"
+              th:object="${customerDto}" method="post" class="form-container" id="customer-form" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="type" th:text="#{customer.type}">Type</label>
+                    <select id="type" th:field="*{type}" required th:classappend="${#fields.hasErrors('type')} ? 'is-invalid'"
+                            th:disabled="${customerEntity != null and customerEntity.defaultCustomer}">
+                        <option th:each="t : ${types}" th:value="${t}" th:text="#{${'customer.type.' + t}}">Account</option>
+                    </select>
+                    <input type="hidden" name="type" value="WALK_IN" th:if="${customerEntity != null and customerEntity.defaultCustomer}">
+                    <span class="field-error" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></span>
+                    <span class="hint" th:text="#{customer.typeHint}">Walk-in customers pay at the counter; accounts and contractors can buy on credit</span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{customer.name}">Customer</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="120" required th:placeholder="#{customer.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="tin" th:text="#{party.tin}">TIN</label>
+                    <input type="text" id="tin" th:field="*{tin}" maxlength="15" class="input-code" inputmode="numeric" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('tin')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('tin')}" th:errors="*{tin}"></span>
+                    <span class="hint" th:text="#{customer.tinHint}">9 digits; printed on EBM invoices. One customer per TIN.</span>
+                </div>
+                <div class="form-group">
+                    <label for="phone" th:text="#{party.phone}">Phone</label>
+                    <input type="tel" id="phone" th:field="*{phone}" maxlength="30" th:placeholder="#{party.phonePh}"
+                           th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="email" th:text="#{party.email}">Email</label>
+                    <input type="email" id="email" th:field="*{email}" maxlength="120"
+                           th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="contactName" th:text="#{party.contact}">Contact</label>
+                    <input type="text" id="contactName" th:field="*{contactName}" maxlength="100"
+                           th:classappend="${#fields.hasErrors('contactName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('contactName')}" th:errors="*{contactName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="address" th:text="#{party.address}">Address</label>
+                    <input type="text" id="address" th:field="*{address}" maxlength="255"
+                           th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="notes" th:text="#{product.notes}">Notes</label>
+                    <input type="text" id="notes" th:field="*{notes}" maxlength="255"
+                           th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                </div>
+            </div>
+
+            <h3 class="form-section-title" th:text="#{customer.termsSection}">Credit and prices</h3>
+
+            <!-- Users allowed to set terms (POS-05) edit them; walk-ins keep no credit -->
+            <th:block th:if="${canSetTerms}">
+                <p class="form-note walk-in-note" th:text="#{customer.walkInNote}">Walk-in customers pay at the counter: no credit limit or payment terms.</p>
+                <div class="form-grid">
+                    <div class="form-group credit-field">
+                        <label for="creditLimit" th:text="#{customer.creditLimit}">Credit limit</label>
+                        <div class="input-unit">
+                            <input type="number" id="creditLimit" th:field="*{creditLimit}" min="0" step="1" inputmode="numeric"
+                                   th:classappend="${#fields.hasErrors('creditLimit')} ? 'is-invalid'">
+                            <span>RWF</span>
+                        </div>
+                        <span class="field-error" th:if="${#fields.hasErrors('creditLimit')}" th:errors="*{creditLimit}"></span>
+                        <span class="hint" th:text="#{customer.creditHint}">0 = cash only. Sales above the limit need manager approval.</span>
+                    </div>
+                    <div class="form-group credit-field">
+                        <label for="paymentTermsDays" th:text="#{party.terms}">Payment terms</label>
+                        <div class="input-unit">
+                            <input type="number" id="paymentTermsDays" th:field="*{paymentTermsDays}" min="0" max="365" step="1" inputmode="numeric"
+                                   th:classappend="${#fields.hasErrors('paymentTermsDays')} ? 'is-invalid'">
+                            <span th:text="#{party.days}">days</span>
+                        </div>
+                        <span class="field-error" th:if="${#fields.hasErrors('paymentTermsDays')}" th:errors="*{paymentTermsDays}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="priceListId" th:text="#{customer.priceList}">Price list</label>
+                        <select id="priceListId" th:field="*{priceListId}" th:classappend="${#fields.hasErrors('priceListId')} ? 'is-invalid'">
+                            <option value="" th:text="#{customer.defaultList(${defaultList.name})}">Default (Retail)</option>
+                            <option th:each="l : ${priceLists}" th:unless="${l.defaultList}" th:value="${l.id}" th:text="${l.name}">Contractors</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('priceListId')}" th:errors="*{priceListId}"></span>
+                    </div>
+                </div>
+            </th:block>
+
+            <!-- Others see the terms; new customers start as cash customers on the default list -->
+            <th:block th:unless="${canSetTerms}">
+                <div class="detail-list fixed-fields">
+                    <div class="item">
+                        <label th:text="#{customer.creditLimit}">Credit limit</label>
+                        <div class="value" th:text="${customerEntity != null and customerEntity.creditLimit.signum() > 0} ? ${@num.money(customerEntity.creditLimit) + ' RWF'} : #{customer.cashOnly}">Cash only</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.terms}">Payment terms</label>
+                        <div class="value" th:text="${customerEntity == null or customerEntity.paymentTermsDays == 0} ? #{party.termsNone} : #{party.termsDays(${customerEntity.paymentTermsDays})}">On the spot</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customer.priceList}">Price list</label>
+                        <div class="value" th:text="${customerEntity != null and customerEntity.priceList != null} ? ${customerEntity.priceList.name} : #{customer.defaultList(${defaultList.name})}">Default (Retail)</div>
+                    </div>
+                </div>
+                <p class="form-note" th:text="#{customer.termsLocked}">Credit limit, payment terms and price list are set by a user allowed to grant credit.</p>
+                <input type="hidden" th:field="*{creditLimit}">
+                <input type="hidden" th:field="*{paymentTermsDays}">
+            </th:block>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{customer.save}">Save Customer</button>
+                <a th:href="${customerDto.id == null} ? @{/customers} : @{/customers/{id}(id=${customerDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/customer-form.js"></script>
+</div>
+</body>
+</html>

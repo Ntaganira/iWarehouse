@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{rate.importTitle}, ~{::content})}">
+<head><title>Import Exchange Rates - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{rate.importTitle}">Import Exchange Rates</h1>
+            <div class="subtitle" th:text="#{rate.importSubtitle}">Load many rates at once from a CSV file, e.g. exported from Excel</div>
+        </div>
+        <a href="/currencies" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="import-layout">
+        <div class="section">
+            <form th:action="@{/currencies/rates/import}" method="post" enctype="multipart/form-data" class="form-container" id="import-form">
+                <div class="error-summary" th:unless="${#lists.isEmpty(problems)}">
+                    <div class="error-summary-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="error-summary-body">
+                        <div class="error-summary-header">
+                            <h3 class="error-summary-title" th:text="#{rate.import.refused(${#lists.size(problems)})}">Nothing was imported: fix these lines and upload the file again</h3>
+                        </div>
+                        <ul class="error-summary-list">
+                            <li class="error-summary-item" th:each="p : ${problems}"><span class="error-summary-message" th:text="${p}">Line 4: unknown currency</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="file" th:text="#{rate.import.file}">CSV file</label>
+                        <input type="file" id="file" name="file" accept=".csv,.txt,text/csv,text/plain" required>
+                        <span class="hint" th:text="#{rate.import.fileHint(${maxLines})}">One rate per line, at most 2000 lines</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="source" th:text="#{rate.source}">Source</label>
+                        <select id="source" name="source">
+                            <option th:each="s : ${sources}" th:value="${s}" th:selected="${s == source}" th:text="#{${'rate.source.' + s}}">BNR</option>
+                        </select>
+                        <span class="hint" th:text="#{rate.import.sourceHint}">Every line of the file gets this source</span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="checkbox-item">
+                            <input type="checkbox" class="checkbox" name="confirmed" value="true" th:checked="${confirmed}">
+                            <span th:text="#{rate.import.confirmLabel}">Rates that move more than 10% from the previous one are correct; import them anyway</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:text="#{rate.import.submit}">Import</button>
+                    <a href="/currencies" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <aside class="section import-help">
+            <div class="section-header"><h2 th:text="#{rate.import.formatTitle}">File format</h2></div>
+            <div class="section-body">
+                <p th:text="#{rate.import.formatIntro}">Three columns: date, currency code, RWF for 1 unit. A header line is optional.</p>
+                <pre class="code-sample">date,currency,rate
+2026-10-06,USD,1448.10
+2026-10-07,USD,1450.25
+2026-10-07,EUR,1689.40</pre>
+                <ul class="help-list">
+                    <li th:text="#{rate.import.ruleSeparators}">Commas, semicolons or tabs; 1450.25 or 1 450,25 both work.</li>
+                    <li th:text="#{rate.import.ruleDates}">Dates as 2026-10-07 or 07/10/2026.</li>
+                    <li th:text="#{rate.import.ruleAllOrNothing}">All or nothing: if one line is wrong, no line is saved.</li>
+                    <li th:text="#{rate.import.ruleExisting}">A line equal to a rate already recorded is skipped; a different value must be corrected on its own, with a reason.</li>
+                </ul>
+                <p class="text-muted">
+                    <span th:text="#{rate.import.active}">Active currencies:</span>
+                    <span class="mono" th:text="${#strings.listJoin(activeCodes, ', ')}">USD, EUR, CNY</span>
+                </p>
+            </div>
+        </aside>
+    </div>
+</div>
+</body>
+</html>

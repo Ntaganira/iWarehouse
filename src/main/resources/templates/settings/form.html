@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{settings.editTitle}, ~{::content})}">
+<head><title>Edit Settings - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{settings.editTitle}">Edit Settings</h1>
+            <div class="subtitle" th:text="#{settings.editSubtitle}">Changes apply to new documents and jobs; every change is recorded with its old value</div>
+        </div>
+        <a href="/settings" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/settings/edit}" th:object="${settingsDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.company}">Company</h3>
+                <p class="hint" th:text="#{settings.group.companyHint}">Printed on invoices, receipts and labels</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="companyName" th:text="#{settings.companyName}">Company name</label>
+                    <input type="text" id="companyName" th:field="*{companyName}" maxlength="150" required
+                           th:classappend="${#fields.hasErrors('companyName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('companyName')}" th:errors="*{companyName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="companyTin" th:text="#{settings.companyTin}">TIN</label>
+                    <input type="text" id="companyTin" th:field="*{companyTin}" inputmode="numeric" maxlength="11"
+                           th:placeholder="#{settings.companyTinPh}" th:classappend="${#fields.hasErrors('companyTin')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('companyTin')}" th:errors="*{companyTin}"></span>
+                    <span class="hint" th:text="#{settings.companyTinHint}">9 digits, as registered with RRA</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="companyAddress" th:text="#{settings.companyAddress}">Address</label>
+                    <input type="text" id="companyAddress" th:field="*{companyAddress}" maxlength="255"
+                           th:classappend="${#fields.hasErrors('companyAddress')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('companyAddress')}" th:errors="*{companyAddress}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="companyPhone" th:text="#{settings.companyPhone}">Phone</label>
+                    <input type="tel" id="companyPhone" th:field="*{companyPhone}" maxlength="20"
+                           th:placeholder="#{user.phonePh}" th:classappend="${#fields.hasErrors('companyPhone')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('companyPhone')}" th:errors="*{companyPhone}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="companyEmail" th:text="#{settings.companyEmail}">Email</label>
+                    <input type="email" id="companyEmail" th:field="*{companyEmail}" maxlength="100"
+                           th:classappend="${#fields.hasErrors('companyEmail')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('companyEmail')}" th:errors="*{companyEmail}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="branchCode" th:text="#{settings.branchCode}">Default branch</label>
+                    <input type="text" id="branchCode" th:field="*{branchCode}" class="input-code" maxlength="10" required
+                           autocapitalize="characters" spellcheck="false" th:classappend="${#fields.hasErrors('branchCode')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('branchCode')}" th:errors="*{branchCode}"></span>
+                    <span class="hint" th:text="#{settings.branchCodeHint}">Branch used to number documents</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.production}">Production</h3>
+                <p class="hint" th:text="#{settings.group.productionHint}">Cutting, off-cuts and weights</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="offcutMinArea" th:text="#{settings.offcutMinArea}">Off-cut minimum area</label>
+                    <div class="input-unit">
+                        <input type="number" id="offcutMinArea" th:field="*{offcutMinArea}" step="0.0001" min="0.01" max="10" required
+                               th:classappend="${#fields.hasErrors('offcutMinArea')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.m2}">m2</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('offcutMinArea')}" th:errors="*{offcutMinArea}"></span>
+                    <span class="hint" th:text="#{settings.offcutMinAreaHint}">Smaller leftovers become cullet (PRD-04)</span>
+                </div>
+                <div class="form-group">
+                    <label for="offcutMinSide" th:text="#{settings.offcutMinSide}">Off-cut minimum side</label>
+                    <div class="input-unit">
+                        <input type="number" id="offcutMinSide" th:field="*{offcutMinSide}" step="1" min="50" max="3000" required
+                               th:classappend="${#fields.hasErrors('offcutMinSide')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.mm}">mm</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('offcutMinSide')}" th:errors="*{offcutMinSide}"></span>
+                    <span class="hint" th:text="#{settings.offcutMinSideHint}">Both sides at least this long (PRD-04)</span>
+                </div>
+                <div class="form-group">
+                    <label for="glassDensity" th:text="#{settings.glassDensity}">Glass density</label>
+                    <div class="input-unit">
+                        <input type="number" id="glassDensity" th:field="*{glassDensity}" step="0.001" min="1" max="5" required
+                               th:classappend="${#fields.hasErrors('glassDensity')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.density}">kg/m2/mm</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('glassDensity')}" th:errors="*{glassDensity}"></span>
+                    <span class="hint" th:text="#{settings.glassDensityHint}">Weight = area x thickness x density</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.pricing}">Pricing</h3>
+                <p class="hint" th:text="#{settings.group.pricingHint}">Defaults for new price lists</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="minChargeableArea" th:text="#{settings.minChargeableArea}">Minimum chargeable area</label>
+                    <div class="input-unit">
+                        <input type="number" id="minChargeableArea" th:field="*{minChargeableArea}" step="0.0001" min="0" max="10" required
+                               th:classappend="${#fields.hasErrors('minChargeableArea')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.m2}">m2</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('minChargeableArea')}" th:errors="*{minChargeableArea}"></span>
+                    <span class="hint" th:text="#{settings.minChargeableAreaHint}">Smaller pieces are charged as this area (MD-06)</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.approvals}">Approval limits</h3>
+                <p class="hint" th:text="#{settings.zeroMeansAll}">0 means every adjustment or discount needs approval.</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="adjustmentApprovalLimit" th:text="#{settings.adjustmentApprovalLimit}">Stock adjustment</label>
+                    <div class="input-unit">
+                        <input type="number" id="adjustmentApprovalLimit" th:field="*{adjustmentApprovalLimit}" step="1" min="0" required
+                               th:classappend="${#fields.hasErrors('adjustmentApprovalLimit')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('adjustmentApprovalLimit')}" th:errors="*{adjustmentApprovalLimit}"></span>
+                    <span class="hint" th:text="#{settings.adjustmentApprovalLimitHint}">Value above which an adjustment needs approval (INV-07)</span>
+                </div>
+                <div class="form-group">
+                    <label for="discountApprovalPercent" th:text="#{settings.discountApprovalPercent}">Discount or price override</label>
+                    <div class="input-unit">
+                        <input type="number" id="discountApprovalPercent" th:field="*{discountApprovalPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('discountApprovalPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('discountApprovalPercent')}" th:errors="*{discountApprovalPercent}"></span>
+                    <span class="hint" th:text="#{settings.discountApprovalPercentHint}">Percentage above which a discount needs approval (POS-06)</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
+                <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="defaultRateSource" th:text="#{settings.defaultRateSource}">Default rate source</label>
+                    <select id="defaultRateSource" th:field="*{defaultRateSource}" required
+                            th:classappend="${#fields.hasErrors('defaultRateSource')} ? 'is-invalid'">
+                        <option th:each="s : ${rateSources}" th:value="${s}" th:text="#{${'rate.source.' + s}}">BNR</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('defaultRateSource')}" th:errors="*{defaultRateSource}"></span>
+                    <span class="hint" th:text="#{settings.defaultRateSourceHint}">Used unless a document asks for another</span>
+                </div>
+                <div class="form-group">
+                    <label for="maxRateAgeDays" th:text="#{settings.maxRateAgeDays}">Oldest usable rate</label>
+                    <div class="input-unit">
+                        <input type="number" id="maxRateAgeDays" th:field="*{maxRateAgeDays}" step="1" min="1" max="90" required
+                               th:classappend="${#fields.hasErrors('maxRateAgeDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('maxRateAgeDays')}" th:errors="*{maxRateAgeDays}"></span>
+                    <span class="hint" th:text="#{settings.maxRateAgeDaysHint}">Older rates are refused, so a missed update is noticed</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{settings.save}">Save Settings</button>
+                <a href="/settings" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

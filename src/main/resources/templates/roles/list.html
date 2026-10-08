@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{role.title}, ~{::content})}">
+<head><title>Roles - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{role.title}">Roles</h1>
+            <div class="subtitle" th:text="#{role.subtitle}">What each role can open and do</div>
+        </div>
+        <a href="/roles/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_ROLE')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{role.add}">Add Role</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{role.sectionTitle}">System Roles</span>
+                <span class="section-count" th:text="${roles.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/roles}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{role.searchPh}" th:aria-label="#{role.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{role.table.role}">Role</th>
+                        <th th:text="#{role.table.users}">Users</th>
+                        <th th:text="#{role.table.pages}">Pages</th>
+                        <th th:text="#{role.table.permissions}">Permissions</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r, stat : ${roles.content}" th:with="admin=${r.code == 'ADMIN'}">
+                        <td>
+                            <div class="patient-cell">
+                                <div class="avatar"
+                                     th:classappend="${stat.index % 5 == 0 ? 'blue' : stat.index % 5 == 1 ? 'green' : stat.index % 5 == 2 ? 'yellow' : stat.index % 5 == 3 ? 'purple' : 'teal'}"
+                                     th:text="${#strings.substring(r.code, 0, 1)}">A</div>
+                                <div class="info">
+                                    <div class="name">
+                                        <a class="row-link mono" th:href="@{/roles/{id}(id=${r.id})}" th:text="${r.code}">ADMIN</a>
+                                        <span class="you-badge" th:if="${admin}" th:text="#{role.system}">System</span>
+                                    </div>
+                                    <div class="email" th:text="${r.description}">Description</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td th:text="${userCounts.containsKey(r.id)} ? ${userCounts.get(r.id)} : 0">0</td>
+                        <td><span class="badge badge-info" th:text="${#sets.size(r.pages)}">0</span></td>
+                        <td><span class="badge badge-secondary" th:text="${#sets.size(r.permissions)}">0</span></td>
+                        <td>
+                            <span class="badge badge-success" th:if="${r.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${r.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a th:href="@{/roles/{id}(id=${r.id})}" class="action-icon edit" th:title="#{common.view}" th:aria-label="#{common.view}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </a>
+                                <a th:href="@{/roles/{id}/edit(id=${r.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}" sec:authorize="hasAuthority('PERM_EDIT_ROLE')">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                                <th:block sec:authorize="hasAuthority('PERM_EDIT_ROLE')" th:unless="${admin}">
+                                    <form th:if="${r.enabled}" th:action="@{/roles/{id}/disable(id=${r.id})}" method="post"
+                                          class="row-action-form confirm-submit danger" th:attr="data-confirm=#{role.disableConfirm(${r.code})}">
+                                        <button type="submit" class="action-icon delete" th:title="#{role.disable}" th:aria-label="#{role.disable}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                        </button>
+                                    </form>
+                                    <form th:unless="${r.enabled}" th:action="@{/roles/{id}/enable(id=${r.id})}" method="post"
+                                          class="row-action-form confirm-submit" th:attr="data-confirm=#{role.enableConfirm(${r.code})}">
+                                        <button type="submit" class="action-icon pay" th:title="#{role.enable}" th:aria-label="#{role.enable}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                        </button>
+                                    </form>
+                                </th:block>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(roles.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                </div>
+                                <h3 th:text="#{role.empty.title}">No roles found</h3>
+                                <p th:text="#{role.empty.subtitle}">Try other filters</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${roles}, '/roles', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${roleDto.id == null} ? #{role.addTitle} : #{role.editTitle}, ~{::content})}">
+<head><title>Role - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${roleDto.id == null} ? #{role.addTitle} : #{role.editTitle}">Add Role</h1>
+            <div class="subtitle" th:text="${roleDto.id == null} ? #{role.addSubtitle} : #{role.editSubtitle}">Choose what this role can open and do</div>
+        </div>
+        <a th:href="${roleDto.id == null} ? @{/roles} : @{/roles/{id}(id=${roleDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${roleDto.id == null} ? @{/roles/new} : @{/roles/{id}/edit(id=${roleDto.id})}"
+              th:object="${roleDto}" method="post" class="form-container form-wide" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{role.code}">Role Code</label>
+                    <input type="text" id="code" th:field="*{code}" th:placeholder="#{role.codePh}"
+                           th:readonly="${roleDto.id != null}" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'"
+                           class="input-code" maxlength="45" autocomplete="off" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="${roleDto.id == null} ? #{role.codeHint} : #{role.codeFixed}">Capital letters, digits and underscores.</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description" th:text="#{role.description}">Description</label>
+                    <textarea id="description" th:field="*{description}" th:placeholder="#{role.descriptionPh}"
+                              th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'" maxlength="255" required></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                </div>
+            </div>
+
+            <p class="form-note" th:if="${isAdminRole}" th:text="#{role.adminNote}">ADMIN always has every page and permission.</p>
+            <p class="form-note" th:if="${roleDto.id != null and !isAdminRole}" th:text="#{role.applyNote}">Changes apply when each user signs in again.</p>
+
+            <div class="form-divider">
+                <h3 th:text="#{role.pages}">Pages</h3>
+                <p class="hint" th:text="#{role.pagesHint}">Screens this role can open (menu entries)</p>
+            </div>
+            <div class="perm-tree">
+                <div class="perm-group" th:each="entry : ${pagesByModule}">
+                    <div class="perm-group-header">
+                        <input type="checkbox" class="checkbox perm-select-all" th:id="|sel-page-${entry.value[0].id}|" th:disabled="${isAdminRole}">
+                        <label th:for="|sel-page-${entry.value[0].id}|" th:text="${entry.key}">Inventory</label>
+                        <span class="badge badge-secondary" th:text="${entry.value.size()}">1</span>
+                    </div>
+                    <div class="perm-items">
+                        <label class="perm-item" th:each="p : ${entry.value}">
+                            <input type="checkbox" class="checkbox perm-check" th:field="*{pageIds}" th:value="${p.id}" th:disabled="${isAdminRole}">
+                            <span th:text="${p.name}">Inventory</span>
+                            <span class="mono" th:text="${p.code}">STOCK</span>
+                            <span class="badge badge-secondary" th:unless="${p.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-divider">
+                <h3 th:text="#{role.permissions}">Permissions</h3>
+                <p class="hint" th:text="#{role.permissionsHint}">Actions this role can do on those screens</p>
+            </div>
+            <div class="perm-tree">
+                <div class="perm-group" th:each="entry : ${permissionsByModule}">
+                    <div class="perm-group-header">
+                        <input type="checkbox" class="checkbox perm-select-all" th:id="|sel-perm-${entry.value[0].id}|" th:disabled="${isAdminRole}">
+                        <label th:for="|sel-perm-${entry.value[0].id}|" th:text="${entry.key}">User Management</label>
+                        <span class="badge badge-secondary" th:text="${entry.value.size()}">4</span>
+                    </div>
+                    <div class="perm-items">
+                        <label class="perm-item" th:each="p : ${entry.value}">
+                            <input type="checkbox" class="checkbox perm-check" th:field="*{permissionIds}" th:value="${p.id}" th:disabled="${isAdminRole}">
+                            <span th:text="${p.name}">View Users</span>
+                            <span class="mono" th:text="${p.code}">VIEW_USER</span>
+                            <span class="badge badge-secondary" th:unless="${p.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="${roleDto.id == null} ? #{role.save} : #{role.update}">Save Role</button>
+                <a th:href="${roleDto.id == null} ? @{/roles} : @{/roles/{id}(id=${roleDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

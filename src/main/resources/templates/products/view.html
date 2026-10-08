@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${product.code}, ~{::content})}">
+<head><title>Glass Product - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1><th:block th:replace="~{products/list :: productName(${product})}"></th:block></h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${product.code}">CLR-6</span> &middot;
+                <span class="badge badge-success" th:if="${product.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${product.enabled}" th:text="#{common.inactive}">Inactive</span>
+                <span class="badge badge-warning" th:unless="${product.glassType.cuttable}" th:text="#{product.madeToSize}">Made to size</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/products" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_PRODUCT')">
+                <form th:if="${product.enabled}" th:action="@{/products/{id}/disable(id=${product.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{product.disableConfirm(${product.code})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{product.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${product.enabled}" th:action="@{/products/{id}/enable(id=${product.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{product.enableConfirm(${product.code})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{product.enable}">Activate</button>
+                </form>
+                <a th:href="@{/products/{id}/edit(id=${product.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="tab-details" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <div class="tab-content active" id="tab-details">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{product.code}">Code</label>
+                        <div class="value mono" th:text="${product.code}">CLR-6</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.glassType}">Glass type</label>
+                        <div class="value" th:text="#{${'glass.type.' + product.glassType}}">Clear</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.variant}">Colour or finish</label>
+                        <div class="value" th:text="${product.variant ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.thickness}">Thickness</label>
+                        <div class="value" th:text="${product.thicknessLabel + ' mm'}">6 mm</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.unit}">Unit</label>
+                        <div class="value">m²</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.weightPerM2}">Weight per m²</label>
+                        <div class="value">
+                            <span th:text="${#numbers.formatDecimal(weightPerM2, 1, 'COMMA', 2, 'POINT')} + ' kg'">15.00 kg</span>
+                            <div class="hint" th:text="#{product.weightHint(${density.stripTrailingZeros().toPlainString()})}">Thickness x glass density (2.5 kg per m² per mm, see Settings)</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.taxCategory}">VAT category</label>
+                        <div class="value">
+                            <span th:text="${product.taxCategory.name}">Standard rate</span>
+                            <span class="text-muted" th:text="${'(' + product.taxCategory.rate.stripTrailingZeros().toPlainString() + '%, EBM ' + product.taxCategory.ebmCode + ')'}">(18%, EBM B)</span>
+                            <span class="badge badge-secondary" th:unless="${product.taxCategory.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.cuttable}">Can be cut</label>
+                        <div class="value" th:text="${product.glassType.cuttable} ? #{common.yes} : #{product.notCuttable}">Yes</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.reorderLevel}">Reorder level</label>
+                        <div class="value" th:text="${product.reorderLevelM2 != null} ? ${product.reorderLevelM2.stripTrailingZeros().toPlainString() + ' m²'} : #{product.noReorder}">No alert</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${product.notes ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(product.createdAt, 'dd/MM/yyyy HH:mm') + (product.createdBy != null ? ' · ' + product.createdBy : '')}">07/10/2026 12:00 · admin</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${product.version > 0} ? ${#temporals.format(product.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + product.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Product/{id}(id=${product.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

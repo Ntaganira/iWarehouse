@@ -121,7 +121,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     opts.cancelText || appMsg('confirmCancel', 'Not now');
                 const ok = el.querySelector('.confirm-ok');
                 ok.textContent = opts.okText || appMsg('confirmOk', 'Yes, Continue');
-                ok.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+                // Keep confirm-ok: open() looks the button up by it on every call.
+                ok.className = 'btn confirm-ok ' + (opts.danger ? 'btn-danger' : 'btn-primary');
                 el.dataset.danger = opts.danger ? 'true' : 'false';
                 onConfirm = opts.onConfirm;
                 el.classList.add('open');
@@ -162,6 +163,23 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // POST actions with a confirmation (data-confirm): <form class="confirm-submit [danger]">
+    document.querySelectorAll('form.confirm-submit').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.confirmed === 'true') return;
+            e.preventDefault();
+            confirmDialog.open({
+                message: form.getAttribute('data-confirm') || confirmDeleteMsg,
+                danger: form.classList.contains('danger'),
+                onConfirm: function () {
+                    form.dataset.confirmed = 'true';
+                    showPageSkeleton();
+                    form.submit(); // does not fire 'submit' again
+                }
+            });
+        });
+    });
+
     // Modals
     const modalOpen = function (id) {
         const overlay = document.getElementById(id);
@@ -182,6 +200,17 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Any modal opened by a button: <button data-modal-open="cancel-modal"> (focuses its first field)
+    document.querySelectorAll('[data-modal-open]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-modal-open');
+            modalOpen(id);
+            const overlay = document.getElementById(id);
+            const field = overlay && overlay.querySelector('input:not([type=hidden]), textarea, select');
+            if (field) setTimeout(() => field.focus(), 50);
+        });
+    });
+
     // Reset password modal
     document.querySelectorAll('.open-reset-modal').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -191,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('reset-form');
             const pw = document.getElementById('reset-password');
             if (nameEl) nameEl.textContent = name;
-            if (form) form.action = '/users/reset-password/' + id;
+            if (form) form.action = this.getAttribute('data-action') || ('/users/' + id + '/reset-password');
             if (pw) pw.value = '';
             modalOpen('reset-modal');
         });
@@ -343,17 +372,45 @@ document.addEventListener('DOMContentLoaded', function () {
     // Choices.js enhanced multi-selects
     if (typeof Choices !== 'undefined') {
         document.querySelectorAll('select[data-multiselect]').forEach(sel => {
+            // No addItems: false here: Choices disables the whole select when it is false.
             new Choices(sel, {
                 removeItemButton: true,
-                addItems: false,
                 allowHTML: false,
                 searchEnabled: true,
-                searchPlaceholderValue: ' ',
+                placeholderValue: sel.dataset.placeholder || null,
+                searchPlaceholderValue: sel.dataset.placeholder || ' ',
                 itemSelectText: ' ',
-                noChoicesText: ' ',
-                noResultsText: ' ',
+                noChoicesText: sel.dataset.noChoices || ' ',
+                noResultsText: sel.dataset.noResults || ' ',
                 classNames: {
                     containerOuter: 'choices multiselect-choices'
+                }
+            });
+        });
+
+        // Long single selects (countries): type to filter
+        document.querySelectorAll('select[data-searchable]').forEach(sel => {
+            // Opening the list puts the cursor in its search box, so typing filters at once. The box is
+            // still hidden for a moment when Choices opens the list, so focus is retried until it takes.
+            sel.addEventListener('showDropdown', () => {
+                const search = sel.closest('.choices').querySelector('input.choices__input--cloned');
+                if (!search) return;
+                let tries = 0;
+                const focus = () => {
+                    search.focus();
+                    if (document.activeElement !== search && ++tries < 10) setTimeout(focus, 30);
+                };
+                setTimeout(focus, 0);
+            });
+            new Choices(sel, {
+                allowHTML: false,
+                searchEnabled: true,
+                shouldSort: false,
+                itemSelectText: '',
+                searchPlaceholderValue: sel.dataset.searchPlaceholder || '',
+                noResultsText: sel.dataset.noResults || ' ',
+                classNames: {
+                    containerOuter: 'choices multiselect-choices single-choices'
                 }
             });
         });

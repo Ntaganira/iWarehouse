@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${receiptDto.id == null} ? #{receipt.addTitle} : #{receipt.editTitle(${receipt.number})}, ~{::content})}">
+<head><title>Goods Receipt - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${receiptDto.id == null} ? #{receipt.addTitle} : #{receipt.editTitle(${receipt.number})}">Receive Crates</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${order.number}">PO-WH-2026-000001</span> &middot;
+                <span th:text="${order.supplier.name}">Shandong Glass Co.</span> &middot;
+                <span th:text="#{receipt.formSubtitle}">saved as a draft; nothing enters stock until it is posted</span>
+            </div>
+        </div>
+        <a th:href="${receiptDto.id == null} ? @{/purchase-orders/{id}(id=${order.id})} : @{/goods-receipts/{id}(id=${receiptDto.id})}"
+           class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${receiptDto.id == null} ? @{/goods-receipts/new} : @{/goods-receipts/{id}/edit(id=${receiptDto.id})}"
+          th:object="${receiptDto}" method="post" class="receipt-form" novalidate>
+        <input type="hidden" th:field="*{purchaseOrderId}">
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="receivedDate" th:text="#{receipt.date}">Received on</label>
+                        <input type="date" id="receivedDate" th:field="*{receivedDate}" required th:classappend="${#fields.hasErrors('receivedDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('receivedDate')}" th:errors="*{receivedDate}"></span>
+                        <span class="hint" th:text="#{receipt.dateHint(${order.currencyCode})}">The USD rate of this date is used when posting</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="deliveryRef" th:text="#{receipt.deliveryRef}">Delivery reference</label>
+                        <input type="text" id="deliveryRef" th:field="*{deliveryRef}" maxlength="60" class="input-code" spellcheck="false"
+                               th:placeholder="#{receipt.deliveryRefPh}" th:classappend="${#fields.hasErrors('deliveryRef')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('deliveryRef')}" th:errors="*{deliveryRef}"></span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="notes" th:text="#{product.notes}">Notes</label>
+                        <input type="text" id="notes" th:field="*{notes}" maxlength="500" th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{receipt.cratesTitle}">Crates</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{receipt.addCrate}">Add crate</span>
+                </button>
+            </div>
+            <p class="form-note" th:text="#{receipt.cratesNote}">One row per crate. Every good sheet becomes a stock unit with its own label; broken sheets are counted for the supplier claim and never enter stock.</p>
+            <div class="table-container">
+                <table class="line-table receipt-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{receipt.orderLine}">Order line</th>
+                            <th th:text="#{receipt.crate}">Crate</th>
+                            <th class="num" th:text="#{po.width}">Width (mm)</th>
+                            <th class="num" th:text="#{po.height}">Height (mm)</th>
+                            <th class="num" th:text="#{receipt.sheets}">Good sheets</th>
+                            <th class="num" th:text="#{receipt.broken}">Broken</th>
+                            <th th:text="#{receipt.rack}">Rack</th>
+                            <th class="num">m²</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body">
+                        <tr class="line-row" th:each="crate, st : *{crates}" th:with="i=${st.index}">
+                            <td class="line-product">
+                                <input type="hidden" th:field="*{crates[__${i}__].id}">
+                                <select th:field="*{crates[__${i}__].poLineId}" th:aria-label="#{receipt.orderLine}"
+                                        th:classappend="${#fields.hasErrors('crates[__${i}__].poLineId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{receipt.chooseLine}">Choose the order line</option>
+                                    <option th:each="l : ${order.lines}" th:value="${l.id}" th:attr="data-w=${l.widthMm}, data-h=${l.heightMm}"
+                                            th:disabled="${l.outstanding == 0 and l.id != crate.poLineId}"
+                                            th:text="${l.lineNo + ' · ' + l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm + ' · ' + #messages.msg('po.outstandingShort', l.outstanding)}">1 · CLR-6 · 3210 × 2250 · 20 to come</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].poLineId')}" th:errors="*{crates[__${i}__].poLineId}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{crates[__${i}__].batchNo}" maxlength="40" class="input-code" spellcheck="false" autocomplete="off"
+                                       th:placeholder="#{receipt.crateNoPh}" th:aria-label="#{receipt.crate}"
+                                       th:classappend="${#fields.hasErrors('crates[__${i}__].batchNo')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].batchNo')}" th:errors="*{crates[__${i}__].batchNo}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{crates[__${i}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.width}"
+                                       th:classappend="${#fields.hasErrors('crates[__${i}__].widthMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].widthMm')}" th:errors="*{crates[__${i}__].widthMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{crates[__${i}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.height}"
+                                       th:classappend="${#fields.hasErrors('crates[__${i}__].heightMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].heightMm')}" th:errors="*{crates[__${i}__].heightMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{crates[__${i}__].sheets}" min="0" max="10000" step="1" inputmode="numeric" th:aria-label="#{receipt.sheets}"
+                                       th:classappend="${#fields.hasErrors('crates[__${i}__].sheets')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].sheets')}" th:errors="*{crates[__${i}__].sheets}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{crates[__${i}__].broken}" min="0" max="10000" step="1" inputmode="numeric" th:aria-label="#{receipt.broken}"
+                                       th:classappend="${#fields.hasErrors('crates[__${i}__].broken')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].broken')}" th:errors="*{crates[__${i}__].broken}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{crates[__${i}__].locationId}" th:aria-label="#{receipt.rack}"
+                                        th:classappend="${#fields.hasErrors('crates[__${i}__].locationId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{receipt.chooseRack}">Choose a rack</option>
+                                    <option th:each="r : ${racks}" th:value="${r.location.id}" th:text="${r.location.code} + ${r.rack.maxPieces != null ? ' · ' + r.load.pieces + '/' + r.rack.maxPieces + ' ' + #messages.msg('receipt.pcs') : ''} + ${r.rack.maxWeightKg != null ? ' · ' + #numbers.formatInteger(r.load.kg, 1, 'COMMA') + '/' + #numbers.formatInteger(r.rack.maxWeightKg, 1, 'COMMA') + ' kg' : ''}">WH-A-R01 · 12/30 pcs · 1,300/3000 kg</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('crates[__${i}__].locationId')}" th:errors="*{crates[__${i}__].locationId}"></span>
+                            </td>
+                            <td class="num line-area">—</td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{receipt.removeCrate}" th:aria-label="#{receipt.removeCrate}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th th:text="#{po.total}">Total</th>
+                            <th class="nowrap"><span id="receipt-total-crates">0</span> <span class="text-muted" th:text="#{receipt.cratesLower}">crates</span></th>
+                            <th></th>
+                            <th></th>
+                            <th class="num" id="receipt-total-sheets">0</th>
+                            <th class="num" id="receipt-total-broken">0</th>
+                            <th></th>
+                            <th class="num" id="receipt-total-area">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{receipt.racksNote}">Racks show pieces and kg already on them against their limits; a crate that would go over is refused.</p>
+        </div>
+
+        <!-- A new crate row (copied by js/line-form.js; {i} becomes the row number) -->
+        <template class="line-template">
+            <tr class="line-row">
+                <td class="line-product">
+                    <input type="hidden" name="crates[{i}].id" value="">
+                    <select name="crates[{i}].poLineId" th:aria-label="#{receipt.orderLine}">
+                        <option value="" th:text="#{receipt.chooseLine}">Choose the order line</option>
+                        <option th:each="l : ${order.lines}" th:value="${l.id}" th:attr="data-w=${l.widthMm}, data-h=${l.heightMm}"
+                                th:disabled="${l.outstanding == 0}"
+                                th:text="${l.lineNo + ' · ' + l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm + ' · ' + #messages.msg('po.outstandingShort', l.outstanding)}">1 · CLR-6 · 3210 × 2250 · 20 to come</option>
+                    </select>
+                </td>
+                <td><input type="text" name="crates[{i}].batchNo" maxlength="40" class="input-code" spellcheck="false" autocomplete="off"
+                           th:placeholder="#{receipt.crateNoPh}" th:aria-label="#{receipt.crate}"></td>
+                <td class="num"><input type="number" name="crates[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.width}"></td>
+                <td class="num"><input type="number" name="crates[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.height}"></td>
+                <td class="num"><input type="number" name="crates[{i}].sheets" min="0" max="10000" step="1" inputmode="numeric" th:aria-label="#{receipt.sheets}"></td>
+                <td class="num"><input type="number" name="crates[{i}].broken" min="0" max="10000" step="1" inputmode="numeric" value="0" th:aria-label="#{receipt.broken}"></td>
+                <td>
+                    <select name="crates[{i}].locationId" th:aria-label="#{receipt.rack}">
+                        <option value="" th:text="#{receipt.chooseRack}">Choose a rack</option>
+                        <option th:each="r : ${racks}" th:value="${r.location.id}" th:text="${r.location.code} + ${r.rack.maxPieces != null ? ' · ' + r.load.pieces + '/' + r.rack.maxPieces + ' ' + #messages.msg('receipt.pcs') : ''} + ${r.rack.maxWeightKg != null ? ' · ' + #numbers.formatInteger(r.load.kg, 1, 'COMMA') + '/' + #numbers.formatInteger(r.rack.maxWeightKg, 1, 'COMMA') + ' kg' : ''}">WH-A-R01</option>
+                    </select>
+                </td>
+                <td class="num line-area">—</td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{receipt.removeCrate}" th:aria-label="#{receipt.removeCrate}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{receipt.saveDraft}">Save draft</button>
+            <a th:href="${receiptDto.id == null} ? @{/purchase-orders/{id}(id=${order.id})} : @{/goods-receipts/{id}(id=${receiptDto.id})}"
+               class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

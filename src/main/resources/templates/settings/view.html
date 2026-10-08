@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{settings.title}, ~{::content})}">
+<head><title>Settings - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{settings.title}">Settings</h1>
+            <div class="subtitle" th:text="#{settings.subtitle}">Company details, production rules, approval limits, tax and document numbering</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-general" th:classappend="${tab == 'general'} ? 'active'" th:text="#{settings.tab.general}">General</button>
+            <button type="button" class="tab" data-tab="tab-tax" th:classappend="${tab == 'tax'} ? 'active'">
+                <span th:text="#{settings.tab.tax}">Tax categories</span>
+                <span class="section-count" th:text="${#lists.size(taxCategories)}">3</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-numbering" th:classappend="${tab == 'numbering'} ? 'active'">
+                <span th:text="#{settings.tab.numbering}">Document numbering</span>
+                <span class="section-count" th:text="${#lists.size(sequences)}">14</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <!-- General (ADM-03) -->
+            <div class="tab-content" id="tab-general" th:classappend="${tab == 'general'} ? 'active'" th:object="${settings}">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{settings.intro}">Rules and limits used by cutting, pricing and approvals. Changes apply to new documents and jobs only.</p>
+                    <a href="/settings/edit" class="btn btn-primary" sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                        <span th:text="#{settings.edit}">Edit settings</span>
+                    </a>
+                </div>
+                <div class="settings-grid">
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.company}">Company</div>
+                                <div class="role-card-desc" th:text="#{settings.group.companyHint}">Printed on invoices, receipts and labels</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt th:text="#{settings.companyName}">Company name</dt>
+                                <dd th:text="*{companyName}">iWarehouse</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt th:text="#{settings.companyTin}">TIN</dt>
+                                <dd th:classappend="*{companyTin} != null ? 'mono'" th:text="*{companyTin} ?: #{settings.notSet}">123456789</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt th:text="#{settings.companyAddress}">Address</dt>
+                                <dd th:text="*{companyAddress} ?: #{settings.notSet}">Kigali, Rwanda</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt th:text="#{settings.companyPhone}">Phone</dt>
+                                <dd th:text="*{companyPhone} ?: #{settings.notSet}">+250 788 000 000</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt th:text="#{settings.companyEmail}">Email</dt>
+                                <dd th:text="*{companyEmail} ?: #{settings.notSet}">info@example.com</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.branchCode}">Default branch</span>
+                                    <span class="setting-hint" th:text="#{settings.branchCodeHint}">Branch used to number documents</span>
+                                </dt>
+                                <dd class="mono" th:text="*{branchCode}">WH</dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.production}">Production</div>
+                                <div class="role-card-desc" th:text="#{settings.group.productionHint}">Cutting, off-cuts and weights</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.offcutMinArea}">Off-cut minimum area</span>
+                                    <span class="setting-hint" th:text="#{settings.offcutMinAreaHint}">Smaller leftovers become cullet (PRD-04)</span>
+                                </dt>
+                                <dd><span th:text="*{offcutMinArea}">0.25</span> <span class="unit" th:text="#{settings.unit.m2}">m2</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.offcutMinSide}">Off-cut minimum side</span>
+                                    <span class="setting-hint" th:text="#{settings.offcutMinSideHint}">Both sides at least this long (PRD-04)</span>
+                                </dt>
+                                <dd><span th:text="*{offcutMinSide}">300</span> <span class="unit" th:text="#{settings.unit.mm}">mm</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.glassDensity}">Glass density</span>
+                                    <span class="setting-hint" th:text="#{settings.glassDensityHint}">Weight = area x thickness x density</span>
+                                </dt>
+                                <dd><span th:text="*{glassDensity}">2.5</span> <span class="unit" th:text="#{settings.unit.density}">kg/m2/mm</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.pricing}">Pricing</div>
+                                <div class="role-card-desc" th:text="#{settings.group.pricingHint}">Defaults for new price lists</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.minChargeableArea}">Minimum chargeable area</span>
+                                    <span class="setting-hint" th:text="#{settings.minChargeableAreaHint}">Smaller pieces are charged as this area (MD-06)</span>
+                                </dt>
+                                <dd><span th:text="*{minChargeableArea}">0.25</span> <span class="unit" th:text="#{settings.unit.m2}">m2</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.approvals}">Approval limits</div>
+                                <div class="role-card-desc" th:text="#{settings.group.approvalsHint}">Above these, a supervisor or manager must approve</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.adjustmentApprovalLimit}">Stock adjustment</span>
+                                    <span class="setting-hint" th:text="#{settings.adjustmentApprovalLimitHint}">Value above which an adjustment needs approval (INV-07)</span>
+                                </dt>
+                                <dd><span th:text="${#numbers.formatInteger(settings.adjustmentApprovalLimit, 1, 'COMMA')}">0</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.discountApprovalPercent}">Discount or price override</span>
+                                    <span class="setting-hint" th:text="#{settings.discountApprovalPercentHint}">Percentage above which a discount needs approval (POS-06)</span>
+                                </dt>
+                                <dd><span th:text="*{discountApprovalPercent}">0</span> <span class="unit">%</span></dd>
+                            </div>
+                        </dl>
+                        <p class="form-note setting-note" th:text="#{settings.zeroMeansAll}">0 means every adjustment or discount needs approval.</p>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
+                                <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.baseCurrency}">Base currency</span>
+                                    <span class="setting-hint" th:text="#{settings.baseCurrencyHint}">Ledgers are always kept in it</span>
+                                </dt>
+                                <dd class="mono">RWF</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.defaultRateSource}">Default rate source</span>
+                                    <span class="setting-hint" th:text="#{settings.defaultRateSourceHint}">Used unless a document asks for another</span>
+                                </dt>
+                                <dd th:text="#{${'rate.source.' + settings.defaultRateSource}}">BNR</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.maxRateAgeDays}">Oldest usable rate</span>
+                                    <span class="setting-hint" th:text="#{settings.maxRateAgeDaysHint}">Older rates are refused, so a missed update is noticed</span>
+                                </dt>
+                                <dd><span th:text="*{maxRateAgeDays}">7</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tax categories (TAX-01) -->
+            <div class="tab-content" id="tab-tax" th:classappend="${tab == 'tax'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{tax.intro}">VAT is calculated per invoice line from the product's tax category.</p>
+                    <a href="/settings/tax-categories/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span th:text="#{tax.add}">Add tax category</span>
+                    </a>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{tax.code}">Code</th>
+                                <th th:text="#{tax.name}">Name</th>
+                                <th class="num" th:text="#{tax.rate}">Rate</th>
+                                <th th:text="#{tax.ebmCode}">EBM tax type</th>
+                                <th th:text="#{common.status}">Status</th>
+                                <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="t : ${taxCategories}">
+                                <td>
+                                    <span class="mono strong" th:text="${t.code}">STANDARD</span>
+                                    <span class="you-badge" th:if="${t.defaultCategory}" th:text="#{tax.default}">Default</span>
+                                </td>
+                                <td>
+                                    <div th:text="${t.name}">Standard rate</div>
+                                    <div class="text-muted" th:text="${t.description}">Taxable supplies</div>
+                                </td>
+                                <td class="num"><span th:text="${#numbers.formatDecimal(t.rate, 1, 'COMMA', 2, 'POINT')}">18.00</span> %</td>
+                                <td><span class="badge badge-info mono" th:text="${t.ebmCode}">B</span></td>
+                                <td>
+                                    <span class="badge badge-success" th:if="${t.enabled}" th:text="#{common.active}">Active</span>
+                                    <span class="badge badge-secondary" th:unless="${t.enabled}" th:text="#{common.inactive}">Inactive</span>
+                                </td>
+                                <td sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">
+                                    <div class="btn-group">
+                                        <a th:href="@{/settings/tax-categories/{id}/edit(id=${t.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                        </a>
+                                        <form th:if="${t.enabled and !t.defaultCategory}" th:action="@{/settings/tax-categories/{id}/disable(id=${t.id})}" method="post"
+                                              class="row-action-form confirm-submit danger" th:attr="data-confirm=#{tax.disableConfirm(${t.code})}">
+                                            <button type="submit" class="action-icon delete" th:title="#{tax.disable}" th:aria-label="#{tax.disable}">
+                                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                            </button>
+                                        </form>
+                                        <form th:unless="${t.enabled}" th:action="@{/settings/tax-categories/{id}/enable(id=${t.id})}" method="post"
+                                              class="row-action-form confirm-submit" th:attr="data-confirm=#{tax.enableConfirm(${t.code})}">
+                                            <button type="submit" class="action-icon pay" th:title="#{tax.enable}" th:aria-label="#{tax.enable}">
+                                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(taxCategories)}">
+                                <td colspan="6"><div class="empty-state"><h3 th:text="#{tax.empty}">No tax categories yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Document numbering (MD-07) -->
+            <div class="tab-content" id="tab-numbering" th:classappend="${tab == 'numbering'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{numbering.intro}">Each document gets the next number when it is saved. Numbers never repeat and the next number can only go up.</p>
+                    <a href="/settings/numbering/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span th:text="#{numbering.add}">Add sequence</span>
+                    </a>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{numbering.docType}">Document</th>
+                                <th th:text="#{numbering.branch}">Branch</th>
+                                <th th:text="#{numbering.reset}">Starts again</th>
+                                <th th:text="#{numbering.nextNumber}">Next number</th>
+                                <th th:text="#{numbering.lastIssued}">Last issued</th>
+                                <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${sequences}">
+                                <td>
+                                    <div class="strong" th:text="#{${'doc.type.' + s.docType}}">Sales invoice</div>
+                                    <div class="text-muted mono" th:text="${s.docType}">INVOICE</div>
+                                </td>
+                                <td><span class="badge badge-secondary mono" th:text="${s.branchCode}">WH</span></td>
+                                <td th:text="#{${'numbering.reset.' + s.resetPolicy}}">Every year</td>
+                                <td><span class="number-preview" th:text="${previews.get(s.id)}">INV-WH-2026-000001</span></td>
+                                <td>
+                                    <span th:if="${s.lastIssuedAt != null}" th:text="${#temporals.format(s.lastIssuedAt, 'yyyy-MM-dd HH:mm')}">2026-10-07 10:12</span>
+                                    <span class="text-muted" th:if="${s.lastIssuedAt == null}" th:text="#{numbering.notUsed}">Not used yet</span>
+                                </td>
+                                <td sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">
+                                    <a th:href="@{/settings/numbering/{id}/edit(id=${s.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(sequences)}">
+                                <td colspan="6"><div class="empty-state"><h3 th:text="#{numbering.empty}">No numbering sequences yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History (AUD-10): changes to settings, tax categories and numbering formats -->
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                 sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/settings', 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

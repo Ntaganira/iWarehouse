@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${productDto.id == null} ? #{product.addTitle} : #{product.editTitle}, ~{::content})}">
+<head><title>Glass Product - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${productDto.id == null} ? #{product.addTitle} : #{product.editTitle}">Add Glass Product</h1>
+            <div class="subtitle" th:text="#{product.formSubtitle}">A glass type, colour or finish and thickness, sold by the m² (MD-01)</div>
+        </div>
+        <a th:href="${productDto.id == null} ? @{/products} : @{/products/{id}(id=${productDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${productDto.id == null} ? @{/products/new} : @{/products/{id}/edit(id=${productDto.id})}"
+              th:object="${productDto}" method="post" class="form-container" id="product-form" novalidate
+              th:attr="data-density=${density}">
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="number-preview-box">
+                <span class="label" th:text="#{product.preview}">Product</span>
+                <span class="number-preview large is-text" id="product-preview" th:attr="data-empty=#{product.previewEmpty}"><th:block
+                        th:if="${productEntity != null}"><th:block th:replace="~{products/list :: productName(${productEntity})}"></th:block></th:block></span>
+                <span class="rate-previous" id="product-weight"
+                      th:text="${weightPerM2 != null} ? ${#numbers.formatDecimal(weightPerM2, 1, 'COMMA', 2, 'POINT') + ' kg/m²'} : ''"></span>
+                <span class="rate-previous" id="product-code" th:if="${productDto.id == null}" th:attr="data-label=#{product.suggestedCode}"></span>
+            </div>
+
+            <!-- New product: type, colour or finish and thickness are chosen once -->
+            <div class="form-grid" th:if="${productDto.id == null}">
+                <div class="form-group">
+                    <label for="glassType" th:text="#{product.glassType}">Glass type</label>
+                    <select id="glassType" th:field="*{glassType}" required th:classappend="${#fields.hasErrors('glassType')} ? 'is-invalid'">
+                        <option value="" th:text="#{product.chooseType}">Choose a type</option>
+                        <option th:each="t : ${glassTypes}" th:value="${t}" th:attr="data-prefix=${t.codePrefix}"
+                                th:text="#{${'glass.type.' + t}}">Clear</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('glassType')}" th:errors="*{glassType}"></span>
+                    <span class="hint" th:text="#{product.temperedHint}">Tempered glass is made to size and cannot be cut</span>
+                </div>
+                <div class="form-group">
+                    <label for="variant" th:text="#{product.variant}">Colour or finish</label>
+                    <input type="text" id="variant" th:field="*{variant}" maxlength="30" th:placeholder="#{product.variantPh}"
+                           th:classappend="${#fields.hasErrors('variant')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('variant')}" th:errors="*{variant}"></span>
+                    <span class="hint" th:text="#{product.variantHint}">Leave empty for plain glass of this type</span>
+                </div>
+                <div class="form-group">
+                    <label for="thicknessMm" th:text="#{product.thickness}">Thickness</label>
+                    <div class="input-unit">
+                        <input type="number" id="thicknessMm" th:field="*{thicknessMm}" step="0.01" min="1" max="50" required
+                               inputmode="decimal" list="common-thicknesses" th:classappend="${#fields.hasErrors('thicknessMm')} ? 'is-invalid'">
+                        <span>mm</span>
+                    </div>
+                    <datalist id="common-thicknesses">
+                        <option th:each="t : ${ {'3', '4', '5', '6', '8', '10', '12', '6.38', '8.38', '10.38'} }" th:value="${t}"></option>
+                    </datalist>
+                    <span class="field-error" th:if="${#fields.hasErrors('thicknessMm')}" th:errors="*{thicknessMm}"></span>
+                    <span class="hint" th:text="#{product.thicknessHint}">Laminated glass is usually 6.38 or 8.38 mm</span>
+                </div>
+            </div>
+
+            <!-- Edit: what the glass is stays fixed -->
+            <th:block th:if="${productDto.id != null}">
+                <div class="detail-list fixed-fields">
+                    <div class="item">
+                        <label th:text="#{product.glassType}">Glass type</label>
+                        <div class="value" th:text="#{${'glass.type.' + productDto.glassType}}">Clear</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.variant}">Colour or finish</label>
+                        <div class="value" th:text="*{variant} ?: '—'">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.thickness}">Thickness</label>
+                        <div class="value" th:text="${productEntity.thicknessLabel + ' mm'}">6 mm</div>
+                    </div>
+                </div>
+                <!-- Not changed on edit, but sent so the form validates -->
+                <input type="hidden" th:field="*{glassType}">
+                <input type="hidden" th:field="*{variant}">
+                <input type="hidden" th:field="*{thicknessMm}">
+                <p class="form-note" th:text="#{product.fixedNote}">Glass type, colour or finish and thickness say what the glass is, so they cannot change. Add a new product instead and deactivate this one.</p>
+            </th:block>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{product.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="20"
+                           th:required="${productDto.id != null}" autocapitalize="characters" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="${productDto.id == null} ? #{product.codeHint} : #{product.codeEditHint}">Leave empty to use the suggested code</span>
+                </div>
+                <div class="form-group">
+                    <label for="taxCategoryId" th:text="#{product.taxCategory}">VAT category</label>
+                    <select id="taxCategoryId" th:field="*{taxCategoryId}" required th:classappend="${#fields.hasErrors('taxCategoryId')} ? 'is-invalid'">
+                        <option th:each="t : ${taxCategories}" th:value="${t.id}"
+                                th:text="${t.name + ' (' + t.rate.stripTrailingZeros().toPlainString() + '%, EBM ' + t.ebmCode + ')'}">Standard rate (18%, EBM B)</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('taxCategoryId')}" th:errors="*{taxCategoryId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="reorderLevelM2" th:text="#{product.reorderLevel}">Reorder level</label>
+                    <div class="input-unit">
+                        <input type="number" id="reorderLevelM2" th:field="*{reorderLevelM2}" step="0.01" min="0" inputmode="decimal"
+                               th:classappend="${#fields.hasErrors('reorderLevelM2')} ? 'is-invalid'">
+                        <span>m²</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('reorderLevelM2')}" th:errors="*{reorderLevelM2}"></span>
+                    <span class="hint" th:text="#{product.reorderHint}">Alert when stock falls below this area; leave empty for no alert</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="notes" th:text="#{product.notes}">Notes</label>
+                    <input type="text" id="notes" th:field="*{notes}" maxlength="255" th:placeholder="#{product.notesPh}"
+                           th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{product.save}">Save Product</button>
+                <a th:href="${productDto.id == null} ? @{/products} : @{/products/{id}(id=${productDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/product-form.js"></script>
+</div>
+</body>
+</html>

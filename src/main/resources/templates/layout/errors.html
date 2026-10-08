@@ -22,7 +22,7 @@
                 <li class="error-summary-item" th:each="err : ${errs}">
                     <span class="error-summary-field"
                           th:if="${err.field != null and !err.field.isEmpty()}"
-                          th:text="${#strings.capitalize(err.field)}"></span>
+                          th:text="${#strings.contains(err.field, '[')} ? #{common.row(${#conversions.convert(#strings.substringBefore(#strings.substringAfter(err.field, '['), ']'), 'java.lang.Integer') + 1})} : ${#strings.capitalize(err.field)}"></span>
                     <span class="error-summary-message" th:text="${err.defaultMessage}"></span>
                 </li>
             </ul>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${supplier.name}, ~{::content})}">
+<head><title>Supplier - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${supplier.name}">Shandong Glass Co.</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${supplier.code}">SUP-WH-0001</span> &middot;
+                <span th:text="${@countries.name(supplier.countryCode)}">China</span> &middot;
+                <span class="badge badge-success" th:if="${supplier.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${supplier.enabled}" th:text="#{common.inactive}">Inactive</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/suppliers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_SUPPLIER')">
+                <form th:if="${supplier.enabled}" th:action="@{/suppliers/{id}/disable(id=${supplier.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{supplier.disableConfirm(${supplier.name})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{product.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${supplier.enabled}" th:action="@{/suppliers/{id}/enable(id=${supplier.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{supplier.enableConfirm(${supplier.name})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{product.enable}">Activate</button>
+                </form>
+                <a th:href="@{/suppliers/{id}/edit(id=${supplier.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="tab-details" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content active" id="tab-details">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{supplier.code}">Code</label>
+                        <div class="value mono" th:text="${supplier.code}">SUP-WH-0001</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{supplier.country}">Country</label>
+                        <div class="value" th:text="${@countries.name(supplier.countryCode) + ' (' + supplier.countryCode + ')'}">China (CN)</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{supplier.currency}">Currency</label>
+                        <div class="value mono" th:text="${supplier.currencyCode}">USD</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{supplier.incoterm}">Incoterm</label>
+                        <div class="value">
+                            <span th:if="${supplier.incoterm != null}" th:text="#{${'incoterm.' + supplier.incoterm}}">FOB - Free on board</span>
+                            <span th:if="${supplier.incoterm == null}" th:text="#{supplier.noIncoterm}">None (local supplier)</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.terms}">Payment terms</label>
+                        <div class="value" th:text="${supplier.paymentTermsDays == 0} ? #{party.termsNone} : #{party.termsDays(${supplier.paymentTermsDays})}">30 days</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.tin}">TIN</label>
+                        <div class="value mono" th:text="${supplier.tin ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.contact}">Contact</label>
+                        <div class="value" th:text="${supplier.contactName ?: '—'}">Li Wei</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.phone}">Phone</label>
+                        <div class="value" th:text="${supplier.phone ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.email}">Email</label>
+                        <div class="value" th:text="${supplier.email ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.address}">Address</label>
+                        <div class="value" th:text="${supplier.address ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${supplier.notes ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${supplier.version > 0} ? ${#temporals.format(supplier.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + supplier.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+
+                <!-- What the supplier's price covers under this incoterm (for the import cost sheet, PRC-03) -->
+                <div class="incoterm-covers" th:if="${supplier.incoterm != null}">
+                    <h3 th:text="#{supplier.coversTitle(${supplier.incoterm})}">Under FOB the supplier's price covers</h3>
+                    <ul>
+                        <li th:classappend="${supplier.incoterm.supplierPaysFreight} ? 'yes' : 'no'"
+                            th:text="${supplier.incoterm.supplierPaysFreight} ? #{supplier.covers.freight} : #{supplier.notCovered.freight}">Main freight: you pay</li>
+                        <li th:classappend="${supplier.incoterm.supplierPaysInsurance} ? 'yes' : 'no'"
+                            th:text="${supplier.incoterm.supplierPaysInsurance} ? #{supplier.covers.insurance} : #{supplier.notCovered.insurance}">Insurance: you pay</li>
+                        <li th:classappend="${supplier.incoterm.supplierPaysDuty} ? 'yes' : 'no'"
+                            th:text="${supplier.incoterm.supplierPaysDuty} ? #{supplier.covers.duty} : #{supplier.notCovered.duty}">Import duty: you pay</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Supplier/{id}(id=${supplier.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

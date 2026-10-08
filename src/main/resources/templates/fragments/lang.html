@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Language switcher (header and login). baseUrl: the page to reload with ?lang=xx. Behaviour in iwarehouse.js. -->
+<div th:fragment="dropdown(baseUrl)" class="lang-dropdown" id="lang-dropdown">
+    <button type="button" class="lang-btn" id="lang-btn" aria-haspopup="true" aria-expanded="false" aria-label="Language">
+        <span class="flag">
+            <th:block th:switch="${#locale.language}">
+                <th:block th:case="'fr'"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagFr}" viewBox="0 0 24 18"></svg></th:block>
+                <th:block th:case="'rw'"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagRw}" viewBox="0 0 24 18"></svg></th:block>
+                <th:block th:case="*"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagUs}" viewBox="0 0 24 18"></svg></th:block>
+            </th:block>
+        </span>
+        <span class="lang-code" th:switch="${#locale.language}">
+            <span th:case="'fr'">FR</span>
+            <span th:case="'rw'">RW</span>
+            <span th:case="*">EN</span>
+        </span>
+        <svg class="lang-caret" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"></path>
+        </svg>
+    </button>
+    <ul class="lang-menu" id="lang-menu">
+        <li>
+            <a th:href="@{${baseUrl}(lang='en')}" class="lang-option" th:classappend="${#locale.language == 'en'} ? 'active'" th:title="#{login.lang.en}">
+                <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagUs}" viewBox="0 0 24 18"></svg></span>
+                <span>English</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{${baseUrl}(lang='fr')}" class="lang-option" th:classappend="${#locale.language == 'fr'} ? 'active'" th:title="#{login.lang.fr}">
+                <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagFr}" viewBox="0 0 24 18"></svg></span>
+                <span>Français</span>
+            </a>
+        </li>
+        <li>
+            <a th:href="@{${baseUrl}(lang='rw')}" class="lang-option" th:classappend="${#locale.language == 'rw'} ? 'active'" th:title="#{login.lang.rw}">
+                <span class="flag"><svg xmlns="http://www.w3.org/2000/svg" th:replace="~{fragments/flags :: flagRw}" viewBox="0 0 24 18"></svg></span>
+                <span>Kinyarwanda</span>
+            </a>
+        </li>
+    </ul>
+</div>
+</body>
+</html>

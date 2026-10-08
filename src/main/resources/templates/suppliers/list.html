@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{supplier.title}, ~{::content})}">
+<head><title>Suppliers - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{supplier.title}">Suppliers</h1>
+            <div class="subtitle" th:text="#{supplier.subtitle}">Who the business buys glass and services from, and in which currency</div>
+        </div>
+        <a href="/suppliers/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_SUPPLIER')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{supplier.add}">Add supplier</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{supplier.sectionTitle}">Suppliers</span>
+                <span class="section-count" th:text="${suppliers.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/suppliers}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{supplier.searchPh}" th:aria-label="#{supplier.searchPh}">
+                </div>
+                <select name="country" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{supplier.country}">
+                    <option value="" th:text="#{supplier.allCountries}">All countries</option>
+                    <option th:each="c : ${countryOptions}" th:value="${c.code}" th:selected="${c.code == country}" th:text="${c.name}">China</option>
+                </select>
+                <select name="currency" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{supplier.currency}">
+                    <option value="" th:text="#{rate.allCurrencies}">All currencies</option>
+                    <option th:each="c : ${currencyOptions}" th:value="${c}" th:selected="${c == currency}" th:text="${c}">USD</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{supplier.name}">Supplier</th>
+                        <th th:text="#{supplier.country}">Country</th>
+                        <th th:text="#{supplier.currency}">Currency</th>
+                        <th th:text="#{supplier.incoterm}">Incoterm</th>
+                        <th th:text="#{party.contact}">Contact</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${suppliers.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/suppliers/{id}(id=${s.id})}" th:text="${s.name}">Shandong Glass Co.</a>
+                            <div class="cell-sub mono" th:text="${s.code}">SUP-WH-0001</div>
+                        </td>
+                        <td th:text="${@countries.name(s.countryCode)}">China</td>
+                        <td class="mono" th:text="${s.currencyCode}">USD</td>
+                        <td>
+                            <span class="badge badge-secondary" th:if="${s.incoterm != null}" th:text="${s.incoterm}">FOB</span>
+                            <span class="text-muted" th:if="${s.incoterm == null}">—</span>
+                        </td>
+                        <td>
+                            <div th:text="${s.contactName ?: '—'}">Li Wei</div>
+                            <div class="cell-sub" th:if="${s.phone != null}" th:text="${s.phone}">+86 531 0000 0000</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-success" th:if="${s.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${s.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a th:href="@{/suppliers/{id}(id=${s.id})}" class="action-icon edit" th:title="#{common.view}" th:aria-label="#{common.view}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </a>
+                                <a th:href="@{/suppliers/{id}/edit(id=${s.id})}" class="action-icon edit" sec:authorize="hasAuthority('PERM_MANAGE_SUPPLIER')"
+                                   th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(suppliers.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{supplier.empty}">No suppliers found</h3>
+                                <p th:text="#{supplier.emptyHint}">Try other filters or add a supplier</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${suppliers}, '/suppliers', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${shipmentDto.id == null} ? #{shipment.addTitle} : #{shipment.editTitle(${shipment.number})}, ~{::content})}">
+<head><title>Shipment - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${shipmentDto.id == null} ? #{shipment.addTitle} : #{shipment.editTitle(${shipment.number})}">New Shipment</h1>
+            <div class="subtitle" th:text="#{shipment.formSubtitle}">Bills are saved as drafts; post them from the shipment page when they are right.</div>
+        </div>
+        <a th:href="${shipmentDto.id == null} ? @{/shipments} : @{/shipments/{id}(id=${shipmentDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${shipmentDto.id == null} ? @{/shipments/new} : @{/shipments/{id}/edit(id=${shipmentDto.id})}"
+          th:object="${shipmentDto}" method="post" class="shipment-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="reference" th:text="#{shipment.reference}">Container / B/L</label>
+                        <input type="text" id="reference" th:field="*{reference}" maxlength="60" class="input-code" spellcheck="false"
+                               th:placeholder="#{shipment.referencePh}" th:classappend="${#fields.hasErrors('reference')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('reference')}" th:errors="*{reference}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="arrivalDate" th:text="#{shipment.arrivalDate}">Arrived</label>
+                        <input type="date" id="arrivalDate" th:field="*{arrivalDate}" required th:classappend="${#fields.hasErrors('arrivalDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('arrivalDate')}" th:errors="*{arrivalDate}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="allocationMethod" th:text="#{shipment.method}">Shared by</label>
+                        <th:block th:if="${locked}">
+                            <input type="hidden" name="allocationMethod" th:value="*{allocationMethod}">
+                            <input type="text" id="allocationMethod" th:value="#{${'shipment.method.' + shipmentDto.allocationMethod}}" disabled>
+                            <span class="hint" th:text="#{shipment.methodLocked}">Fixed once bills are posted</span>
+                        </th:block>
+                        <th:block th:unless="${locked}">
+                            <select id="allocationMethod" th:field="*{allocationMethod}" th:classappend="${#fields.hasErrors('allocationMethod')} ? 'is-invalid'">
+                                <option th:each="m : ${methods}" th:value="${m}" th:text="#{${'shipment.method.' + m}}">By area</option>
+                            </select>
+                            <span class="hint" th:text="#{shipment.methodHint}">How the costs are shared between the crates</span>
+                        </th:block>
+                        <span class="field-error" th:if="${#fields.hasErrors('allocationMethod')}" th:errors="*{allocationMethod}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes" th:text="#{product.notes}">Notes</label>
+                        <input type="text" id="notes" th:field="*{notes}" maxlength="500" th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="receiptIds" th:text="#{shipment.receipts}">Receipts</label>
+                        <th:block th:if="${locked}">
+                            <input type="hidden" th:each="rid : *{receiptIds}" name="receiptIds" th:value="${rid}">
+                            <div class="locked-list">
+                                <span class="badge badge-secondary mono" th:each="r : ${shipment.receipts}" th:text="${r.receiptNumber}">GRN-WH-2026-000001</span>
+                            </div>
+                            <span class="hint" th:text="#{shipment.receiptsLocked}">Fixed once bills are posted: their costs were shared over these crates</span>
+                        </th:block>
+                        <th:block th:unless="${locked}">
+                            <select id="receiptIds" th:field="*{receiptIds}" multiple data-multiselect
+                                    th:attr="data-placeholder=#{shipment.receiptsPh}, data-no-choices=#{shipment.noReceiptsLeft}, data-no-results=#{shipment.noReceiptMatch}"
+                                    th:classappend="${#fields.hasErrors('receiptIds')} ? 'is-invalid'">
+                                <option th:each="r : ${receipts}" th:value="${r.id}"
+                                        th:text="${r.number + ' · ' + r.purchaseOrder.supplier.name + ' · ' + #temporals.format(r.receivedDate, 'yyyy-MM-dd')}">GRN-WH-2026-000001 · Shandong Glass Co. · 2026-10-08</option>
+                            </select>
+                            <span class="hint" th:text="#{shipment.receiptsHint}">Posted receipts of the crates that came in this shipment</span>
+                        </th:block>
+                        <span class="field-error" th:if="${#fields.hasErrors('receiptIds')}" th:errors="*{receiptIds}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section" th:if="${!#lists.isEmpty(postedCosts)}">
+            <div class="section-header">
+                <h2 th:text="#{shipment.postedBills}">Posted bills</h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="num">#</th>
+                            <th th:text="#{shipment.cost}">Cost</th>
+                            <th th:text="#{shipment.bill}">Bill</th>
+                            <th class="num" th:text="#{shipment.amount}">Amount</th>
+                            <th th:text="#{common.status}">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${postedCosts}">
+                            <td class="num text-muted" th:text="${c.lineNo}">1</td>
+                            <td>
+                                <strong th:text="#{${'shipment.costType.' + c.costType}}">Freight</strong>
+                                <div class="cell-sub" th:if="${c.description != null}" th:text="${c.description}">Sea freight</div>
+                            </td>
+                            <td class="nowrap"><span class="mono" th:text="${c.invoiceRef ?: '—'}">INV-1</span> <span class="cell-sub" th:text="${#temporals.format(c.invoiceDate, 'yyyy-MM-dd')}">2026-10-01</span></td>
+                            <td class="num nowrap" th:text="${@num.amount(c.amount, 2) + ' ' + c.currencyCode}">2,000.00 USD</td>
+                            <td><span class="badge badge-success" th:text="#{shipment.costPosted(${c.postingNo})}">Posted #1</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{shipment.postedBillsNote}">Posted bills never change. To correct one, add a credit note: the same cost with a negative amount.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="${#lists.isEmpty(postedCosts)} ? #{shipment.billsTitle} : #{shipment.newBillsTitle}">Bills</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{shipment.addBill}">Add bill</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table bill-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{shipment.costTypeCol}">Cost</th>
+                            <th th:text="#{shipment.description}">Description</th>
+                            <th th:text="#{shipment.paidToCol}">Paid to</th>
+                            <th th:text="#{shipment.invoiceRef}">Bill no.</th>
+                            <th th:text="#{shipment.invoiceDate}">Bill date</th>
+                            <th th:text="#{shipment.currency}">Currency</th>
+                            <th class="num" th:text="#{shipment.amount}">Amount</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body">
+                        <tr class="line-row" th:each="cost, st : *{costs}">
+                            <td>
+                                <input type="hidden" th:field="*{costs[__${st.index}__].id}">
+                                <select th:field="*{costs[__${st.index}__].costType}" th:aria-label="#{shipment.costTypeCol}"
+                                        th:classappend="${#fields.hasErrors('costs[__${st.index}__].costType')} ? 'is-invalid'">
+                                    <option value="" th:text="#{shipment.chooseType}">Choose</option>
+                                    <option th:each="t : ${costTypes}" th:value="${t}" th:text="#{${'shipment.costType.' + t}}">Freight</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].costType')}" th:errors="*{costs[__${st.index}__].costType}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{costs[__${st.index}__].description}" maxlength="120" th:aria-label="#{shipment.description}"
+                                       th:classappend="${#fields.hasErrors('costs[__${st.index}__].description')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].description')}" th:errors="*{costs[__${st.index}__].description}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{costs[__${st.index}__].supplierId}" th:aria-label="#{shipment.paidToCol}"
+                                        th:classappend="${#fields.hasErrors('costs[__${st.index}__].supplierId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{shipment.noPayee}">—</option>
+                                    <option th:each="sup : ${suppliers}" th:value="${sup.id}" th:text="${sup.name}">Bolloré Logistics</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].supplierId')}" th:errors="*{costs[__${st.index}__].supplierId}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{costs[__${st.index}__].invoiceRef}" maxlength="60" class="input-code" spellcheck="false" th:aria-label="#{shipment.invoiceRef}"
+                                       th:classappend="${#fields.hasErrors('costs[__${st.index}__].invoiceRef')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].invoiceRef')}" th:errors="*{costs[__${st.index}__].invoiceRef}"></span>
+                            </td>
+                            <td>
+                                <input type="date" th:field="*{costs[__${st.index}__].invoiceDate}" th:aria-label="#{shipment.invoiceDate}"
+                                       th:classappend="${#fields.hasErrors('costs[__${st.index}__].invoiceDate')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].invoiceDate')}" th:errors="*{costs[__${st.index}__].invoiceDate}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{costs[__${st.index}__].currencyCode}" th:aria-label="#{shipment.currency}"
+                                        th:classappend="${#fields.hasErrors('costs[__${st.index}__].currencyCode')} ? 'is-invalid'">
+                                    <option th:each="cur : ${currencies}" th:value="${cur.code}" th:text="${cur.code}">USD</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].currencyCode')}" th:errors="*{costs[__${st.index}__].currencyCode}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{costs[__${st.index}__].amount}" step="0.01" inputmode="decimal" th:aria-label="#{shipment.amount}"
+                                       th:classappend="${#fields.hasErrors('costs[__${st.index}__].amount')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('costs[__${st.index}__].amount')}" th:errors="*{costs[__${st.index}__].amount}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{shipment.removeBill}" th:aria-label="#{shipment.removeBill}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{shipment.billsNote}">One row per bill, in the bill's currency and dated like the bill: its exchange rate is the rate of that date (customs duty: the customs rate). A negative amount is a credit note. Empty rows are ignored.</p>
+        </div>
+
+        <!-- A new bill (copied by js/line-form.js; {i} becomes the row number) -->
+        <template class="line-template">
+            <tr class="line-row">
+                <td>
+                    <input type="hidden" name="costs[{i}].id" value="">
+                    <select name="costs[{i}].costType" th:aria-label="#{shipment.costTypeCol}">
+                        <option value="" th:text="#{shipment.chooseType}">Choose</option>
+                        <option th:each="t : ${costTypes}" th:value="${t}" th:text="#{${'shipment.costType.' + t}}">Freight</option>
+                    </select>
+                </td>
+                <td><input type="text" name="costs[{i}].description" maxlength="120" th:aria-label="#{shipment.description}"></td>
+                <td>
+                    <select name="costs[{i}].supplierId" th:aria-label="#{shipment.paidToCol}">
+                        <option value="" th:text="#{shipment.noPayee}">—</option>
+                        <option th:each="sup : ${suppliers}" th:value="${sup.id}" th:text="${sup.name}">Bolloré Logistics</option>
+                    </select>
+                </td>
+                <td><input type="text" name="costs[{i}].invoiceRef" maxlength="60" class="input-code" spellcheck="false" th:aria-label="#{shipment.invoiceRef}"></td>
+                <td><input type="date" name="costs[{i}].invoiceDate" th:aria-label="#{shipment.invoiceDate}"></td>
+                <td>
+                    <select name="costs[{i}].currencyCode" th:aria-label="#{shipment.currency}">
+                        <option th:each="cur : ${currencies}" th:value="${cur.code}" th:selected="${cur.code == base.code}" th:text="${cur.code}">RWF</option>
+                    </select>
+                </td>
+                <td class="num"><input type="number" name="costs[{i}].amount" step="0.01" inputmode="decimal" th:aria-label="#{shipment.amount}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{shipment.removeBill}" th:aria-label="#{shipment.removeBill}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{shipment.save}">Save</button>
+            <a th:href="${shipmentDto.id == null} ? @{/shipments} : @{/shipments/{id}(id=${shipmentDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

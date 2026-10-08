@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${currencyDto.id == null} ? #{currency.addTitle} : #{currency.editTitle}, ~{::content})}">
+<head><title>Currency - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${currencyDto.id == null} ? #{currency.addTitle} : #{currency.editTitle}">Add Currency</h1>
+            <div class="subtitle" th:text="#{currency.formSubtitle}">A currency suppliers and documents may use (ACC-02)</div>
+        </div>
+        <a href="/currencies?tab=currencies" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${currencyDto.id == null} ? @{/currencies/new} : @{/currencies/{id}/edit(id=${currencyDto.id})}"
+              th:object="${currencyDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <p class="form-note" th:if="${currencyEntity != null and currencyEntity.baseCurrency}" th:text="#{currency.baseNote}">RWF is the base currency: ledgers are kept in it, it stays active and has no decimals.</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{currency.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="3" required
+                           th:readonly="${currencyDto.id != null}" th:placeholder="#{currency.codePh}"
+                           autocapitalize="characters" spellcheck="false" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="${currencyDto.id == null} ? #{currency.codeHint} : #{currency.codeFixed}">ISO 4217 code, e.g. USD</span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{currency.name}">Name</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="60" required th:placeholder="#{currency.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="symbol" th:text="#{currency.symbol}">Symbol</label>
+                    <input type="text" id="symbol" th:field="*{symbol}" maxlength="8" required th:placeholder="#{currency.symbolPh}"
+                           th:classappend="${#fields.hasErrors('symbol')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('symbol')}" th:errors="*{symbol}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="decimals" th:text="#{currency.decimals}">Decimals</label>
+                    <input type="number" id="decimals" th:field="*{decimals}" min="0" max="4" step="1" required
+                           th:readonly="${currencyEntity != null and currencyEntity.baseCurrency}"
+                           th:classappend="${#fields.hasErrors('decimals')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('decimals')}" th:errors="*{decimals}"></span>
+                    <span class="hint" th:text="#{currency.decimalsHint}">Used when rounding amounts: 2 for USD, 0 for RWF</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{currency.save}">Save Currency</button>
+                <a href="/currencies?tab=currencies" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="section" th:if="${history != null}" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

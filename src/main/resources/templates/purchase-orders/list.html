@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{po.title}, ~{::content})}">
+<head><title>Purchase Orders - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{po.title}">Purchase Orders</h1>
+            <div class="subtitle" th:text="#{po.subtitle}">Glass ordered from suppliers, in their currency, and what has arrived</div>
+        </div>
+        <a href="/purchase-orders/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_PURCHASE_ORDER')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{po.add}">New purchase order</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{po.sectionTitle}">Orders</span>
+                <span class="section-count" th:text="${orders.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/purchase-orders}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{po.searchPh}" th:aria-label="#{po.searchPh}">
+                </div>
+                <select name="supplier" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{po.supplier}">
+                    <option value="" th:text="#{po.allSuppliers}">All suppliers</option>
+                    <option th:each="s : ${supplierOptions}" th:value="${s.id}" th:selected="${s.id == supplier}" th:text="${s.name}">Shandong Glass</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="open" th:selected="${status == 'open'}" th:text="#{po.status.open}">Open</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'po.status.' + st}}">Draft</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{po.number}">Order</th>
+                        <th th:text="#{po.supplier}">Supplier</th>
+                        <th th:text="#{po.orderDate}">Ordered</th>
+                        <th class="num" th:text="#{po.sheets}">Sheets</th>
+                        <th class="num" th:text="#{po.received}">Received</th>
+                        <th class="num" th:text="#{po.amount}">Amount</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="o : ${orders.content}" th:with="t=${totals.get(o.id)}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/purchase-orders/{id}(id=${o.id})}" th:text="${o.number}">PO-WH-2026-000001</a>
+                            <div class="cell-sub" th:if="${o.supplierRef != null}" th:text="${o.supplierRef}">PI-2026-114</div>
+                        </td>
+                        <td th:text="${o.supplier.name}">Shandong Glass Co.</td>
+                        <td class="nowrap">
+                            <div th:text="${#temporals.format(o.orderDate, 'yyyy-MM-dd')}">2026-10-08</div>
+                            <div class="cell-sub" th:if="${o.expectedDate != null}" th:text="#{po.expectedShort(${#temporals.format(o.expectedDate, 'yyyy-MM-dd')})}">due 2026-11-20</div>
+                        </td>
+                        <td class="num">
+                            <div th:text="${t.sheets}">40</div>
+                            <div class="cell-sub" th:text="${@num.m2(t.areaM2)} + ' m²'">288.9 m²</div>
+                        </td>
+                        <td class="num">
+                            <span th:text="${t.received}">20</span>
+                            <div class="cell-sub" th:if="${o.status.receivable and t.outstanding > 0}" th:text="#{po.outstandingShort(${t.outstanding})}">20 to come</div>
+                        </td>
+                        <td class="num">
+                            <span th:text="${@num.amount(t.amount, decimals.getOrDefault(o.currencyCode, 2))}">1,256.72</span>
+                            <span class="text-muted mono" th:text="${o.currencyCode}">USD</span>
+                        </td>
+                        <td><th:block th:replace="~{purchase-orders/list :: poStatus(${o.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(orders.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{po.empty}">No purchase orders found</h3>
+                                <p th:text="#{po.emptyHint}">Try other filters or raise a new order</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${orders}, '/purchase-orders', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a purchase order. */-->
+<th:block th:fragment="poStatus(s)" th:switch="${s.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{po.status.DRAFT}">Draft</span>
+    <span th:case="'ORDERED'" class="badge badge-info" th:text="#{po.status.ORDERED}">Ordered</span>
+    <span th:case="'PARTIALLY_RECEIVED'" class="badge badge-warning" th:text="#{po.status.PARTIALLY_RECEIVED}">Partly received</span>
+    <span th:case="'RECEIVED'" class="badge badge-success" th:text="#{po.status.RECEIVED}">Received</span>
+    <span th:case="'CLOSED'" class="badge badge-confirmed" th:text="#{po.status.CLOSED}">Closed short</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{po.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

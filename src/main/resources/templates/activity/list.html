@@ -69,7 +69,7 @@
                         <td th:text="${log.module}">User Management</td>
                         <td>
                             <span class="action-badge"
-                                  th:classappend="${#strings.contains(log.action, 'CREATE')} ? 'action-create' : (${#strings.contains(log.action, 'DELETE') or #strings.contains(log.action, 'CANCEL')} ? 'action-delete' : (${#strings.contains(log.action, 'UPDATE')} ? 'action-update' : (${#strings.contains(log.action, 'LOGIN')} ? 'action-login' : (${#strings.contains(log.action, 'ACCESS') or #strings.contains(log.action, 'FAILED')} ? 'action-access' : 'action-other'))))"
+                                  th:classappend="${#strings.contains(log.action, 'CREATE')} ? 'action-create' : (${#strings.contains(log.action, 'DELETE') or #strings.contains(log.action, 'CANCEL')} ? 'action-delete' : (${#strings.contains(log.action, 'UPDATE')} ? 'action-update' : (${#strings.contains(log.action, 'ACCESS') or #strings.contains(log.action, 'FAILED')} ? 'action-access' : (${#strings.contains(log.action, 'LOGIN')} ? 'action-login' : 'action-other'))))"
                                   th:text="${log.action}">CREATE_INVOICE</span>
                         </td>
                         <td th:text="${log.description}">Created invoice INV-WH-2026-000123</td>

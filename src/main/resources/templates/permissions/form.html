@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{perm.editTitle}, ~{::content})}">
+<head><title>Permission - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{perm.editTitle}">Edit Permission</h1>
+            <div class="subtitle mono" th:text="${permission.code}">VIEW_USER</div>
+        </div>
+        <a href="/permissions" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/permissions/{id}/edit(id=${permissionDto.id})}" th:object="${permissionDto}"
+              method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="detail-list fixed-fields">
+                <div class="item">
+                    <label th:text="#{perm.code}">Code</label>
+                    <div class="value mono" th:text="${permission.code}">VIEW_USER</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{perm.module}">Module</label>
+                    <div class="value" th:text="${permission.module}">User Management</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{perm.action}">Action</label>
+                    <div class="value" th:text="${permission.action}">VIEW</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{common.status}">Status</label>
+                    <div class="value">
+                        <span class="badge badge-success" th:if="${permission.enabled}" th:text="#{common.active}">Active</span>
+                        <span class="badge badge-secondary" th:unless="${permission.enabled}" th:text="#{common.inactive}">Inactive</span>
+                    </div>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{perm.fixedHint}">Code, module and action come from the module that uses this permission.</p>
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="name" th:text="#{perm.name}">Name</label>
+                    <input type="text" id="name" th:field="*{name}" th:placeholder="#{perm.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'" maxlength="150" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description" th:text="#{perm.description}">Description</label>
+                    <textarea id="description" th:field="*{description}" th:placeholder="#{perm.descriptionPh}"
+                              th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'" maxlength="500"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{perm.update}">Save Permission</button>
+                <a href="/permissions" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

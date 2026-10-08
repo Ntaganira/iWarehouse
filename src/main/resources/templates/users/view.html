@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${user.fullName}, ~{::content})}">
+<head><title>User - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1>
+                <span th:text="${user.fullName}">User Name</span>
+                <span class="you-badge" th:if="${isSelf}" th:text="#{user.you}">You</span>
+            </h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${user.username}">username</span> &middot;
+                <span class="badge badge-success" th:if="${user.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${user.enabled}" th:text="#{common.inactive}">Inactive</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/users" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline open-reset-modal" sec:authorize="hasAuthority('PERM_RESET_PASSWORD')"
+                    th:attr="data-id=${user.id}, data-name=${user.fullName}, data-action=@{/users/{id}/reset-password(id=${user.id})}"
+                    th:text="#{user.resetPassword}">Reset Password</button>
+            <th:block sec:authorize="hasAuthority('PERM_DISABLE_USER')" th:unless="${isSelf}">
+                <form th:if="${user.enabled}" th:action="@{/users/{id}/disable(id=${user.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{user.disableConfirm(${user.fullName})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{user.disable}">Disable</button>
+                </form>
+                <form th:unless="${user.enabled}" th:action="@{/users/{id}/enable(id=${user.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{user.enableConfirm(${user.fullName})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{user.enable}">Enable</button>
+                </form>
+            </th:block>
+            <a th:href="@{/users/{id}/edit(id=${user.id})}" class="btn btn-primary" sec:authorize="hasAuthority('PERM_EDIT_USER')" th:text="#{common.edit}">Edit</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="tab-account" th:text="#{user.general}">Account</button>
+            <button type="button" class="tab" data-tab="tab-access" th:text="#{user.rolePermissions}">Roles &amp; Access</button>
+            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <div class="tab-content active" id="tab-account">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{user.username}">Username</label>
+                        <div class="value mono" th:text="${user.username}">admin</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.fullName}">Full Name</label>
+                        <div class="value" th:text="${user.fullName}">System Admin</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.email}">Email</label>
+                        <div class="value" th:text="${user.email}">admin@iwarehouse.local</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.phone}">Phone</label>
+                        <div class="value" th:text="${user.phone ?: '—'}">+250...</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(user.createdAt, 'dd/MM/yyyy HH:mm')}">07/10/2026 12:00</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${user.updatedAt != null} ? ${#temporals.format(user.updatedAt, 'dd/MM/yyyy HH:mm')} : '—'">—</div>
+                    </div>
+                    <div class="item" th:if="${user.lockedUntil != null and user.lockedUntil.isAfter(#temporals.createNow())}">
+                        <label th:text="#{user.lockedUntil}">Locked until</label>
+                        <div class="value"><span class="badge badge-danger" th:text="${#temporals.format(user.lockedUntil, 'dd/MM/yyyy HH:mm')}">—</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-access">
+                <div class="role-card" th:each="r : ${user.roles}">
+                    <div class="role-card-header">
+                        <div>
+                            <div class="role-card-title">
+                                <a class="row-link" th:href="@{/roles/{id}(id=${r.id})}" sec:authorize="hasAuthority('PERM_VIEW_ROLE')" th:text="${r.code}">ADMIN</a>
+                                <span sec:authorize="!hasAuthority('PERM_VIEW_ROLE')" th:text="${r.code}">ADMIN</span>
+                                <span class="badge badge-secondary" th:unless="${r.enabled}" th:text="#{common.inactive}">Inactive</span>
+                            </div>
+                            <div class="role-card-desc" th:text="${r.description}">Description</div>
+                        </div>
+                        <span class="badge badge-info" th:text="#{user.permissionCount(${#sets.size(r.permissions)})}">8 permissions</span>
+                    </div>
+                    <div class="role-card-body">
+                        <div class="role-card-section">
+                            <label th:text="#{user.pages}">Pages</label>
+                            <div class="badge-wrap">
+                                <span class="badge badge-info" th:each="p : ${r.pages}" th:text="${p.name}">Inventory</span>
+                            </div>
+                            <div class="text-muted" th:if="${#sets.isEmpty(r.pages)}" th:text="#{user.noPages}">No pages</div>
+                        </div>
+                        <div class="role-card-section">
+                            <label th:text="#{user.permissions}">Permissions</label>
+                            <div class="badge-wrap">
+                                <span class="badge badge-secondary" th:each="p : ${r.permissions}" th:text="${p.name}" th:title="${p.code}">View Users</span>
+                            </div>
+                            <div class="text-muted" th:if="${#sets.isEmpty(r.permissions)}" th:text="#{user.noPermissions}">No permissions</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="empty-state" th:if="${#sets.isEmpty(user.roles)}">
+                    <h3 th:text="#{user.noRoles}">No roles assigned</h3>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/User/{id}(id=${user.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{users/list :: resetModal}"></div>
+</div>
+</body>
+</html>

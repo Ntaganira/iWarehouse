@@ -4,7 +4,7 @@ services:
     container_name: iwarehouse-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"   # DB_PORT=5441 when another project already uses 5432
     environment:
       POSTGRES_DB: iwarehouse
       POSTGRES_USER: postgres

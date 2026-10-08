@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{perm.title}, ~{::content})}">
+<head><title>Permissions - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{perm.title}">Permissions</h1>
+            <div class="subtitle" th:text="#{perm.subtitle}">Every action the system checks, by module</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{perm.sectionTitle}">Permission Catalogue</span>
+                <span class="section-count" th:text="${permissions.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/permissions}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{perm.searchPh}" th:aria-label="#{perm.searchPh}">
+                </div>
+                <select name="module" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{perm.module}">
+                    <option value="" th:selected="${module == null or module == ''}" th:text="#{perm.moduleSelect}">All Modules</option>
+                    <option th:each="m : ${modules}" th:value="${m}" th:text="${m}" th:selected="${module == m}">Module</option>
+                </select>
+            </form>
+        </div>
+        <p class="form-note list-note" th:text="#{perm.catalogueNote}">Permissions are added with each module; here you can rename or switch them off.</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{perm.table.permission}">Permission</th>
+                        <th th:text="#{perm.module}">Module</th>
+                        <th th:text="#{perm.code}">Code</th>
+                        <th th:text="#{perm.table.roles}">Roles</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{common.actions}">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${permissions.content}" th:with="locked=${protectedModules.contains(p.module)}">
+                        <td>
+                            <div class="info">
+                                <div class="name" th:text="${p.name}">View Users</div>
+                                <div class="email" th:if="${p.description != null}" th:text="${p.description}">Description</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-info" th:text="${p.module}">User Management</span></td>
+                        <td><span class="mono" th:text="${p.code}">VIEW_USER</span></td>
+                        <td th:text="${roleCounts.containsKey(p.id)} ? ${roleCounts.get(p.id)} : 0">0</td>
+                        <td>
+                            <span class="badge badge-success" th:if="${p.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${p.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                        <td>
+                            <div class="btn-group" sec:authorize="hasAuthority('PERM_EDIT_PERMISSION')">
+                                <a th:href="@{/permissions/{id}/edit(id=${p.id})}" class="action-icon edit" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                </a>
+                                <span th:if="${locked}" class="action-icon lock-icon" th:title="#{perm.protectedHint}" th:aria-label="#{perm.protectedHint}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <th:block th:unless="${locked}">
+                                    <form th:if="${p.enabled}" th:action="@{/permissions/{id}/disable(id=${p.id})}" method="post"
+                                          class="row-action-form confirm-submit danger" th:attr="data-confirm=#{perm.disableConfirm(${p.code})}">
+                                        <button type="submit" class="action-icon delete" th:title="#{perm.disable}" th:aria-label="#{perm.disable}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                                        </button>
+                                    </form>
+                                    <form th:unless="${p.enabled}" th:action="@{/permissions/{id}/enable(id=${p.id})}" method="post"
+                                          class="row-action-form confirm-submit" th:attr="data-confirm=#{perm.enableConfirm(${p.code})}">
+                                        <button type="submit" class="action-icon pay" th:title="#{perm.enable}" th:aria-label="#{perm.enable}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                        </button>
+                                    </form>
+                                </th:block>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(permissions.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="icon">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </div>
+                                <h3 th:text="#{perm.empty.title}">No permissions found</h3>
+                                <p th:text="#{perm.empty.subtitle}">Try other filters</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${permissions}, '/permissions', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

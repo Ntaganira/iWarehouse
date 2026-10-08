@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${sequenceDto.id == null} ? #{numbering.addTitle} : #{numbering.editTitle}, ~{::content})}">
+<head><title>Numbering - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${sequenceDto.id == null} ? #{numbering.addTitle} : #{numbering.editTitle}">Add Numbering Sequence</h1>
+            <div class="subtitle" th:text="#{numbering.formSubtitle}">How numbers look for one document type and branch (MD-07)</div>
+        </div>
+        <a href="/settings?tab=numbering" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${sequenceDto.id == null} ? @{/settings/numbering/new} : @{/settings/numbering/{id}/edit(id=${sequenceDto.id})}"
+              th:object="${sequenceDto}" method="post" class="form-container" id="numbering-form" novalidate
+              th:attr="data-year=${previewYear},data-month=${previewMonth}">
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="number-preview-box">
+                <span class="label" th:text="#{numbering.previewLabel}">Next number</span>
+                <span class="number-preview large" id="number-preview">INV-WH-2026-000001</span>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="docType" th:text="#{numbering.docType}">Document</label>
+                    <th:block th:if="${sequenceDto.id == null}">
+                        <select id="docType" th:field="*{docType}" required th:classappend="${#fields.hasErrors('docType')} ? 'is-invalid'">
+                            <option value="" th:text="#{numbering.docTypeSelect}">Choose a document type</option>
+                            <option th:each="t : ${docTypes}" th:value="${t}" th:attr="data-prefix=${t.defaultPrefix}"
+                                    th:text="#{${'doc.type.' + t}}">Sales invoice</option>
+                        </select>
+                    </th:block>
+                    <th:block th:if="${sequenceDto.id != null}">
+                        <input type="text" id="docType" th:value="#{${'doc.type.' + sequenceDto.docType}}" readonly>
+                        <input type="hidden" th:field="*{docType}">
+                    </th:block>
+                    <span class="field-error" th:if="${#fields.hasErrors('docType')}" th:errors="*{docType}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="branchCode" th:text="#{numbering.branch}">Branch</label>
+                    <input type="text" id="branchCode" th:field="*{branchCode}" class="input-code" maxlength="10" required
+                           th:readonly="${sequenceDto.id != null}" autocapitalize="characters" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('branchCode')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('branchCode')}" th:errors="*{branchCode}"></span>
+                    <span class="hint" th:text="${sequenceDto.id == null} ? #{numbering.branchHint} : #{numbering.fixedHint}">Warehouse or vehicle code, e.g. WH</span>
+                </div>
+                <div class="form-group">
+                    <label for="prefix" th:text="#{numbering.prefix}">Prefix</label>
+                    <input type="text" id="prefix" th:field="*{prefix}" class="input-code" maxlength="10" required
+                           autocapitalize="characters" spellcheck="false" th:classappend="${#fields.hasErrors('prefix')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('prefix')}" th:errors="*{prefix}"></span>
+                    <span class="hint" th:text="#{numbering.prefixHint}">1 to 10 capital letters or digits, starting with a letter</span>
+                </div>
+                <div class="form-group">
+                    <label for="resetPolicy" th:text="#{numbering.reset}">Starts again</label>
+                    <select id="resetPolicy" th:field="*{resetPolicy}" th:disabled="${sequence != null and sequence.used}"
+                            th:classappend="${#fields.hasErrors('resetPolicy')} ? 'is-invalid'">
+                        <option th:each="p : ${resetPolicies}" th:value="${p}" th:text="#{${'numbering.reset.' + p}}">Every year</option>
+                    </select>
+                    <!-- A disabled select is not submitted: send the fixed value -->
+                    <input type="hidden" name="resetPolicy" th:value="${sequence.resetPolicy}" th:if="${sequence != null and sequence.used}">
+                    <span class="field-error" th:if="${#fields.hasErrors('resetPolicy')}" th:errors="*{resetPolicy}"></span>
+                    <span class="hint" th:if="${sequence != null and sequence.used}" th:text="#{numbering.reset.lockedHint}">Fixed once a number has been issued, so numbers never repeat.</span>
+                </div>
+                <div class="form-group">
+                    <label for="padding" th:text="#{numbering.padding}">Digits</label>
+                    <input type="number" id="padding" th:field="*{padding}" min="3" max="10" step="1" required
+                           th:classappend="${#fields.hasErrors('padding')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('padding')}" th:errors="*{padding}"></span>
+                    <span class="hint" th:text="#{numbering.paddingHint}">Sequence digits, padded with zeros (3 to 10)</span>
+                </div>
+                <div class="form-group">
+                    <label for="nextValue" th:text="#{numbering.next}">Next sequence number</label>
+                    <input type="number" id="nextValue" th:field="*{nextValue}" min="1" step="1" required
+                           th:classappend="${#fields.hasErrors('nextValue')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('nextValue')}" th:errors="*{nextValue}"></span>
+                    <span class="hint" th:text="#{numbering.nextHint}">Can only go up. Raise it to continue from a previous system.</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{numbering.save}">Save Sequence</button>
+                <a href="/settings?tab=numbering" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="section" th:if="${history != null}" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+    </div>
+    <script defer src="/js/numbering.js"></script>
+</div>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${userDto.id == null} ? #{user.addTitle} : #{user.editTitle}, ~{::content})}">
+<head><title>User - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${userDto.id == null} ? #{user.addTitle} : #{user.editTitle}">Add User</h1>
+            <div class="subtitle" th:text="${userDto.id == null} ? #{user.addSubtitle} : #{user.editSubtitle}">Create a new system user</div>
+        </div>
+        <a th:href="${userDto.id == null} ? @{/users} : @{/users/{id}(id=${userDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${userDto.id == null} ? @{/users/new} : @{/users/{id}/edit(id=${userDto.id})}"
+              th:object="${userDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="username" th:text="#{user.username}">Username</label>
+                    <input type="text" id="username" th:field="*{username}" th:placeholder="#{user.usernamePh}"
+                           th:readonly="${userDto.id != null}" th:classappend="${#fields.hasErrors('username')} ? 'is-invalid'"
+                           autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="50" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></span>
+                    <span class="hint" th:if="${userDto.id != null}" th:text="#{user.usernameFixed}">The username can't be changed.</span>
+                    <span class="hint" th:if="${userDto.id == null}" th:text="#{user.usernameHint}">3 to 50 letters, digits, dots, dashes or underscores.</span>
+                </div>
+                <div class="form-group">
+                    <label for="fullName" th:text="#{user.fullName}">Full Name</label>
+                    <input type="text" id="fullName" th:field="*{fullName}" th:placeholder="#{user.fullNamePh}"
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'" maxlength="100" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="email" th:text="#{user.email}">Email</label>
+                    <input type="email" id="email" th:field="*{email}" th:placeholder="#{user.emailPh}"
+                           th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'" maxlength="100" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="phone" th:text="#{user.phone}">Phone</label>
+                    <input type="tel" id="phone" th:field="*{phone}" th:placeholder="#{user.phonePh}"
+                           th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'" maxlength="20">
+                    <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                </div>
+                <div class="form-group" th:if="${userDto.id == null}">
+                    <label for="password" th:text="#{user.password}">Password</label>
+                    <input type="password" id="password" th:field="*{password}" th:placeholder="#{user.passwordPh}"
+                           th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'"
+                           autocomplete="new-password" minlength="8" maxlength="72" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+                    <span class="hint" th:text="#{user.passwordHint}">At least 8 characters</span>
+                </div>
+            </div>
+
+            <div class="form-divider">
+                <h3 th:text="#{user.roles}">Roles</h3>
+                <p class="hint" th:if="${canAssignRoles and !isSelf}" th:text="#{user.rolesHint}">A user gets every page and action of each role ticked here.</p>
+            </div>
+
+            <!-- Editable roles: needs PERM_ASSIGN_ROLE, and never on your own account -->
+            <th:block th:if="${canAssignRoles and !isSelf}">
+                <div class="role-picker">
+                    <label class="role-option" th:each="r : ${allRoles}" th:classappend="${!r.enabled} ? 'is-off'">
+                        <input type="checkbox" class="checkbox" th:field="*{roleIds}" th:value="${r.id}">
+                        <span class="role-option-text">
+                            <span class="role-option-code">
+                                <span th:text="${r.code}">ADMIN</span>
+                                <span class="badge badge-secondary" th:unless="${r.enabled}" th:text="#{common.inactive}">Inactive</span>
+                            </span>
+                            <span class="role-option-desc" th:text="${r.description}">System administrator</span>
+                        </span>
+                    </label>
+                </div>
+                <span class="field-error" th:if="${#fields.hasErrors('roleIds')}" th:errors="*{roleIds}"></span>
+            </th:block>
+
+            <!-- Read-only roles -->
+            <th:block th:unless="${canAssignRoles and !isSelf}">
+                <div class="role-tags">
+                    <th:block th:each="r : ${allRoles}">
+                        <span class="role-tag" th:if="${#sets.contains(userDto.roleIds, r.id)}" th:text="${r.code}">ADMIN</span>
+                    </th:block>
+                    <span class="text-muted" th:if="${#sets.isEmpty(userDto.roleIds)}" th:text="#{user.noRoles}">No roles</span>
+                </div>
+                <p class="form-note" th:text="${isSelf} ? #{user.rolesSelf} : #{user.rolesNoPermission}">You can't change roles.</p>
+            </th:block>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="${userDto.id == null} ? #{user.save} : #{user.update}">Save User</button>
+                <a th:href="${userDto.id == null} ? @{/users} : @{/users/{id}(id=${userDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

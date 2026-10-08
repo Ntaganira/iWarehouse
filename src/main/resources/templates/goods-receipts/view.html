@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${receipt.number}, ~{::content})}">
+<head><title>Goods Receipt - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${receipt.status.name()}, order=${receipt.purchaseOrder},
+        canReceive=${#authorization.expression('hasAuthority(''PERM_RECEIVE_GOODS'')')},
+        canPrint=${#authorization.expression('hasAuthority(''PAGE_STOCK'') and hasAuthority(''PERM_PRINT_LABEL'')')},
+        seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${receipt.number}">GRN-WH-2026-000001</h1>
+            <div class="subtitle">
+                <a class="mono" th:href="@{/purchase-orders/{id}(id=${order.id})}" th:text="${order.number}"
+                   sec:authorize="hasAuthority('PAGE_PROCUREMENT') and hasAuthority('PERM_VIEW_PURCHASE_ORDER')">PO-WH-2026-000001</a>
+                <span class="mono" sec:authorize="!(hasAuthority('PAGE_PROCUREMENT') and hasAuthority('PERM_VIEW_PURCHASE_ORDER'))" th:text="${order.number}">PO-WH-2026-000001</span>
+                &middot; <span th:text="${order.supplier.name}">Shandong Glass Co.</span>
+                &middot; <th:block th:replace="~{goods-receipts/list :: receiptStatus(${receipt.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/goods-receipts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${canReceive and s == 'DRAFT'}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{receipt.cancel}">Cancel receipt</button>
+                <a th:href="@{/goods-receipts/{id}/edit(id=${receipt.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <form th:action="@{/goods-receipts/{id}/post(id=${receipt.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{receipt.postConfirm(${receipt.number}, ${receipt.sheets})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{receipt.post}">Post into stock</button>
+                </form>
+            </th:block>
+            <th:block th:if="${canPrint and s == 'POSTED' and receipt.sheets > 0}">
+                <a th:href="@{/stock/labels.zpl(receipt=${receipt.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+                <a th:href="@{/stock/labels(receipt=${receipt.id})}" class="btn btn-primary" th:text="#{label.printAll(${receipt.sheets})}">Print 38 labels</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{receipt.cancelledNote}">Cancelled:</strong> <span th:text="${receipt.cancelReason}">Entered twice</span>
+    </div>
+    <div class="doc-note" th:if="${landing != null}">
+        <strong th:text="#{receipt.inShipment}">Shipment:</strong>
+        <a class="mono" th:href="@{/shipments/{id}(id=${landing.shipment.id})}" th:text="${landing.shipment.number}"
+           sec:authorize="hasAuthority('PAGE_SHIPMENTS') and hasAuthority('PERM_VIEW_SHIPMENT')">SHP-WH-2026-000001</a>
+        <span class="mono" sec:authorize="!(hasAuthority('PAGE_SHIPMENTS') and hasAuthority('PERM_VIEW_SHIPMENT'))" th:text="${landing.shipment.number}">SHP-WH-2026-000001</span>
+        <span th:text="#{receipt.inShipmentText}">holds the freight, duty and clearing of these crates.</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{receipt.draftNote}">Draft: nothing is in stock yet. Check the crates, then post: each good sheet becomes a stock unit on its rack, with a label to print.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receipt.crates}">Crates</div>
+                <div class="kpi-value" th:text="${#lists.size(receipt.crates)}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${#temporals.format(receipt.receivedDate, 'yyyy-MM-dd')}">2026-10-08</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receipt.sheets}">Good sheets</div>
+                <div class="kpi-value" th:text="${receipt.sheets}">38</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${@num.m2(receipt.area)} + ' m²'">274.46 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${receipt.broken > 0} ? 'orange' : 'purple'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receipt.broken}">Broken</div>
+                <div class="kpi-value" th:text="${receipt.broken}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{receipt.brokenHint}">for the supplier claim; not in stock</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="${receipt.currencyCode == 'RWF'} ? #{receipt.rate} : #{receipt.rateLabel(${receipt.currencyCode})}">RWF per 1 USD</div>
+                <th:block th:if="${receipt.rate != null}">
+                    <div class="kpi-value" th:with="rateText=${@num.rate(receipt.rate)}" th:classappend="${#strings.length(rateText) > 9} ? 'is-long'"
+                         th:text="${rateText}">1,450.25</div>
+                    <div class="kpi-trend flat">
+                        <span class="vs" th:if="${receipt.rateSource != null}"
+                              th:text="${#messages.msg('rate.source.' + receipt.rateSource) + ' · ' + #temporals.format(receipt.rateDate, 'yyyy-MM-dd')}">BNR · 2026-10-07</span>
+                        <span class="vs" th:if="${receipt.rateSource == null}" th:text="#{receipt.baseCurrency}">Order in RWF</span>
+                    </div>
+                </th:block>
+                <th:block th:if="${receipt.rate == null}">
+                    <div class="kpi-value is-empty">&mdash;</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="#{receipt.rateOnPost(${receipt.currencyCode})}">The USD rate of the receipt date is fixed when posting</span></div>
+                </th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-crates" th:classappend="${tab == 'crates'} ? 'active'">
+                <span th:text="#{receipt.crates}">Crates</span>
+                <span class="section-count" th:text="${#lists.size(receipt.crates)}">2</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-units" th:classappend="${tab == 'units'} ? 'active'" th:if="${s == 'POSTED'}">
+                <span th:text="#{receipt.unitsTab}">Stock units</span>
+                <span class="section-count" th:text="${#lists.size(units)}">38</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-crates" th:classappend="${tab == 'crates' or (tab == 'units' and s != 'POSTED')} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{receipt.date}">Received on</label>
+                        <div class="value" th:text="${#temporals.format(receipt.receivedDate, 'yyyy-MM-dd')}">2026-10-08</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{receipt.deliveryRef}">Delivery reference</label>
+                        <div class="value mono" th:text="${receipt.deliveryRef ?: '—'}">MSKU 123456-7</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{receipt.postedBy}">Posted</label>
+                        <div class="value" th:text="${receipt.postedAt != null} ? ${#temporals.format(receipt.postedAt, 'yyyy-MM-dd HH:mm') + ' · ' + receipt.postedBy} : '—'">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{product.notes}">Notes</label>
+                        <div class="value" th:text="${receipt.notes ?: '—'}">—</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{receipt.crate}">Crate</th>
+                                <th th:text="#{product.name}">Product</th>
+                                <th th:text="#{po.size}">Size (mm)</th>
+                                <th class="num" th:text="#{receipt.sheets}">Good sheets</th>
+                                <th class="num" th:text="#{receipt.broken}">Broken</th>
+                                <th class="num">m²</th>
+                                <th th:text="#{receipt.rack}">Rack</th>
+                                <th class="num" th:if="${seeCost and s == 'POSTED'}" th:text="#{receipt.costPerM2}">Cost per m² (RWF)</th>
+                                <th class="num" th:if="${seeCost and landing != null}" th:text="#{receipt.landedPerM2}">Landed per m² (RWF)</th>
+                                <th th:if="${canPrint and s == 'POSTED'}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${receipt.crates}">
+                                <td class="mono strong" th:text="${c.batchNo}">C-01</td>
+                                <td>
+                                    <th:block th:replace="~{products/list :: productName(${c.product})}"></th:block>
+                                    <div class="cell-sub" th:text="#{receipt.ofLine(${c.poLine.lineNo})}">line 1</div>
+                                </td>
+                                <td class="nowrap" th:text="${c.widthMm + ' × ' + c.heightMm}">3210 × 2250</td>
+                                <td class="num" th:text="${c.sheets}">19</td>
+                                <td class="num" th:classappend="${c.broken > 0} ? 'text-danger'" th:text="${c.broken}">1</td>
+                                <td class="num" th:text="${@num.m2(c.area)}">137.23</td>
+                                <td class="mono" th:text="${c.location.code}">WH-A-R01</td>
+                                <td class="num" th:if="${seeCost and s == 'POSTED'}" th:text="${@num.price(c.costPerM2)}">6,308.59</td>
+                                <td class="num strong" th:if="${seeCost and landing != null}"
+                                    th:text="${landing.extraPerM2.get(c.id) != null} ? ${@num.price(c.costPerM2.add(landing.extraPerM2.get(c.id)))} : ${@num.price(c.costPerM2)}">34,503.72</td>
+                                <td th:if="${canPrint and s == 'POSTED'}">
+                                    <a th:if="${c.sheets > 0}" class="btn btn-outline btn-sm" th:href="@{/stock/labels(receipt=${receipt.id}, crate=${c.id})}"
+                                       th:text="#{label.printCrate(${c.sheets})}">19 labels</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:if="${seeCost and s == 'POSTED'}" th:text="${landing != null} ? #{receipt.costNoteLanded} : #{receipt.costNote}">Cost at the order price and this receipt's rate. Freight, duty and clearing are added by the import cost sheet.</p>
+            </div>
+
+            <div class="tab-content" id="tab-units" th:classappend="${tab == 'units'} ? 'active'" th:if="${s == 'POSTED'}">
+                <th:block th:replace="~{stock/list :: unitTable(${units}, false)}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <p class="tab-intro" th:text="#{receipt.historyIntro}">Changes to the receipt and its crates, newest first.</p>
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/goods-receipts/' + ${receipt.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${canReceive and s == 'DRAFT'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{receipt.cancelTitle(${receipt.number})},
+                @{/goods-receipts/{id}/cancel(id=${receipt.id})}, #{receipt.cancelText}, #{receipt.cancel})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

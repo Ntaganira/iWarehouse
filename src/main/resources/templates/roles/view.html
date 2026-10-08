@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${role.code}, ~{::content})}">
+<head><title>Role - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1>
+                <span class="mono" th:text="${role.code}">ADMIN</span>
+                <span class="you-badge" th:if="${isAdminRole}" th:text="#{role.system}">System</span>
+            </h1>
+            <div class="subtitle">
+                <span th:text="${role.description}">Description</span> &middot;
+                <span class="badge badge-success" th:if="${role.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${role.enabled}" th:text="#{common.inactive}">Inactive</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/roles" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_EDIT_ROLE')" th:unless="${isAdminRole}">
+                <form th:if="${role.enabled}" th:action="@{/roles/{id}/disable(id=${role.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{role.disableConfirm(${role.code})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{role.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${role.enabled}" th:action="@{/roles/{id}/enable(id=${role.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{role.enableConfirm(${role.code})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{role.enable}">Activate</button>
+                </form>
+            </th:block>
+            <a th:href="@{/roles/{id}/edit(id=${role.id})}" class="btn btn-primary" sec:authorize="hasAuthority('PERM_EDIT_ROLE')" th:text="#{common.edit}">Edit</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab active" data-tab="tab-access" th:text="#{role.access}">Access</button>
+            <button type="button" class="tab" data-tab="tab-members">
+                <span th:text="#{role.members}">Users</span>
+                <span class="section-count" th:text="${#lists.size(members)}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <div class="tab-content active" id="tab-access">
+                <div class="role-card">
+                    <div class="role-card-header">
+                        <div>
+                            <div class="role-card-title" th:text="#{role.pages}">Pages</div>
+                            <div class="role-card-desc" th:text="#{role.pagesHint}">Screens this role can open</div>
+                        </div>
+                        <span class="badge badge-info" th:text="${#lists.size(grantedPages)}">0</span>
+                    </div>
+                    <div class="role-card-body">
+                        <div class="badge-wrap">
+                            <span class="badge badge-info" th:each="p : ${grantedPages}" th:text="${p.name}" th:title="${p.code}">Inventory</span>
+                        </div>
+                        <div class="text-muted" th:if="${#lists.isEmpty(grantedPages)}" th:text="#{user.noPages}">No pages</div>
+                    </div>
+                </div>
+                <div class="role-card">
+                    <div class="role-card-header">
+                        <div>
+                            <div class="role-card-title" th:text="#{role.permissions}">Permissions</div>
+                            <div class="role-card-desc" th:text="#{role.permissionsHint}">Actions this role can do</div>
+                        </div>
+                        <span class="badge badge-info" th:text="${#sets.size(role.permissions)}">0</span>
+                    </div>
+                    <div class="role-card-body">
+                        <div class="role-card-section" th:each="entry : ${grantedPermissions}">
+                            <label th:text="${entry.key}">User Management</label>
+                            <div class="badge-wrap">
+                                <span class="badge badge-secondary" th:each="p : ${entry.value}" th:text="${p.name}" th:title="${p.code}">View Users</span>
+                            </div>
+                        </div>
+                        <div class="text-muted" th:if="${#maps.isEmpty(grantedPermissions)}" th:text="#{user.noPermissions}">No permissions</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-members">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{user.table.user}">User</th>
+                                <th th:text="#{user.email}">Email</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${members}">
+                                <td>
+                                    <div class="info">
+                                        <div class="name">
+                                            <a class="row-link" th:href="@{/users/{id}(id=${u.id})}" sec:authorize="hasAuthority('PERM_VIEW_USER')" th:text="${u.fullName}">Name</a>
+                                            <span sec:authorize="!hasAuthority('PERM_VIEW_USER')" th:text="${u.fullName}">Name</span>
+                                        </div>
+                                        <div class="email mono" th:text="${u.username}">username</div>
+                                    </div>
+                                </td>
+                                <td th:text="${u.email}">user@example.com</td>
+                                <td>
+                                    <span class="badge badge-success" th:if="${u.enabled}" th:text="#{common.active}">Active</span>
+                                    <span class="badge badge-secondary" th:unless="${u.enabled}" th:text="#{common.inactive}">Inactive</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(members)}">
+                                <td colspan="3"><div class="empty-state"><h3 th:text="#{role.noMembers}">No users have this role</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-history" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <p class="form-note" th:text="#{role.historyNote}">Grant changes are in the activity log.</p>
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Role/{id}(id=${role.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

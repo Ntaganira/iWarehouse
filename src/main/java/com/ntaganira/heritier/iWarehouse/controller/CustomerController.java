@@ -10,9 +10,12 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
+import com.ntaganira.heritier.iWarehouse.service.Ageing;
+import com.ntaganira.heritier.iWarehouse.service.CustomerAccountService;
 import com.ntaganira.heritier.iWarehouse.service.CustomerService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.PriceListService;
+import com.ntaganira.heritier.iWarehouse.service.TillService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -48,14 +51,19 @@ public class CustomerController {
 
     private final CustomerService customerService;
     private final PriceListService priceListService;
+    private final CustomerAccountService accountService;
+    private final TillService tillService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
 
-    public CustomerController(CustomerService customerService, PriceListService priceListService,
-                              DataChangeService dataChangeService, ActivityLogService activityLogService, Messages messages) {
+    public CustomerController(CustomerService customerService, PriceListService priceListService, CustomerAccountService accountService,
+                              TillService tillService, DataChangeService dataChangeService, ActivityLogService activityLogService,
+                              Messages messages) {
         this.customerService = customerService;
         this.priceListService = priceListService;
+        this.accountService = accountService;
+        this.tillService = tillService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.messages = messages;
@@ -82,9 +90,20 @@ public class CustomerController {
     @PreAuthorize("hasAuthority('PAGE_CUSTOMERS') and hasAuthority('PERM_VIEW_CUSTOMER')")
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
-        String open = List.of("details", "history").contains(tab) ? tab : "details";
-        model.addAttribute("customer", customerService.findById(id));
+        boolean seesAccount = AppUserPrincipal.currentHas("PERM_VIEW_CUSTOMER_ACCOUNT");
+        String open = List.of("details", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
+        Customer customer = customerService.findById(id);
+        model.addAttribute("customer", customer);
         model.addAttribute("defaultList", priceListService.defaultList());
+        // The account (ACC-09): its statement, balance and ageing, and taking a payment on it
+        if (seesAccount) {
+            CustomerAccountService.Account account = accountService.account(customer);
+            model.addAttribute("account", account);
+            model.addAttribute("statement", Paging.of(account.statement(), Paging.pageOf("account", open, page)));
+            model.addAttribute("buckets", Ageing.Bucket.values());
+            model.addAttribute("payMethods", CustomerPaymentController.methods());
+            model.addAttribute("myTill", tillService.current().map(tillService::summary).orElse(null));
+        }
         model.addAttribute("history", dataChangeService.history("Customer", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "customers/view";

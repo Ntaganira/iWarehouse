@@ -232,7 +232,7 @@ class CounterSalesTest {
         });
         when(unitsBackRepo.findByInvoiceId(any())).thenAnswer(a -> unitsBack.stream()
                 .filter(u -> u.getInvoiceId().equals(a.getArgument(0))).toList());
-        tills = new TillService(tillRepo, invoiceRepo, paymentRepo, creditNoteRepo, postings, numbers, CLOCK);
+        tills = new TillService(tillRepo, invoiceRepo, paymentRepo, creditNoteRepo, mock(CustomerPaymentRepository.class), postings, numbers, CLOCK);
         when(numbers.next(DocumentType.CREDIT_NOTE)).thenAnswer(a -> String.format("CN-WH-2026-%06d", creditNotes.size() + 1));
         ProcessingServiceRepository serviceRepo = mock(ProcessingServiceRepository.class);
         when(serviceRepo.findAllById(any())).thenAnswer(a -> {

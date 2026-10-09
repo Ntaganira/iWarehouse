@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${payment.number}, ~{::content})}">
+<head><title>Customer payment - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${payment.number}">RCT-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{creditNote.subtitleOne(${payment.customer.name}, ${#temporals.format(payment.postedAt, 'dd/MM/yyyy HH:mm')}, ${payment.postedBy})}">Umucyo Builders · 09/10/2026 10:30 · accountant</div>
+        </div>
+        <div class="btn-group">
+            <a href="/customer-payments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/customer-payments/{id}/receipt(id=${payment.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{invoice.printReceipt}">Print the receipt</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${payment.customer.id}, tab='account')}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${payment.customer.name}">Umucyo Builders</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${payment.customer.name}">Umucyo Builders</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customerAccount.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(payment.amount)}">100,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.method}">Method</label>
+                    <div class="value">
+                        <span th:text="#{${'payment.method.' + payment.method}}">Mobile money</span>
+                        <span class="mono" th:if="${payment.reference != null}" th:text="${' · ' + payment.reference}">· MP-55</span>
+                    </div>
+                </div>
+                <div class="item" th:if="${payment.cashTendered != null}">
+                    <label th:text="#{posReceipt.tendered}">Cash handed over</label>
+                    <div class="value" th:text="#{invoice.cashLine(${@num.money(payment.cashTendered)}, ${@num.money(payment.change)})}">Cash handed over 100,000 RWF, change 0 RWF.</div>
+                </div>
+                <div class="item" th:if="${till != null}">
+                    <label th:text="#{invoice.till}">Till</label>
+                    <div class="value">
+                        <a class="mono" th:href="@{/till-sessions/{id}(id=${till.id})}" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:text="${till.number}">TILL-WH-2026-000022</a>
+                        <span class="mono" sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="${till.number}">TILL-WH-2026-000022</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customerPayment.owedNow}">Still owed (RWF)</label>
+                    <div class="value" th:text="${@num.money(owed)}">292,038</div>
+                </div>
+                <div class="item item-full" th:if="${payment.notes != null}">
+                    <label th:text="#{customerAccount.notes}">Notes</label>
+                    <div class="value" th:text="${payment.notes}">For invoices of September</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/customer-payments/' + payment.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

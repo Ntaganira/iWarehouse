@@ -8,6 +8,8 @@ import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
+import com.ntaganira.heritier.iWarehouse.service.Ageing;
+import com.ntaganira.heritier.iWarehouse.service.CustomerAccountService;
 import com.ntaganira.heritier.iWarehouse.service.JournalService;
 import com.ntaganira.heritier.iWarehouse.service.PostingService;
 import com.ntaganira.heritier.iWarehouse.service.TrialBalance;
@@ -44,13 +46,15 @@ public class AccountingController {
 
     private final JournalService journalService;
     private final PostingService postingService;
+    private final CustomerAccountService accountService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
 
-    public AccountingController(JournalService journalService, PostingService postingService,
+    public AccountingController(JournalService journalService, PostingService postingService, CustomerAccountService accountService,
                                 ActivityLogService activityLogService, Messages messages) {
         this.journalService = journalService;
         this.postingService = postingService;
+        this.accountService = accountService;
         this.activityLogService = activityLogService;
         this.messages = messages;
     }
@@ -87,6 +91,18 @@ public class AccountingController {
                 : journalService.forSource(journal.getSourceId(), JournalSource.values()).stream()
                 .filter(j -> !j.getId().equals(id)).toList());
         return "journals/view";
+    }
+
+    /** The aged receivables (ACC-09): every customer with a balance, by days past due. */
+    @GetMapping("/receivables")
+    @PreAuthorize("hasAuthority('PAGE_RECEIVABLES') and hasAuthority('PERM_VIEW_ACCOUNTING')")
+    public String receivables(@RequestParam(defaultValue = "0") int page, Model model) {
+        CustomerAccountService.Receivables receivables = accountService.receivables();
+        model.addAttribute("receivables", receivables);
+        model.addAttribute("rows", Paging.of(receivables.customers(), Paging.page(page)));
+        model.addAttribute("buckets", Ageing.Bucket.values());
+        model.addAttribute("today", accountService.today());
+        return "accounting/receivables";
     }
 
     @GetMapping("/trial-balance")

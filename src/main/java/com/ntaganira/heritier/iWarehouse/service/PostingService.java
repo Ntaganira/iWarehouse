@@ -302,6 +302,18 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    /**
+     * A payment on a customer's account (ACC-09): Dr the method's account (cash in the till, mobile money, bank for card and
+     * transfer) / Cr the customer's receivable.
+     */
+    public JournalEntry customerPayment(CustomerPayment payment) {
+        Journal journal = Journal.of(JournalSource.CUSTOMER_PAYMENT, payment.getId(), payment.getNumber(), payment.getPaymentDate(),
+                        "Payment " + payment.getNumber() + " from " + payment.getCustomer().getName())
+                .add(payment.getMethod().account(), payment.getAmount(), null, null, null, payment.getReference(), null)
+                .add(AccountKey.RECEIVABLE, payment.getAmount().negate(), null, null, payment.getCustomer().getId(), null, null);
+        return journalService.post(journal);
+    }
+
     /** A till opened: its float leaves the main cash vault for the till (Dr Cash on Hand / Cr Main Cash Vault). */
     public JournalEntry tillOpened(TillSession session) {
         Journal journal = Journal.of(JournalSource.TILL_OPENED, session.getId(), session.getNumber(),

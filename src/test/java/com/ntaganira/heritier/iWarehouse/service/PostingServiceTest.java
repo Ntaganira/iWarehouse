@@ -421,6 +421,31 @@ class PostingServiceTest {
         assertInventoryEqualsValuation();
     }
 
+    @Test
+    void aPaymentOnACustomersAccountClearsWhatTheyOwe() {   // ACC-09
+        Customer builders = new Customer();
+        builders.setId(UUID.randomUUID());
+        builders.setName("Umucyo Builders");
+        CustomerPayment payment = new CustomerPayment();
+        payment.setId(UUID.randomUUID());
+        payment.setNumber("RCT-WH-2026-000001");
+        payment.setCustomer(builders);
+        payment.setPaymentDate(LocalDate.of(2026, 10, 9));
+        payment.setMethod(PaymentMethod.BANK_TRANSFER);
+        payment.setAmount(new BigDecimal("150000.00"));
+        payment.setReference("TRF-77");
+
+        postings.customerPayment(payment);
+
+        Journal journal = last();
+        assertThat(journal.source()).isEqualTo(JournalSource.CUSTOMER_PAYMENT);
+        assertThat(line(journal, AccountKey.BANK).debit()).isEqualByComparingTo("150000");
+        assertThat(line(journal, AccountKey.BANK).memo()).isEqualTo("TRF-77");
+        assertThat(line(journal, AccountKey.RECEIVABLE).credit()).isEqualByComparingTo("150000");
+        assertThat(line(journal, AccountKey.RECEIVABLE).customerId()).isEqualTo(builders.getId());
+        assertThat(journal.debits()).isEqualByComparingTo(journal.credits());
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static SalesPayment salePayment(PaymentMethod method, String amount, String reference) {

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{customerPayment.slipTitle(${payment.number})} + ' - ' + #{app.name}">Payment - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page receipt-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{customerPayment.slipTitle(${payment.number})}">Payment: RCT-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{posReceipt.pageHint}">80 mm wide. Print on the receipt printer at 100% (no scaling).</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/customer-payments/{id}(id=${payment.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- A payment on a customer's account (ACC-09) -->
+    <div class="receipt">
+        <div class="receipt-head">
+            <div class="receipt-company" th:text="${companyName}">iWarehouse</div>
+            <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+            <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>
+            <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row receipt-total"><span th:text="#{customerPayment.slipKind}">PAYMENT RECEIVED</span><span class="mono" th:text="${payment.number}">RCT-WH-2026-000001</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.date}">Date</span><span th:text="${#temporals.format(payment.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.cashier}">Cashier</span><span th:text="${payment.postedBy}">accountant</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.customer}">Customer</span><span th:text="${payment.customer.name}">Umucyo Builders</span></div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row receipt-total"><span th:text="#{customerPayment.slipAmount}">PAID</span><span th:text="${@num.money(payment.amount)}">100,000</span></div>
+        <div class="receipt-row">
+            <span th:text="#{${'payment.method.' + payment.method}} + ${payment.reference != null ? ' ' + payment.reference : ''}">Mobile money MP-55</span>
+            <span th:text="${@num.money(payment.amount)}">100,000</span>
+        </div>
+        <div class="receipt-row" th:if="${payment.cashTendered != null}"><span th:text="#{posReceipt.tendered}">Cash handed over</span><span th:text="${@num.money(payment.cashTendered)}">100,000</span></div>
+        <div class="receipt-row" th:if="${payment.change != null and payment.change.signum() > 0}"><span th:text="#{posReceipt.change}">Change</span><span th:text="${@num.money(payment.change)}">0</span></div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row"><span th:text="#{customerPayment.slipOwed}">Still owed</span><span th:text="${@num.money(owed)}">292,038</span></div>
+        <div class="receipt-foot" th:if="${payment.notes != null}" th:text="${payment.notes}">For invoices of September</div>
+        <div class="receipt-foot" th:text="#{posReceipt.thanks}">Thank you</div>
+    </div>
+</body>
+</html>

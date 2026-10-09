@@ -62,6 +62,10 @@ public class TillSession extends BaseEntity {
     @Column(name = "cash_refunds", precision = 18, scale = 2)
     private BigDecimal cashRefunds;
 
+    /** Cash taken on customer accounts (ACC-09): it is in the drawer. Set when the till closes. */
+    @Column(name = "cash_account_payments", precision = 18, scale = 2)
+    private BigDecimal cashAccountPayments;
+
     @Column(name = "counted_cash", precision = 18, scale = 2)
     private BigDecimal countedCash;
 

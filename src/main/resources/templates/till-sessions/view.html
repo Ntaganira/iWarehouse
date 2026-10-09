@@ -45,6 +45,10 @@
                 <span th:text="#{till.balances}">Balances taken</span>
                 <span class="section-count" th:text="${balances.totalElements}">0</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-accounts" th:classappend="${tab == 'accounts'} ? 'active'">
+                <span th:text="#{till.accountPayments}">Account payments</span>
+                <span class="section-count" th:text="${accountPayments.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-refunds" th:classappend="${tab == 'refunds'} ? 'active'">
                 <span th:text="#{till.refunds}">Refunds</span>
                 <span class="section-count" th:text="${refunds.totalElements}">0</span>
@@ -89,6 +93,10 @@
                     </table>
                 </div>
                 <th:block th:replace="~{layout/pagination :: pager(${balances}, ${'/till-sessions/' + till.id}, 'tab=balances')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-accounts" th:classappend="${tab == 'accounts'} ? 'active'">
+                <th:block th:replace="~{customer-payments/list :: paymentTable(${accountPayments.content})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${accountPayments}, ${'/till-sessions/' + till.id}, 'tab=accounts')}"></th:block>
             </div>
             <div class="tab-content" id="tab-refunds" th:classappend="${tab == 'refunds'} ? 'active'">
                 <th:block th:replace="~{credit-notes/list :: creditNoteTable(${refunds.content})}"></th:block>

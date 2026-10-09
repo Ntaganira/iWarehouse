@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{receivables.title}, ~{::content})}">
+<head><title>Receivables - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{receivables.title}">Receivables</h1>
+            <div class="subtitle" th:text="#{receivables.subtitle(${#temporals.format(today, 'dd/MM/yyyy')})}">What customers owe on 09/10/2026, by days past due</div>
+        </div>
+        <a href="/customer-payments" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS')" th:text="#{nav.customerPayments}">Customer payments</a>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{receivables.total}">Owed in all (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(receivables.total)}">588,057</div>
+                </div>
+                <div class="item" th:each="b : ${buckets}">
+                    <label th:text="#{${'ageing.' + b}}">Not due</label>
+                    <div class="value" th:text="${@num.money(receivables.totals.get(b))}">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{receivables.customers}">Customers owing</span>
+                <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th class="num" th:each="b : ${buckets}" th:text="#{${'ageing.' + b}}">Not due</th>
+                        <th class="num" th:text="#{customerAccount.total}">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${rows.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/customers/{id}(id=${a.customer.id}, tab='account')}" th:text="${a.customer.name}">Umucyo Builders</a>
+                            <div class="cell-sub" th:text="${a.customer.paymentTermsDays == 0} ? #{party.termsNone} : #{party.termsDays(${a.customer.paymentTermsDays})}">30 days</div>
+                        </td>
+                        <td class="num" th:each="b : ${buckets}" th:text="${a.ageing.get(b).signum() == 0} ? '—' : ${@num.money(a.ageing.get(b))}">0</td>
+                        <td class="num strong" th:text="${@num.money(a.ageing.balance)}">392,038</td>
+                    </tr>
+                    <tr th:if="${rows.totalElements == 0}">
+                        <td th:colspan="${buckets.length + 2}">
+                            <div class="empty-state">
+                                <h3 th:text="#{receivables.empty}">Nobody owes anything</h3>
+                                <p th:text="#{receivables.emptyHint}">Credit sales and order balances appear here until they are paid</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/accounting/receivables', '')}"></th:block>
+    </div>
+</div>
+</body>
+</html>

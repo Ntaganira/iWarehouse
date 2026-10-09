@@ -180,6 +180,20 @@ public class JournalService {
                         .and(Sort.by(Sort.Direction.ASC, "lineNo"))));
     }
 
+    /** A customer's lines on the receivable account (their statement, ACC-09), in the order they were posted. */
+    public List<JournalLine> customerLines(UUID customerId) {
+        return lineRepo.findCustomerLines(receivableAccount().getId(), customerId);
+    }
+
+    /** Rows of (customer id, date, debit, credit) of the receivable account's lines that name a customer. */
+    public List<Object[]> receivableEntries() {
+        return lineRepo.customerEntries(receivableAccount().getId());
+    }
+
+    private Account receivableAccount() {
+        return accountRepo.findBySystemKey(AccountKey.RECEIVABLE).orElseThrow(() -> new IllegalStateException("No receivable account"));
+    }
+
     /** What a customer owes: the receivable account's balance on their lines (POS-05). */
     public BigDecimal receivable(UUID customerId) {
         Account receivable = accountRepo.findBySystemKey(AccountKey.RECEIVABLE)

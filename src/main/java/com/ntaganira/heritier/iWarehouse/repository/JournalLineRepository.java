@@ -53,6 +53,17 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " where l.account.id = :accountId and l.customer.id = :customerId")
     BigDecimal balanceOfCustomer(@Param("accountId") UUID accountId, @Param("customerId") UUID customerId);
 
+    /** A customer's lines on an account (their statement, ACC-09), in the order they were posted. */
+    @EntityGraph(attributePaths = {"entry"})
+    @Query("select l from JournalLine l where l.account.id = :accountId and l.customer.id = :customerId"
+            + " order by l.entry.entryDate, l.entry.postedAt, l.entry.number, l.lineNo")
+    List<JournalLine> findCustomerLines(@Param("accountId") UUID accountId, @Param("customerId") UUID customerId);
+
+    /** Rows of (customer id, date, debit, credit) of an account's lines that name a customer: the receivables ageing. */
+    @Query("select l.customer.id, l.entry.entryDate, l.debit, l.credit from JournalLine l"
+            + " where l.account.id = :accountId and l.customer is not null")
+    List<Object[]> customerEntries(@Param("accountId") UUID accountId);
+
     /** Rows of (product id, debits less credits) of an account: the inventory account per glass (AT-10). */
     @Query("select l.product.id, coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"
             + " where l.account.id = :accountId group by l.product.id")

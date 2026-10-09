@@ -112,6 +112,9 @@
         <a sec:authorize="hasAuthority('PAGE_INVOICES')" th:classappend="${#strings.startsWith(requestURI, '/invoices')} ? 'active' : ''" href="/invoices">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span> <span th:text="#{nav.invoices}">Invoices</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS') and hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT')" th:classappend="${#strings.startsWith(requestURI, '/customer-payments')} ? 'active' : ''" href="/customer-payments">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></span> <span th:text="#{nav.customerPayments}">Customer Payments</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')" th:classappend="${#strings.startsWith(requestURI, '/credit-notes')} ? 'active' : ''" href="/credit-notes">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span> <span th:text="#{nav.creditNotes}">Credit Notes</span>
         </a>
@@ -133,6 +136,9 @@
         </a>
         <a sec:authorize="hasAuthority('PAGE_ACCOUNTS')" th:classappend="${#strings.startsWith(requestURI, '/accounting/accounts')} ? 'active' : ''" href="/accounting/accounts">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span> <span th:text="#{nav.accounts}">Chart of Accounts</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_RECEIVABLES')" th:classappend="${#strings.startsWith(requestURI, '/accounting/receivables')} ? 'active' : ''" href="/accounting/receivables">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span> <span th:text="#{nav.receivables}">Receivables</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" th:classappend="${#strings.startsWith(requestURI, '/accounting/trial-balance')} ? 'active' : ''" href="/accounting/trial-balance">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="3" x2="12" y2="21"></line><path d="M5 7h14"></path><path d="M5 7l-3 7a3 3 0 0 0 6 0z"></path><path d="M19 7l-3 7a3 3 0 0 0 6 0z"></path><line x1="8" y1="21" x2="16" y2="21"></line></svg></span> <span th:text="#{nav.trialBalance}">Trial Balance</span>

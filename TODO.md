@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V24.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V25.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-09)
@@ -27,15 +27,15 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Accounting core: chart of accounts, posting engine, journals, trial balance (AT-10 passes) | Done (M2) | V16, `/accounting/journals`, `/accounting/accounts`, `/accounting/trial-balance` |
 | Counter sales, part 1: tills, POS for stock units, VAT, split payment, invoices, receipts (AT-08 passes) | Done (M3, part 1) | V17, `/pos`, `/invoices`, `/till-sessions` |
 | Counter sales, part 2: custom cut sizes, credit and discount approvals, quotations, deposits, returns and order cancellations, performance | Done (M3) | V18–V23, `/pos`, `/invoices`, `/sale-approvals`, `/quotations`, `/credit-notes` |
-| EBM / VSDC fiscal signing | **Next** (M4) | — |
-| Customer and supplier accounts, period close, financial statements | Not started (M5) | — |
+| EBM / VSDC fiscal signing | Deferred (M4): after M5, at the owner's request (2026-10-09) | — |
+| Customer and supplier accounts, period close, financial statements | **Next** (M5) | — |
 | Dashboard, reports, alerts, notifications, files | Not started (M6) | — |
 | Fleet: vehicles, drivers, trips, loading | Not started (M7) | — |
 | Mobile POS app (PWA) with offline sync | Not started (M8) | — |
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 353, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
+Unit tests: 360, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -58,7 +58,7 @@ Unit tests: 353, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 an
 
 ---
 
-## M4 — EBM / VSDC fiscal signing
+## M4 — EBM / VSDC fiscal signing (deferred: done after M5, at the owner's request, 2026-10-09)
 
 Goal: every sale, credit note and copy is signed by RRA (TAX-02, TAX-03, POS-07). AT-09.
 
@@ -71,7 +71,7 @@ Goal: every sale, credit note and copy is signed by RRA (TAX-02, TAX-03, POS-07)
 
 Goal: the accountant runs receivables, payables and the month end (ACC-05, ACC-08..ACC-12, TAX-05). AT-10.
 
-- [ ] Customer subledger: invoices, receipts, credit notes, balance and ageing on the customer page (ACC-09) (M)
+- [x] Customer subledger: invoices, receipts, credit notes, balance and ageing on the customer page (ACC-09) (M) — 2026-10-09 (V24): the customer page's Account tab shows what they owe, the overdue part, the oldest due date and the ageing (not due, 1-30, 31-60, 61-90, over 90 days: payments settle the oldest charges, each due its date plus the payment terms), and the statement: every receivable line naming them (sales on credit, order balances, credit notes, payments) with the balance after it. "Take a payment" (RCT-WH-2026-000001) takes at most what they owe: cash into the cashier's till (change from what was handed over), mobile money, card or transfer (Dr that account / Cr receivable); an 80 mm receipt prints what is still owed. `/customer-payments` lists them; `/accounting/receivables` ages every customer owing, with the totals; the till counts the cash taken on accounts ("Account payments" tab)
 - [ ] Supplier invoices against receipts (Dr GRNI / Cr AP in the supplier's currency), supplier payments, shipment bills paid to a supplier in its balance, ageing (ACC-09) (M)
 - [ ] Realised FX gain/loss when a foreign invoice is paid at another rate (ACC-08) (S); revaluation of open foreign balances at month end (S)
 - [ ] Manual journals with approval; reversal, never delete (ACC-05) (M)
@@ -218,6 +218,7 @@ Answers change what gets built; record each answer next to the question.
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
 - Counter sales on 2026-10-09 by qa-admin: tills TILL-WH-2026-000001..6 (all closed; -000002 sold U-WH-000061 and U-WH-000011 on INV-WH-2026-000001, 389,408 RWF to "Jean Habimana", TIN 102938475, half cash half mobile money MP-778812, and closed 500 RWF short, "Change given twice"; the others opened and closed for checks without a sale), and their journals
+- Customer account tests on 2026-10-09: RCT-WH-2026-000001 (Umucyo, 100,000 by transfer TRF-901) and -000002 (Umucyo, 50,000 cash, 60,000 handed over, in TILL-WH-2026-000027, closed): Umucyo now owes 46,019. Journals up to JV-WH-2026-000066
 - Order cancellation tests on 2026-10-09: CN-WH-2026-000003 and -000004 gave up the two pieces of INV-WH-2026-000012 (6,750 by mobile money MP-7781, 6,750 by transfer TRF-55); CUT-WH-2026-000015 cancelled "Order cancelled". Journals up to JV-WH-2026-000063
 - Timing tests on 2026-10-09 (NFR-02): INV-WH-2026-000015..21 sold U-WH-000042, -44, -43, -20, -21, -22 and -23 for cash (qa-admin, TILL-WH-2026-000023..26, closed)
 - Return tests on 2026-10-09: INV-WH-2026-000013 (U-WH-000041 sold for cash, kept), INV-WH-2026-000014 (U-WH-000043 sold for cash, back on WH-A-R04 by CN-WH-2026-000001, 195,008 refunded from TILL-WH-2026-000022, closed), CN-WH-2026-000002 on INV-WH-2026-000010 (Umucyo: U-WH-000018 back as cullet, 196,019 to their account: they now owe 196,019 less). Journals up to JV-WH-2026-000050

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{customerPayment.title}, ~{::content})}">
+<head><title>Customer payments - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{customerPayment.title}">Customer payments</h1>
+            <div class="subtitle" th:text="#{customerPayment.subtitle}">What customers paid on their accounts</div>
+        </div>
+        <a href="/accounting/receivables" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_RECEIVABLES')" th:text="#{nav.receivables}">Receivables</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{customerPayment.sectionTitle}">Payments taken</span>
+                <span class="section-count" th:text="${payments.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/customer-payments}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{customerPayment.searchPh}" th:aria-label="#{customerPayment.searchPh}">
+                </div>
+            </form>
+        </div>
+        <th:block th:replace="~{customer-payments/list :: paymentTable(${payments.content})}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${payments}, '/customer-payments', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Payments on accounts: number, date, customer, method and reference, amount, by */-->
+<div th:fragment="paymentTable(rows)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{customerPayment.number}">Payment</th>
+                <th th:text="#{invoice.date}">Date</th>
+                <th th:text="#{invoice.customer}">Customer</th>
+                <th th:text="#{invoice.method}">Method</th>
+                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                <th th:text="#{creditNote.by}">By</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="p : ${rows}">
+                <td><a class="row-link strong mono" th:href="@{/customer-payments/{id}(id=${p.id})}" th:text="${p.number}">RCT-WH-2026-000001</a></td>
+                <td class="nowrap" th:text="${#temporals.format(p.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</td>
+                <td><a th:href="@{/customers/{id}(id=${p.customer.id}, tab='account')}" th:text="${p.customer.name}">Umucyo Builders</a></td>
+                <td>
+                    <span th:text="#{${'payment.method.' + p.method}}">Mobile money</span>
+                    <div class="cell-sub mono" th:if="${p.reference != null}" th:text="${p.reference}">MP-55</div>
+                </td>
+                <td class="num" th:text="${@num.money(p.amount)}">100,000</td>
+                <td th:text="${p.postedBy}">accountant</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}">
+                <td colspan="6">
+                    <div class="empty-state">
+                        <h3 th:text="#{customerPayment.empty}">No payments yet</h3>
+                        <p th:text="#{customerPayment.emptyHint}">Payments are taken on the customer's page, Account tab</p>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

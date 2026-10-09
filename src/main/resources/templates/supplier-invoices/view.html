@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${invoice.number}, ~{::content})}">
+<head><title>Supplier invoice - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${invoice.number}">SINV-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{creditNote.subtitleOne(${invoice.supplier.name}, ${#temporals.format(invoice.postedAt, 'dd/MM/yyyy HH:mm')}, ${invoice.postedBy})}">Shandong Float Glass Co. · 09/10/2026 10:30 · accountant</div>
+        </div>
+        <div class="btn-group">
+            <a href="/supplier-invoices" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{supplierInvoice.supplier}">Supplier</label>
+                    <div class="value">
+                        <a th:href="@{/suppliers/{id}(id=${invoice.supplier.id}, tab='account')}" sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:text="${invoice.supplier.name}">Shandong Float Glass Co.</a>
+                        <span sec:authorize="!hasAuthority('PAGE_SUPPLIERS')" th:text="${invoice.supplier.name}">Shandong Float Glass Co.</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierInvoice.supplierRef}">Supplier's number</label>
+                    <div class="value mono" th:text="${invoice.supplierRef}">INV-778</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.date}">Date</label>
+                    <div class="value" th:text="${#temporals.format(invoice.invoiceDate, 'dd/MM/yyyy')}">09/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierInvoice.due}">Due</label>
+                    <div class="value" th:text="${#temporals.format(invoice.dueDate, 'dd/MM/yyyy')}">08/11/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierAccount.amountCcy}">Amount</label>
+                    <div class="value strong" th:text="${@num.amount(invoice.amount, 2) + ' ' + invoice.currencyCode}">4,500.00 USD</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierInvoice.base}">RWF as received</label>
+                    <div class="value" th:text="${@num.money(invoice.baseAmount)}">6,000,000</div>
+                </div>
+                <div class="item item-full" th:if="${invoice.notes != null}">
+                    <label th:text="#{customerAccount.notes}">Notes</label>
+                    <div class="value" th:text="${invoice.notes}">—</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{supplierInvoice.receipts}">Goods receipts it bills</h2>
+        </div>
+        <div class="section-body">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="num">#</th>
+                            <th th:text="#{receipt.number}">Receipt</th>
+                            <th class="num" th:text="#{supplierAccount.amountCcy}">Amount</th>
+                            <th class="num" th:text="#{supplierInvoice.rate}">Rate</th>
+                            <th class="num" th:text="#{supplierInvoice.base}">RWF as received</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="l : ${lines}">
+                            <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                            <td><a class="mono" th:href="@{/goods-receipts/{id}(id=${l.goodsReceiptId})}" th:text="${l.receiptNumber}">GRN-WH-2026-000001</a></td>
+                            <td class="num" th:text="${@num.amount(l.amount, 2)}">4,500.00</td>
+                            <td class="num" th:text="${l.rate != null} ? ${@num.rate(l.rate)} : '—'">1,333.33</td>
+                            <td class="num strong" th:text="${@num.money(l.baseAmount)}">6,000,000</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="2" th:text="#{customerAccount.total}">Total</th>
+                            <th class="num" th:text="${@num.amount(invoice.amount, 2) + ' ' + invoice.currencyCode}">4,500.00 USD</th>
+                            <th></th>
+                            <th class="num" th:text="${@num.money(invoice.baseAmount)}">6,000,000</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/supplier-invoices/' + invoice.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

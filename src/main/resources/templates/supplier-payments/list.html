@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{supplierPayment.title}, ~{::content})}">
+<head><title>Supplier payments - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{supplierPayment.title}">Supplier payments</h1>
+            <div class="subtitle" th:text="#{supplierPayment.subtitle}">What was paid to suppliers, with the FX gain or loss on each</div>
+        </div>
+        <a href="/accounting/payables" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PAYABLES')" th:text="#{nav.payables}">Payables</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{supplierPayment.sectionTitle}">Payments made</span>
+                <span class="section-count" th:text="${payments.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/supplier-payments}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{supplierPayment.searchPh}" th:aria-label="#{supplierPayment.searchPh}">
+                </div>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{supplierPayment.number}">Payment</th>
+                        <th th:text="#{invoice.date}">Date</th>
+                        <th th:text="#{supplierInvoice.supplier}">Supplier</th>
+                        <th th:text="#{invoice.method}">Method</th>
+                        <th class="num" th:text="#{supplierAccount.amountCcy}">Amount</th>
+                        <th class="num" th:text="#{supplierPayment.fx}">FX gain or loss (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${payments.content}">
+                        <td><a class="row-link strong mono" th:href="@{/supplier-payments/{id}(id=${p.id})}" th:text="${p.number}">SPAY-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(p.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</td>
+                        <td><a th:href="@{/suppliers/{id}(id=${p.supplier.id}, tab='account')}" th:text="${p.supplier.name}">Shandong Float Glass Co.</a></td>
+                        <td>
+                            <span th:text="#{${'supplierPayment.method.' + p.method}}">Bank transfer</span>
+                            <div class="cell-sub mono" th:if="${p.reference != null}" th:text="${p.reference}">SWIFT-881</div>
+                        </td>
+                        <td class="num">
+                            <span th:text="${@num.amount(p.amount, 2) + ' ' + p.currencyCode}">4,500.00 USD</span>
+                            <div class="cell-sub" th:text="${@num.money(p.baseAmount) + ' RWF'}">6,075,000 RWF</div>
+                        </td>
+                        <td class="num" th:text="${p.fxGainLoss.signum() == 0} ? '—' : ${@num.money(p.fxGainLoss)}">-75,000</td>
+                    </tr>
+                    <tr th:if="${payments.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{supplierPayment.empty}">No payments to suppliers yet</h3>
+                                <p th:text="#{supplierPayment.emptyHint}">Pay from the supplier's page, Account tab</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${payments}, '/supplier-payments', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

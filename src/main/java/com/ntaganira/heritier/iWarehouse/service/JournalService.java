@@ -190,6 +190,26 @@ public class JournalService {
         return lineRepo.customerEntries(receivableAccount().getId());
     }
 
+    /** A supplier's lines on the payable account (their statement, ACC-09), in the order they were posted. */
+    public List<JournalLine> supplierLines(UUID supplierId) {
+        return lineRepo.findSupplierLines(account(AccountKey.PAYABLE).getId(), supplierId);
+    }
+
+    /** Every payable line that names a supplier, in the order they were posted (the payables report). */
+    public List<JournalLine> payableLines() {
+        return lineRepo.findSupplierLines(account(AccountKey.PAYABLE).getId());
+    }
+
+    /** The goods receipts' lines on Goods Received Not Invoiced (what each receipt left to invoice). */
+    public List<JournalLine> grniOfReceipts(Collection<UUID> receiptIds) {
+        return receiptIds.isEmpty() ? List.of()
+                : lineRepo.findOfSources(account(AccountKey.GRNI).getId(), JournalSource.GOODS_RECEIPT, receiptIds);
+    }
+
+    private Account account(AccountKey key) {
+        return accountRepo.findBySystemKey(key).orElseThrow(() -> new IllegalStateException("No account " + key));
+    }
+
     private Account receivableAccount() {
         return accountRepo.findBySystemKey(AccountKey.RECEIVABLE).orElseThrow(() -> new IllegalStateException("No receivable account"));
     }

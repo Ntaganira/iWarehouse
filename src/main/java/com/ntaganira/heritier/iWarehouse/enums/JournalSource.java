@@ -29,7 +29,9 @@ public enum JournalSource {
     SALES_DELIVERY("/invoices/"),
     SALES_BALANCE("/invoices/"),
     CREDIT_NOTE("/credit-notes/"),
-    CUSTOMER_PAYMENT("/customer-payments/");
+    CUSTOMER_PAYMENT("/customer-payments/"),
+    SUPPLIER_INVOICE("/supplier-invoices/"),
+    SUPPLIER_PAYMENT("/supplier-payments/");
 
     private final String path;
 

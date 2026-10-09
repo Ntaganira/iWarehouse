@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${payment.number}, ~{::content})}">
+<head><title>Supplier payment - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${payment.number}">SPAY-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{creditNote.subtitleOne(${payment.supplier.name}, ${#temporals.format(payment.postedAt, 'dd/MM/yyyy HH:mm')}, ${payment.postedBy})}">Shandong Float Glass Co. · 09/10/2026 10:30 · accountant</div>
+        </div>
+        <div class="btn-group">
+            <a href="/supplier-payments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{supplierInvoice.supplier}">Supplier</label>
+                    <div class="value">
+                        <a th:href="@{/suppliers/{id}(id=${payment.supplier.id}, tab='account')}" sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:text="${payment.supplier.name}">Shandong Float Glass Co.</a>
+                        <span sec:authorize="!hasAuthority('PAGE_SUPPLIERS')" th:text="${payment.supplier.name}">Shandong Float Glass Co.</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierAccount.amountPaid}">Amount paid</label>
+                    <div class="value strong" th:text="${@num.amount(payment.amount, 2) + ' ' + payment.currencyCode}">4,500.00 USD</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.method}">Method</label>
+                    <div class="value">
+                        <span th:text="#{${'supplierPayment.method.' + payment.method}}">Bank transfer</span>
+                        <span class="mono" th:if="${payment.reference != null}" th:text="${' · ' + payment.reference}">· SWIFT-881</span>
+                    </div>
+                </div>
+                <div class="item" th:if="${payment.rate != null}">
+                    <label th:text="#{supplierInvoice.rate}">Rate</label>
+                    <div class="value" th:text="#{supplierPayment.rateLine(${@num.rate(payment.rate)}, ${#temporals.format(payment.rateDate, 'dd/MM/yyyy')}, ${payment.rateSource})}">1,350.00 of 09/10/2026 (BNR)</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierPayment.paidRwf}">Paid (RWF)</label>
+                    <div class="value" th:text="${@num.money(payment.baseAmount)}">6,075,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierPayment.settledRwf}">Settled, as booked (RWF)</label>
+                    <div class="value" th:text="${@num.money(payment.settledBase)}">6,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierPayment.fx}">FX gain or loss (RWF)</label>
+                    <div class="value strong" th:text="${payment.fxGainLoss.signum() == 0} ? '—' : (${payment.fxGainLoss.signum() > 0} ? #{supplierPayment.gain(${@num.money(payment.fxGainLoss)})} : #{supplierPayment.loss(${@num.money(payment.fxGainLoss.negate())})})">Loss of 75,000</div>
+                </div>
+                <div class="item item-full" th:if="${payment.notes != null}">
+                    <label th:text="#{customerAccount.notes}">Notes</label>
+                    <div class="value" th:text="${payment.notes}">—</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/supplier-payments/' + payment.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{payables.title}, ~{::content})}">
+<head><title>Payables - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{payables.title}">Payables</h1>
+            <div class="subtitle" th:text="#{payables.subtitle(${#temporals.format(today, 'dd/MM/yyyy')})}">What is owed to suppliers on 09/10/2026, by days past due</div>
+        </div>
+        <a href="/supplier-payments" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_SUPPLIER_PAYMENTS')" th:text="#{nav.supplierPayments}">Supplier payments</a>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{payables.total}">Owed in all (RWF as booked)</label>
+                    <div class="value strong" th:text="${@num.money(payables.total)}">6,000,000</div>
+                </div>
+                <div class="item" th:each="b : ${buckets}">
+                    <label th:text="#{${'ageing.' + b}}">Not due</label>
+                    <div class="value" th:text="${@num.money(payables.totals.get(b))}">0</div>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{payables.note}">RWF as each invoice or bill was booked; foreign amounts are paid at the day's rate, and the difference is the FX gain or loss.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{payables.suppliers}">Suppliers owed</span>
+                <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{supplierInvoice.supplier}">Supplier</th>
+                        <th class="num" th:each="b : ${buckets}" th:text="#{${'ageing.' + b}}">Not due</th>
+                        <th class="num" th:text="#{customerAccount.total}">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${rows.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/suppliers/{id}(id=${a.supplier.id}, tab='account')}" th:text="${a.supplier.name}">Shandong Float Glass Co.</a>
+                            <div class="cell-sub" th:each="o : ${a.open}" th:if="${o.amount.signum() != 0}" th:text="${@num.amount(o.amount, 2) + ' ' + o.currency}">4,500.00 USD</div>
+                        </td>
+                        <td class="num" th:each="b : ${buckets}" th:text="${a.ageing.get(b).signum() == 0} ? '—' : ${@num.money(a.ageing.get(b))}">0</td>
+                        <td class="num strong" th:text="${@num.money(a.ageing.balance)}">6,000,000</td>
+                    </tr>
+                    <tr th:if="${rows.totalElements == 0}">
+                        <td th:colspan="${buckets.length + 2}">
+                            <div class="empty-state">
+                                <h3 th:text="#{payables.empty}">Nothing is owed to suppliers</h3>
+                                <p th:text="#{payables.emptyHint}">Supplier invoices and shipment bills appear here until they are paid</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/accounting/payables', '')}"></th:block>
+    </div>
+</div>
+</body>
+</html>

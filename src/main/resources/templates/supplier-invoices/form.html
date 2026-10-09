@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{supplierInvoice.addTitle}, ~{::content})}">
+<head><title>Record a supplier invoice - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{supplierInvoice.addTitle}">Record a supplier invoice</h1>
+            <div class="subtitle" th:text="${supplier.name}">Shandong Float Glass Co.</div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/suppliers/{id}(id=${supplier.id}, tab='account')}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section" th:if="${#lists.isEmpty(uninvoiced)}">
+        <div class="section-body">
+            <div class="empty-state">
+                <h3 th:text="#{supplierAccount.noneToInvoice}">Every posted receipt is invoiced</h3>
+                <p th:text="#{supplierInvoice.nothingHint}">An invoice bills goods receipts posted and not invoiced yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <form th:unless="${#lists.isEmpty(uninvoiced)}" th:action="@{/supplier-invoices}" method="post" class="supplier-invoice-form" novalidate>
+        <input type="hidden" name="supplierId" th:value="${supplier.id}">
+        <div class="error-summary" th:if="${errorText != null}">
+            <div class="error-summary-body">
+                <ul class="error-summary-list"><li class="error-summary-item"><span class="error-summary-message" th:text="${errorText}">Error</span></li></ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{supplierInvoice.receipts}">Goods receipts it bills</h2>
+            </div>
+            <div class="section-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><span class="sr-only" th:text="#{invoice.choose}">Choose</span></th>
+                                <th th:text="#{receipt.number}">Receipt</th>
+                                <th th:text="#{invoice.date}">Date</th>
+                                <th th:text="#{supplierAccount.order}">Order</th>
+                                <th class="num" th:text="#{supplierAccount.amountCcy}">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${uninvoiced}">
+                                <td><input type="checkbox" class="checkbox" name="receiptIds" th:value="${u.receipt.id}" th:checked="${#lists.contains(ticked, u.receipt.id)}"
+                                           th:attr="data-amount=${u.amount}" data-receipt-pick th:aria-label="${u.receipt.number}"></td>
+                                <td><a class="mono strong" th:href="@{/goods-receipts/{id}(id=${u.receipt.id})}" target="_blank" rel="noopener" th:text="${u.receipt.number}">GRN-WH-2026-000001</a></td>
+                                <td class="nowrap" th:text="${#temporals.format(u.receipt.receivedDate, 'dd/MM/yyyy')}">08/10/2026</td>
+                                <td class="mono" th:text="${u.receipt.purchaseOrder.number}">PO-WH-2026-000001</td>
+                                <td class="num" th:text="${@num.amount(u.amount, 2) + ' ' + u.currency}">4,500.00 USD</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{supplierInvoice.receiptsNote}">Tick the receipts the supplier's invoice bills. Each moves from Goods Received Not Invoiced to the supplier's payable at the value and rate it was received at.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{supplierInvoice.details}">The supplier's invoice</h2>
+            </div>
+            <div class="section-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="supplierRef" th:text="#{supplierInvoice.supplierRef}">Supplier's number</label>
+                        <input type="text" id="supplierRef" name="supplierRef" maxlength="60" class="input-code" required autocomplete="off"
+                               th:value="${supplierRef}" th:classappend="${errorField == 'supplierRef'} ? 'is-invalid'">
+                    </div>
+                    <div class="form-group">
+                        <label for="invoiceDate" th:text="#{invoice.date}">Date</label>
+                        <input type="date" id="invoiceDate" name="invoiceDate" required th:value="${invoiceDate}" th:classappend="${errorField == 'invoiceDate'} ? 'is-invalid'">
+                        <span class="hint" th:text="${supplier.paymentTermsDays == 0} ? #{party.termsNone} : #{supplierInvoice.dueHint(${supplier.paymentTermsDays})}">Due 30 days after</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount" th:text="#{supplierInvoice.total}">Total on the invoice</label>
+                        <input type="number" id="amount" name="amount" min="0" step="any" inputmode="decimal" required
+                               th:value="${amount}" th:classappend="${errorField == 'amount'} ? 'is-invalid'">
+                        <span class="hint" th:text="#{supplierInvoice.totalHint}">As the supplier wrote it: it must match the receipts ticked</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes" th:text="#{customerAccount.notes}">Notes</label>
+                        <input type="text" id="notes" name="notes" maxlength="255" autocomplete="off" th:value="${notes}">
+                    </div>
+                </div>
+                <div class="pay-status supplier-invoice-total" aria-live="polite" th:attr="data-none-label=#{supplierInvoice.totalNone}, data-total-label=#{supplierInvoice.totalTicked},
+                     data-currency=${uninvoiced[0].currency}">
+                    <span class="pay-status-label" th:text="#{supplierInvoice.totalNone}">Tick the receipts it bills</span>
+                    <span class="pay-status-amount"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <a th:href="@{/suppliers/{id}(id=${supplier.id}, tab='account')}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            <button type="submit" class="btn btn-primary" th:text="#{supplierInvoice.record}">Record the invoice</button>
+        </div>
+    </form>
+    <script defer src="/js/supplier-invoice.js"></script>
+</div>
+</body>
+</html>

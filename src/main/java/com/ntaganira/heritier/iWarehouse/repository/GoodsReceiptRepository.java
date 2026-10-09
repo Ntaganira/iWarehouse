@@ -17,6 +17,10 @@ import java.util.UUID;
 
 public interface GoodsReceiptRepository extends JpaRepository<GoodsReceipt, UUID>, JpaSpecificationExecutor<GoodsReceipt> {
 
+    /** A supplier's goods receipts in a status, oldest first (the posted ones a supplier invoice can bill, ACC-09). */
+    @EntityGraph(attributePaths = {"purchaseOrder"})
+    List<GoodsReceipt> findByPurchaseOrder_Supplier_IdAndStatusOrderByReceivedDateAscNumberAsc(UUID supplierId, GoodsReceiptStatus status);
+
     @EntityGraph(attributePaths = {"purchaseOrder", "purchaseOrder.supplier"})
     Page<GoodsReceipt> findAll(Specification<GoodsReceipt> spec, Pageable pageable);
 

@@ -30,6 +30,10 @@ public enum DocumentType {
     TILL_SESSION("TILL"),
     /** A discount or credit waiting for a manager at the counter (POS-05, POS-06). */
     SALE_APPROVAL("APR"),
+    /** A supplier's invoice matched to its goods receipts (ACC-09): SINV-WH-2026-000001. */
+    SUPPLIER_INVOICE("SINV"),
+    /** A payment to a supplier (ACC-09): SPAY-WH-2026-000001. */
+    SUPPLIER_PAYMENT("SPAY"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

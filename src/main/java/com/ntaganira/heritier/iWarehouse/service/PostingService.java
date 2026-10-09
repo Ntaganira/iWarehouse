@@ -314,6 +314,46 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    /**
+     * A supplier's invoice matched to its goods receipts (ACC-09, SRS 4.9.1): per receipt, Dr Goods Received Not Invoiced / Cr
+     * Accounts Payable at the receipt's own value and rate, in the supplier's currency: GRNI clears exactly and the payable
+     * keeps what the receipt was booked at (the FX is realised when it is paid).
+     */
+    public JournalEntry supplierInvoice(SupplierInvoice invoice, List<SupplierInvoiceLine> lines) {
+        UUID supplierId = invoice.getSupplier().getId();
+        Journal journal = Journal.of(JournalSource.SUPPLIER_INVOICE, invoice.getId(), invoice.getNumber(), invoice.getInvoiceDate(),
+                "Supplier invoice " + invoice.getSupplierRef() + " from " + invoice.getSupplier().getName());
+        for (SupplierInvoiceLine line : lines) {
+            Journal.Fx fx = fx(invoice.getCurrencyCode(), line.getAmount(), line.getRate());
+            journal.add(AccountKey.GRNI, line.getBaseAmount(), null, supplierId, line.getReceiptNumber(), fx)
+                    .add(AccountKey.PAYABLE, line.getBaseAmount().negate(), null, supplierId,
+                            invoice.getSupplierRef() + " · " + line.getReceiptNumber(), fx);
+        }
+        return journalService.post(journal);
+    }
+
+    /**
+     * A payment to a supplier (ACC-08, ACC-09): Dr Accounts Payable, the RWF the settled items were booked at / Cr the bank,
+     * the main cash vault or mobile money, the RWF paid at the day's rate; the difference is the realised FX gain or loss.
+     */
+    public JournalEntry supplierPayment(SupplierPayment payment) {
+        AccountKey from = switch (payment.getMethod()) {
+            case CASH -> AccountKey.CASH_VAULT;
+            case MOBILE_MONEY -> AccountKey.MOBILE_MONEY;
+            default -> AccountKey.BANK;
+        };
+        BigDecimal settledRate = payment.getRate() == null ? null
+                : payment.getSettledBase().divide(payment.getAmount(), 6, RoundingMode.HALF_UP);
+        Journal journal = Journal.of(JournalSource.SUPPLIER_PAYMENT, payment.getId(), payment.getNumber(), payment.getPaymentDate(),
+                        "Payment " + payment.getNumber() + " to " + payment.getSupplier().getName())
+                .add(AccountKey.PAYABLE, payment.getSettledBase(), null, payment.getSupplier().getId(), null,
+                        fx(payment.getCurrencyCode(), payment.getAmount(), settledRate))
+                .add(from, payment.getBaseAmount().negate(), null, null, payment.getReference(),
+                        fx(payment.getCurrencyCode(), payment.getAmount(), payment.getRate()))
+                .balanceOn(AccountKey.FX_GAIN_LOSS);
+        return journalService.post(journal);
+    }
+
     /** A till opened: its float leaves the main cash vault for the till (Dr Cash on Hand / Cr Main Cash Vault). */
     public JournalEntry tillOpened(TillSession session) {
         Journal journal = Journal.of(JournalSource.TILL_OPENED, session.getId(), session.getNumber(),

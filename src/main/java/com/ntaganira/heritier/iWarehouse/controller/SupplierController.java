@@ -9,8 +9,11 @@ import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.Incoterm;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
+import com.ntaganira.heritier.iWarehouse.service.Ageing;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
+import com.ntaganira.heritier.iWarehouse.service.SupplierAccountService;
 import com.ntaganira.heritier.iWarehouse.service.SupplierService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,14 +45,16 @@ public class SupplierController {
     static final String MODULE = "Suppliers";
 
     private final SupplierService supplierService;
+    private final SupplierAccountService accountService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Countries countries;
     private final Messages messages;
 
-    public SupplierController(SupplierService supplierService, DataChangeService dataChangeService,
+    public SupplierController(SupplierService supplierService, SupplierAccountService accountService, DataChangeService dataChangeService,
                               ActivityLogService activityLogService, Countries countries, Messages messages) {
         this.supplierService = supplierService;
+        this.accountService = accountService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.countries = countries;
@@ -82,8 +87,19 @@ public class SupplierController {
     @PreAuthorize("hasAuthority('PAGE_SUPPLIERS') and hasAuthority('PERM_VIEW_SUPPLIER')")
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
-        String open = List.of("details", "history").contains(tab) ? tab : "details";
-        model.addAttribute("supplier", supplierService.findById(id));
+        boolean seesAccount = AppUserPrincipal.currentHas("PERM_VIEW_SUPPLIER_ACCOUNT");
+        String open = List.of("details", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
+        Supplier supplier = supplierService.findById(id);
+        model.addAttribute("supplier", supplier);
+        // The account (ACC-09): what is owed per currency, the ageing, receipts to invoice, the statement, paying
+        if (seesAccount) {
+            SupplierAccountService.Account account = accountService.account(supplier);
+            model.addAttribute("account", account);
+            model.addAttribute("statement", Paging.of(account.statement(), Paging.pageOf("account", open, page)));
+            model.addAttribute("buckets", Ageing.Bucket.values());
+            model.addAttribute("payCurrencies", account.open().stream().filter(o -> o.getAmount().signum() > 0).toList());
+            model.addAttribute("payMethods", SupplierPaymentController.methods());
+        }
         model.addAttribute("history", dataChangeService.history("Supplier", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "suppliers/view";

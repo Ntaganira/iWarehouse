@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{supplierInvoice.title}, ~{::content})}">
+<head><title>Supplier invoices - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{supplierInvoice.title}">Supplier invoices</h1>
+            <div class="subtitle" th:text="#{supplierInvoice.subtitle}">Suppliers' invoices matched to the goods received</div>
+        </div>
+        <a href="/accounting/payables" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PAYABLES')" th:text="#{nav.payables}">Payables</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{supplierInvoice.sectionTitle}">Invoices recorded</span>
+                <span class="section-count" th:text="${invoices.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/supplier-invoices}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{supplierInvoice.searchPh}" th:aria-label="#{supplierInvoice.searchPh}">
+                </div>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{supplierInvoice.number}">Invoice</th>
+                        <th th:text="#{supplierInvoice.supplierRef}">Supplier's number</th>
+                        <th th:text="#{supplierInvoice.supplier}">Supplier</th>
+                        <th th:text="#{invoice.date}">Date</th>
+                        <th th:text="#{supplierInvoice.due}">Due</th>
+                        <th class="num" th:text="#{supplierAccount.amountCcy}">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="i : ${invoices.content}">
+                        <td><a class="row-link strong mono" th:href="@{/supplier-invoices/{id}(id=${i.id})}" th:text="${i.number}">SINV-WH-2026-000001</a></td>
+                        <td class="mono" th:text="${i.supplierRef}">INV-778</td>
+                        <td><a th:href="@{/suppliers/{id}(id=${i.supplier.id}, tab='account')}" th:text="${i.supplier.name}">Shandong Float Glass Co.</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(i.invoiceDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                        <td class="nowrap" th:text="${#temporals.format(i.dueDate, 'dd/MM/yyyy')}">08/11/2026</td>
+                        <td class="num">
+                            <span th:text="${@num.amount(i.amount, 2) + ' ' + i.currencyCode}">4,500.00 USD</span>
+                            <div class="cell-sub" th:text="#{supplierInvoice.baseShort(${@num.money(i.baseAmount)})}">6,000,000 RWF as received</div>
+                        </td>
+                    </tr>
+                    <tr th:if="${invoices.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{supplierInvoice.empty}">No supplier invoices yet</h3>
+                                <p th:text="#{supplierInvoice.emptyHint}">Record one from the supplier's page when their invoice comes in</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${invoices}, '/supplier-invoices', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

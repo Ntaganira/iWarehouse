@@ -446,6 +446,83 @@ class PostingServiceTest {
         assertThat(journal.debits()).isEqualByComparingTo(journal.credits());
     }
 
+    @Test
+    void aSupplierInvoiceMovesReceiptsFromGrniToPayablesAndAPaymentBooksTheRealisedFx() {   // ACC-08, ACC-09
+        Supplier shandong = new Supplier();
+        shandong.setId(UUID.randomUUID());
+        shandong.setName("Shandong Float Glass Co.");
+        SupplierInvoice invoice = new SupplierInvoice();
+        invoice.setId(UUID.randomUUID());
+        invoice.setNumber("SINV-WH-2026-000001");
+        invoice.setSupplier(shandong);
+        invoice.setSupplierRef("INV-778");
+        invoice.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        invoice.setCurrencyCode("USD");
+        SupplierInvoiceLine first = new SupplierInvoiceLine();
+        first.setReceiptNumber("GRN-WH-2026-000001");
+        first.setAmount(new BigDecimal("3000.00"));
+        first.setRate(new BigDecimal("1300"));
+        first.setBaseAmount(new BigDecimal("3900000.00"));
+        SupplierInvoiceLine second = new SupplierInvoiceLine();
+        second.setReceiptNumber("GRN-WH-2026-000002");
+        second.setAmount(new BigDecimal("1500.00"));
+        second.setRate(new BigDecimal("1350"));
+        second.setBaseAmount(new BigDecimal("2025000.00"));
+
+        postings.supplierInvoice(invoice, List.of(first, second));
+
+        Journal billed = last();
+        assertThat(billed.source()).isEqualTo(JournalSource.SUPPLIER_INVOICE);
+        assertThat(lines(AccountKey.GRNI).stream().map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("5925000");
+        assertThat(lines(AccountKey.PAYABLE).stream().map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("-5925000");
+        assertThat(lines(AccountKey.PAYABLE)).allSatisfy(l -> {
+            assertThat(l.supplierId()).isEqualTo(shandong.getId());
+            assertThat(l.fx().currencyCode()).isEqualTo("USD");
+        });
+        assertThat(billed.debits()).isEqualByComparingTo(billed.credits());
+
+        // 3,500 USD paid at 1,340 by transfer: settles 4,575,000 as booked, 4,690,000 leaves the bank, 115,000 FX loss
+        SupplierPayment payment = new SupplierPayment();
+        payment.setId(UUID.randomUUID());
+        payment.setNumber("SPAY-WH-2026-000001");
+        payment.setSupplier(shandong);
+        payment.setPaymentDate(LocalDate.of(2026, 10, 9));
+        payment.setMethod(PaymentMethod.BANK_TRANSFER);
+        payment.setReference("SWIFT-1");
+        payment.setCurrencyCode("USD");
+        payment.setAmount(new BigDecimal("3500.00"));
+        payment.setRate(new BigDecimal("1340"));
+        payment.setBaseAmount(new BigDecimal("4690000.00"));
+        payment.setSettledBase(new BigDecimal("4575000.00"));
+        payment.setFxGainLoss(new BigDecimal("-115000.00"));
+
+        postings.supplierPayment(payment);
+
+        Journal paid = last();
+        assertThat(paid.source()).isEqualTo(JournalSource.SUPPLIER_PAYMENT);
+        assertThat(line(paid, AccountKey.PAYABLE).debit()).isEqualByComparingTo("4575000");
+        assertThat(line(paid, AccountKey.PAYABLE).fx().amount()).isEqualByComparingTo("3500");
+        assertThat(line(paid, AccountKey.BANK).credit()).isEqualByComparingTo("4690000");
+        assertThat(line(paid, AccountKey.FX_GAIN_LOSS).debit()).isEqualByComparingTo("115000");
+        assertThat(paid.debits()).isEqualByComparingTo(paid.credits());
+
+        // Cash comes out of the main cash vault, in RWF: no FX
+        SupplierPayment cash = new SupplierPayment();
+        cash.setId(UUID.randomUUID());
+        cash.setNumber("SPAY-WH-2026-000002");
+        cash.setSupplier(shandong);
+        cash.setPaymentDate(LocalDate.of(2026, 10, 9));
+        cash.setMethod(PaymentMethod.CASH);
+        cash.setCurrencyCode("RWF");
+        cash.setAmount(new BigDecimal("200000.00"));
+        cash.setBaseAmount(new BigDecimal("200000.00"));
+        cash.setSettledBase(new BigDecimal("200000.00"));
+        cash.setFxGainLoss(BigDecimal.ZERO);
+        postings.supplierPayment(cash);
+        assertThat(line(last(), AccountKey.CASH_VAULT).credit()).isEqualByComparingTo("200000");
+        assertThat(last().lines()).noneMatch(l -> l.account() == AccountKey.FX_GAIN_LOSS);
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static SalesPayment salePayment(PaymentMethod method, String amount, String reference) {

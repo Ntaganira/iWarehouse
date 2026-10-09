@@ -16,6 +16,10 @@
         </div>
         <div class="btn-group">
             <a href="/suppliers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/supplier-invoices/new(supplier=${supplier.id})}" class="btn btn-outline" th:if="${account != null and !#lists.isEmpty(account.uninvoiced)}"
+               sec:authorize="hasAuthority('PERM_RECORD_SUPPLIER_INVOICE')" th:text="#{supplierAccount.recordInvoice}">Record an invoice</a>
+            <button type="button" class="btn btn-outline" data-modal-open="supplier-pay-modal" th:if="${account != null and !#lists.isEmpty(payCurrencies)}"
+                    sec:authorize="hasAuthority('PERM_PAY_SUPPLIER')" th:text="#{supplierAccount.pay}">Pay</button>
             <th:block sec:authorize="hasAuthority('PERM_MANAGE_SUPPLIER')">
                 <form th:if="${supplier.enabled}" th:action="@{/suppliers/{id}/disable(id=${supplier.id})}" method="post"
                       class="row-action-form confirm-submit danger" th:attr="data-confirm=#{supplier.disableConfirm(${supplier.name})}">
@@ -33,6 +37,10 @@
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-account" th:classappend="${tab == 'account'} ? 'active'" th:if="${account != null}">
+                <span th:text="#{customerAccount.tab}">Account</span>
+                <span class="section-count" th:text="${@num.money(account.balance)}">6,000,000</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
         <div class="section-body">
@@ -104,11 +112,160 @@
                     </ul>
                 </div>
             </div>
+            <!-- The account (ACC-09): what is owed per currency, its ageing, receipts to invoice, the statement -->
+            <div class="tab-content" id="tab-account" th:classappend="${tab == 'account'} ? 'active'" th:if="${account != null}">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{supplierAccount.owed}">Owed (RWF as booked)</label>
+                        <div class="value strong" th:text="${@num.money(account.balance)}">6,000,000</div>
+                    </div>
+                    <div class="item" th:each="o : ${account.open}" th:if="${o.amount.signum() != 0}">
+                        <label th:text="#{supplierAccount.owedIn(${o.currency})}">Owed in USD</label>
+                        <div class="value" th:text="${@num.amount(o.amount, 2) + ' ' + o.currency}">4,500.00 USD</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customerAccount.overdue}">Overdue (RWF)</label>
+                        <div class="value" th:text="${@num.money(account.ageing.overdue)}">0</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.terms}">Payment terms</label>
+                        <div class="value" th:text="${supplier.paymentTermsDays == 0} ? #{party.termsNone} : #{party.termsDays(${supplier.paymentTermsDays})}">30 days</div>
+                    </div>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{customerAccount.ageing}">Ageing (RWF)</h3>
+                <div class="detail-list">
+                    <div class="item" th:each="b : ${buckets}">
+                        <label th:text="#{${'ageing.' + b}}">Not due</label>
+                        <div class="value" th:text="${@num.money(account.ageing.get(b))}">0</div>
+                    </div>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{supplierAccount.toInvoice}">Received, not invoiced</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{receipt.number}">Receipt</th>
+                                <th th:text="#{invoice.date}">Date</th>
+                                <th th:text="#{supplierAccount.order}">Order</th>
+                                <th class="num" th:text="#{supplierAccount.amountCcy}">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${account.uninvoiced}">
+                                <td><a class="mono" th:href="@{/goods-receipts/{id}(id=${u.receipt.id})}" th:text="${u.receipt.number}">GRN-WH-2026-000001</a></td>
+                                <td class="nowrap" th:text="${#temporals.format(u.receipt.receivedDate, 'dd/MM/yyyy')}">08/10/2026</td>
+                                <td><a class="mono" th:href="@{/purchase-orders/{id}(id=${u.receipt.purchaseOrder.id})}" th:text="${u.receipt.purchaseOrder.number}">PO-WH-2026-000001</a></td>
+                                <td class="num" th:text="${@num.amount(u.amount, 2) + ' ' + u.currency}">4,500.00 USD</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(account.uninvoiced)}">
+                                <td colspan="4"><span class="text-muted" th:text="#{supplierAccount.noneToInvoice}">Every posted receipt is invoiced</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{customerAccount.statement}">Statement</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{invoice.date}">Date</th>
+                                <th th:text="#{journal.source}">Event</th>
+                                <th th:text="#{customerAccount.journal}">Journal</th>
+                                <th class="num" th:text="#{supplierAccount.billed}">Owed (RWF)</th>
+                                <th class="num" th:text="#{supplierAccount.settled}">Paid or credited (RWF)</th>
+                                <th class="num" th:text="#{customerAccount.runningBalance}">Balance (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${statement.content}">
+                                <td class="nowrap" th:text="${#temporals.format(r.line.entry.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                                <td>
+                                    <th:block th:replace="~{journals/list :: source(${r.line.entry})}"></th:block>
+                                    <div class="cell-sub" th:if="${r.line.memo != null}" th:text="${r.line.memo}">INV-778 · GRN-WH-2026-000001</div>
+                                    <div class="cell-sub" th:if="${r.foreign}" th:text="${r.line.credit.signum() > 0} ? ${@num.amount(r.line.fxAmount.abs(), 2) + ' ' + r.line.currencyCode + ' × ' + @num.rate(r.line.rate)} : ${@num.amount(r.line.fxAmount.abs(), 2) + ' ' + r.line.currencyCode}">4,500.00 USD × 1,333.33</div>
+                                </td>
+                                <td>
+                                    <a class="mono" th:href="@{/accounting/journals/{id}(id=${r.line.entry.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="${r.line.entry.number}">JV-WH-2026-000035</a>
+                                    <span class="mono" sec:authorize="!hasAuthority('PAGE_ACCOUNTING')" th:text="${r.line.entry.number}">JV-WH-2026-000035</span>
+                                </td>
+                                <td class="num" th:text="${r.line.credit.signum() > 0} ? ${@num.money(r.line.credit)} : ''">6,000,000</td>
+                                <td class="num" th:text="${r.line.debit.signum() > 0} ? ${@num.money(r.line.debit)} : ''"></td>
+                                <td class="num strong" th:text="${@num.money(r.balance)}">6,000,000</td>
+                            </tr>
+                            <tr th:if="${statement.totalElements == 0}">
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{customerAccount.empty}">Nothing on the account</h3>
+                                        <p th:text="#{supplierAccount.emptyHint}">Supplier invoices, shipment bills and payments appear here</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${statement}, ${'/suppliers/' + supplier.id}, 'tab=account')}"></th:block>
+            </div>
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
                 <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/suppliers/' + supplier.id}, 'tab=history')}"></th:block>
                 <a class="link-more" th:href="@{/audit/history/Supplier/{id}(id=${supplier.id})}" th:text="#{audit.fullHistory}">Full history</a>
             </div>
+        </div>
+    </div>
+
+    <!-- A payment to the supplier (ACC-08, ACC-09) -->
+    <div class="modal-overlay" id="supplier-pay-modal" th:if="${account != null and !#lists.isEmpty(payCurrencies)}" sec:authorize="hasAuthority('PERM_PAY_SUPPLIER')"
+         th:classappend="${payForm != null} ? 'open'">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="supplier-pay-title">
+            <div class="modal-header">
+                <h3 id="supplier-pay-title" th:text="#{supplierAccount.payTitle(${supplier.name})}">Payment to Shandong Float Glass Co.</h3>
+                <button type="button" class="modal-close" data-modal-close="supplier-pay-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/supplier-payments}" method="post" novalidate>
+                <input type="hidden" name="supplierId" th:value="${supplier.id}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{supplierAccount.payText}">At today's rate; it settles the oldest items first and the difference with what they were booked at is the FX gain or loss.</p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="sp-currency" th:text="#{supplierAccount.currency}">Currency</label>
+                            <select id="sp-currency" name="currencyCode" th:classappend="${payField == 'currencyCode'} ? 'is-invalid'">
+                                <option th:each="o : ${payCurrencies}" th:value="${o.currency}" th:selected="${payForm != null and payForm.get('currencyCode') == o.currency}"
+                                        th:text="#{supplierAccount.currencyOwed(${o.currency}, ${@num.amount(o.amount, 2)})}">USD (4,500.00 owed)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sp-amount" th:text="#{supplierAccount.amountPaid}">Amount paid</label>
+                            <input type="number" id="sp-amount" name="amount" min="0" step="any" inputmode="decimal" required
+                                   th:value="${payForm != null ? payForm.get('amount') : @num.plain(payCurrencies[0].amount)}" th:classappend="${payField == 'amount'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group">
+                            <label for="sp-method" th:text="#{invoice.method}">Method</label>
+                            <select id="sp-method" name="method" th:classappend="${payField == 'method'} ? 'is-invalid'">
+                                <option th:each="m : ${payMethods}" th:value="${m}" th:selected="${payForm != null and payForm.get('method') == m.name()}"
+                                        th:text="#{${'supplierPayment.method.' + m}}">Bank transfer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sp-reference" th:text="#{pos.pay.reference}">Reference</label>
+                            <input type="text" id="sp-reference" name="reference" maxlength="60" class="input-code" autocomplete="off"
+                                   th:value="${payForm != null ? payForm.get('reference') : ''}" th:classappend="${payField == 'reference'} ? 'is-invalid'">
+                            <span class="hint" th:text="#{supplierAccount.referenceHint}">For a transfer or mobile money</span>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="sp-notes" th:text="#{customerAccount.notes}">Notes</label>
+                            <input type="text" id="sp-notes" name="notes" maxlength="255" autocomplete="off"
+                                   th:value="${payForm != null ? payForm.get('notes') : ''}" th:classappend="${payField == 'notes'} ? 'is-invalid'">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="supplier-pay-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{supplierAccount.pay}">Pay</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

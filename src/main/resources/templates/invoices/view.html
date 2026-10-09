@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${invoice.number}, ~{::content})}">
+<head><title>Invoice - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${invoice.number}">INV-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{invoice.subtitleOne(${invoice.billTo}, ${#temporals.format(invoice.postedAt, 'dd/MM/yyyy HH:mm')}, ${invoice.postedBy})}">Jean Habimana · 09/10/2026 10:30 · cashier1</div>
+        </div>
+        <div class="btn-group">
+            <a href="/invoices" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a href="/pos" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')" th:text="#{pos.newSale}">New sale</a>
+            <a th:href="@{/invoices/{id}/receipt(id=${invoice.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{invoice.printReceipt}">Print the receipt</a>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:text="#{invoice.ebmPending}">Not signed by EBM yet: fiscal signing comes with the EBM connection (M4).</div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${invoice.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${invoice.customer.name}">Walk-in customer</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${invoice.customer.name}">Walk-in customer</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.billTo}">Made out to</label>
+                    <div class="value" th:text="${invoice.billTo}">Jean Habimana</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.buyerTin}">Buyer's TIN</label>
+                    <div class="value mono" th:text="${invoice.buyerTin ?: '—'}">102938475</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.till}">Till</label>
+                    <div class="value">
+                        <a class="mono" th:href="@{/till-sessions/{id}(id=${invoice.tillSession.id})}" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:text="${invoice.tillSession.number}">TILL-WH-2026-000001</a>
+                        <span class="mono" sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="${invoice.tillSession.number}">TILL-WH-2026-000001</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.total}">Total (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(invoice.totalAmount)}">195,008</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{invoice.lines}">Lines</span>
+                <span class="section-count" th:text="${invoice.lines.size()}">1</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{product.name}">Glass</th>
+                                <th class="num" th:text="#{pos.m2Charged}">m² charged</th>
+                                <th class="num" th:text="#{pos.pricePerM2}">Price / m²</th>
+                                <th th:text="#{pos.vat}">VAT</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${invoice.lines}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td><a class="mono" th:href="@{/stock/{id}(id=${l.stockUnitId})}" sec:authorize="hasAuthority('PAGE_STOCK')" th:text="${l.unitCode}">U-WH-000002</a>
+                                    <span class="mono" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${l.unitCode}">U-WH-000002</span></td>
+                                <td>
+                                    <th:block th:replace="~{products/list :: productName(${l.product})}"></th:block>
+                                    <div class="cell-sub mono" th:text="${l.widthMm + ' × ' + l.heightMm}">3210 × 2250</div>
+                                </td>
+                                <td class="num" th:text="${@num.m2(l.chargeableAreaM2)}">7.2225</td>
+                                <td class="num">
+                                    <span th:text="${@num.money(l.pricePerM2)}">27,000</span>
+                                    <div class="cell-sub" th:text="${l.priceList.name + ' · ' + (l.pricesIncludeVat ? #messages.msg('pos.vatIncluded') : #messages.msg('pos.vatExcluded'))}">Retail · VAT included</div>
+                                </td>
+                                <td class="nowrap" th:text="${l.taxCode + ' ' + @num.m2(l.vatRate) + '%'}">B 18%</td>
+                                <td class="num strong" th:text="${@num.money(l.amount)}">195,008</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr th:each="g : ${totals.groups}">
+                                <th colspan="6" th:text="#{invoice.vatLine(${g.taxCode}, ${@num.m2(g.rate)}, ${@num.money(g.getNet())})}">B 18%: net 165,261.02, VAT</th>
+                                <th class="num" th:text="${@num.money(g.vat)}">29,746.98</th>
+                            </tr>
+                            <tr>
+                                <th colspan="6" th:text="#{pos.total}">Total (RWF)</th>
+                                <th class="num" th:text="${@num.money(invoice.totalAmount)}">195,008</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{invoice.payments}">Payments</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{invoice.method}">Method</th>
+                                <th th:text="#{pos.pay.reference}">Reference</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="p : ${payments}">
+                                <td th:text="#{${'payment.method.' + p.method}}">Cash</td>
+                                <td class="mono" th:text="${p.reference ?: '—'}">MP-55</td>
+                                <td class="num" th:text="${@num.money(p.amount)}">97,504</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(payments)}">
+                                <td colspan="3"><span class="text-muted" th:text="#{invoice.noPayment}">Nothing to pay</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:if="${invoice.cashTendered != null}"
+                   th:text="#{invoice.cashLine(${@num.money(invoice.cashTendered)}, ${@num.money(invoice.changeGiven)})}">Cash handed over 100,000 RWF, change 2,496 RWF.</p>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/invoices/' + invoice.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{invoice.title}, ~{::content})}">
+<head><title>Invoices - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{invoice.title}">Invoices</h1>
+            <div class="subtitle" th:text="#{invoice.subtitle}">Sales invoices issued at the counter, with their payments</div>
+        </div>
+        <a href="/pos" class="btn btn-primary" sec:authorize="hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')" th:text="#{pos.title}">Counter POS</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{invoice.sectionTitle}">Issued invoices</span>
+                <span class="section-count" th:text="${invoices.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/invoices}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{invoice.searchPh}" th:aria-label="#{invoice.searchPh}">
+                </div>
+            </form>
+        </div>
+        <th:block th:replace="~{invoices/list :: invoiceTable(${invoices.content})}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${invoices}, '/invoices', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Issued invoices: number, date, customer and TIN, total, cashier */-->
+<div th:fragment="invoiceTable(rows)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{invoice.number}">Invoice</th>
+                <th th:text="#{invoice.date}">Date</th>
+                <th th:text="#{invoice.customer}">Customer</th>
+                <th class="num" th:text="#{invoice.total}">Total (RWF)</th>
+                <th th:text="#{invoice.cashier}">Cashier</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="i : ${rows}">
+                <td><a class="row-link strong mono" th:href="@{/invoices/{id}(id=${i.id})}" th:text="${i.number}">INV-WH-2026-000001</a></td>
+                <td class="nowrap" th:text="${#temporals.format(i.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</td>
+                <td>
+                    <span th:text="${i.billTo}">Jean Habimana</span>
+                    <div class="cell-sub mono" th:if="${i.buyerTin != null}" th:text="#{invoice.tinShort(${i.buyerTin})}">TIN 102938475</div>
+                </td>
+                <td class="num" th:text="${@num.money(i.totalAmount)}">195,008</td>
+                <td th:text="${i.postedBy}">cashier1</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}">
+                <td colspan="5">
+                    <div class="empty-state">
+                        <h3 th:text="#{invoice.empty}">No invoices yet</h3>
+                        <p th:text="#{invoice.emptyHint}">Sales paid at the counter appear here</p>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

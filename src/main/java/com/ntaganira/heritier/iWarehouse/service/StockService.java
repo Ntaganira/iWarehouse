@@ -22,6 +22,7 @@ import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.LocationRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockAdjustmentLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCostEntryRepository;
+import com.ntaganira.heritier.iWarehouse.repository.SalesInvoiceLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCountRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockMovementRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
@@ -78,6 +79,8 @@ public class StockService {
     public static final String REF_CUSTOMER = "CUSTOMER";
     /** Reference type of COUNT movements (INV-08). */
     public static final String REF_STOCK_COUNT = "STOCK_COUNT";
+    /** Movements of units sold, referring to their invoice. */
+    public static final String REF_SALES_INVOICE = "SALES_INVOICE";
     /** Status filter value for every status; empty means "in stock". */
     public static final String ALL_STATUSES = "all";
 
@@ -86,19 +89,21 @@ public class StockService {
     private final StockCostEntryRepository costEntryRepo;
     private final StockAdjustmentLineRepository adjustmentLineRepo;
     private final StockCountRepository countRepo;
+    private final SalesInvoiceLineRepository saleLineRepo;
     private final LocationRepository locationRepo;
     private final DocumentNumberService numbers;
     private final Clock clock;
 
     public StockService(StockUnitRepository unitRepo, StockMovementRepository movementRepo,
                         StockCostEntryRepository costEntryRepo, StockAdjustmentLineRepository adjustmentLineRepo,
-                        StockCountRepository countRepo, LocationRepository locationRepo, DocumentNumberService numbers,
-                        Clock clock) {
+                        StockCountRepository countRepo, SalesInvoiceLineRepository saleLineRepo, LocationRepository locationRepo,
+                        DocumentNumberService numbers, Clock clock) {
         this.unitRepo = unitRepo;
         this.movementRepo = movementRepo;
         this.costEntryRepo = costEntryRepo;
         this.adjustmentLineRepo = adjustmentLineRepo;
         this.countRepo = countRepo;
+        this.saleLineRepo = saleLineRepo;
         this.locationRepo = locationRepo;
         this.numbers = numbers;
         this.clock = clock;
@@ -376,6 +381,10 @@ public class StockService {
         for (Object[] row : countRepo.findHolds(unitIds)) {
             holds.putIfAbsent((UUID) row[0], (String) row[1]);
         }
+        // A sale being rung up holds its units until it is paid or cancelled (POS-01)
+        for (Object[] row : saleLineRepo.findHolds(unitIds)) {
+            holds.putIfAbsent((UUID) row[0], (String) row[1]);
+        }
         return holds;
     }
 
@@ -425,6 +434,21 @@ public class StockService {
         record(unit, MovementType.RELEASE, location, StockStatus.RESERVED, LocalDateTime.now(clock), reason,
                 customer == null ? null : REF_CUSTOMER, customer == null ? null : customer.getId(),
                 customer == null ? null : customer.getCode());
+    }
+
+    // ---------------------------------------------------------------- sales (POS-01)
+
+    /** A unit sold at the counter leaves stock: SOLD, off its rack, its reservation cleared. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void sell(StockUnit unit, UUID invoiceId, String invoiceNumber) {
+        requireAllowed(unit, StockAction.SELL);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        StockStatus fromStatus = unit.getStatus();
+        unit.setStatus(StockStatus.SOLD);
+        unit.setLocation(null);
+        unit.setReservedCustomer(null);
+        unit.setReservedNote(null);
+        record(unit, MovementType.SALE, from, fromStatus, LocalDateTime.now(clock), null, REF_SALES_INVOICE, invoiceId, invoiceNumber);
     }
 
     // ---------------------------------------------------------------- transfers and adjustments (INV-07)

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -27,11 +28,11 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
 
     JournalLine save(JournalLine line);
 
-    @EntityGraph(attributePaths = {"account", "product", "supplier"})
+    @EntityGraph(attributePaths = {"account", "product", "supplier", "customer"})
     List<JournalLine> findByEntry_IdOrderByLineNo(UUID entryId);
 
     /** An account's lines, newest journal first (its ledger). */
-    @EntityGraph(attributePaths = {"entry", "product", "supplier"})
+    @EntityGraph(attributePaths = {"entry", "product", "supplier", "customer"})
     @Query(value = "select l from JournalLine l where l.account.id = :accountId",
             countQuery = "select count(l) from JournalLine l where l.account.id = :accountId")
     Page<JournalLine> findLedger(@Param("accountId") UUID accountId, Pageable pageable);
@@ -46,6 +47,11 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
     /** Rows of (account id, debits, credits) of all journals. */
     @Query("select l.account.id, coalesce(sum(l.debit), 0), coalesce(sum(l.credit), 0) from JournalLine l group by l.account.id")
     List<Object[]> balances();
+
+    /** Debits less credits of an account on one customer's lines (what they owe on the receivable account). */
+    @Query("select coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"
+            + " where l.account.id = :accountId and l.customer.id = :customerId")
+    BigDecimal balanceOfCustomer(@Param("accountId") UUID accountId, @Param("customerId") UUID customerId);
 
     /** Rows of (product id, debits less credits) of an account: the inventory account per glass (AT-10). */
     @Query("select l.product.id, coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"

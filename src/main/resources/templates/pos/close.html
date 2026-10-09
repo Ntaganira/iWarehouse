@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{till.closeTitle}, ~{::content})}">
+<head><title>Close the till - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{till.closeTitle}">Close the Till</h1>
+            <div class="subtitle" th:text="#{till.closeSubtitle(${till.number})}">Count the cash in TILL-WH-2026-000001 and close it</div>
+        </div>
+        <a href="/pos" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${sale != null}">
+        <span th:text="#{till.close.saleOpen(${sale.lines.size()})}">A sale with 2 lines is being rung up: pay it or cancel it first.</span>
+        <a href="/pos" th:text="#{till.backToSale}">Back to the sale</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{till.takings}">What the till took</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{till-sessions/list :: takings(${summary})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/pos/till/close}" method="post" class="form-container confirm-submit" novalidate
+              th:attr="data-confirm=#{till.closeConfirm(${till.number})}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="countedCash" th:text="#{till.counted}">Cash counted (RWF)</label>
+                    <input type="number" id="countedCash" name="countedCash" min="0" step="any" required inputmode="decimal" autofocus
+                           th:value="${countedCash}">
+                    <span class="hint" th:text="#{till.countedHint(${@num.money(summary.expectedCash)})}">The till should hold 145,008 RWF: the float and the cash kept from sales</span>
+                </div>
+                <div class="form-group">
+                    <label for="note" th:text="#{till.note}">Note</label>
+                    <input type="text" id="note" name="note" maxlength="255" th:value="${note}" th:placeholder="#{till.notePh}">
+                    <span class="hint" th:text="#{till.noteHint}">Needed when the cash counted differs from what the till should hold</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{till.close}">Close the till</button>
+                <a href="/pos" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

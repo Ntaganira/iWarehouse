@@ -29,7 +29,9 @@ public enum StockAction {
     /** Released from a reservation. */
     RELEASE(EnumSet.of(StockStatus.RESERVED)),
     /** A lost unit found again. */
-    FIND(EnumSet.of(StockStatus.LOST));
+    FIND(EnumSet.of(StockStatus.LOST)),
+    /** Sold at the counter: available, or reserved for the buyer (POS-01). */
+    SELL(EnumSet.of(StockStatus.AVAILABLE, StockStatus.RESERVED));
 
     private final Set<StockStatus> allowed;
 

@@ -18,7 +18,7 @@ import java.util.UUID;
  * - User      : Hntaganira
  * - Desc      : One line of a journal: an account debited or credited in RWF (ACC-01). A line from a foreign
  *               document keeps its currency, amount and rate; a stock line its glass (AT-10 per glass); a
- *               payable line its supplier. Append-only (trg_journal_lines_append_only).
+ *               payable line its supplier, a receivable line its customer. Append-only (trg_journal_lines_append_only).
  * </pre>
  */
 @Entity
@@ -60,6 +60,11 @@ public class JournalLine {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
+
+    /** Receivable lines: the customer whose credit it is (POS-05). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
 
     @Column(name = "currency_code", length = 3)
     private String currencyCode;

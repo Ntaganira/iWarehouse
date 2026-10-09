@@ -5,6 +5,7 @@ import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
 import com.ntaganira.heritier.iWarehouse.enums.AdjustmentKind;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
+import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import com.ntaganira.heritier.iWarehouse.enums.WriteOffCause;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.CurrencyRepository;
@@ -209,6 +210,55 @@ public class PostingService {
         }
         journal.stockChange(before.values(), valuesNow(before))
                 .balanceOn(AccountKey.STOCK_REVALUATION);
+        return journalService.post(journal);
+    }
+
+    // ---------------------------------------------------------------- counter sales (POS-01, POS-04, POS-10)
+
+    /**
+     * A sale paid (SRS 4.9.1): Dr each payment's account (cash in the till, mobile money, bank for card and
+     * transfer, the customer's receivable for credit) / Cr Sales Revenue (net) and VAT Output; and the glass at
+     * MAC: Dr Cost of Goods Sold / Cr Inventory, the change of each glass's value.
+     */
+    public JournalEntry sale(SalesInvoice invoice, List<SalesPayment> payments, StockValues before) {
+        Customer customer = invoice.getCustomer();
+        Journal journal = Journal.of(JournalSource.SALES_INVOICE, invoice.getId(), invoice.getNumber(), invoice.getInvoiceDate(),
+                "Sale " + invoice.getNumber() + " to " + invoice.getBillTo());
+        for (SalesPayment p : payments) {
+            UUID customerId = p.getMethod() == PaymentMethod.CREDIT ? customer.getId() : null;
+            journal.add(p.getMethod().account(), p.getAmount(), null, null, customerId, p.getReference(), null);
+        }
+        journal.credit(AccountKey.SALES, invoice.getNetAmount())
+                .credit(AccountKey.VAT_OUTPUT, invoice.getVatAmount());
+        Map<UUID, BigDecimal> after = valuesNow(before);
+        journal.stockChange(before.values(), after);
+        BigDecimal cost = BigDecimal.ZERO;
+        for (Map.Entry<UUID, BigDecimal> e : before.values().entrySet()) {
+            cost = cost.add(e.getValue().subtract(after.getOrDefault(e.getKey(), BigDecimal.ZERO)));
+        }
+        journal.debit(AccountKey.COGS, cost);
+        return journalService.post(journal);
+    }
+
+    /** A till opened: its float leaves the main cash vault for the till (Dr Cash on Hand / Cr Main Cash Vault). */
+    public JournalEntry tillOpened(TillSession session) {
+        Journal journal = Journal.of(JournalSource.TILL_OPENED, session.getId(), session.getNumber(),
+                        session.getOpenedAt().toLocalDate(), "Till " + session.getNumber() + " opened by " + session.getCashierUsername())
+                .debit(AccountKey.CASH, session.getOpeningFloat())
+                .credit(AccountKey.CASH_VAULT, session.getOpeningFloat());
+        return journalService.post(journal);
+    }
+
+    /**
+     * A till closed: the cash counted goes back to the vault (Dr Main Cash Vault / Cr Cash on Hand, the cash
+     * expected); a shortage is Dr Cash Over/Short, an overage Cr (ACC-07 for the counter).
+     */
+    public JournalEntry tillClosed(TillSession session) {
+        Journal journal = Journal.of(JournalSource.TILL_CLOSED, session.getId(), session.getNumber(),
+                        session.getClosedAt().toLocalDate(), "Till " + session.getNumber() + " closed")
+                .debit(AccountKey.CASH_VAULT, session.getCountedCash())
+                .credit(AccountKey.CASH, session.getExpectedCash())
+                .balanceOn(AccountKey.CASH_OVER_SHORT);
         return journalService.post(journal);
     }
 

@@ -9,6 +9,7 @@ import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.AccountRepository;
+import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
 import com.ntaganira.heritier.iWarehouse.repository.JournalEntryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.JournalLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
@@ -54,18 +55,20 @@ public class JournalService {
     private final AccountRepository accountRepo;
     private final ProductRepository productRepo;
     private final SupplierRepository supplierRepo;
+    private final CustomerRepository customerRepo;
     private final StockSummaryService summaryService;
     private final DocumentNumberService numbers;
     private final Clock clock;
 
     public JournalService(JournalEntryRepository entryRepo, JournalLineRepository lineRepo, AccountRepository accountRepo,
-                          ProductRepository productRepo, SupplierRepository supplierRepo, StockSummaryService summaryService,
-                          DocumentNumberService numbers, Clock clock) {
+                          ProductRepository productRepo, SupplierRepository supplierRepo, CustomerRepository customerRepo,
+                          StockSummaryService summaryService, DocumentNumberService numbers, Clock clock) {
         this.entryRepo = entryRepo;
         this.lineRepo = lineRepo;
         this.accountRepo = accountRepo;
         this.productRepo = productRepo;
         this.supplierRepo = supplierRepo;
+        this.customerRepo = customerRepo;
         this.summaryService = summaryService;
         this.numbers = numbers;
         this.clock = clock;
@@ -118,6 +121,7 @@ public class JournalService {
             line.setMemo(l.memo());
             line.setProduct(l.productId() == null ? null : productRepo.getReferenceById(l.productId()));
             line.setSupplier(l.supplierId() == null ? null : supplierRepo.getReferenceById(l.supplierId()));
+            line.setCustomer(l.customerId() == null ? null : customerRepo.getReferenceById(l.customerId()));
             if (l.fx() != null) {
                 line.setCurrencyCode(l.fx().currencyCode());
                 line.setFxAmount(l.fx().amount());
@@ -174,6 +178,13 @@ public class JournalService {
         return lineRepo.findLedger(accountId, PageRequest.of(page, size,
                 Sort.by(Sort.Direction.DESC, "entry.entryDate").and(Sort.by(Sort.Direction.DESC, "entry.number"))
                         .and(Sort.by(Sort.Direction.ASC, "lineNo"))));
+    }
+
+    /** What a customer owes: the receivable account's balance on their lines (POS-05). */
+    public BigDecimal receivable(UUID customerId) {
+        Account receivable = accountRepo.findBySystemKey(AccountKey.RECEIVABLE)
+                .orElseThrow(() -> new IllegalStateException("No receivable account"));
+        return lineRepo.balanceOfCustomer(receivable.getId(), customerId);
     }
 
     /** Debits less credits of every account with lines. */

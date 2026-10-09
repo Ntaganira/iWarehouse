@@ -22,7 +22,10 @@ public enum JournalSource {
     CLAIM_REJECTED("/shipments/"),
     CUTTING_JOB("/cutting-jobs/"),
     ADJUSTMENT("/stock-adjustments/"),
-    OPENING_STOCK(null);
+    OPENING_STOCK(null),
+    SALES_INVOICE("/invoices/"),
+    TILL_OPENED("/till-sessions/"),
+    TILL_CLOSED("/till-sessions/");
 
     private final String path;
 

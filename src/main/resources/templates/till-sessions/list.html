@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{till.title}, ~{::content})}">
+<head><title>Till Sessions - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{till.title}">Till Sessions</h1>
+            <div class="subtitle" th:text="#{till.subtitle}">Each cashier's till: the float, what it took, the cash counted and any difference</div>
+        </div>
+        <a href="/pos" class="btn btn-primary" sec:authorize="hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')" th:text="#{pos.title}">Counter POS</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{till.sectionTitle}">Sessions</span>
+                <span class="section-count" th:text="${sessions.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/till-sessions}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{till.searchPh}" th:aria-label="#{till.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'till.status.' + st}}">Open</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{till.number}">Till</th>
+                        <th th:text="#{till.cashier}">Cashier</th>
+                        <th th:text="#{till.opened}">Opened</th>
+                        <th class="num" th:text="#{till.floatShort}">Float</th>
+                        <th class="num" th:text="#{till.counted}">Cash counted (RWF)</th>
+                        <th class="num" th:text="#{till.difference}">Difference</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="t : ${sessions.content}">
+                        <td><a class="row-link strong mono" th:href="@{/till-sessions/{id}(id=${t.id})}" th:text="${t.number}">TILL-WH-2026-000001</a></td>
+                        <td th:text="${t.cashierUsername}">cashier1</td>
+                        <td class="nowrap">
+                            <span th:text="${#temporals.format(t.openedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 08:00</span>
+                            <div class="cell-sub" th:if="${t.closedAt != null}" th:text="#{till.closedAt(${#temporals.format(t.closedAt, 'dd/MM/yyyy HH:mm')})}">closed 09/10/2026 18:00</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(t.openingFloat)}">50,000</td>
+                        <td class="num" th:text="${t.countedCash != null} ? ${@num.money(t.countedCash)} : '—'">144,008</td>
+                        <td class="num" th:text="${t.difference != null} ? ${@num.money(t.difference)} : '—'">-1,000</td>
+                        <td><th:block th:replace="~{till-sessions/list :: tillStatus(${t})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(sessions.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{till.empty}">No till sessions yet</h3>
+                                <p th:text="#{till.emptyHint}">A cashier opens a till on the Counter POS</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${sessions}, '/till-sessions', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status of a till: open, closed, or closed with a difference */-->
+<th:block th:fragment="tillStatus(t)">
+    <span th:if="${t.open}" class="badge badge-info" th:text="#{till.status.OPEN}">Open</span>
+    <span th:if="${!t.open and t.difference != null and t.difference.signum() == 0}" class="badge badge-success" th:text="#{till.status.CLOSED}">Closed</span>
+    <span th:if="${!t.open and t.difference != null and t.difference.signum() != 0}" class="badge badge-warning" th:text="#{till.status.DIFFERENCE}">Closed with a difference</span>
+</th:block>
+
+<!--/* What a till took: float, each payment method, cash expected (POS-10) */-->
+<th:block th:fragment="takings(summary)">
+    <div class="detail-list">
+        <div class="item">
+            <label th:text="#{till.floatShort}">Float</label>
+            <div class="value" th:text="${@num.money(summary.session.openingFloat)}">50,000</div>
+        </div>
+        <div class="item">
+            <label th:text="#{till.cashSales}">Cash kept from sales</label>
+            <div class="value" th:text="${@num.money(summary.cashSales)}">95,008</div>
+        </div>
+        <div class="item" th:each="e : ${summary.byMethod}" th:if="${e.key.name() != 'CASH'}">
+            <label th:text="#{${'payment.method.' + e.key}}">Mobile money</label>
+            <div class="value" th:text="${@num.money(e.value)}">100,000</div>
+        </div>
+        <div class="item">
+            <label th:text="#{till.expected}">Cash the till should hold</label>
+            <div class="value strong" th:text="${@num.money(summary.expectedCash)}">145,008</div>
+        </div>
+        <div class="item">
+            <label th:text="#{till.invoices}">Invoices</label>
+            <div class="value" th:text="${summary.invoices}">3</div>
+        </div>
+        <div class="item">
+            <label th:text="#{till.taken}">Taken in all</label>
+            <div class="value" th:text="${@num.money(summary.total)}">195,008</div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

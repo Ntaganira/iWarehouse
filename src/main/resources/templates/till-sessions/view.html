@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${till.number}, ~{::content})}">
+<head><title>Till session - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${till.number}">TILL-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{till.byOn(${till.cashierUsername}, ${#temporals.format(till.openedAt, 'dd/MM/yyyy HH:mm')})}">cashier1 · opened 09/10/2026 08:00</span>
+                <th:block th:replace="~{till-sessions/list :: tillStatus(${till})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/till-sessions" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${till.open}" href="/pos/till" class="btn btn-primary" sec:authorize="hasAuthority('PERM_SELL')" th:text="#{till.close}">Close the till</a>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${!till.open}" th:classappend="${till.difference.signum() != 0} ? 'is-warning' : ''">
+        <strong th:text="#{till.closedLine(${#temporals.format(till.closedAt, 'dd/MM/yyyy HH:mm')}, ${@num.money(till.countedCash)}, ${@num.money(till.expectedCash)}, ${@num.money(till.difference)})}">Closed 09/10/2026 18:00: 144,008 counted, 145,008 expected, difference -1,000</strong>
+        <span th:if="${till.closeNote != null}" th:text="${'· ' + till.closeNote}">· change given twice</span>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{till.takings}">What the till took</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{till-sessions/list :: takings(${summary})}"></th:block>
+            <div class="detail-list" sec:authorize="hasAuthority('PAGE_ACCOUNTING') and hasAuthority('PERM_VIEW_ACCOUNTING')" th:if="${!#lists.isEmpty(journals)}">
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-invoices" th:classappend="${tab == 'invoices'} ? 'active'">
+                <span th:text="#{till.invoices}">Invoices</span>
+                <span class="section-count" th:text="${invoices.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-invoices" th:classappend="${tab == 'invoices'} ? 'active'">
+                <th:block th:replace="~{invoices/list :: invoiceTable(${invoices.content})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${invoices}, ${'/till-sessions/' + till.id}, 'tab=invoices')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/till-sessions/' + till.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

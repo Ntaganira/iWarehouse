@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{posReceipt.pageTitle(${invoice.number})} + ' - ' + #{app.name}">Receipt - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page receipt-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{posReceipt.pageTitle(${invoice.number})}">Receipt: INV-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{posReceipt.pageHint}">80 mm wide. Print on the receipt printer at 100% (no scaling).</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- The receipt (POS-07 without the EBM signature until M4; TAX-01, TAX-04) -->
+    <div class="receipt">
+        <div class="receipt-head">
+            <div class="receipt-company" th:text="${companyName}">iWarehouse</div>
+            <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+            <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>
+            <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.invoice}">Invoice</span><span class="mono" th:text="${invoice.number}">INV-WH-2026-000001</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.date}">Date</span><span th:text="${#temporals.format(invoice.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.cashier}">Cashier</span><span th:text="${invoice.postedBy}">cashier1</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.customer}">Customer</span><span th:text="${invoice.billTo}">Jean Habimana</span></div>
+        <div class="receipt-row" th:if="${invoice.buyerTin != null}"><span th:text="#{posReceipt.buyerTin}">Buyer's TIN</span><span class="mono" th:text="${invoice.buyerTin}">102938475</span></div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-line" th:each="l : ${invoice.lines}">
+            <div class="receipt-row">
+                <span th:text="${l.product.code + ' ' + l.widthMm + '×' + l.heightMm}">CLR-6 3210×2250</span>
+                <span th:text="${@num.money(l.amount) + ' ' + l.taxCode}">195,008 B</span>
+            </div>
+            <div class="receipt-sub" th:text="${l.unitCode + ' · ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">U-WH-000002 · 7.2225 m² × 27,000</div>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row receipt-total"><span th:text="#{posReceipt.total}">TOTAL</span><span th:text="${@num.money(invoice.totalAmount)}">195,008</span></div>
+        <div class="receipt-row" th:each="g : ${totals.groups}">
+            <span th:text="#{posReceipt.vatLine(${g.taxCode}, ${@num.m2(g.rate)})}">TOTAL B-18%</span>
+            <span th:text="${@num.money(g.gross)}">195,008</span>
+        </div>
+        <div class="receipt-row" th:each="g : ${totals.groups}" th:if="${g.rate.signum() > 0}">
+            <span th:text="#{posReceipt.taxLine(${g.taxCode})}">TOTAL TAX B</span>
+            <span th:text="${@num.money(g.vat)}">29,746.98</span>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row" th:each="p : ${payments}">
+            <span th:text="#{${'payment.method.' + p.method}} + ${p.reference != null ? ' ' + p.reference : ''}">Cash</span>
+            <span th:text="${@num.money(p.amount)}">195,008</span>
+        </div>
+        <div class="receipt-row" th:if="${invoice.cashTendered != null}"><span th:text="#{posReceipt.tendered}">Cash handed over</span><span th:text="${@num.money(invoice.cashTendered)}">200,000</span></div>
+        <div class="receipt-row" th:if="${invoice.changeGiven != null and invoice.changeGiven.signum() > 0}"><span th:text="#{posReceipt.change}">Change</span><span th:text="${@num.money(invoice.changeGiven)}">4,992</span></div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-foot" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
+        <div class="receipt-foot" th:text="#{posReceipt.thanks}">Thank you</div>
+    </div>
+</body>
+</html>

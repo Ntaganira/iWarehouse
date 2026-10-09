@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{pos.title}, ~{::content})}">
+<head><title>Counter POS - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="lines=${sale != null ? sale.lines : {}}, empty=${sale == null or #lists.isEmpty(sale.lines)}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{pos.title}">Counter POS</h1>
+            <div class="subtitle" th:text="#{pos.tillLine(${till.number}, ${#temporals.format(till.openedAt, 'dd/MM/yyyy HH:mm')}, ${@num.money(summary.expectedCash)})}">Till TILL-WH-2026-000001 · opened 09/10/2026 08:00 · cash expected 50,000 RWF</div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/till-sessions/{id}(id=${till.id})}" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{pos.tillDetails}">Till details</a>
+            <a href="/pos/till" class="btn btn-outline" th:text="#{till.close}">Close the till</a>
+        </div>
+    </div>
+
+    <div class="pos-layout">
+        <!-- Find glass: scan a label, or search the smallest piece that fits (POS-01, INV-06) -->
+        <div class="section pos-find">
+            <div class="section-header">
+                <h2 th:text="#{pos.find}">Find glass</h2>
+            </div>
+            <div class="section-body">
+                <form th:action="@{/pos/add}" method="post" class="pos-scan" novalidate>
+                    <input type="hidden" name="back" th:value="${searchQuery}">
+                    <div class="form-group">
+                        <label for="code" th:text="#{pos.scan}">Scan a label</label>
+                        <div class="scan-row">
+                            <textarea id="code" name="code" rows="1" maxlength="60" class="input-code scan-codes" autocomplete="off" autocapitalize="characters"
+                                      spellcheck="false" enterkeyhint="go" autofocus data-enter-submits th:placeholder="#{pos.scanPh}"></textarea>
+                            <button type="submit" class="btn btn-primary" th:text="#{pos.add}">Add</button>
+                        </div>
+                        <span class="hint" th:text="#{pos.scanHint}">A scanner reads the label and presses Enter: the piece goes into the sale</span>
+                    </div>
+                </form>
+
+                <form th:action="@{/pos}" method="get" class="pos-search">
+                    <div class="form-group">
+                        <label for="product" th:text="#{pos.glass}">Glass</label>
+                        <select id="product" name="product" data-searchable>
+                            <option value="" th:text="#{pos.anyGlass}">Any glass</option>
+                            <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}"
+                                    th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                        </select>
+                    </div>
+                    <div class="fit-search">
+                        <label for="minWidth" th:text="#{stock.fitLabel}">Find a piece at least</label>
+                        <input type="number" id="minWidth" name="minWidth" th:value="${minWidth}" min="1" max="10000" step="1" inputmode="numeric"
+                               th:placeholder="#{po.widthShort}" th:aria-label="#{po.width}">
+                        <span aria-hidden="true">×</span>
+                        <input type="number" id="minHeight" name="minHeight" th:value="${minHeight}" min="1" max="10000" step="1" inputmode="numeric"
+                               th:placeholder="#{po.heightShort}" th:aria-label="#{po.height}">
+                        <span class="text-muted">mm</span>
+                        <button type="submit" class="btn btn-primary btn-sm" th:text="#{stock.fitFind}">Find</button>
+                        <a th:if="${searching}" class="btn btn-outline btn-sm" href="/pos" th:text="#{pos.clearSearch}">Clear</a>
+                    </div>
+                </form>
+
+                <div class="table-container" th:if="${searching}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{product.name}">Glass</th>
+                                <th th:text="#{po.size}">Size (mm)</th>
+                                <th th:text="#{stock.location}">Place</th>
+                                <th class="num" th:text="#{pos.price}">Price (RWF)</th>
+                                <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${results}" th:with="price=${prices.get(u.id)}">
+                                <td class="mono strong" th:text="${u.code}">U-WH-000002</td>
+                                <td th:text="${u.product.code}">CLR-6</td>
+                                <td class="mono nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">3210 × 2250</td>
+                                <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R01</td>
+                                <td class="num" th:text="${price != null} ? ${@num.money(price)} : '—'">195,008</td>
+                                <td class="nowrap">
+                                    <span class="badge badge-info" th:if="${inSale.contains(u.id)}" th:text="#{pos.inSale}">In the sale</span>
+                                    <form th:unless="${inSale.contains(u.id)}" th:action="@{/pos/add}" method="post" class="row-action-form">
+                                        <input type="hidden" name="unitId" th:value="${u.id}">
+                                        <input type="hidden" name="back" th:value="${searchQuery}">
+                                        <button type="submit" class="btn btn-outline btn-sm" th:disabled="${price == null}" th:text="#{pos.add}">Add</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(results)}">
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{pos.noResults}">No available piece fits</h3>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:if="${searching and results.size() >= 12}" th:text="#{pos.firstResults}">The 12 smallest pieces that fit; give a size to narrow the search.</p>
+            </div>
+        </div>
+
+        <!-- The sale: customer, lines, totals (POS-04, TAX-01, TAX-04) -->
+        <div class="section pos-sale">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{pos.sale}">Sale</span>
+                    <span class="section-count" th:text="${lines.size()}">0</span>
+                </h2>
+            </div>
+            <div class="section-body">
+                <form th:action="@{/pos/customer}" method="post" class="pos-customer" novalidate>
+                    <input type="hidden" name="back" th:value="${searchQuery}">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="customerId" th:text="#{pos.customer}">Customer</label>
+                            <select id="customerId" name="customerId" data-searchable>
+                                <option th:each="c : ${customers}" th:value="${c.id}" th:selected="${customer != null and c.id == customer.id}"
+                                        th:text="${c.name + ' · ' + c.code}">Walk-in customer · WALK-IN</option>
+                            </select>
+                            <span class="hint" th:if="${credit != null and credit.allowed}"
+                                  th:text="#{pos.creditAvailable(${@num.money(credit.available)}, ${@num.money(credit.limit)})}">Credit available: 500,000 of 5,000,000 RWF</span>
+                            <span class="hint" th:if="${customer != null and customer.priceList != null}" th:text="#{pos.priceList(${customer.priceList.name})}">Price list: Contractor</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="buyerName" th:text="#{pos.buyerName}">Name on the invoice</label>
+                            <input type="text" id="buyerName" name="buyerName" maxlength="100" th:value="${sale != null ? sale.buyerName : ''}" th:placeholder="#{pos.buyerNamePh}">
+                        </div>
+                        <div class="form-group">
+                            <label for="buyerTin" th:text="#{pos.buyerTin}">Buyer's TIN</label>
+                            <input type="text" id="buyerTin" name="buyerTin" maxlength="9" inputmode="numeric" class="input-code"
+                                   th:value="${sale != null ? sale.buyerTin : ''}" th:placeholder="#{pos.buyerTinPh}">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-outline" th:text="#{pos.setCustomer}">Use this customer</button>
+                    </div>
+                </form>
+
+                <div class="table-container pos-lines">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th class="num" th:text="#{pos.charged}">Charged</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                                <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines}">
+                                <td>
+                                    <span class="mono strong nowrap" th:text="${l.unitCode}">U-WH-000002</span>
+                                    <div class="cell-sub mono nowrap" th:text="${l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm}">CLR-6 · 3210 × 2250</div>
+                                </td>
+                                <td class="num nowrap">
+                                    <span th:text="${@num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">7.2225 m² × 27,000</span>
+                                    <div class="cell-sub" th:text="${l.pricesIncludeVat} ? #{pos.vatIncluded} : #{pos.vatExcluded}">VAT included</div>
+                                </td>
+                                <td class="num">
+                                    <span class="strong" th:text="${@num.money(l.amount)}">195,008</span>
+                                    <div class="cell-sub" th:text="#{pos.vatShort(${l.taxCode}, ${@num.m2(l.vatRate)})}">VAT B 18%</div>
+                                </td>
+                                <td>
+                                    <form th:action="@{/pos/lines/{id}/remove(id=${l.id})}" method="post" class="row-action-form">
+                                        <input type="hidden" name="back" th:value="${searchQuery}">
+                                        <button type="submit" class="action-icon delete" th:title="#{pos.remove}" th:aria-label="#{pos.remove}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${empty}">
+                                <td colspan="4">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{pos.emptySale}">Nothing in the sale yet</h3>
+                                        <p th:text="#{pos.emptySaleHint}">Scan a label or add a piece from the search</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pos-totals" th:unless="${empty}">
+                    <div class="pos-total-row" th:each="g : ${totals.groups}">
+                        <span th:text="#{pos.vatGroup(${g.taxCode}, ${@num.m2(g.rate)})}">VAT B (18%)</span>
+                        <span th:text="${@num.money(g.vat)}">29,746.98</span>
+                    </div>
+                    <div class="pos-total-row pos-grand-total">
+                        <span th:text="#{pos.total}">Total (RWF)</span>
+                        <span th:text="${@num.money(totals.gross)}">195,008</span>
+                    </div>
+                </div>
+
+                <div class="form-actions pos-actions">
+                    <button type="button" class="btn btn-primary" data-modal-open="pay-modal" th:disabled="${empty}" th:text="#{pos.pay}">Pay</button>
+                    <form th:if="${!empty}" th:action="@{/pos/cancel}" method="post" class="row-action-form confirm-submit danger"
+                          th:attr="data-confirm=#{pos.cancelConfirm}">
+                        <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{pos.cancelSale}">Cancel the sale</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment, split over the ways the customer pays (POS-04) -->
+    <th:block th:unless="${empty}">
+        <div class="modal-overlay" id="pay-modal" th:classappend="${payForm != null} ? 'open'" th:attr="data-total=${totals.gross}">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-modal-title">
+                <div class="modal-header">
+                    <h3 id="pay-modal-title" th:text="#{pos.payTitle(${@num.money(totals.gross)})}">Pay 195,008 RWF</h3>
+                    <button type="button" class="modal-close" data-modal-close="pay-modal" th:aria-label="#{common.cancel}">&times;</button>
+                </div>
+                <form th:action="@{/pos/pay}" method="post" class="pos-pay" novalidate>
+                    <div class="modal-body">
+                        <div class="pay-grid">
+                            <div class="form-group">
+                                <label for="pay-cash" th:text="#{pos.pay.cash}">Cash received</label>
+                                <input type="number" id="pay-cash" name="cash" min="0" step="any" inputmode="decimal" data-pay="cash"
+                                       th:value="${payForm != null ? payForm.get('cash') : ''}" th:classappend="${payField == 'cash'} ? 'is-invalid'">
+                            </div>
+                            <div class="form-group"></div>
+                            <div class="form-group">
+                                <label for="pay-momo" th:text="#{pos.pay.mobileMoney}">Mobile money</label>
+                                <input type="number" id="pay-momo" name="mobileMoney" min="0" step="any" inputmode="decimal" data-pay="other"
+                                       th:value="${payForm != null ? payForm.get('mobileMoney') : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label for="pay-momo-ref" th:text="#{pos.pay.reference}">Reference</label>
+                                <input type="text" id="pay-momo-ref" name="mobileMoneyRef" maxlength="60" class="input-code"
+                                       th:value="${payForm != null ? payForm.get('mobileMoneyRef') : ''}" th:classappend="${payField == 'mobileMoneyRef'} ? 'is-invalid'">
+                            </div>
+                            <div class="form-group">
+                                <label for="pay-card" th:text="#{pos.pay.card}">Card</label>
+                                <input type="number" id="pay-card" name="card" min="0" step="any" inputmode="decimal" data-pay="other"
+                                       th:value="${payForm != null ? payForm.get('card') : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label for="pay-card-ref" th:text="#{pos.pay.reference}">Reference</label>
+                                <input type="text" id="pay-card-ref" name="cardRef" maxlength="60" class="input-code"
+                                       th:value="${payForm != null ? payForm.get('cardRef') : ''}" th:classappend="${payField == 'cardRef'} ? 'is-invalid'">
+                            </div>
+                            <div class="form-group">
+                                <label for="pay-bank" th:text="#{pos.pay.bankTransfer}">Bank transfer</label>
+                                <input type="number" id="pay-bank" name="bankTransfer" min="0" step="any" inputmode="decimal" data-pay="other"
+                                       th:value="${payForm != null ? payForm.get('bankTransfer') : ''}">
+                            </div>
+                            <div class="form-group">
+                                <label for="pay-bank-ref" th:text="#{pos.pay.reference}">Reference</label>
+                                <input type="text" id="pay-bank-ref" name="bankRef" maxlength="60" class="input-code"
+                                       th:value="${payForm != null ? payForm.get('bankRef') : ''}" th:classappend="${payField == 'bankRef'} ? 'is-invalid'">
+                            </div>
+                            <div class="form-group" th:if="${credit != null and credit.allowed}">
+                                <label for="pay-credit" th:text="#{pos.pay.credit}">Customer credit</label>
+                                <input type="number" id="pay-credit" name="credit" min="0" step="any" inputmode="decimal" data-pay="other"
+                                       th:value="${payForm != null ? payForm.get('credit') : ''}" th:classappend="${payField == 'credit'} ? 'is-invalid'">
+                                <span class="hint" th:text="#{pos.creditAvailable(${@num.money(credit.available)}, ${@num.money(credit.limit)})}">Credit available</span>
+                            </div>
+                        </div>
+                        <div class="pay-status" aria-live="polite" th:attr="data-due-label=#{pos.pay.due}, data-change-label=#{pos.pay.change}, data-done-label=#{pos.pay.done}">
+                            <span class="pay-status-label" th:text="#{pos.pay.due}">Still to pay</span>
+                            <span class="pay-status-amount" th:text="${@num.money(totals.gross)}">195,008</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" data-modal-close="pay-modal" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{pos.pay.confirm}">Take the payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </th:block>
+    <script defer src="/js/stock-ops.js"></script>
+    <script defer src="/js/pos.js"></script>
+</div>
+</body>
+</html>

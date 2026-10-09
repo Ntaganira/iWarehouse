@@ -1,0 +1,286 @@
+package com.ntaganira.heritier.iWarehouse.controller;
+
+import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
+import com.ntaganira.heritier.iWarehouse.entity.*;
+import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
+import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
+import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
+import com.ntaganira.heritier.iWarehouse.service.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.math.BigDecimal;
+import java.util.*;
+
+/**
+ * <pre>
+ * - Project   : iWarehouse - Glass Warehouse &amp; Mobile POS (ERP-Lite)
+ * - Package   : com.ntaganira.heritier.iWarehouse.controller
+ * - File      : PosController.java
+ * - Date      : 2026. 10. 09.
+ * - User      : Hntaganira
+ * - Desc      : The counter POS (POS-01, POS-04, POS-10): open the till with a float; ring up a sale by scanning
+ *               labels or from the smallest-fit search; choose the customer and the buyer's name and TIN; take a
+ *               split payment, which issues the invoice; close the till with the cash counted.
+ *               PAGE_POS + PERM_SELL.
+ * </pre>
+ */
+@Controller
+@RequestMapping("/pos")
+public class PosController {
+
+    static final String MODULE = "Sales";
+    private static final int SEARCH_ROWS = 12;
+
+    private final TillService tillService;
+    private final SalesService salesService;
+    private final StockService stockService;
+    private final ProductRepository productRepo;
+    private final CustomerRepository customerRepo;
+    private final ActivityLogService activityLogService;
+    private final Messages messages;
+    private final NumberFormats num;
+
+    public PosController(TillService tillService, SalesService salesService, StockService stockService,
+                         ProductRepository productRepo, CustomerRepository customerRepo, ActivityLogService activityLogService,
+                         Messages messages, NumberFormats num) {
+        this.tillService = tillService;
+        this.salesService = salesService;
+        this.stockService = stockService;
+        this.productRepo = productRepo;
+        this.customerRepo = customerRepo;
+        this.activityLogService = activityLogService;
+        this.messages = messages;
+        this.num = num;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String pos(@RequestParam(required = false) UUID product, @RequestParam(required = false) Integer minWidth,
+                      @RequestParam(required = false) Integer minHeight, Model model) {
+        Optional<TillSession> till = tillService.current();
+        if (till.isEmpty()) {
+            return "pos/open";
+        }
+        TillSession session = till.get();
+        SalesInvoice sale = salesService.cart(session).orElse(null);
+        Customer customer = sale != null ? sale.getCustomer() : customerRepo.findByDefaultCustomerTrue().orElse(null);
+        Integer w = positive(minWidth);
+        Integer h = positive(minHeight);
+        boolean searching = product != null || w != null || h != null;
+        List<StockUnit> results = List.of();
+        if (searching) {
+            // Available pieces of the glass; with a size, those at least that big either way round, smallest first
+            // (INV-06): a size left empty counts as 1 mm
+            boolean sized = w != null || h != null;
+            results = stockService.findPage(new StockService.UnitFilter(null, product, null, "AVAILABLE", null,
+                    sized ? (w == null ? 1 : w) : null, sized ? (h == null ? 1 : h) : null), 0, SEARCH_ROWS).getContent();
+        }
+        Set<UUID> inSale = new HashSet<>();
+        if (sale != null) {
+            sale.getLines().forEach(l -> inSale.add(l.getStockUnitId()));
+        }
+        model.addAttribute("till", session);
+        model.addAttribute("summary", tillService.summary(session));
+        model.addAttribute("sale", sale);
+        model.addAttribute("customer", customer);
+        model.addAttribute("totals", sale == null ? Vat.Totals.NONE : salesService.totals(sale));
+        model.addAttribute("credit", customer == null ? null : salesService.credit(customer));
+        model.addAttribute("customers", salesService.customers());
+        model.addAttribute("products", productRepo.findByEnabledTrueOrderByCodeAsc());
+        model.addAttribute("results", results);
+        model.addAttribute("prices", customer == null ? Map.of() : salesService.prices(customer, results));
+        model.addAttribute("inSale", inSale);
+        model.addAttribute("searching", searching);
+        model.addAttribute("product", product);
+        model.addAttribute("minWidth", w);
+        model.addAttribute("minHeight", h);
+        model.addAttribute("searchQuery", QueryString.of("product", product == null ? null : product.toString(),
+                "minWidth", w == null ? null : w.toString(), "minHeight", h == null ? null : h.toString()));
+        return "pos/index";
+    }
+
+    // ---------------------------------------------------------------- the till (POS-10)
+
+    @PostMapping("/till/open")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String openTill(@RequestParam(required = false) BigDecimal openingFloat, RedirectAttributes redirect) {
+        try {
+            TillSession session = tillService.open(openingFloat);
+            activityLogService.record(MODULE, "OPEN_TILL", "Opened till " + session.getNumber() + " with a float of "
+                    + num.money(session.getOpeningFloat()) + " RWF", ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("till.openedMsg", session.getNumber()));
+        } catch (BusinessException e) {
+            fail(redirect, "OPEN_TILL", "Failed to open a till", e);
+        }
+        return "redirect:/pos";
+    }
+
+    @GetMapping("/till")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String closeForm(Model model, RedirectAttributes redirect) {
+        Optional<TillSession> till = tillService.current();
+        if (till.isEmpty()) {
+            redirect.addFlashAttribute("flashError", messages.get("till.notOpen"));
+            return "redirect:/pos";
+        }
+        model.addAttribute("till", till.get());
+        model.addAttribute("summary", tillService.summary(till.get()));
+        model.addAttribute("sale", salesService.cart(till.get()).filter(s -> !s.getLines().isEmpty()).orElse(null));
+        return "pos/close";
+    }
+
+    @PostMapping("/till/close")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String closeTill(@RequestParam(required = false) BigDecimal countedCash, @RequestParam(required = false) String note,
+                            RedirectAttributes redirect) {
+        Optional<TillSession> till = tillService.current();
+        if (till.isEmpty()) {
+            redirect.addFlashAttribute("flashError", messages.get("till.notOpen"));
+            return "redirect:/pos";
+        }
+        try {
+            TillSession session = tillService.close(till.get().getId(), countedCash, note);
+            activityLogService.record(MODULE, "CLOSE_TILL", "Closed till " + session.getNumber() + ": "
+                    + num.money(session.getCountedCash()) + " RWF counted, " + num.money(session.getExpectedCash()) + " expected"
+                    + (session.getDifference().signum() == 0 ? "" : ", difference " + num.money(session.getDifference())
+                    + " (" + session.getCloseNote() + ")"), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute(session.getDifference().signum() == 0 ? "flashSuccess" : "flashWarning",
+                    session.getDifference().signum() == 0 ? messages.get("till.closedMsg", session.getNumber())
+                            : messages.get("till.closedDifference", session.getNumber(), num.money(session.getDifference())));
+            return "redirect:/till-sessions/" + session.getId();
+        } catch (BusinessException e) {
+            fail(redirect, "CLOSE_TILL", "Failed to close till " + till.get().getNumber(), e);
+            redirect.addFlashAttribute("countedCash", countedCash == null ? null : countedCash.toPlainString());
+            redirect.addFlashAttribute("note", note);
+            return "redirect:/pos/till";
+        }
+    }
+
+    // ---------------------------------------------------------------- the sale being rung up (POS-01)
+
+    @PostMapping("/add")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String add(@RequestParam(required = false) String code, @RequestParam(required = false) UUID unitId,
+                      @RequestParam(required = false) String back, RedirectAttributes redirect) {
+        try {
+            SalesInvoice sale = salesService.addUnit(code, unitId);
+            SalesInvoiceLine line = sale.getLines().get(sale.getLines().size() - 1);
+            activityLogService.record(MODULE, "UPDATE_SALE", "Added " + line.getUnitCode() + " ("
+                    + num.money(line.getAmount()) + " RWF) to the sale at till " + sale.getTillSession().getNumber(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.added", line.getUnitCode(), num.money(line.getAmount())));
+        } catch (BusinessException e) {
+            fail(redirect, "UPDATE_SALE", "Failed to add " + (code != null ? code.trim() : unitId) + " to a sale", e);
+        }
+        return "redirect:/pos" + query(back);
+    }
+
+    @PostMapping("/lines/{lineId}/remove")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String remove(@PathVariable UUID lineId, @RequestParam(required = false) String back, RedirectAttributes redirect) {
+        try {
+            SalesInvoiceLine line = salesService.removeLine(lineId);
+            activityLogService.record(MODULE, "UPDATE_SALE", "Removed " + line.getUnitCode() + " from the sale", ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.removed", line.getUnitCode()));
+        } catch (BusinessException e) {
+            fail(redirect, "UPDATE_SALE", "Failed to remove a line from a sale", e);
+        }
+        return "redirect:/pos" + query(back);
+    }
+
+    @PostMapping("/customer")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String customer(@RequestParam(required = false) UUID customerId, @RequestParam(required = false) String buyerName,
+                           @RequestParam(required = false) String buyerTin, @RequestParam(required = false) String back,
+                           RedirectAttributes redirect) {
+        try {
+            SalesInvoice sale = salesService.setCustomer(customerId, buyerName, buyerTin);
+            activityLogService.record(MODULE, "UPDATE_SALE", "Sale at till " + sale.getTillSession().getNumber() + " for "
+                    + sale.getCustomer().getName() + (sale.getBuyerTin() == null ? "" : ", TIN " + sale.getBuyerTin()), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.customerSet", sale.getBillTo()));
+        } catch (BusinessException e) {
+            fail(redirect, "UPDATE_SALE", "Failed to set the customer of a sale", e);
+        }
+        return "redirect:/pos" + query(back);
+    }
+
+    @PostMapping("/cancel")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String cancel(RedirectAttributes redirect) {
+        try {
+            SalesInvoice sale = salesService.cancel();
+            activityLogService.record(MODULE, "CANCEL_SALE", "Cancelled the sale at till " + sale.getTillSession().getNumber()
+                    + " (" + sale.getLines().size() + " line(s))", ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.cancelled"));
+        } catch (BusinessException e) {
+            fail(redirect, "CANCEL_SALE", "Failed to cancel a sale", e);
+        }
+        return "redirect:/pos";
+    }
+
+    // ---------------------------------------------------------------- payment (POS-04)
+
+    @PostMapping("/pay")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String pay(@RequestParam(required = false) BigDecimal cash, @RequestParam(required = false) BigDecimal mobileMoney,
+                      @RequestParam(required = false) String mobileMoneyRef, @RequestParam(required = false) BigDecimal card,
+                      @RequestParam(required = false) String cardRef, @RequestParam(required = false) BigDecimal bankTransfer,
+                      @RequestParam(required = false) String bankRef, @RequestParam(required = false) BigDecimal credit,
+                      RedirectAttributes redirect) {
+        SalePayments.Entered entered = new SalePayments.Entered(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, credit);
+        try {
+            SalesService.Paid paid = salesService.pay(entered);
+            SalesInvoice invoice = paid.invoice();
+            activityLogService.record(MODULE, "CREATE_SALES_INVOICE", "Issued " + invoice.getNumber() + " to " + invoice.getBillTo()
+                    + ": " + num.money(invoice.getTotalAmount()) + " RWF" + (paid.journal() == null ? "" : ", journal " + paid.journal().getNumber()),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", paid.change().signum() > 0
+                    ? messages.get("sale.paidChange", invoice.getNumber(), num.money(paid.change()))
+                    : messages.get("sale.paid", invoice.getNumber()));
+            return "redirect:/invoices/" + invoice.getId();
+        } catch (BusinessException e) {
+            fail(redirect, "CREATE_SALES_INVOICE", "Failed to take the payment of a sale", e);
+            Map<String, String> form = new HashMap<>();
+            form.put("cash", plain(cash));
+            form.put("mobileMoney", plain(mobileMoney));
+            form.put("mobileMoneyRef", mobileMoneyRef);
+            form.put("card", plain(card));
+            form.put("cardRef", cardRef);
+            form.put("bankTransfer", plain(bankTransfer));
+            form.put("bankRef", bankRef);
+            form.put("credit", plain(credit));
+            redirect.addFlashAttribute("payForm", form);
+            redirect.addFlashAttribute("payField", e.getField());
+            return "redirect:/pos";
+        }
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private void fail(RedirectAttributes redirect, String action, String what, BusinessException e) {
+        String error = messages.get(e.getMessageKey(), e.getArgs());
+        activityLogService.record(MODULE, action, what + ": " + error, ActivityStatus.FAILED);
+        redirect.addFlashAttribute("flashError", error);
+    }
+
+    /** The search the cashier was on, kept across a POST (only its own parameters). */
+    private static String query(String back) {
+        if (back == null || back.isBlank() || !back.matches("[A-Za-z0-9=&%_.-]+")) {
+            return "";
+        }
+        return "?" + back;
+    }
+
+    private static String plain(BigDecimal value) {
+        return value == null ? null : value.stripTrailingZeros().toPlainString();
+    }
+
+    private static Integer positive(Integer value) {
+        return value == null || value <= 0 ? null : value;
+    }
+}

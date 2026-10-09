@@ -109,6 +109,9 @@
         <a sec:authorize="hasAuthority('PAGE_INVOICES')" th:classappend="${#strings.startsWith(requestURI, '/invoices')} ? 'active' : ''" href="/invoices">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span> <span th:text="#{nav.invoices}">Invoices</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:classappend="${#strings.startsWith(requestURI, '/till-sessions')} ? 'active' : ''" href="/till-sessions">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg></span> <span th:text="#{nav.tillSessions}">Till Sessions</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:classappend="${#strings.startsWith(requestURI, '/customers')} ? 'active' : ''" href="/customers">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span> <span th:text="#{nav.customers}">Customers</span>
         </a>

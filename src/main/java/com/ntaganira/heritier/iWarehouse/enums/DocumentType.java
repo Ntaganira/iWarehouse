@@ -27,6 +27,7 @@ public enum DocumentType {
     CUTTING_JOB("CUT"),
     TRIP("TRP"),
     JOURNAL("JV"),
+    TILL_SESSION("TILL"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

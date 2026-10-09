@@ -4350,3 +4350,47 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .place-label-path { margin-top: .6mm; font-size: 2.3mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* A transfer's destination chosen by scanning the rack's label */
 .hint.transfer-to-scanned { color: var(--success); font-weight: 600; }
+
+/* Counter POS (POS-01, POS-04): find glass on one side, the sale on the other on wide screens; stacked below 1600 px */
+.pos-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 0 24px; align-items: start; }
+.pos-search { margin-top: 8px; }
+.pos-search .fit-search { margin: 4px -24px 0; border-top: 1px solid var(--gray-100); }
+.pos-customer .form-actions { margin-top: 0; padding-top: 0; border-top: 0; }
+.pos-lines { margin-top: 16px; }
+.pos-totals { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gray-200); }
+.pos-total-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--gray-700); font-variant-numeric: tabular-nums; }
+.pos-grand-total { font-size: 20px; font-weight: 700; color: var(--dark); }
+.pos-actions { justify-content: flex-end; }
+.pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 12px; }
+.pay-grid > .form-group { margin-bottom: 0; }
+.pay-status { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 4px; padding: 12px 14px;
+  border-radius: 8px; background: var(--tint-orange); color: var(--dark); font-weight: 600; }
+.pay-status.is-change { background: var(--tint-blue); }
+.pay-status.is-done { background: var(--tint-green); }
+.pay-status-amount { font-size: 20px; font-variant-numeric: tabular-nums; }
+@media (max-width: 1600px) {
+  .pos-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .pos-search .fit-search { margin: 4px -16px 0; }
+  .pay-grid { grid-template-columns: minmax(0, 1fr); }
+  .pay-grid > .form-group:empty { display: none; }
+}
+
+/* Receipt, 80 mm (POS-07): black on white in both themes, it is printed; its own page size when printed */
+.receipt { box-sizing: border-box; width: 80mm; max-width: 100%; margin: 0 auto; padding: 4mm; background: #fff; color: #000;
+  border: 1px dashed var(--gray-300); font-family: Arial, Helvetica, sans-serif; font-size: 3.2mm; line-height: 1.35; page: receipt; }
+.receipt-head { text-align: center; }
+.receipt .mono { color: #000; }
+.receipt-company { font-size: 4.6mm; font-weight: 700; }
+.receipt-rule { margin: 2mm 0; border-top: 1px dashed #000; }
+.receipt-row { display: flex; justify-content: space-between; gap: 3mm; }
+.receipt-row > span:last-child { text-align: right; white-space: nowrap; }
+.receipt-sub { font-size: 2.8mm; color: #333; }
+.receipt-line + .receipt-line { margin-top: 1mm; }
+.receipt-total { font-size: 4.2mm; font-weight: 700; }
+.receipt-foot { margin-top: 1mm; text-align: center; }
+@page receipt { size: 80mm auto; margin: 0; }
+@media print {
+  .receipt-page .receipt { border: 0; margin: 0; padding: 2mm 3mm; }
+}

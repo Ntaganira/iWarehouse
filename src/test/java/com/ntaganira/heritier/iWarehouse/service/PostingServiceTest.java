@@ -255,7 +255,88 @@ class PostingServiceTest {
         assertThat(balance(AccountKey.CLAIMS)).isEqualByComparingTo("0");
     }
 
+    @Test
+    void aCounterSaleAndItsTillKeepTheBooksBalancedAndTheStockAtItsValue() {   // AT-08, AT-10
+        held.put(clear6.getId(), new BigDecimal("100.0000"));
+        clear6.setMacPerM2(new BigDecimal("5000.0000"));
+        postings.openingStock();
+
+        TillSession till = new TillSession();
+        till.setId(UUID.randomUUID());
+        till.setNumber("TILL-WH-2026-000001");
+        till.setCashierUsername("cashier1");
+        till.setOpenedAt(LocalDate.of(2026, 10, 9).atTime(8, 0));
+        till.setOpeningFloat(new BigDecimal("20000.00"));
+        postings.tillOpened(till);
+        assertThat(balance(AccountKey.CASH)).isEqualByComparingTo("20000");
+        assertThat(balance(AccountKey.CASH_VAULT)).isEqualByComparingTo("-20000");
+
+        // A 7.2225 m² sheet sold for 195,008 RWF VAT included: half cash, half mobile money
+        Customer walkIn = new Customer();
+        walkIn.setId(UUID.randomUUID());
+        walkIn.setName("Walk-in customer");
+        SalesInvoice invoice = new SalesInvoice();
+        invoice.setId(UUID.randomUUID());
+        invoice.setNumber("INV-WH-2026-000001");
+        invoice.setCustomer(walkIn);
+        invoice.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        invoice.setNetAmount(new BigDecimal("165261.02"));
+        invoice.setVatAmount(new BigDecimal("29746.98"));
+        invoice.setTotalAmount(new BigDecimal("195008.00"));
+        PostingService.StockValues before = postings.stockValues(List.of(clear6));
+        held.put(clear6.getId(), held().subtract(new BigDecimal("7.2225")));          // sold: the MAC stays
+        postings.sale(invoice, List.of(salePayment(PaymentMethod.CASH, "97504", null), salePayment(PaymentMethod.MOBILE_MONEY, "97504", "MP-55")),
+                before);
+        Journal sale = last();
+        assertThat(line(sale, AccountKey.CASH).debit()).isEqualByComparingTo("97504");
+        assertThat(line(sale, AccountKey.MOBILE_MONEY).debit()).isEqualByComparingTo("97504");
+        assertThat(line(sale, AccountKey.MOBILE_MONEY).memo()).isEqualTo("MP-55");
+        assertThat(line(sale, AccountKey.SALES).credit()).isEqualByComparingTo("165261.02");
+        assertThat(line(sale, AccountKey.VAT_OUTPUT).credit()).isEqualByComparingTo("29746.98");
+        assertThat(line(sale, AccountKey.COGS).debit()).isEqualByComparingTo("36112.50");   // 7.2225 m² x 5,000 MAC
+        assertThat(line(sale, AccountKey.INVENTORY).credit()).isEqualByComparingTo("36112.50");
+        assertInventoryEqualsValuation();
+
+        // A credit sale names its customer on the receivable line
+        Customer builders = new Customer();
+        builders.setId(UUID.randomUUID());
+        builders.setName("Umucyo Builders");
+        SalesInvoice onCredit = new SalesInvoice();
+        onCredit.setId(UUID.randomUUID());
+        onCredit.setNumber("INV-WH-2026-000002");
+        onCredit.setCustomer(builders);
+        onCredit.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        onCredit.setNetAmount(new BigDecimal("8474.58"));
+        onCredit.setVatAmount(new BigDecimal("1525.42"));
+        onCredit.setTotalAmount(new BigDecimal("10000.00"));
+        before = postings.stockValues(List.of(clear6));
+        held.put(clear6.getId(), held().subtract(new BigDecimal("0.5000")));
+        postings.sale(onCredit, List.of(salePayment(PaymentMethod.CREDIT, "10000", null)), before);
+        assertThat(line(last(), AccountKey.RECEIVABLE).customerId()).isEqualTo(builders.getId());
+        assertInventoryEqualsValuation();
+
+        // The till closes 1,000 short: the vault gets what was counted, the shortage goes to Cash Over/Short
+        till.setClosedAt(LocalDate.of(2026, 10, 9).atTime(18, 0));
+        till.setExpectedCash(new BigDecimal("117504.00"));
+        till.setCountedCash(new BigDecimal("116504.00"));
+        postings.tillClosed(till);
+        assertThat(balance(AccountKey.CASH)).isEqualByComparingTo("0");
+        assertThat(balance(AccountKey.CASH_VAULT)).isEqualByComparingTo("96504");      // 116,504 back less the 20,000 float
+        assertThat(balance(AccountKey.CASH_OVER_SHORT)).isEqualByComparingTo("1000");
+        BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debits).isEqualByComparingTo(credits);
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static SalesPayment salePayment(PaymentMethod method, String amount, String reference) {
+        SalesPayment p = new SalesPayment();
+        p.setMethod(method);
+        p.setAmount(new BigDecimal(amount));
+        p.setReference(reference);
+        return p;
+    }
 
     private void assertInventoryEqualsValuation() {
         BigDecimal valuation = held().multiply(clear6.getMacPerM2()).setScale(2, RoundingMode.HALF_UP);

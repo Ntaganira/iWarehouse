@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{pos.title}, ~{::content})}">
+<head><title>Counter POS - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{pos.title}">Counter POS</h1>
+            <div class="subtitle" th:text="#{pos.openSubtitle}">Open your till to start selling: count the float you take from the cash vault</div>
+        </div>
+        <a href="/till-sessions" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{till.title}">Till Sessions</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/pos/till/open}" method="post" class="form-container" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="openingFloat" th:text="#{till.float}">Opening float (RWF)</label>
+                    <input type="number" id="openingFloat" name="openingFloat" min="0" step="1" required inputmode="numeric" autofocus value="0">
+                    <span class="hint" th:text="#{till.floatHint}">The change in the drawer when you start; it leaves the main cash vault</span>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{till.openNote}">You sell in your own till. When you close it, you count the cash: the difference with what the till should hold is recorded.</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{till.open}">Open the till</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

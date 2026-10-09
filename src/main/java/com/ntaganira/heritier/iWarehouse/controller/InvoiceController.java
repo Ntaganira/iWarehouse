@@ -1,20 +1,27 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
+import com.ntaganira.heritier.iWarehouse.entity.SalesInvoiceLine;
+import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
+import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.service.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * <pre>
@@ -24,8 +31,8 @@ import java.util.UUID;
  * - Date      : 2026. 10. 09.
  * - User      : Hntaganira
  * - Desc      : Issued sales invoices (POS-01, POS-04, TAX-01, TAX-04): the list, an invoice with its lines, VAT
- *               per tax letter, payments, journal and History, and its receipt to print (80 mm).
- *               PAGE_INVOICES + PERM_VIEW_INVOICE.
+ *               per tax letter, payments, journal and History, and its receipt to print (80 mm); handing over
+ *               the pieces of its custom sizes (POS-02, PERM_DELIVER_SALE). PAGE_INVOICES + PERM_VIEW_INVOICE.
  * </pre>
  */
 @Controller
@@ -37,14 +44,17 @@ public class InvoiceController {
     private final DataChangeService dataChangeService;
     private final SettingService settingService;
     private final ActivityLogService activityLogService;
+    private final Messages messages;
 
     public InvoiceController(SalesService salesService, JournalService journalService, DataChangeService dataChangeService,
-                             SettingService settingService, ActivityLogService activityLogService) {
+                             SettingService settingService, ActivityLogService activityLogService,
+                             Messages messages) {
         this.salesService = salesService;
         this.journalService = journalService;
         this.dataChangeService = dataChangeService;
         this.settingService = settingService;
         this.activityLogService = activityLogService;
+        this.messages = messages;
     }
 
     @GetMapping
@@ -65,7 +75,16 @@ public class InvoiceController {
         model.addAttribute("invoice", invoice);
         model.addAttribute("totals", salesService.totals(invoice));
         model.addAttribute("payments", salesService.payments(id));
-        model.addAttribute("journals", journalService.forSource(id, JournalSource.SALES_INVOICE));
+        model.addAttribute("journals", journalService.forSource(id, JournalSource.SALES_INVOICE, JournalSource.SALES_DELIVERY));
+        // Sizes to cut (POS-02): their cutting jobs, what is handed over, the pieces ready to hand over
+        boolean custom = invoice.getLines().stream().anyMatch(SalesInvoiceLine::isCustomPiece);
+        model.addAttribute("custom", custom);
+        Map<UUID, SalesService.Progress> progress = custom ? salesService.progress(invoice) : Map.of();
+        model.addAttribute("progress", progress);
+        model.addAttribute("toHandOver", progress.values().stream().mapToInt(SalesService.Progress::getRemaining).sum());
+        model.addAttribute("jobs", custom ? salesService.jobsOf(invoice) : List.of());
+        model.addAttribute("ready", custom ? salesService.readyPieces(invoice) : List.of());
+        model.addAttribute("deliveries", custom ? salesService.deliveries(id) : List.of());
         model.addAttribute("history", dataChangeService.historyWithChildren("SalesInvoice", id.toString(), "SalesInvoiceLine",
                 "invoice", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
@@ -87,6 +106,26 @@ public class InvoiceController {
         activityLogService.record(PosController.MODULE, "PRINT_RECEIPT", "Opened the receipt of " + invoice.getNumber() + " for printing",
                 ActivityStatus.SUCCESS);
         return "invoices/receipt";
+    }
+
+    /** Hands over pieces of the invoice's sizes (SRS 5.3 step 5): ticked or scanned. */
+    @PostMapping("/{id}/deliver")
+    @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_DELIVER_SALE')")
+    public String deliver(@PathVariable UUID id, @RequestParam(required = false) List<UUID> unitIds,
+                          @RequestParam(required = false) String codes, RedirectAttributes redirect) {
+        try {
+            SalesService.Delivered d = salesService.deliver(id, unitIds, codes);
+            String units = d.units().stream().map(StockUnit::getCode).collect(Collectors.joining(", "));
+            activityLogService.record(PosController.MODULE, "DELIVER_SALE", "Handed over " + units + " of " + d.invoice().getNumber()
+                    + (d.journal() == null ? "" : ", journal " + d.journal().getNumber()), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.delivered", d.units().size(), d.invoice().getNumber()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(PosController.MODULE, "DELIVER_SALE", "Failed to hand over pieces of invoice " + id + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/invoices/" + id;
     }
 
     /** Only issued invoices have a page: a sale being rung up lives on the POS. */

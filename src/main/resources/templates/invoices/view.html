@@ -52,6 +52,91 @@
         </div>
     </div>
 
+    <!-- Sizes to cut (POS-02): their cutting jobs and the pieces to hand over (SRS 5.3) -->
+    <div class="section" th:if="${custom}">
+        <div class="section-header">
+            <h2 th:text="#{invoice.handOver}">Pieces to hand over</h2>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item item-full">
+                    <label th:text="#{invoice.jobs}">Cutting jobs</label>
+                    <div class="value">
+                        <span th:if="${#lists.isEmpty(jobs)}">—</span>
+                        <span th:each="j, st : ${jobs}">
+                            <a class="mono" th:href="@{/cutting-jobs/{id}(id=${j.id})}" sec:authorize="hasAuthority('PAGE_PRODUCTION')" th:text="${j.number}">CUT-WH-2026-000008</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_PRODUCTION')" th:text="${j.number}">CUT-WH-2026-000008</span>
+                            <th:block th:replace="~{cutting-jobs/list :: jobStatus(${j.status})}"></th:block><span th:unless="${st.last}"> </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <form th:action="@{/invoices/{id}/deliver(id=${invoice.id})}" method="post" class="pos-handover" novalidate
+                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${!#lists.isEmpty(ready)}">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><span class="sr-only" th:text="#{invoice.choose}">Choose</span></th>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{po.size}">Size (mm)</th>
+                                <th th:text="#{stock.location}">Place</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${ready}">
+                                <td><input type="checkbox" class="checkbox" name="unitIds" th:value="${u.id}" checked th:aria-label="${u.code}"></td>
+                                <td class="mono strong" th:text="${u.code}">U-WH-000071</td>
+                                <td class="mono nowrap" th:text="${u.product.code + ' · ' + u.widthMm + ' × ' + u.heightMm}">CLR-6 · 600 × 400</td>
+                                <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R04</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:text="#{invoice.handOverTicked}">Hand over the pieces ticked</button>
+                </div>
+            </form>
+            <form th:action="@{/invoices/{id}/deliver(id=${invoice.id})}" method="post" class="pos-handover-scan" novalidate
+                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${toHandOver > 0}">
+                <div class="form-group">
+                    <label for="handover-codes" th:text="#{invoice.handOverScan}">Or scan the pieces handed over</label>
+                    <div class="scan-row">
+                        <textarea id="handover-codes" name="codes" rows="1" maxlength="4000" class="input-code scan-codes" autocomplete="off"
+                                  autocapitalize="characters" spellcheck="false" enterkeyhint="go" data-enter-submits th:placeholder="#{pos.scanPh}"></textarea>
+                        <button type="submit" class="btn btn-outline" th:text="#{invoice.handOverButton}">Hand over</button>
+                    </div>
+                </div>
+            </form>
+            <p class="form-note" th:if="${toHandOver > 0 and #lists.isEmpty(ready)}" th:text="#{invoice.nothingReady}">No piece is ready yet: the cutting jobs reserve them for the customer as they are cut.</p>
+            <p class="form-note" th:if="${toHandOver == 0}" th:text="#{invoice.allHandedOver}">Every piece of this invoice has been handed over.</p>
+
+            <th:block th:unless="${#lists.isEmpty(deliveries)}">
+                <h3 class="detail-heading" th:text="#{invoice.handedOver}">Handed over</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{invoice.handedOverOn}">When</th>
+                                <th th:text="#{invoice.handedOverBy}">By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${deliveries}">
+                                <td><a class="mono" th:href="@{/stock/{id}(id=${d.stockUnitId})}" sec:authorize="hasAuthority('PAGE_STOCK')" th:text="${d.unitCode}">U-WH-000071</a>
+                                    <span class="mono" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${d.unitCode}">U-WH-000071</span></td>
+                                <td class="nowrap" th:text="${#temporals.format(d.deliveredAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:00</td>
+                                <td th:text="${d.username}">cashier1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </th:block>
+        </div>
+    </div>
+
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
@@ -68,10 +153,8 @@
                         <thead>
                             <tr>
                                 <th class="num">#</th>
-                                <th th:text="#{stock.code}">Label</th>
-                                <th th:text="#{product.name}">Glass</th>
-                                <th class="num" th:text="#{pos.m2Charged}">m² charged</th>
-                                <th class="num" th:text="#{pos.pricePerM2}">Price / m²</th>
+                                <th th:text="#{invoice.item}">Item</th>
+                                <th class="num" th:text="#{pos.charged}">Charged</th>
                                 <th th:text="#{pos.vat}">VAT</th>
                                 <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
                             </tr>
@@ -79,16 +162,14 @@
                         <tbody>
                             <tr th:each="l : ${invoice.lines}">
                                 <td class="num text-muted" th:text="${l.lineNo}">1</td>
-                                <td><a class="mono" th:href="@{/stock/{id}(id=${l.stockUnitId})}" sec:authorize="hasAuthority('PAGE_STOCK')" th:text="${l.unitCode}">U-WH-000002</a>
-                                    <span class="mono" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${l.unitCode}">U-WH-000002</span></td>
                                 <td>
-                                    <th:block th:replace="~{products/list :: productName(${l.product})}"></th:block>
-                                    <div class="cell-sub mono" th:text="${l.widthMm + ' × ' + l.heightMm}">3210 × 2250</div>
+                                    <th:block th:replace="~{invoices/list :: lineWhat(${l})}"></th:block>
+                                    <div class="cell-sub" th:if="${l.customPiece}" th:with="p=${progress.get(l.id)}"
+                                         th:text="#{sale.line.handedOver(${p.delivered}, ${p.ordered})}">Handed over 1 of 3</div>
                                 </td>
-                                <td class="num" th:text="${@num.m2(l.chargeableAreaM2)}">7.2225</td>
-                                <td class="num">
-                                    <span th:text="${@num.money(l.pricePerM2)}">27,000</span>
-                                    <div class="cell-sub" th:text="${l.priceList.name + ' · ' + (l.pricesIncludeVat ? #messages.msg('pos.vatIncluded') : #messages.msg('pos.vatExcluded'))}">Retail · VAT included</div>
+                                <td class="num nowrap">
+                                    <th:block th:replace="~{invoices/list :: lineCharge(${l})}"></th:block>
+                                    <div class="cell-sub" th:text="${l.priceList.name}">Retail</div>
                                 </td>
                                 <td class="nowrap" th:text="${l.taxCode + ' ' + @num.m2(l.vatRate) + '%'}">B 18%</td>
                                 <td class="num strong" th:text="${@num.money(l.amount)}">195,008</td>
@@ -96,11 +177,11 @@
                         </tbody>
                         <tfoot>
                             <tr th:each="g : ${totals.groups}">
-                                <th colspan="6" th:text="#{invoice.vatLine(${g.taxCode}, ${@num.m2(g.rate)}, ${@num.money(g.getNet())})}">B 18%: net 165,261.02, VAT</th>
+                                <th colspan="4" th:text="#{invoice.vatLine(${g.taxCode}, ${@num.m2(g.rate)}, ${@num.money(g.getNet())})}">B 18%: net 165,261.02, VAT</th>
                                 <th class="num" th:text="${@num.money(g.vat)}">29,746.98</th>
                             </tr>
                             <tr>
-                                <th colspan="6" th:text="#{pos.total}">Total (RWF)</th>
+                                <th colspan="4" th:text="#{pos.total}">Total (RWF)</th>
                                 <th class="num" th:text="${@num.money(invoice.totalAmount)}">195,008</th>
                             </tr>
                         </tfoot>
@@ -138,6 +219,7 @@
             </div>
         </div>
     </div>
+    <script defer src="/js/stock-ops.js"></script>
 </div>
 </body>
 </html>

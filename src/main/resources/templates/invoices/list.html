@@ -30,6 +30,31 @@
     </div>
 </div>
 
+<!--/* What a sale line is: a unit from stock, a size to cut (POS-02), or processing on a size */-->
+<th:block th:fragment="lineWhat(l)">
+    <th:block th:if="${l.stockUnit}">
+        <span class="mono strong nowrap" th:text="${l.unitCode}">U-WH-000002</span>
+        <div class="cell-sub mono nowrap" th:text="${l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm}">CLR-6 · 3210 × 2250</div>
+    </th:block>
+    <th:block th:if="${l.customPiece}">
+        <span class="strong" th:text="#{sale.line.custom}">Size to cut</span>
+        <div class="cell-sub mono nowrap" th:text="${l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm + ' · ×' + l.quantity}">CLR-6 · 600 × 400 · ×3</div>
+        <div class="cell-sub" th:if="${l.mark != null}" th:text="#{sale.line.mark(${l.mark})}">Mark: kitchen</div>
+    </th:block>
+    <th:block th:if="${l.serviceLine}">
+        <span class="strong" th:text="${l.service.name}">Edging</span>
+        <div class="cell-sub" th:text="${l.holes != null} ? #{sale.line.serviceHoles(${l.parentLine.lineNo}, ${l.holes})} : #{sale.line.serviceFor(${l.parentLine.lineNo})}">on line 2</div>
+    </th:block>
+</th:block>
+
+<!--/* How a sale line is charged: area x price per m², or the service's quantity x its price */-->
+<th:block th:fragment="lineCharge(l)">
+    <span th:if="${l.stockUnit}" th:text="${@num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">7.2225 m² × 27,000</span>
+    <span th:if="${l.customPiece}" th:text="${l.quantity + ' × ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">3 × 0.25 m² × 27,000</span>
+    <span th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit) + ' × ' + @num.money(l.serviceUnitPrice)}">4 m × 1,500</span>
+    <div class="cell-sub" th:text="${l.pricesIncludeVat} ? #{pos.vatIncluded} : #{pos.vatExcluded}">VAT included</div>
+</th:block>
+
 <!--/* Issued invoices: number, date, customer and TIN, total, cashier */-->
 <div th:fragment="invoiceTable(rows)" class="table-container">
     <table>

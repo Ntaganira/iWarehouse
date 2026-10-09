@@ -17,8 +17,9 @@ import java.util.UUID;
  * - File      : SalesInvoiceLine.java
  * - Date      : 2026. 10. 09.
  * - User      : Hntaganira
- * - Desc      : One line of a sale: a unit from stock, priced per m² from the customer's price list over its
- *               chargeable area (MD-06), with the list, its VAT flag and the glass's tax letter and rate kept
+ * - Desc      : One line of a sale: a unit from stock or a size to cut (POS-02), priced per m² from the
+ *               customer's price list over its chargeable area (MD-06), or processing on a size, priced per
+ *               m², metre of edge, piece or hole. The list, its VAT flag and the tax letter and rate are kept
  *               on the line (TAX-01). The amount is whole RWF, VAT included. Fixed once the invoice is issued
  *               (trg_sales_invoice_lines_posted).
  * </pre>
@@ -83,4 +84,43 @@ public class SalesInvoiceLine extends BaseEntity {
     /** Whole RWF, VAT included. */
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
+
+    /** A service line: the size it is done on. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_line_id")
+    private SalesInvoiceLine parentLine;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    private ProcessingService service;
+
+    /** A service line: the m², metres, pieces or holes charged. */
+    @Column(name = "service_quantity", precision = 10, scale = 4)
+    private BigDecimal serviceQuantity;
+
+    @Column(name = "service_unit_price", precision = 18, scale = 2)
+    private BigDecimal serviceUnitPrice;
+
+    /** Holes per piece, for a service charged per hole. */
+    private Integer holes;
+
+    /** A size: the services' codes, for the cutter. */
+    @Column(length = 200)
+    private String processing;
+
+    /** A size: the customer's mark. */
+    @Column(length = 60)
+    private String mark;
+
+    public boolean isStockUnit() {
+        return kind == SaleLineKind.STOCK_UNIT;
+    }
+
+    public boolean isCustomPiece() {
+        return kind == SaleLineKind.CUSTOM_PIECE;
+    }
+
+    public boolean isServiceLine() {
+        return kind == SaleLineKind.SERVICE;
+    }
 }

@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
@@ -33,6 +35,26 @@ public final class Pricing {
     }
 
     /** The area a piece is charged for: its own area, but never less than the minimum (0.25 m² by default). */
+    /**
+     * What a processing service charges on {@code quantity} pieces of {@code widthMm} x {@code heightMm} (MD-06):
+     * m² of glass, metres of edge (the perimeter), pieces, or holes ({@code holes} per piece), 4 decimals.
+     */
+    public static BigDecimal serviceQuantity(ChargeUnit unit, int widthMm, int heightMm, int quantity, Integer holes) {
+        BigDecimal pieces = BigDecimal.valueOf(quantity);
+        return switch (unit) {
+            case M2 -> areaM2(widthMm, heightMm).multiply(pieces).setScale(AREA_SCALE, RoundingMode.HALF_UP);
+            case METRE -> BigDecimal.valueOf(2L * (widthMm + heightMm)).multiply(pieces)
+                    .divide(BigDecimal.valueOf(1000), AREA_SCALE, RoundingMode.HALF_UP);
+            case PIECE -> pieces.setScale(AREA_SCALE);
+            case HOLE -> {
+                if (holes == null || holes <= 0) {
+                    throw new IllegalArgumentException("Holes per piece are needed for a service charged per hole");
+                }
+                yield BigDecimal.valueOf((long) holes * quantity).setScale(AREA_SCALE);
+            }
+        };
+    }
+
     public static BigDecimal chargeableArea(int widthMm, int heightMm, BigDecimal minArea) {
         BigDecimal area = areaM2(widthMm, heightMm);
         if (minArea != null && area.compareTo(minArea) < 0) {

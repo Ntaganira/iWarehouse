@@ -43,10 +43,13 @@
         <div class="receipt-rule"></div>
         <div class="receipt-line" th:each="l : ${invoice.lines}">
             <div class="receipt-row">
-                <span th:text="${l.product.code + ' ' + l.widthMm + '×' + l.heightMm}">CLR-6 3210×2250</span>
+                <span th:if="${!l.serviceLine}" th:text="${l.product.code + ' ' + l.widthMm + '×' + l.heightMm + (l.customPiece ? ' ×' + l.quantity : '')}">CLR-6 3210×2250</span>
+                <span th:if="${l.serviceLine}" th:text="${l.service.name}">Edging</span>
                 <span th:text="${@num.money(l.amount) + ' ' + l.taxCode}">195,008 B</span>
             </div>
-            <div class="receipt-sub" th:text="${l.unitCode + ' · ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">U-WH-000002 · 7.2225 m² × 27,000</div>
+            <div class="receipt-sub" th:if="${l.stockUnit}" th:text="${l.unitCode + ' · ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">U-WH-000002 · 7.2225 m² × 27,000</div>
+            <div class="receipt-sub" th:if="${l.customPiece}" th:text="#{posReceipt.custom(${@num.m2(l.chargeableAreaM2)}, ${@num.money(l.pricePerM2)})}">to cut · 0.25 m² × 27,000 each</div>
+            <div class="receipt-sub" th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit) + ' × ' + @num.money(l.serviceUnitPrice)}">4 m × 1,500</div>
         </div>
         <div class="receipt-rule"></div>
         <div class="receipt-row receipt-total"><span th:text="#{posReceipt.total}">TOTAL</span><span th:text="${@num.money(invoice.totalAmount)}">195,008</span></div>

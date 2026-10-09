@@ -14,6 +14,7 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.JournalService;
+import com.ntaganira.heritier.iWarehouse.service.SalesService;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.CuttingJobService;
 import com.ntaganira.heritier.iWarehouse.service.CuttingYield;
@@ -59,6 +60,7 @@ public class CuttingJobController {
 
     private final CuttingJobService jobService;
     private final JournalService journalService;
+    private final SalesService salesService;
     private final StockService stockService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
@@ -67,11 +69,12 @@ public class CuttingJobController {
     private final NumberFormats num;
 
     public CuttingJobController(CuttingJobService jobService, StockService stockService, DataChangeService dataChangeService,
-                                JournalService journalService, ActivityLogService activityLogService, Validator validator,
-                                Messages messages, NumberFormats num) {
+                                JournalService journalService, SalesService salesService, ActivityLogService activityLogService,
+                                Validator validator, Messages messages, NumberFormats num) {
         this.jobService = jobService;
         this.stockService = stockService;
         this.journalService = journalService;
+        this.salesService = salesService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.validator = new SpringValidatorAdapter(validator);
@@ -105,6 +108,7 @@ public class CuttingJobController {
         CuttingJob job = jobService.findDetailed(id);
         model.addAttribute("job", job);
         model.addAttribute("journals", journalService.forSource(id, JournalSource.CUTTING_JOB));
+        model.addAttribute("salesInvoiceNumber", salesService.numberOf(job.getSalesInvoiceId()).orElse(null));
         model.addAttribute("need", CuttingJobService.need(job));
         model.addAttribute("source", jobService.source(job).orElse(null));
         model.addAttribute("outcome", jobService.outcome(job));

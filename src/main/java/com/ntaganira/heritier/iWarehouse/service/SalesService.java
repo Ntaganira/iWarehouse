@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.dto.CuttingJobDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.*;
@@ -37,7 +38,9 @@ import java.util.stream.Collectors;
  *               the customer's price list over their chargeable area (MD-06), and held meanwhile. Paying splits
  *               the total over cash, mobile money, card, bank transfer and customer credit (within the limit,
  *               POS-05), issues the invoice (INV number), sells the units (SOLD) and posts the journal: sales,
- *               VAT output, and the glass at MAC.
+ *               VAT output, and the glass at MAC. Sizes to cut (POS-02) are priced by chargeable area with their
+ *               processing as service lines; paying creates their cutting jobs, and the pieces are handed over
+ *               later (sold then, their cost posted: SRS 5.3).
  * </pre>
  */
 @Service
@@ -50,7 +53,14 @@ public class SalesService {
     private final ProductRepository productRepo;
     private final CustomerRepository customerRepo;
     private final CurrencyRepository currencyRepo;
+    private final ProcessingServiceRepository serviceRepo;
+    private final TaxCategoryRepository taxRepo;
+    private final CuttingJobRepository jobRepo;
+    private final CuttingJobOutputRepository outputRepo;
+    private final CuttingJobLineRepository jobLineRepo;
+    private final SalesDeliveryRepository deliveryRepo;
     private final TillService tillService;
+    private final CuttingJobService cuttingJobService;
     private final StockService stockService;
     private final PriceListService priceListService;
     private final PostingService postingService;
@@ -60,15 +70,25 @@ public class SalesService {
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
                         ProductRepository productRepo, CustomerRepository customerRepo, CurrencyRepository currencyRepo,
-                        TillService tillService, StockService stockService, PriceListService priceListService,
-                        PostingService postingService, JournalService journalService, DocumentNumberService numbers, Clock clock) {
+                        ProcessingServiceRepository serviceRepo, TaxCategoryRepository taxRepo, CuttingJobRepository jobRepo,
+                        CuttingJobOutputRepository outputRepo, CuttingJobLineRepository jobLineRepo,
+                        SalesDeliveryRepository deliveryRepo, TillService tillService, CuttingJobService cuttingJobService,
+                        StockService stockService, PriceListService priceListService, PostingService postingService,
+                        JournalService journalService, DocumentNumberService numbers, Clock clock) {
         this.repo = repo;
         this.paymentRepo = paymentRepo;
         this.unitRepo = unitRepo;
         this.productRepo = productRepo;
         this.customerRepo = customerRepo;
         this.currencyRepo = currencyRepo;
+        this.serviceRepo = serviceRepo;
+        this.taxRepo = taxRepo;
+        this.jobRepo = jobRepo;
+        this.outputRepo = outputRepo;
+        this.jobLineRepo = jobLineRepo;
+        this.deliveryRepo = deliveryRepo;
         this.tillService = tillService;
+        this.cuttingJobService = cuttingJobService;
         this.stockService = stockService;
         this.priceListService = priceListService;
         this.postingService = postingService;
@@ -85,8 +105,25 @@ public class SalesService {
         }
     }
 
-    /** An invoice paid: the invoice, its change and its journal. */
-    public record Paid(SalesInvoice invoice, BigDecimal change, JournalEntry journal) {
+    /** An invoice paid: the invoice, its change, its journal and the cutting jobs of its custom sizes. */
+    public record Paid(SalesInvoice invoice, BigDecimal change, JournalEntry journal, List<CuttingJob> jobs) {
+    }
+
+    /** A size to cut for the customer (POS-02): glass, size, quantity, processing (holes per piece for drilling), mark. */
+    public record CustomSize(UUID productId, Integer widthMm, Integer heightMm, Integer quantity, List<UUID> serviceIds,
+                             Integer holes, String mark) {
+    }
+
+    /** Pieces handed over: the units sold and the journal of their cost. */
+    public record Delivered(SalesInvoice invoice, List<StockUnit> units, JournalEntry journal) {
+    }
+
+    /** How far a custom size is: pieces ordered, handed over and still to hand over. */
+    public record Progress(int ordered, int delivered) {
+
+        public int getRemaining() {
+            return Math.max(ordered - delivered, 0);
+        }
     }
 
     // ---------------------------------------------------------------- reading
@@ -94,6 +131,11 @@ public class SalesService {
     /** The sale the till is ringing up, if any. */
     public Optional<SalesInvoice> cart(TillSession session) {
         return repo.findFirstByTillSession_IdAndStatus(session.getId(), SalesInvoiceStatus.DRAFT);
+    }
+
+    /** An invoice's number, for a link to it (a cutting job cut for a sale). */
+    public Optional<String> numberOf(UUID id) {
+        return id == null ? Optional.empty() : repo.findById(id).map(SalesInvoice::getNumber);
     }
 
     public SalesInvoice findDetailed(UUID id) {
@@ -202,10 +244,8 @@ public class SalesService {
         SalesInvoiceLine line = sale.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst()
                 .orElseThrow(() -> new NotFoundException("SalesInvoiceLine", lineId));
         sale.getLines().remove(line);
-        int no = 1;
-        for (SalesInvoiceLine l : sale.getLines()) {
-            l.setLineNo(no++);
-        }
+        sale.getLines().removeIf(l -> l.getParentLine() == line);   // a size takes its processing with it
+        renumber(sale);
         return line;
     }
 
@@ -235,7 +275,13 @@ public class SalesService {
                 }
             }
             sale.setCustomer(customer);
-            sale.getLines().forEach(l -> price(l, customer));
+            sale.getLines().forEach(l -> {
+                if (l.isServiceLine()) {
+                    priceService(l, customer);
+                } else {
+                    price(l, customer);
+                }
+            });
         }
         sale.setBuyerName(name);
         sale.setBuyerTin(tin != null ? tin : customer.getType() != CustomerType.WALK_IN ? customer.getTin() : null);
@@ -264,11 +310,15 @@ public class SalesService {
         if (sale.getLines().isEmpty()) {
             throw BusinessException.of("sale.empty");
         }
-        Set<UUID> productIds = sale.getLines().stream().map(l -> l.getProduct().getId()).collect(Collectors.toCollection(TreeSet::new));
-        List<Product> products = productRepo.lockAllById(productIds);
+        Set<UUID> productIds = sale.getLines().stream().filter(SalesInvoiceLine::isStockUnit).map(l -> l.getProduct().getId())
+                .collect(Collectors.toCollection(TreeSet::new));
+        List<Product> products = productIds.isEmpty() ? List.of() : productRepo.lockAllById(productIds);
         PostingService.StockValues before = postingService.stockValues(products);
         Map<UUID, StockUnit> units = unitsOf(sale);
         for (SalesInvoiceLine line : sale.getLines()) {
+            if (!line.isStockUnit()) {
+                continue;
+            }
             StockUnit unit = units.get(line.getStockUnitId());
             if (unit == null) {
                 throw BusinessException.of("sale.unit.unknown", line.getUnitCode());
@@ -291,7 +341,9 @@ public class SalesService {
 
         String number = numbers.next(DocumentType.INVOICE);
         for (SalesInvoiceLine line : sale.getLines()) {
-            stockService.sell(units.get(line.getStockUnitId()), sale.getId(), number);
+            if (line.isStockUnit()) {
+                stockService.sell(units.get(line.getStockUnitId()), sale.getId(), number);
+            }
         }
         LocalDateTime now = LocalDateTime.now(clock);
         String username = AppUserPrincipal.currentUsername();
@@ -320,7 +372,251 @@ public class SalesService {
         sale.setPostedBy(username);
         sale.setStatus(SalesInvoiceStatus.POSTED);
         JournalEntry journal = postingService.sale(sale, payments, before);
-        return new Paid(sale, split.change(), journal);
+        return new Paid(sale, split.change(), journal, createJobs(sale));
+    }
+
+    /**
+     * The cutting jobs of a paid sale's sizes (POS-02, SRS 5.3 step 3): one per glass, for the customer, its lines
+     * the sizes with their processing and mark, each linked to its invoice line.
+     */
+    private List<CuttingJob> createJobs(SalesInvoice sale) {
+        Map<UUID, List<SalesInvoiceLine>> byGlass = new LinkedHashMap<>();
+        sale.getLines().stream().filter(SalesInvoiceLine::isCustomPiece)
+                .forEach(l -> byGlass.computeIfAbsent(l.getProduct().getId(), k -> new ArrayList<>()).add(l));
+        List<CuttingJob> jobs = new ArrayList<>();
+        for (Map.Entry<UUID, List<SalesInvoiceLine>> e : byGlass.entrySet()) {
+            CuttingJobDto dto = new CuttingJobDto();
+            dto.setPurpose(CuttingPurpose.CUSTOMER);
+            dto.setCustomerId(sale.getCustomer().getId());
+            dto.setCustomerRef(sale.getNumber());
+            dto.setProductId(e.getKey());
+            dto.setNotes("Invoice " + sale.getNumber());
+            for (SalesInvoiceLine size : e.getValue()) {
+                CuttingJobDto.Line row = new CuttingJobDto.Line();
+                row.setWidthMm(size.getWidthMm());
+                row.setHeightMm(size.getHeightMm());
+                row.setQuantity(size.getQuantity());
+                row.setProcessing(sale.getLines().stream().filter(l -> l.getParentLine() == size)
+                        .map(l -> l.getService().getCode()).toList());
+                row.setMark(size.getMark());
+                dto.getLines().add(row);
+            }
+            CuttingJob job = cuttingJobService.create(dto);
+            job.setSalesInvoiceId(sale.getId());
+            for (int i = 0; i < job.getLines().size(); i++) {
+                job.getLines().get(i).setSalesLineId(e.getValue().get(i).getId());
+            }
+            jobs.add(job);
+        }
+        return jobs;
+    }
+
+    // ---------------------------------------------------------------- sizes to cut (POS-02)
+
+    /** Adds a size to cut to the till's sale, priced by chargeable area, with its processing as service lines. */
+    @Transactional
+    public SalesInvoice addCustom(CustomSize c) {
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cartOrNew(session);
+        Product product = c.productId() == null ? null : productRepo.findById(c.productId()).filter(Product::isEnabled).orElse(null);
+        if (product == null) {
+            throw BusinessException.onField("productId", "sale.custom.product");
+        }
+        if (!product.getGlassType().isCuttable()) {
+            throw BusinessException.onField("productId", "sale.custom.notCuttable", product.getCode());
+        }
+        int width = size(c.widthMm(), "widthMm");
+        int height = size(c.heightMm(), "heightMm");
+        if (c.quantity() == null || c.quantity() < 1 || c.quantity() > 999) {
+            throw BusinessException.onField("quantity", "sale.custom.quantity");
+        }
+        String mark = PartyRules.clean(c.mark());
+        if (mark != null && mark.length() > 60) {
+            throw BusinessException.onField("mark", "sale.custom.markSize");
+        }
+        List<UUID> ids = c.serviceIds() == null ? List.of() : c.serviceIds().stream().filter(Objects::nonNull).distinct().toList();
+        List<ProcessingService> services = serviceRepo.findAllById(ids).stream().filter(ProcessingService::isEnabled)
+                .sorted(Comparator.comparing(ProcessingService::getCode)).toList();
+        if (services.size() != ids.size()) {
+            throw BusinessException.onField("serviceIds", "sale.custom.service");
+        }
+        boolean perHole = services.stream().anyMatch(s -> s.getChargeUnit() == ChargeUnit.HOLE);
+        if (perHole && (c.holes() == null || c.holes() < 1 || c.holes() > 50)) {
+            throw BusinessException.onField("holes", "sale.custom.holes");
+        }
+
+        SalesInvoiceLine piece = new SalesInvoiceLine();
+        piece.setInvoice(sale);
+        piece.setKind(SaleLineKind.CUSTOM_PIECE);
+        piece.setProduct(product);
+        piece.setWidthMm(width);
+        piece.setHeightMm(height);
+        piece.setQuantity(c.quantity());
+        piece.setMark(mark);
+        piece.setProcessing(services.isEmpty() ? null : services.stream().map(ProcessingService::getCode).collect(Collectors.joining(",")));
+        price(piece, sale.getCustomer());
+        sale.getLines().add(piece);
+        for (ProcessingService service : services) {
+            SalesInvoiceLine line = new SalesInvoiceLine();
+            line.setInvoice(sale);
+            line.setKind(SaleLineKind.SERVICE);
+            line.setParentLine(piece);
+            line.setService(service);
+            line.setProduct(product);
+            line.setWidthMm(width);
+            line.setHeightMm(height);
+            line.setQuantity(c.quantity());
+            line.setHoles(service.getChargeUnit() == ChargeUnit.HOLE ? c.holes() : null);
+            priceService(line, sale.getCustomer());
+            sale.getLines().add(line);
+        }
+        renumber(sale);
+        return sale;
+    }
+
+    /** The cutting jobs of an invoice's sizes, "Cut the rest" jobs included. */
+    public List<CuttingJob> jobsOf(SalesInvoice invoice) {
+        return jobRepo.findBySalesInvoiceIdOrderByNumberAsc(invoice.getId());
+    }
+
+    public List<SalesDelivery> deliveries(UUID invoiceId) {
+        return deliveryRepo.findByInvoiceIdOrderByDeliveredAtAscUnitCodeAsc(invoiceId);
+    }
+
+    /** Each size of an invoice: pieces ordered and handed over. */
+    public Map<UUID, Progress> progress(SalesInvoice invoice) {
+        Map<UUID, Long> delivered = deliveries(invoice.getId()).stream()
+                .collect(Collectors.groupingBy(SalesDelivery::getLineId, Collectors.counting()));
+        Map<UUID, Progress> progress = new LinkedHashMap<>();
+        invoice.getLines().stream().filter(SalesInvoiceLine::isCustomPiece)
+                .forEach(l -> progress.put(l.getId(), new Progress(l.getQuantity(), delivered.getOrDefault(l.getId(), 0L).intValue())));
+        return progress;
+    }
+
+    /**
+     * Pieces ready to hand over: cut by the invoice's own cutting jobs ("Cut the rest" ones included) for a size with pieces
+     * left to hand over, and still reserved. Pieces of the same size cut for another sale are not this sale's.
+     */
+    public List<StockUnit> readyPieces(SalesInvoice invoice) {
+        Map<UUID, Progress> progress = progress(invoice);
+        Map<UUID, UUID> pieces = piecesOf(invoice);
+        if (pieces.isEmpty()) {
+            return List.of();
+        }
+        return unitRepo.findByIdIn(pieces.keySet()).stream()
+                .filter(u -> u.getStatus() == StockStatus.RESERVED)
+                .filter(u -> progress.containsKey(pieces.get(u.getId())) && progress.get(pieces.get(u.getId())).getRemaining() > 0)
+                .sorted(Comparator.comparing(StockUnit::getCode))
+                .toList();
+    }
+
+    /** The pieces cut for an invoice: unit id -> the invoice line (size) its cutting job line was made for. */
+    private Map<UUID, UUID> piecesOf(SalesInvoice invoice) {
+        List<UUID> jobIds = jobsOf(invoice).stream().map(CuttingJob::getId).toList();
+        if (jobIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, UUID> salesLineOf = new HashMap<>();
+        jobLineRepo.findByJob_IdIn(jobIds).stream().filter(l -> l.getSalesLineId() != null)
+                .forEach(l -> salesLineOf.put(l.getId(), l.getSalesLineId()));
+        Map<UUID, UUID> pieces = new LinkedHashMap<>();
+        for (CuttingJobOutput o : outputRepo.findByCuttingJobIdIn(jobIds)) {
+            if (o.getKind() == CuttingOutputKind.PIECE && o.getStockUnitId() != null && salesLineOf.containsKey(o.getJobLineId())) {
+                pieces.put(o.getStockUnitId(), salesLineOf.get(o.getJobLineId()));
+            }
+        }
+        return pieces;
+    }
+
+    /**
+     * Hands over pieces of an invoice's sizes (SRS 5.3 step 5): each must have been cut by the invoice's own cutting jobs,
+     * still be reserved, and its size have pieces left to hand over. The units are sold and their cost at MAC posted.
+     */
+    @Transactional
+    public Delivered deliver(UUID invoiceId, Collection<UUID> unitIds, String codes) {
+        SalesInvoice invoice = repo.lockById(invoiceId).orElseThrow(() -> new NotFoundException("SalesInvoice", invoiceId));
+        invoice = findDetailed(invoiceId);
+        if (invoice.getStatus() != SalesInvoiceStatus.POSTED) {
+            throw BusinessException.of("sale.deliver.notIssued");
+        }
+        Map<UUID, StockUnit> chosen = new LinkedHashMap<>();
+        if (unitIds != null && !unitIds.isEmpty()) {
+            unitRepo.findAllById(unitIds).forEach(u -> chosen.put(u.getId(), u));
+        }
+        List<String> scanned = StockTransferService.parseCodes(codes);
+        if (!scanned.isEmpty()) {
+            Map<String, StockUnit> byCode = unitRepo.findByCodeIn(scanned).stream()
+                    .collect(Collectors.toMap(StockUnit::getCode, Function.identity()));
+            for (String code : scanned) {
+                StockUnit unit = byCode.get(code);
+                if (unit == null) {
+                    throw BusinessException.onField("codes", "sale.unit.unknown", code);
+                }
+                chosen.put(unit.getId(), unit);
+            }
+        }
+        if (chosen.isEmpty()) {
+            throw BusinessException.onField("codes", "sale.deliver.none");
+        }
+        Map<UUID, Integer> left = new HashMap<>();
+        progress(invoice).forEach((lineId, p) -> left.put(lineId, p.getRemaining()));
+        Map<UUID, UUID> pieces = piecesOf(invoice);
+        Map<UUID, SalesInvoiceLine> lines = invoice.getLines().stream().filter(l -> l.getId() != null)
+                .collect(Collectors.toMap(SalesInvoiceLine::getId, Function.identity()));
+        Map<StockUnit, SalesInvoiceLine> plan = new LinkedHashMap<>();
+        Map<UUID, String> holds = stockService.holds(chosen.keySet());
+        for (StockUnit unit : chosen.values()) {
+            SalesInvoiceLine line = lines.get(pieces.get(unit.getId()));
+            if (line == null) {
+                throw BusinessException.onField("codes", "sale.deliver.notThisSale", unit.getCode(), invoice.getNumber());
+            }
+            if (unit.getStatus() != StockStatus.RESERVED) {
+                throw BusinessException.onField("codes", "sale.deliver.notReady", unit.getCode(),
+                        new DefaultMessageSourceResolvable("stock.status." + unit.getStatus().name()));
+            }
+            if (holds.containsKey(unit.getId())) {
+                throw BusinessException.onField("codes", "sale.unit.held", unit.getCode(), holds.get(unit.getId()));
+            }
+            if (left.getOrDefault(line.getId(), 0) <= 0) {
+                throw BusinessException.onField("codes", "sale.deliver.noSize", unit.getCode());
+            }
+            left.merge(line.getId(), -1, Integer::sum);
+            plan.put(unit, line);
+        }
+        List<Product> products = productRepo.lockAllById(plan.keySet().stream().map(u -> u.getProduct().getId())
+                .collect(Collectors.toCollection(TreeSet::new)));
+        PostingService.StockValues before = postingService.stockValues(products);
+        LocalDateTime now = LocalDateTime.now(clock);
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        for (Map.Entry<StockUnit, SalesInvoiceLine> e : plan.entrySet()) {
+            StockUnit unit = e.getKey();
+            stockService.sell(unit, invoice.getId(), invoice.getNumber());
+            SalesDelivery delivery = new SalesDelivery();
+            delivery.setInvoiceId(invoice.getId());
+            delivery.setLineId(e.getValue().getId());
+            delivery.setStockUnitId(unit.getId());
+            delivery.setUnitCode(unit.getCode());
+            delivery.setDeliveredAt(now);
+            delivery.setUserId(user.map(AppUserPrincipal::getId).orElse(null));
+            delivery.setUsername(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            deliveryRepo.save(delivery);
+        }
+        JournalEntry journal = postingService.saleDelivery(invoice, before);
+        return new Delivered(invoice, new ArrayList<>(plan.keySet()), journal);
+    }
+
+    private static int size(Integer mm, String field) {
+        if (mm == null || mm < 1 || mm > 10000) {
+            throw BusinessException.onField(field, "sale.custom.size");
+        }
+        return mm;
+    }
+
+    private static void renumber(SalesInvoice sale) {
+        int no = 1;
+        for (SalesInvoiceLine l : sale.getLines()) {
+            l.setLineNo(no++);
+        }
     }
 
     // ---------------------------------------------------------------- helpers
@@ -348,6 +644,16 @@ public class SalesService {
         if (held != null && !held.equals(tillNumber)) {
             throw BusinessException.onField("code", "sale.unit.held", unit.getCode(), held);
         }
+        // A piece cut for a paid sale leaves only by being handed over from that invoice (POS-02)
+        if (unit.getStatus() == StockStatus.RESERVED) {
+            Optional<String> soldOn = outputRepo.findByStockUnitId(unit.getId())
+                    .flatMap(o -> jobRepo.findById(o.getCuttingJobId()))
+                    .map(CuttingJob::getSalesInvoiceId)
+                    .flatMap(this::numberOf);
+            if (soldOn.isPresent()) {
+                throw BusinessException.onField("code", "sale.unit.cutForSale", unit.getCode(), soldOn.get());
+            }
+        }
     }
 
     /** Prices a line for the customer: their list (or the default one), chargeable area, the glass's tax letter (TAX-01). */
@@ -365,6 +671,28 @@ public class SalesService {
         line.setVatRate(tax.getRate());
         line.setAmount(Vat.lineAmount(price.pricePerM2(), area, line.getQuantity(), price.list().isPricesIncludeVat(), tax.getRate(),
                 baseDecimals()));
+    }
+
+    /**
+     * Prices processing for the customer (MD-06): the service's price per its unit (m², metre of edge, piece, hole) from
+     * their list or the default one, times what the pieces need; VAT at the standard rate.
+     */
+    private void priceService(SalesInvoiceLine line, Customer customer) {
+        ProcessingService service = line.getService();
+        PriceListService.ServicePriceFor price = priceListService.servicePriceFor(customer, service)
+                .orElseThrow(() -> BusinessException.onField("serviceIds", "sale.custom.noServicePrice", service.getName()));
+        TaxCategory tax = taxRepo.findByDefaultCategoryTrue().orElseThrow(() -> new IllegalStateException("No default tax category"));
+        BigDecimal quantity = Pricing.serviceQuantity(service.getChargeUnit(), line.getWidthMm(), line.getHeightMm(), line.getQuantity(),
+                line.getHoles());
+        line.setServiceQuantity(quantity);
+        line.setServiceUnitPrice(price.price());
+        line.setPriceList(price.list());
+        line.setPricesIncludeVat(price.list().isPricesIncludeVat());
+        line.setChargeableAreaM2(null);
+        line.setPricePerM2(null);
+        line.setTaxCode(tax.getEbmCode());
+        line.setVatRate(tax.getRate());
+        line.setAmount(Vat.lineAmount(price.price(), quantity, 1, price.list().isPricesIncludeVat(), tax.getRate(), baseDecimals()));
     }
 
     private Map<UUID, StockUnit> unitsOf(SalesInvoice sale) {

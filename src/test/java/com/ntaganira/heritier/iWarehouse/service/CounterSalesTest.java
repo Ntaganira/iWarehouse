@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.dto.CuttingJobDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.*;
@@ -49,6 +50,18 @@ class CounterSalesTest {
     private TillService tills;
     private SalesService sales;
     private DocumentNumberService numbers;
+    private CuttingJobService cuttingJobs;
+    private CuttingJobRepository jobRepo;
+    private CuttingJobOutputRepository outputRepo;
+    private StockUnitRepository unitRepo;
+    private final List<SalesDelivery> deliveries = new ArrayList<>();
+    private final List<CuttingJobDto> jobRequests = new ArrayList<>();
+    private final List<CuttingJob> jobs = new ArrayList<>();
+    private final List<CuttingJobOutput> outputs = new ArrayList<>();
+    private ProcessingService edging;
+    private ProcessingService drilling;
+    private ProcessingService polishing;
+    private Product tempered;
     private TillSession till;
     private Customer walkIn;
     private Customer builders;
@@ -64,7 +77,14 @@ class CounterSalesTest {
         TaxCategory standard = tax("B", "18.00");
         TaxCategory exempt = tax("A", "0.00");
         clear6 = product("CLR-6", standard);
+        clear6.setGlassType(GlassType.CLEAR);
         exemptGlass = product("EXP-4", exempt);
+        exemptGlass.setGlassType(GlassType.CLEAR);
+        tempered = product("TMP-8", standard);
+        tempered.setGlassType(GlassType.TEMPERED);
+        edging = service("EDGE", "Edging", ChargeUnit.METRE);
+        drilling = service("DRILL", "Drilling", ChargeUnit.HOLE);
+        polishing = service("POLISH", "Polishing", ChargeUnit.M2);
         retail = priceList("RETAIL", true);
         contractor = priceList("CONTRACTOR", false);
         walkIn = customer("WALK-IN", CustomerType.WALK_IN, "0", null, null);
@@ -73,7 +93,7 @@ class CounterSalesTest {
         tillRepo = mock(TillSessionRepository.class);
         invoiceRepo = mock(SalesInvoiceRepository.class);
         SalesPaymentRepository paymentRepo = mock(SalesPaymentRepository.class);
-        StockUnitRepository unitRepo = mock(StockUnitRepository.class);
+        unitRepo = mock(StockUnitRepository.class);
         movementRepo = mock(StockMovementRepository.class);
         StockAdjustmentLineRepository adjustmentLineRepo = mock(StockAdjustmentLineRepository.class);
         SalesInvoiceLineRepository saleLineRepo = mock(SalesInvoiceLineRepository.class);
@@ -97,6 +117,10 @@ class CounterSalesTest {
                 .filter(u -> u.getCode().equalsIgnoreCase(a.getArgument(0))).findFirst());
         when(unitRepo.findById(any())).thenAnswer(a -> units.stream().filter(u -> u.getId().equals(a.getArgument(0))).findFirst());
         when(unitRepo.findAllById(any())).thenAnswer(a -> {
+            Collection<UUID> ids = a.getArgument(0);
+            return units.stream().filter(u -> ids.contains(u.getId())).toList();
+        });
+        when(unitRepo.findByIdIn(any())).thenAnswer(a -> {
             Collection<UUID> ids = a.getArgument(0);
             return units.stream().filter(u -> ids.contains(u.getId())).toList();
         });
@@ -156,8 +180,74 @@ class CounterSalesTest {
         StockService stockService = new StockService(unitRepo, movementRepo, mock(StockCostEntryRepository.class), adjustmentLineRepo,
                 mock(StockCountRepository.class), saleLineRepo, mock(LocationRepository.class), numbers, CLOCK);
         tills = new TillService(tillRepo, invoiceRepo, paymentRepo, postings, numbers, CLOCK);
-        sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, currencyRepo, tills, stockService,
-                priceLists, postings, journals, numbers, CLOCK);
+        ProcessingServiceRepository serviceRepo = mock(ProcessingServiceRepository.class);
+        when(serviceRepo.findAllById(any())).thenAnswer(a -> {
+            Collection<UUID> ids = a.getArgument(0);
+            return List.of(edging, drilling, polishing).stream().filter(sv -> ids.contains(sv.getId())).toList();
+        });
+        TaxCategoryRepository taxRepo = mock(TaxCategoryRepository.class);
+        when(taxRepo.findByDefaultCategoryTrue()).thenReturn(Optional.of(standard));
+        when(productRepo.findById(any())).thenAnswer(a -> List.of(clear6, exemptGlass, tempered).stream()
+                .filter(pr -> pr.getId().equals(a.getArgument(0))).findFirst());
+        // Edging 1,500/m and drilling 500/hole on every list; polishing is priced nowhere
+        when(priceLists.servicePriceFor(any(), any())).thenAnswer(a -> {
+            ProcessingService sv = a.getArgument(1);
+            return sv == polishing ? Optional.empty()
+                    : Optional.of(new PriceListService.ServicePriceFor(sv == edging ? new BigDecimal("1500") : new BigDecimal("500"), retail));
+        });
+        jobRepo = mock(CuttingJobRepository.class);
+        outputRepo = mock(CuttingJobOutputRepository.class);
+        SalesDeliveryRepository deliveryRepo = mock(SalesDeliveryRepository.class);
+        when(deliveryRepo.save(any())).thenAnswer(a -> {
+            deliveries.add(a.getArgument(0));
+            return a.getArgument(0);
+        });
+        when(deliveryRepo.findByInvoiceIdOrderByDeliveredAtAscUnitCodeAsc(any())).thenAnswer(a -> deliveries.stream()
+                .filter(d -> d.getInvoiceId().equals(a.getArgument(0))).toList());
+        // The jobs made for sales, their lines and what they cut
+        when(jobRepo.findBySalesInvoiceIdOrderByNumberAsc(any())).thenAnswer(a -> jobs.stream()
+                .filter(j -> a.getArgument(0).equals(j.getSalesInvoiceId())).toList());
+        when(jobRepo.findById(any())).thenAnswer(a -> jobs.stream().filter(j -> j.getId().equals(a.getArgument(0))).findFirst());
+        CuttingJobLineRepository jobLineRepo = mock(CuttingJobLineRepository.class);
+        when(jobLineRepo.findByJob_IdIn(any())).thenAnswer(a -> {
+            Collection<UUID> ids = a.getArgument(0);
+            return jobs.stream().filter(j -> ids.contains(j.getId())).flatMap(j -> j.getLines().stream()).toList();
+        });
+        when(outputRepo.findByCuttingJobIdIn(any())).thenAnswer(a -> {
+            Collection<UUID> ids = a.getArgument(0);
+            return outputs.stream().filter(o -> ids.contains(o.getCuttingJobId())).toList();
+        });
+        when(outputRepo.findByStockUnitId(any())).thenAnswer(a -> outputs.stream()
+                .filter(o -> a.getArgument(0).equals(o.getStockUnitId())).findFirst());
+        when(unitRepo.findByCodeIn(any())).thenAnswer(a -> {
+            Collection<String> codes = a.getArgument(0);
+            return units.stream().filter(u -> codes.contains(u.getCode())).toList();
+        });
+        when(invoiceRepo.lockById(any())).thenAnswer(a -> invoices.stream().filter(i -> i.getId().equals(a.getArgument(0))).findFirst());
+        when(invoiceRepo.findDetailedById(any())).thenAnswer(a -> invoices.stream().filter(i -> i.getId().equals(a.getArgument(0))).findFirst());
+        // The cutting job made for a sale: what was asked, and a job with those lines
+        cuttingJobs = mock(CuttingJobService.class);
+        when(cuttingJobs.create(any())).thenAnswer(a -> {
+            CuttingJobDto dto = a.getArgument(0);
+            jobRequests.add(dto);
+            CuttingJob job = new CuttingJob();
+            job.setId(UUID.randomUUID());
+            job.setNumber(String.format("CUT-WH-2026-%06d", jobRequests.size() + 10));
+            jobs.add(job);
+            for (CuttingJobDto.Line row : dto.getLines()) {
+                CuttingJobLine line = new CuttingJobLine();
+                line.setId(UUID.randomUUID());
+                line.setJob(job);
+                line.setWidthMm(row.getWidthMm());
+                line.setHeightMm(row.getHeightMm());
+                line.setQuantity(row.getQuantity());
+                job.getLines().add(line);
+            }
+            return job;
+        });
+        sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, currencyRepo, serviceRepo, taxRepo,
+                jobRepo, outputRepo, jobLineRepo, deliveryRepo, tills, cuttingJobs, stockService, priceLists, postings, journals, numbers,
+                CLOCK);
     }
 
     @AfterEach
@@ -355,7 +445,168 @@ class CounterSalesTest {
         assertThat(unit.getStatus()).isEqualTo(StockStatus.AVAILABLE);
     }
 
+    // ---------------------------------------------------------------- sizes to cut (POS-02)
+
+    @Test
+    void aSizeIsPricedByChargeableAreaWithItsProcessingAsServiceLines() {
+        tills.open(BigDecimal.ZERO);
+
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 3,
+                List.of(edging.getId(), drilling.getId()), 2, " kitchen "));
+
+        assertThat(sale.getLines()).extracting(SalesInvoiceLine::getKind)
+                .containsExactly(SaleLineKind.CUSTOM_PIECE, SaleLineKind.SERVICE, SaleLineKind.SERVICE);
+        SalesInvoiceLine size = sale.getLines().get(0);
+        assertThat(size.getChargeableAreaM2()).isEqualByComparingTo("0.25");            // 0.24 m² charged as 0.25 (MD-06)
+        assertThat(size.getAmount()).isEqualByComparingTo("20250");                    // 3 x 0.25 x 27,000
+        assertThat(size.getMark()).isEqualTo("kitchen");
+        assertThat(size.getProcessing()).isEqualTo("DRILL,EDGE");
+        assertThat(size.getStockUnitId()).isNull();
+        SalesInvoiceLine drill = sale.getLines().get(1);                               // services in code order
+        assertThat(drill.getService()).isEqualTo(drilling);
+        assertThat(drill.getParentLine()).isEqualTo(size);
+        assertThat(drill.getServiceQuantity()).isEqualByComparingTo("6");               // 2 holes x 3 pieces
+        assertThat(drill.getAmount()).isEqualByComparingTo("3000");
+        assertThat(drill.getTaxCode()).isEqualTo("B");                                 // processing at the standard rate
+        SalesInvoiceLine edge = sale.getLines().get(2);
+        assertThat(edge.getServiceQuantity()).isEqualByComparingTo("6");                // 2 m of edge x 3 pieces
+        assertThat(edge.getAmount()).isEqualByComparingTo("9000");
+        assertThat(sale.getLines()).extracting(SalesInvoiceLine::getLineNo).containsExactly(1, 2, 3);
+        assertThat(sales.totals(sale).gross()).isEqualByComparingTo("32250");
+    }
+
+    @Test
+    void aSizeTakesItsProcessingWhenItIsRemovedAndWrongSizesAreRefused() {
+        tills.open(BigDecimal.ZERO);
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 1, List.of(edging.getId()), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));
+        sales.removeLine(sale.getLines().get(1).getId());                               // the edging alone
+        assertThat(sale.getLines()).singleElement().extracting(SalesInvoiceLine::getKind).isEqualTo(SaleLineKind.CUSTOM_PIECE);
+        sales.addCustom(new SalesService.CustomSize(clear6.getId(), 800, 500, 2, List.of(edging.getId()), null, null));
+        sale.getLines().forEach(l -> l.setId(l.getId() == null ? UUID.randomUUID() : l.getId()));
+        sales.removeLine(sale.getLines().get(1).getId());                               // the second size, with its edging
+        assertThat(sale.getLines()).singleElement().satisfies(l -> assertThat(l.getWidthMm()).isEqualTo(600));
+
+        assertThatThrownBy(() -> sales.addCustom(new SalesService.CustomSize(tempered.getId(), 600, 400, 1, List.of(), null, null)))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.custom.notCuttable"));
+        assertThatThrownBy(() -> sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 0, 1, List.of(), null, null)))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getField()).isEqualTo("heightMm"));
+        assertThatThrownBy(() -> sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 1, List.of(drilling.getId()), null, null)))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getField()).isEqualTo("holes"));
+        assertThatThrownBy(() -> sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 1, List.of(polishing.getId()), null, null)))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.custom.noServicePrice"));
+    }
+
+    @Test
+    void payingForSizesCreatesTheirCuttingJobsAndSellsNothingYet() {
+        tills.open(BigDecimal.ZERO);
+        StockUnit sheet = unit("U-WH-000020", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 3, List.of(edging.getId()), null, "K1"));
+        sales.addCustom(new SalesService.CustomSize(clear6.getId(), 1200, 800, 1, List.of(), null, null));
+        sales.addCustom(new SalesService.CustomSize(exemptGlass.getId(), 500, 500, 2, List.of(), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));
+
+        SalesService.Paid paid = sales.pay(new SalePayments.Entered(new BigDecimal("200000"), null, null, null, null, null, null, null));
+
+        assertThat(sale.getStatus()).isEqualTo(SalesInvoiceStatus.POSTED);
+        assertThat(paid.jobs()).hasSize(2);                                             // one per glass
+        CuttingJobDto clear = jobRequests.get(0);
+        assertThat(clear.getPurpose()).isEqualTo(CuttingPurpose.CUSTOMER);
+        assertThat(clear.getCustomerId()).isEqualTo(walkIn.getId());
+        assertThat(clear.getCustomerRef()).isEqualTo("INV-WH-2026-000001");
+        assertThat(clear.getProductId()).isEqualTo(clear6.getId());
+        assertThat(clear.getLines()).extracting(CuttingJobDto.Line::getQuantity).containsExactly(3, 1);
+        assertThat(clear.getLines().get(0).getProcessing()).containsExactly("EDGE");
+        assertThat(clear.getLines().get(0).getMark()).isEqualTo("K1");
+        CuttingJob job = paid.jobs().get(0);
+        assertThat(job.getSalesInvoiceId()).isEqualTo(sale.getId());
+        assertThat(job.getLines().get(0).getSalesLineId()).isEqualTo(sale.getLines().get(0).getId());
+        assertThat(job.getLines().get(1).getSalesLineId()).isEqualTo(sale.getLines().get(2).getId());
+        assertThat(sheet.getStatus()).isEqualTo(StockStatus.AVAILABLE);                // nothing leaves stock until cut and handed over
+        verify(movementRepo, never()).save(any());
+    }
+
+    @Test
+    void piecesCutForTheSaleAreHandedOverAndTheirCostPosted() {
+        tills.open(BigDecimal.ZERO);
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 2, List.of(), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));
+        CuttingJobLine size = sales.pay(new SalePayments.Entered(new BigDecimal("13500"), null, null, null, null, null, null, null))
+                .jobs().get(0).getLines().get(0);
+        StockUnit first = cut(size, CuttingOutputKind.PIECE, unit("U-WH-000071", clear6, 400, 600, StockStatus.RESERVED, walkIn));
+        StockUnit second = cut(size, CuttingOutputKind.PIECE, unit("U-WH-000072", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+        StockUnit third = cut(size, CuttingOutputKind.PIECE, unit("U-WH-000073", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+        cut(size, CuttingOutputKind.PIECE, unit("U-WH-000076", clear6, 600, 400, StockStatus.BROKEN, null));
+        cut(size, CuttingOutputKind.OFFCUT, unit("U-WH-000074", clear6, 700, 400, StockStatus.AVAILABLE, null));
+        // Same glass, same size, reserved for the same walk-in customer, but cut for another sale
+        CuttingJob otherSales = new CuttingJob();
+        otherSales.setId(UUID.randomUUID());
+        otherSales.setSalesInvoiceId(UUID.randomUUID());
+        CuttingJobLine otherSize = new CuttingJobLine();
+        otherSize.setId(UUID.randomUUID());
+        otherSize.setSalesLineId(UUID.randomUUID());
+        otherSales.getLines().add(otherSize);
+        jobs.add(otherSales);
+        StockUnit someoneElses = cut(otherSize, CuttingOutputKind.PIECE, unit("U-WH-000075", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+
+        assertThat(sales.readyPieces(sale)).extracting(StockUnit::getCode).containsExactly("U-WH-000071", "U-WH-000072", "U-WH-000073");
+        assertThatThrownBy(() -> sales.deliver(sale.getId(), List.of(someoneElses.getId()), null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.deliver.notThisSale");
+                    assertThat(e.getArgs()).containsExactly("U-WH-000075", "INV-WH-2026-000001");
+                });
+        assertThatThrownBy(() -> sales.deliver(sale.getId(), null, "U-WH-000074"))               // the off-cut stays in stock
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.deliver.notThisSale"));
+        assertThatThrownBy(() -> sales.deliver(sale.getId(), null, "U-WH-000076"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.deliver.notReady"));
+        assertThatThrownBy(() -> sales.deliver(sale.getId(), List.of(first.getId(), second.getId(), third.getId()), null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {                       // 2 ordered
+                    assertThat(e.getMessageKey()).isEqualTo("sale.deliver.noSize");
+                    assertThat(e.getArgs()).containsExactly("U-WH-000073");
+                });
+
+        SalesService.Delivered delivered = sales.deliver(sale.getId(), List.of(first.getId()), " u-wh-000072 ");
+
+        assertThat(delivered.units()).extracting(StockUnit::getCode).containsExactly("U-WH-000071", "U-WH-000072");
+        assertThat(first.getStatus()).isEqualTo(StockStatus.SOLD);
+        assertThat(second.getStatus()).isEqualTo(StockStatus.SOLD);
+        assertThat(someoneElses.getStatus()).isEqualTo(StockStatus.RESERVED);
+        assertThat(deliveries).extracting(SalesDelivery::getLineId).containsOnly(sale.getLines().get(0).getId());
+        assertThat(sales.progress(sale).get(sale.getLines().get(0).getId()).getRemaining()).isZero();
+        assertThat(sales.readyPieces(sale)).isEmpty();
+        verify(postings).saleDelivery(eq(sale), any());
+
+        // The third piece was cut for this sale: another walk-in sale at the counter cannot take it
+        when(invoiceRepo.findById(sale.getId())).thenReturn(Optional.of(sale));
+        assertThatThrownBy(() -> sales.addUnit("U-WH-000073", null)).isInstanceOfSatisfying(BusinessException.class, e -> {
+            assertThat(e.getMessageKey()).isEqualTo("sale.unit.cutForSale");
+            assertThat(e.getArgs()).containsExactly("U-WH-000073", "INV-WH-2026-000001");
+        });
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static ProcessingService service(String code, String name, ChargeUnit unit) {
+        ProcessingService sv = new ProcessingService();
+        sv.setId(UUID.randomUUID());
+        sv.setCode(code);
+        sv.setName(name);
+        sv.setChargeUnit(unit);
+        sv.setEnabled(true);
+        return sv;
+    }
+
+    /** Records a unit as an output of a cutting job line. */
+    private StockUnit cut(CuttingJobLine line, CuttingOutputKind kind, StockUnit unit) {
+        CuttingJobOutput output = new CuttingJobOutput();
+        output.setCuttingJobId(line.getJob() != null ? line.getJob().getId()
+                : jobs.stream().filter(j -> j.getLines().contains(line)).findFirst().orElseThrow().getId());
+        output.setJobLineId(line.getId());
+        output.setKind(kind);
+        output.setStockUnitId(unit.getId());
+        outputs.add(output);
+        return unit;
+    }
 
     private UUID assignIds(SalesInvoice sale) {
         sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));

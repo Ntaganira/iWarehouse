@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -57,6 +58,10 @@ public class CuttingJobLine extends BaseEntity {
 
     @Column(name = "cut_qty")
     private Integer cutQty;
+
+    /** The sale's size this line cuts (POS-02), if any. */
+    @Column(name = "sales_line_id")
+    private UUID salesLineId;
 
     /** m² of one piece. */
     public BigDecimal getPieceAreaM2() {

@@ -129,6 +129,13 @@
                         <label th:text="#{cutting.customerRef}">Customer's reference</label>
                         <div class="value mono" th:text="${job.customerRef ?: '—'}">Q-0017</div>
                     </div>
+                    <div class="item" th:if="${salesInvoiceNumber != null}">
+                        <label th:text="#{cutting.forInvoice}">For invoice</label>
+                        <div class="value">
+                            <a class="mono" th:href="@{/invoices/{id}(id=${job.salesInvoiceId})}" sec:authorize="hasAuthority('PAGE_INVOICES')" th:text="${salesInvoiceNumber}">INV-WH-2026-000002</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_INVOICES')" th:text="${salesInvoiceNumber}">INV-WH-2026-000002</span>
+                        </div>
+                    </div>
                     <div class="item">
                         <label th:text="#{cutting.dueDate}">Wanted by</label>
                         <div class="value" th:text="${job.dueDate != null} ? ${#temporals.format(job.dueDate, 'dd/MM/yyyy')} : '—'">10/10/2026</div>

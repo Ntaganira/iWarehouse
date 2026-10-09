@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,16 @@ class SalesRulesTest {
     void oneTaxLetterHasOneRate() {
         assertThatThrownBy(() -> Vat.totals(List.of(new Vat.Line("B", STANDARD, BigDecimal.TEN),
                 new Vat.Line("B", new BigDecimal("16"), BigDecimal.TEN)))).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void processingIsChargedOnWhatThePiecesNeed() {   // MD-06, POS-02
+        assertThat(Pricing.serviceQuantity(ChargeUnit.M2, 600, 400, 3, null)).isEqualByComparingTo("0.72");     // 0.24 m² x 3
+        assertThat(Pricing.serviceQuantity(ChargeUnit.METRE, 600, 400, 3, null)).isEqualByComparingTo("6");     // 2 m of edge x 3
+        assertThat(Pricing.serviceQuantity(ChargeUnit.METRE, 1215, 333, 1, null)).isEqualByComparingTo("3.096");
+        assertThat(Pricing.serviceQuantity(ChargeUnit.PIECE, 600, 400, 3, null)).isEqualByComparingTo("3");
+        assertThat(Pricing.serviceQuantity(ChargeUnit.HOLE, 600, 400, 3, 4)).isEqualByComparingTo("12");
+        assertThatThrownBy(() -> Pricing.serviceQuantity(ChargeUnit.HOLE, 600, 400, 3, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     // ---------------------------------------------------------------- payments

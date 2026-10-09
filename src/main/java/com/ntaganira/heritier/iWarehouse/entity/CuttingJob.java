@@ -139,6 +139,10 @@ public class CuttingJob extends BaseEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    /** The sale whose custom sizes it cuts (POS-02), if any. */
+    @Column(name = "sales_invoice_id")
+    private UUID salesInvoiceId;
+
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo")
     private List<CuttingJobLine> lines = new ArrayList<>();

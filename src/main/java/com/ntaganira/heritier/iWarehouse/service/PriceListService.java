@@ -76,6 +76,10 @@ public class PriceListService {
     }
 
     /** What a customer pays per m² of a product, and which list that price comes from. */
+    /** A processing service's price per its charge unit, and the list it comes from (MD-06). */
+    public record ServicePriceFor(BigDecimal price, PriceList list) {
+    }
+
     public record UnitPrice(BigDecimal pricePerM2, PriceList list, boolean fromDefaultList) {
 
         public boolean includesVat() {
@@ -154,6 +158,18 @@ public class PriceListService {
                         .map(PriceListItem::getPricePerM2).orElse(null);
         return Pricing.resolve(ownPrice, defaultPrice)
                 .map(r -> new UnitPrice(r.price(), r.fromDefaultList() ? defaultList : own, r.fromDefaultList()));
+    }
+
+    /** A service's price for the customer: their list first, then the default list; empty when neither prices it. */
+    public Optional<ServicePriceFor> servicePriceFor(Customer customer, ProcessingService service) {
+        PriceList defaultList = defaultList();
+        PriceList own = customer == null || customer.getPriceList() == null ? defaultList : customer.getPriceList();
+        BigDecimal ownPrice = servicePrices(own.getId()).get(service.getId());
+        if (ownPrice != null) {
+            return Optional.of(new ServicePriceFor(ownPrice, own));
+        }
+        BigDecimal defaultPrice = own.getId().equals(defaultList.getId()) ? null : servicePrices(defaultList.getId()).get(service.getId());
+        return defaultPrice == null ? Optional.empty() : Optional.of(new ServicePriceFor(defaultPrice, defaultList));
     }
 
     /** Changes to the list and its prices, newest first. */

@@ -4394,3 +4394,6 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 @media print {
   .receipt-page .receipt { border: 0; margin: 0; padding: 2mm 3mm; }
 }
+
+/* Invoice hand-over (POS-02): the pieces ticked and the scan form keep the section's spacing below the cutting jobs */
+.pos-handover, .pos-handover-scan { margin-top: 24px; }

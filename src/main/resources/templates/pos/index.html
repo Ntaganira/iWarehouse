@@ -96,6 +96,62 @@
                     </table>
                 </div>
                 <p class="form-note" th:if="${searching and results.size() >= 12}" th:text="#{pos.firstResults}">The 12 smallest pieces that fit; give a size to narrow the search.</p>
+
+                <!-- A size to cut for the customer: priced by chargeable area, cut by a cutting job once paid (POS-02) -->
+                <form th:action="@{/pos/custom}" method="post" class="pos-custom" novalidate
+                      th:with="f=${customForm}, chosen=${customForm != null ? customForm.get('serviceIds') : {}}">
+                    <input type="hidden" name="back" th:value="${searchQuery}">
+                    <h3 class="detail-heading" th:text="#{pos.custom}">Size to cut</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="custom-product" th:text="#{pos.glass}">Glass</label>
+                            <select id="custom-product" name="productId" data-searchable th:classappend="${customField == 'productId'} ? 'is-invalid'">
+                                <option value="" th:text="#{pos.chooseGlass}">Choose the glass</option>
+                                <option th:each="p : ${cuttable}" th:value="${p.id}" th:selected="${f != null and p.id == f.get('productId')}"
+                                        th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-width" th:text="#{po.width}">Width (mm)</label>
+                            <input type="number" id="custom-width" name="widthMm" min="1" max="10000" step="1" inputmode="numeric"
+                                   th:value="${f != null ? f.get('widthMm') : ''}" th:classappend="${customField == 'widthMm'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-height" th:text="#{po.height}">Height (mm)</label>
+                            <input type="number" id="custom-height" name="heightMm" min="1" max="10000" step="1" inputmode="numeric"
+                                   th:value="${f != null ? f.get('heightMm') : ''}" th:classappend="${customField == 'heightMm'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-quantity" th:text="#{pos.quantity}">Pieces</label>
+                            <input type="number" id="custom-quantity" name="quantity" min="1" max="999" step="1" inputmode="numeric"
+                                   th:value="${f != null and f.get('quantity') != null ? f.get('quantity') : 1}" th:classappend="${customField == 'quantity'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-mark" th:text="#{pos.mark}">Customer's mark</label>
+                            <input type="text" id="custom-mark" name="mark" maxlength="60" th:value="${f != null ? f.get('mark') : ''}"
+                                   th:placeholder="#{pos.markPh}" th:classappend="${customField == 'mark'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group full-width" th:unless="${#lists.isEmpty(services)}">
+                            <span class="count-at-label" th:text="#{pos.processing}">Processing</span>
+                            <div class="proc-checks" role="group" th:aria-label="#{pos.processing}">
+                                <label class="proc-check" th:each="sv : ${services}" th:title="#{${'service.unit.' + sv.chargeUnit}}">
+                                    <input type="checkbox" name="serviceIds" th:value="${sv.id}" th:checked="${#lists.contains(chosen, sv.id)}">
+                                    <span th:text="${sv.name}">Edging</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" th:if="${holeServices}">
+                            <label for="custom-holes" th:text="#{pos.holes}">Holes per piece</label>
+                            <input type="number" id="custom-holes" name="holes" min="1" max="50" step="1" inputmode="numeric"
+                                   th:value="${f != null ? f.get('holes') : ''}" th:classappend="${customField == 'holes'} ? 'is-invalid'">
+                            <span class="hint" th:text="#{pos.holesHint}">For processing charged per hole</span>
+                        </div>
+                    </div>
+                    <p class="form-note" th:text="#{pos.customNote}">Paying creates the cutting job; the pieces are reserved for the customer and handed over from the invoice.</p>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" th:text="#{pos.addCustom}">Add the size</button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -148,14 +204,8 @@
                         </thead>
                         <tbody>
                             <tr th:each="l : ${lines}">
-                                <td>
-                                    <span class="mono strong nowrap" th:text="${l.unitCode}">U-WH-000002</span>
-                                    <div class="cell-sub mono nowrap" th:text="${l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm}">CLR-6 · 3210 × 2250</div>
-                                </td>
-                                <td class="num nowrap">
-                                    <span th:text="${@num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">7.2225 m² × 27,000</span>
-                                    <div class="cell-sub" th:text="${l.pricesIncludeVat} ? #{pos.vatIncluded} : #{pos.vatExcluded}">VAT included</div>
-                                </td>
+                                <td><th:block th:replace="~{invoices/list :: lineWhat(${l})}"></th:block></td>
+                                <td class="num nowrap"><th:block th:replace="~{invoices/list :: lineCharge(${l})}"></th:block></td>
                                 <td class="num">
                                     <span class="strong" th:text="${@num.money(l.amount)}">195,008</span>
                                     <div class="cell-sub" th:text="#{pos.vatShort(${l.taxCode}, ${@num.m2(l.vatRate)})}">VAT B 18%</div>

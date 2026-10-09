@@ -240,6 +240,23 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    /**
+     * Pieces of a paid sale's custom sizes handed over (SRS 5.3 step 5): Dr Cost of Goods Sold / Cr Inventory, the
+     * change of each glass's value (the sale itself was posted when it was paid).
+     */
+    public JournalEntry saleDelivery(SalesInvoice invoice, StockValues before) {
+        Journal journal = Journal.of(JournalSource.SALES_DELIVERY, invoice.getId(), invoice.getNumber(), today(),
+                "Pieces of sale " + invoice.getNumber() + " handed over");
+        Map<UUID, BigDecimal> after = valuesNow(before);
+        journal.stockChange(before.values(), after);
+        BigDecimal cost = BigDecimal.ZERO;
+        for (Map.Entry<UUID, BigDecimal> e : before.values().entrySet()) {
+            cost = cost.add(e.getValue().subtract(after.getOrDefault(e.getKey(), BigDecimal.ZERO)));
+        }
+        journal.debit(AccountKey.COGS, cost);
+        return journalService.post(journal);
+    }
+
     /** A till opened: its float leaves the main cash vault for the till (Dr Cash on Hand / Cr Main Cash Vault). */
     public JournalEntry tillOpened(TillSession session) {
         Journal journal = Journal.of(JournalSource.TILL_OPENED, session.getId(), session.getNumber(),

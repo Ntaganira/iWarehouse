@@ -32,6 +32,9 @@ public interface CuttingJobRepository extends JpaRepository<CuttingJob, UUID>, J
     /** Jobs cutting the rest of a job, not cancelled. */
     List<CuttingJob> findByParentJobIdAndStatusNot(UUID parentJobId, CuttingJobStatus status);
 
+    /** The cutting jobs of a sale's custom sizes (POS-02), "Cut the rest" jobs included. */
+    List<CuttingJob> findBySalesInvoiceIdOrderByNumberAsc(UUID salesInvoiceId);
+
     /** The job a unit was taken for or cut by. */
     Optional<CuttingJob> findFirstBySourceUnitIdAndStatusIn(UUID sourceUnitId, Collection<CuttingJobStatus> statuses);
 

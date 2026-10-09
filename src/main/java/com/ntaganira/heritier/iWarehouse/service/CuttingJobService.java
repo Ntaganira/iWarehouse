@@ -894,6 +894,7 @@ public class CuttingJobService {
         rest.setDueDate(job.getDueDate());
         rest.setNotes(job.getNotes());
         rest.setParentJobId(job.getId());
+        rest.setSalesInvoiceId(job.getSalesInvoiceId());
         int no = 0;
         for (CuttingJobLine line : job.getLines()) {
             if (line.getShortQty() <= 0) {
@@ -907,6 +908,7 @@ public class CuttingJobService {
             copy.setQuantity(line.getShortQty());
             copy.setProcessing(line.getProcessing());
             copy.setMark(line.getMark());
+            copy.setSalesLineId(line.getSalesLineId());
             rest.getLines().add(copy);
         }
         return repo.save(rest);

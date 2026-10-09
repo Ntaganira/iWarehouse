@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
@@ -42,18 +43,20 @@ public class PosController {
     private final StockService stockService;
     private final ProductRepository productRepo;
     private final CustomerRepository customerRepo;
+    private final PriceListService priceListService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
 
     public PosController(TillService tillService, SalesService salesService, StockService stockService,
-                         ProductRepository productRepo, CustomerRepository customerRepo, ActivityLogService activityLogService,
-                         Messages messages, NumberFormats num) {
+                         ProductRepository productRepo, CustomerRepository customerRepo, PriceListService priceListService,
+                         ActivityLogService activityLogService, Messages messages, NumberFormats num) {
         this.tillService = tillService;
         this.salesService = salesService;
         this.stockService = stockService;
         this.productRepo = productRepo;
         this.customerRepo = customerRepo;
+        this.priceListService = priceListService;
         this.activityLogService = activityLogService;
         this.messages = messages;
         this.num = num;
@@ -92,7 +95,13 @@ public class PosController {
         model.addAttribute("totals", sale == null ? Vat.Totals.NONE : salesService.totals(sale));
         model.addAttribute("credit", customer == null ? null : salesService.credit(customer));
         model.addAttribute("customers", salesService.customers());
-        model.addAttribute("products", productRepo.findByEnabledTrueOrderByCodeAsc());
+        List<Product> products = productRepo.findByEnabledTrueOrderByCodeAsc();
+        model.addAttribute("products", products);
+        // Sizes are cut from cuttable glass only (tempered glass is made to size)
+        model.addAttribute("cuttable", products.stream().filter(p -> p.getGlassType().isCuttable()).toList());
+        List<ProcessingService> services = priceListService.services().stream().filter(ProcessingService::isEnabled).toList();
+        model.addAttribute("services", services);
+        model.addAttribute("holeServices", services.stream().anyMatch(sv -> sv.getChargeUnit() == ChargeUnit.HOLE));
         model.addAttribute("results", results);
         model.addAttribute("prices", customer == null ? Map.of() : salesService.prices(customer, results));
         model.addAttribute("inSale", inSale);
@@ -180,6 +189,41 @@ public class PosController {
         return "redirect:/pos" + query(back);
     }
 
+    /** Adds a size to cut, with its processing (POS-02). */
+    @PostMapping("/custom")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String custom(@RequestParam(required = false) UUID productId, @RequestParam(required = false) Integer widthMm,
+                         @RequestParam(required = false) Integer heightMm, @RequestParam(required = false) Integer quantity,
+                         @RequestParam(required = false) List<UUID> serviceIds, @RequestParam(required = false) Integer holes,
+                         @RequestParam(required = false) String mark, @RequestParam(required = false) String back,
+                         RedirectAttributes redirect) {
+        try {
+            SalesInvoice sale = salesService.addCustom(new SalesService.CustomSize(productId, widthMm, heightMm, quantity, serviceIds,
+                    holes, mark));
+            SalesInvoiceLine size = sale.getLines().stream().filter(SalesInvoiceLine::isCustomPiece)
+                    .reduce((a, b) -> b).orElseThrow();
+            BigDecimal amount = sale.getLines().stream().filter(l -> l == size || l.getParentLine() == size)
+                    .map(SalesInvoiceLine::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+            String what = size.getProduct().getCode() + " " + size.getWidthMm() + " x " + size.getHeightMm() + " x " + size.getQuantity();
+            activityLogService.record(MODULE, "UPDATE_SALE", "Added the size " + what + (size.getProcessing() == null ? "" : " (" + size.getProcessing() + ")")
+                    + ", " + num.money(amount) + " RWF, to the sale at till " + sale.getTillSession().getNumber(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.customAdded", what, num.money(amount)));
+        } catch (BusinessException e) {
+            fail(redirect, "UPDATE_SALE", "Failed to add a size to a sale", e);
+            Map<String, Object> form = new HashMap<>();
+            form.put("productId", productId);
+            form.put("widthMm", widthMm);
+            form.put("heightMm", heightMm);
+            form.put("quantity", quantity);
+            form.put("serviceIds", serviceIds == null ? List.of() : serviceIds);
+            form.put("holes", holes);
+            form.put("mark", mark);
+            redirect.addFlashAttribute("customForm", form);
+            redirect.addFlashAttribute("customField", e.getField());
+        }
+        return "redirect:/pos" + query(back);
+    }
+
     @PostMapping("/lines/{lineId}/remove")
     @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
     public String remove(@PathVariable UUID lineId, @RequestParam(required = false) String back, RedirectAttributes redirect) {
@@ -237,11 +281,14 @@ public class PosController {
             SalesService.Paid paid = salesService.pay(entered);
             SalesInvoice invoice = paid.invoice();
             activityLogService.record(MODULE, "CREATE_SALES_INVOICE", "Issued " + invoice.getNumber() + " to " + invoice.getBillTo()
-                    + ": " + num.money(invoice.getTotalAmount()) + " RWF" + (paid.journal() == null ? "" : ", journal " + paid.journal().getNumber()),
+                    + ": " + num.money(invoice.getTotalAmount()) + " RWF" + (paid.journal() == null ? "" : ", journal " + paid.journal().getNumber())
+                    + (paid.jobs().isEmpty() ? "" : ", cutting jobs " + paid.jobs().stream().map(CuttingJob::getNumber).toList()),
                     ActivityStatus.SUCCESS);
-            redirect.addFlashAttribute("flashSuccess", paid.change().signum() > 0
+            String jobs = paid.jobs().stream().map(CuttingJob::getNumber).reduce((a, b) -> a + ", " + b).orElse(null);
+            String paidText = paid.change().signum() > 0
                     ? messages.get("sale.paidChange", invoice.getNumber(), num.money(paid.change()))
-                    : messages.get("sale.paid", invoice.getNumber()));
+                    : messages.get("sale.paid", invoice.getNumber());
+            redirect.addFlashAttribute("flashSuccess", jobs == null ? paidText : paidText + ". " + messages.get("sale.jobsCreated", jobs));
             return "redirect:/invoices/" + invoice.getId();
         } catch (BusinessException e) {
             fail(redirect, "CREATE_SALES_INVOICE", "Failed to take the payment of a sale", e);

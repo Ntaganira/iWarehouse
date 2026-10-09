@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V18.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V19.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-09)
@@ -26,7 +26,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Rack and slot labels; put-away decided (none) | Done (M1) | V15, labels from `/locations/{id}` |
 | Accounting core: chart of accounts, posting engine, journals, trial balance (AT-10 passes) | Done (M2) | V16, `/accounting/journals`, `/accounting/accounts`, `/accounting/trial-balance` |
 | Counter sales, part 1: tills, POS for stock units, VAT, split payment, invoices, receipts (AT-08 passes) | Done (M3, part 1) | V17, `/pos`, `/invoices`, `/till-sessions` |
-| Counter sales, part 2: custom cut sizes, credit and discount approvals, quotations, orders, returns | **Next** (M3) | — |
+| Counter sales, part 2: custom cut sizes (done, V18), credit and discount approvals, quotations, orders, returns | **Next** (M3) | V18, `/pos`, `/invoices` |
 | EBM / VSDC fiscal signing | Not started (M4) | — |
 | Customer and supplier accounts, period close, financial statements | Not started (M5) | — |
 | Dashboard, reports, alerts, notifications, files | Not started (M6) | — |
@@ -58,14 +58,14 @@ Unit tests: 324, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 an
 
 ---
 
-## M3 — Counter sales (part 1 done 2026-10-09: stock sales; custom cuts, approvals, quotations, orders, returns next)
+## M3 — Counter sales (part 1 done 2026-10-09: stock sales; custom cuts done 2026-10-09; approvals, quotations, orders, returns next)
 
 Goal: the cashier sells stock and custom cuts, takes split payments and gives receipts (POS-01..POS-10, TAX-01, TAX-04, SRS 5.3). AT-08.
 
 - [x] VAT per line from the product's tax category (TAX-01) (M); buyer TIN on the invoice (TAX-04) (M) — 2026-10-09: `Vat` (pure): a line is whole RWF with VAT included (price per m² x chargeable area, VAT added when the list excludes it, rounded once); VAT per tax letter on the invoice totals, as EBM reports it (A exempt, B 18%, C zero-rated). The letter and rate are copied on the line. Buyer's name and TIN (9 digits) on the invoice; an account customer's TIN by default
 - [x] Till sessions (POS-10) (M) — 2026-10-09: `/pos` opens the cashier's till with a float (journal: Dr Cash on Hand / Cr Main Cash Vault), one open till per cashier; closing compares the cash counted with the float plus the cash kept from sales: a difference needs a note, goes to Cash Over/Short and the counted cash back to the vault. A till does not close while a sale is rung up in it. `/till-sessions` lists them with their takings per payment method, invoices, journals and History
 - [x] POS screen for units from stock (POS-01, POS-04) (L) — 2026-10-09: scan a label (Enter adds it) or search the smallest available piece that fits a size (INV-06), priced for the sale's customer; the sale is a draft invoice of the till, its units held (`StockService.holds`) until it is paid or cancelled; the customer's price list reprices it (a unit reserved for another customer is refused); payment dialog split over cash (handed over, change shown), mobile money, card and bank transfer (with references) and customer credit (account customers, within the credit limit: over it is refused until the approval below exists). Two panes from 1600 px, stacked below
-- [ ] Custom cut sizes on the POS (POS-02) (L): width x height x quantity and processing, priced by chargeable area, creating a linked cutting job; the invoice is issued when paid (or a deposit, POS-08) and the pieces leave stock when collected, with their COGS at MAC (SRS 5.3)
+- [x] Custom cut sizes on the POS (POS-02) (L) — 2026-10-09 (V18): width x height x quantity of a cuttable glass with the customer's mark, priced by chargeable area like a unit; its processing (edging per metre, drilling per hole...) are service lines under the size, priced from the customer's list. Paying issues the invoice and creates one cutting job per glass for it (customer reference = the invoice number; the sizes with their processing and mark; the job links the invoice and each job line its size); nothing leaves stock yet. The pieces cut are RESERVED and cannot be rung up at the counter. The invoice hands over only the pieces its own jobs cut, ticked or scanned: SOLD (SALE movement), COGS at MAC (Dr COGS / Cr Inventory), "Handed over x of y" per size, `sales_deliveries` append-only (DELIVER_SALE: cashier, warehouse supervisor). Deposits come with the orders (POS-08)
 - [x] Sales invoice and receipt (M) — 2026-10-09: paying issues the invoice (INV-WH-2026-000001), sells the units (SOLD, SALE movement), posts the journal (Dr cash / mobile money / bank / the customer's receivable, Cr sales net and VAT output; Dr COGS / Cr Inventory at MAC) and opens the invoice: lines, VAT per letter, payments, journal, History. 80 mm receipt to print (`/invoices/{id}/receipt`). A PDF copy comes with the reports' exports (M6); the EBM signature with M4
 - [ ] Credit limits: over the limit needs a manager's approval (POS-05) (M); discounts and price overrides above the role limit (`DISCOUNT_APPROVAL_PERCENT`) need approval with a reason (POS-06) (M)
 - [ ] Quotations with validity, converted to an order or invoice (POS-03) (M); sales orders with deposits and balance on collection (POS-08) (S); cut pieces RESERVED for the order until collected
@@ -230,6 +230,7 @@ Answers change what gets built; record each answer next to the question.
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
 - Counter sales on 2026-10-09 by qa-admin: tills TILL-WH-2026-000001..6 (all closed; -000002 sold U-WH-000061 and U-WH-000011 on INV-WH-2026-000001, 389,408 RWF to "Jean Habimana", TIN 102938475, half cash half mobile money MP-778812, and closed 500 RWF short, "Change given twice"; the others opened and closed for checks without a sale), and their journals
+- Custom cut sales on 2026-10-09 by qa-admin (2 pieces CLR-6 600 x 400 with edging and drilling, 21,500 RWF each, walk-in): INV-WH-2026-000002..7, their jobs CUT-WH-2026-000008 and -000010..13 (pieces U-WH-000062..76 handed over, off-cuts left on the off-cut rack or cut again) and tills TILL-WH-2026-000007..12. Before the hand-over fix, INV-WH-2026-000003 was handed over the pieces of -000002: -000002 shows 0 of 2 handed over and -000003 2 of 2; -000003's job CUT-WH-2026-000009 was cancelled (U-WH-000064 back in stock). Journals up to JV-WH-2026-000029
 - Ledger started on 2026-10-09: opening stock JV-WH-2026-000001 (7,135,242.24 RWF), then ADJ-WH-2026-000006 (U-WH-000060 written off as broken, approved by owner38648) and its journal JV-WH-2026-000002. Account 5190 "Office rent (test)", deactivated. Go-live starts the ledger again from an empty database
 - Labels printed for WH-A-OC, WH-A-R01, WH-A-R02 and WH-A-R04 by qa-admin on 2026-10-09: their codes are fixed (the real racks get their own codes and labels at go-live)
 - Stock counts CNT-WH-2026-000001..7: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled

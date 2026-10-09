@@ -28,6 +28,8 @@ public enum DocumentType {
     TRIP("TRP"),
     JOURNAL("JV"),
     TILL_SESSION("TILL"),
+    /** A discount or credit waiting for a manager at the counter (POS-05, POS-06). */
+    SALE_APPROVAL("APR"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

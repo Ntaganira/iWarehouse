@@ -50,6 +50,8 @@
             <div class="receipt-sub" th:if="${l.stockUnit}" th:text="${l.unitCode + ' · ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">U-WH-000002 · 7.2225 m² × 27,000</div>
             <div class="receipt-sub" th:if="${l.customPiece}" th:text="#{posReceipt.custom(${@num.m2(l.chargeableAreaM2)}, ${@num.money(l.pricePerM2)})}">to cut · 0.25 m² × 27,000 each</div>
             <div class="receipt-sub" th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit) + ' × ' + @num.money(l.serviceUnitPrice)}">4 m × 1,500</div>
+            <div class="receipt-sub" th:if="${l.priceChanged and l.discountPercent.signum() > 0}"
+                 th:text="#{posReceipt.discount(${@num.m2(l.discountPercent)}, ${@num.money(l.listPrice)})}">discount 11.11% (list 27,000)</div>
         </div>
         <div class="receipt-rule"></div>
         <div class="receipt-row receipt-total"><span th:text="#{posReceipt.total}">TOTAL</span><span th:text="${@num.money(invoice.totalAmount)}">195,008</span></div>

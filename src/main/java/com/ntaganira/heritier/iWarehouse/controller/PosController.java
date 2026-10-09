@@ -1,10 +1,12 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
+import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
@@ -27,7 +29,9 @@ import java.util.*;
  * - User      : Hntaganira
  * - Desc      : The counter POS (POS-01, POS-04, POS-10): open the till with a float; ring up a sale by scanning
  *               labels or from the smallest-fit search; choose the customer and the buyer's name and TIN; take a
- *               split payment, which issues the invoice; close the till with the cash counted.
+ *               split payment, which issues the invoice; close the till with the cash counted. Change a line's
+ *               price with a reason, ask a manager for a discount above the cashier's limit (POS-06) or credit
+ *               above the customer's limit (POS-05), withdraw a request; the page follows their decisions.
  *               PAGE_POS + PERM_SELL.
  * </pre>
  */
@@ -94,6 +98,16 @@ public class PosController {
         model.addAttribute("customer", customer);
         model.addAttribute("totals", sale == null ? Vat.Totals.NONE : salesService.totals(sale));
         model.addAttribute("credit", customer == null ? null : salesService.credit(customer));
+        // Approval requests (POS-05, POS-06): the latest of each line, those waiting, the credit approved
+        List<SaleApproval> approvals = salesService.approvals(sale);
+        Map<UUID, SaleApproval> lineApprovals = new HashMap<>();
+        approvals.stream().filter(a -> a.getLineId() != null).forEach(a -> lineApprovals.put(a.getLineId(), a));
+        model.addAttribute("lineApprovals", lineApprovals);
+        model.addAttribute("waiting", approvals.stream().filter(SaleApproval::isPending).toList());
+        model.addAttribute("creditApproval", approvals.stream().filter(a -> a.isCredit() && !a.isPending()).reduce((a, b) -> b)
+                .filter(a -> a.getStatus() != SaleApprovalStatus.WITHDRAWN).orElse(null));
+        model.addAttribute("approvalState", approvalState(approvals));
+        model.addAttribute("discountLimit", salesService.discountLimit());
         model.addAttribute("customers", salesService.customers());
         List<Product> products = productRepo.findByEnabledTrueOrderByCodeAsc();
         model.addAttribute("products", products);
@@ -267,6 +281,106 @@ public class PosController {
         return "redirect:/pos";
     }
 
+    // ---------------------------------------------------------------- price changes and approvals (POS-05, POS-06)
+
+    /** Changes a line's price with a reason: at once within the cashier's limit, otherwise asked of a manager. */
+    @PostMapping("/lines/{lineId}/price")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String price(@PathVariable UUID lineId, @RequestParam(required = false) BigDecimal price,
+                        @RequestParam(required = false) String reason, @RequestParam(required = false) String back,
+                        RedirectAttributes redirect) {
+        try {
+            SalesService.PriceChange change = reason == null || reason.isBlank()
+                    ? salesService.changePrice(lineId, price, reason)
+                    : AuditContext.withReason(reason.trim(), () -> salesService.changePrice(lineId, price, reason));
+            String what = change.line().getLabel();
+            if (change.approval() != null) {
+                SaleApproval a = change.approval();
+                activityLogService.record(MODULE, "CREATE_SALE_APPROVAL", "Asked " + a.getNumber() + " for " + what + ": "
+                        + num.money(a.getListPrice()) + " to " + num.money(a.getRequestedPrice()) + " (" + num.m2(a.getDiscountPercent())
+                        + "% off, limit " + num.m2(a.getLimitPercent()) + "%): " + a.getReason(), ActivityStatus.SUCCESS);
+                redirect.addFlashAttribute("flashWarning", messages.get("sale.price.asked", a.getNumber(), num.m2(a.getDiscountPercent()),
+                        num.m2(a.getLimitPercent())));
+            } else if (change.line().isPriceChanged()) {
+                activityLogService.record(MODULE, "UPDATE_SALE", "Changed the price of " + what + " from " + num.money(change.listPrice())
+                        + " to " + num.money(change.price()) + " (" + num.m2(change.discount()) + "% off): " + change.line().getPriceReason(),
+                        ActivityStatus.SUCCESS);
+                redirect.addFlashAttribute("flashSuccess", messages.get("sale.price.changed", what, num.money(change.line().getAmount())));
+            } else {
+                activityLogService.record(MODULE, "UPDATE_SALE", "Put " + what + " back at its list price " + num.money(change.listPrice()),
+                        ActivityStatus.SUCCESS);
+                redirect.addFlashAttribute("flashSuccess", messages.get("sale.price.restored", what, num.money(change.line().getAmount())));
+            }
+        } catch (BusinessException e) {
+            fail(redirect, "UPDATE_SALE", "Failed to change the price of a sale line", e);
+            Map<String, Object> form = new HashMap<>();
+            form.put("lineId", lineId);
+            form.put("price", plain(price));
+            form.put("reason", reason);
+            redirect.addFlashAttribute("priceForm", form);
+            redirect.addFlashAttribute("priceField", e.getField());
+        }
+        return "redirect:/pos" + query(back);
+    }
+
+    /** Asks a manager to approve credit above what the customer has left (POS-05). */
+    @PostMapping("/credit-approval")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String creditApproval(@RequestParam(required = false) BigDecimal cash, @RequestParam(required = false) BigDecimal mobileMoney,
+                                 @RequestParam(required = false) String mobileMoneyRef, @RequestParam(required = false) BigDecimal card,
+                                 @RequestParam(required = false) String cardRef, @RequestParam(required = false) BigDecimal bankTransfer,
+                                 @RequestParam(required = false) String bankRef, @RequestParam(required = false) BigDecimal credit,
+                                 @RequestParam(required = false) String creditReason, RedirectAttributes redirect) {
+        try {
+            SaleApproval a = AuditContext.withReason(creditReason == null ? null : creditReason.trim(),
+                    () -> salesService.requestCredit(credit, creditReason));
+            activityLogService.record(MODULE, "CREATE_SALE_APPROVAL", "Asked " + a.getNumber() + " for credit of " + num.money(a.getCreditAmount())
+                    + " RWF for " + a.getSubject() + " (limit " + num.money(a.getCreditLimit()) + ", owed " + num.money(a.getOwed())
+                    + "): " + a.getReason(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashWarning", messages.get("sale.credit.asked", a.getNumber(), num.money(a.getCreditAmount())));
+        } catch (BusinessException e) {
+            fail(redirect, "CREATE_SALE_APPROVAL", "Failed to ask for credit approval", e);
+            Map<String, String> form = payForm(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, credit);
+            form.put("creditReason", creditReason);
+            redirect.addFlashAttribute("payForm", form);
+            redirect.addFlashAttribute("payField", e.getField());
+            redirect.addFlashAttribute("creditOver", true);
+        }
+        return "redirect:/pos";
+    }
+
+    /** Takes back a request still waiting, with a reason. */
+    @PostMapping("/approvals/{id}/withdraw")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String withdraw(@PathVariable UUID id, @RequestParam(required = false) String reason, @RequestParam(required = false) String back,
+                           RedirectAttributes redirect) {
+        try {
+            SaleApproval a = AuditContext.withReason(reason == null ? null : reason.trim(), () -> salesService.withdrawRequest(id, reason));
+            activityLogService.record(MODULE, "CANCEL_SALE_APPROVAL", "Withdrew " + a.getNumber() + " (" + a.getSubject() + "): "
+                    + a.getDecisionNote(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.approval.withdrawn", a.getNumber()));
+        } catch (BusinessException e) {
+            fail(redirect, "CANCEL_SALE_APPROVAL", "Failed to withdraw an approval request", e);
+        }
+        return "redirect:/pos" + query(back);
+    }
+
+    /** Where the sale's requests stand, for the page to reload once a manager decides. */
+    @GetMapping(value = "/approvals/state", produces = "application/json")
+    @ResponseBody
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public Map<String, String> approvalsState() {
+        SalesInvoice sale = tillService.current().flatMap(salesService::cart).orElse(null);
+        return Map.of("state", approvalState(salesService.approvals(sale)));
+    }
+
+    /** Each request with its status: changes when one is decided. */
+    private static String approvalState(List<SaleApproval> approvals) {
+        StringBuilder state = new StringBuilder();
+        approvals.forEach(a -> state.append(a.getNumber()).append(':').append(a.getStatus()).append(';'));
+        return state.toString();
+    }
+
     // ---------------------------------------------------------------- payment (POS-04)
 
     @PostMapping("/pay")
@@ -292,17 +406,10 @@ public class PosController {
             return "redirect:/invoices/" + invoice.getId();
         } catch (BusinessException e) {
             fail(redirect, "CREATE_SALES_INVOICE", "Failed to take the payment of a sale", e);
-            Map<String, String> form = new HashMap<>();
-            form.put("cash", plain(cash));
-            form.put("mobileMoney", plain(mobileMoney));
-            form.put("mobileMoneyRef", mobileMoneyRef);
-            form.put("card", plain(card));
-            form.put("cardRef", cardRef);
-            form.put("bankTransfer", plain(bankTransfer));
-            form.put("bankRef", bankRef);
-            form.put("credit", plain(credit));
-            redirect.addFlashAttribute("payForm", form);
+            redirect.addFlashAttribute("payForm", payForm(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, credit));
             redirect.addFlashAttribute("payField", e.getField());
+            // Credit above what the customer has left: the dialog offers to ask a manager (POS-05)
+            redirect.addFlashAttribute("creditOver", e.getMessageKey().startsWith("sale.pay.credit.over"));
             return "redirect:/pos";
         }
     }
@@ -321,6 +428,20 @@ public class PosController {
             return "";
         }
         return "?" + back;
+    }
+
+    private static Map<String, String> payForm(BigDecimal cash, BigDecimal mobileMoney, String mobileMoneyRef, BigDecimal card,
+                                               String cardRef, BigDecimal bankTransfer, String bankRef, BigDecimal credit) {
+        Map<String, String> form = new HashMap<>();
+        form.put("cash", plain(cash));
+        form.put("mobileMoney", plain(mobileMoney));
+        form.put("mobileMoneyRef", mobileMoneyRef);
+        form.put("card", plain(card));
+        form.put("cardRef", cardRef);
+        form.put("bankTransfer", plain(bankTransfer));
+        form.put("bankRef", bankRef);
+        form.put("credit", plain(credit));
+        return form;
     }
 
     private static String plain(BigDecimal value) {

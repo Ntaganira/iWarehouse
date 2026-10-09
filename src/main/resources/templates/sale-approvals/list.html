@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{saleApproval.title}, ~{::content})}">
+<head><title>Sale Approvals - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{saleApproval.title}">Sale Approvals</h1>
+            <div class="subtitle" th:text="#{saleApproval.subtitle}">Discounts above the cashier's limit and credit above the customer's limit, waiting for a manager</div>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${pending > 0}" sec:authorize="hasAuthority('PERM_APPROVE_SALE')">
+        <span th:text="#{saleApproval.pendingNote(${pending})}">2 requests wait for approval.</span>
+        <a th:href="@{/sale-approvals(status='PENDING')}" th:text="#{adjustment.showPending}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{saleApproval.sectionTitle}">Requests</span>
+                <span class="section-count" th:text="${approvals.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/sale-approvals}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{saleApproval.searchPh}" th:aria-label="#{saleApproval.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'saleApproval.status.' + st}}">Approved</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{saleApproval.number}">Request</th>
+                        <th th:text="#{adjustment.when}">Asked</th>
+                        <th th:text="#{saleApproval.what}">For</th>
+                        <th th:text="#{saleApproval.change}">Change</th>
+                        <th th:text="#{adjustment.requestedBy}">Asked by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${approvals.content}">
+                        <td><a class="row-link strong mono" th:href="@{/sale-approvals/{id}(id=${a.id})}" th:text="${a.number}">APR-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(a.createdAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 16:20</td>
+                        <td>
+                            <span class="strong" th:text="#{${'saleApproval.kind.' + a.kind}}">Discount</span>
+                            <div class="cell-sub" th:text="${a.subject}">U-WH-000012 · CLR-6 3210 x 2250</div>
+                            <div class="cell-sub" th:text="${a.reason}">Regular customer</div>
+                        </td>
+                        <td><th:block th:replace="~{sale-approvals/list :: approvalChange(${a})}"></th:block></td>
+                        <td th:text="${a.requestedBy}">cashier1</td>
+                        <td><th:block th:replace="~{sale-approvals/list :: approvalStatus(${a.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(approvals.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{saleApproval.empty}">No requests found</h3>
+                                <p th:text="#{saleApproval.emptyHint}">Cashiers ask here for a discount above their limit or credit above the customer's limit</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${approvals}, '/sale-approvals', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a request. */-->
+<th:block th:fragment="approvalStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING'" class="badge badge-warning" th:text="#{saleApproval.status.PENDING}">Waiting</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{saleApproval.status.APPROVED}">Approved</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{saleApproval.status.REJECTED}">Rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{saleApproval.status.WITHDRAWN}">Withdrawn</span>
+</th:block>
+
+<!--/* What a request changes: the price and the discount, or the credit and how far over the limit. */-->
+<th:block th:fragment="approvalChange(a)">
+    <th:block th:if="${a.price}">
+        <span class="nowrap" th:text="${@num.money(a.listPrice) + ' → ' + @num.money(a.requestedPrice)}">27,000 → 24,000</span>
+        <div class="cell-sub" th:text="#{saleApproval.discountOf(${@num.m2(a.discountPercent)}, ${@num.m2(a.limitPercent)})}">11.11% off (limit 5%)</div>
+    </th:block>
+    <th:block th:if="${a.credit}">
+        <span class="nowrap" th:text="#{saleApproval.creditOf(${@num.money(a.creditAmount)})}">Credit 300,000 RWF</span>
+        <div class="cell-sub" th:text="#{saleApproval.overBy(${@num.money(a.overLimit)})}">120,000 RWF over the limit</div>
+    </th:block>
+</th:block>
+</body>
+</html>

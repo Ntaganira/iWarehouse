@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,12 +41,18 @@ import java.util.stream.Collectors;
  *               POS-05), issues the invoice (INV number), sells the units (SOLD) and posts the journal: sales,
  *               VAT output, and the glass at MAC. Sizes to cut (POS-02) are priced by chargeable area with their
  *               processing as service lines; paying creates their cutting jobs, and the pieces are handed over
- *               later (sold then, their cost posted: SRS 5.3).
+ *               later (sold then, their cost posted: SRS 5.3). A line's price can be changed with a reason
+ *               (POS-06): within the cashier's discount limit at once, above it once a manager approves; credit
+ *               above what the customer has left needs a manager's approval too (POS-05). Requests still pending
+ *               stop the payment.
  * </pre>
  */
 @Service
 @Transactional(readOnly = true)
 public class SalesService {
+
+    /** The highest price a line can be given (NUMERIC(18,2) with room for the area). */
+    private static final BigDecimal MAX_PRICE = new BigDecimal("999999999");
 
     private final SalesInvoiceRepository repo;
     private final SalesPaymentRepository paymentRepo;
@@ -59,6 +66,8 @@ public class SalesService {
     private final CuttingJobOutputRepository outputRepo;
     private final CuttingJobLineRepository jobLineRepo;
     private final SalesDeliveryRepository deliveryRepo;
+    private final SaleApprovalRepository approvalRepo;
+    private final UserRepository userRepo;
     private final TillService tillService;
     private final CuttingJobService cuttingJobService;
     private final StockService stockService;
@@ -66,15 +75,17 @@ public class SalesService {
     private final PostingService postingService;
     private final JournalService journalService;
     private final DocumentNumberService numbers;
+    private final SettingService settingService;
     private final Clock clock;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
                         ProductRepository productRepo, CustomerRepository customerRepo, CurrencyRepository currencyRepo,
                         ProcessingServiceRepository serviceRepo, TaxCategoryRepository taxRepo, CuttingJobRepository jobRepo,
                         CuttingJobOutputRepository outputRepo, CuttingJobLineRepository jobLineRepo,
-                        SalesDeliveryRepository deliveryRepo, TillService tillService, CuttingJobService cuttingJobService,
-                        StockService stockService, PriceListService priceListService, PostingService postingService,
-                        JournalService journalService, DocumentNumberService numbers, Clock clock) {
+                        SalesDeliveryRepository deliveryRepo, SaleApprovalRepository approvalRepo, UserRepository userRepo,
+                        TillService tillService, CuttingJobService cuttingJobService, StockService stockService,
+                        PriceListService priceListService, PostingService postingService, JournalService journalService,
+                        DocumentNumberService numbers, SettingService settingService, Clock clock) {
         this.repo = repo;
         this.paymentRepo = paymentRepo;
         this.unitRepo = unitRepo;
@@ -87,6 +98,8 @@ public class SalesService {
         this.outputRepo = outputRepo;
         this.jobLineRepo = jobLineRepo;
         this.deliveryRepo = deliveryRepo;
+        this.approvalRepo = approvalRepo;
+        this.userRepo = userRepo;
         this.tillService = tillService;
         this.cuttingJobService = cuttingJobService;
         this.stockService = stockService;
@@ -94,6 +107,7 @@ public class SalesService {
         this.postingService = postingService;
         this.journalService = journalService;
         this.numbers = numbers;
+        this.settingService = settingService;
         this.clock = clock;
     }
 
@@ -116,6 +130,11 @@ public class SalesService {
 
     /** Pieces handed over: the units sold and the journal of their cost. */
     public record Delivered(SalesInvoice invoice, List<StockUnit> units, JournalEntry journal) {
+    }
+
+    /** A line's price changed (POS-06): applied at once (no approval), or waiting for the approval. */
+    public record PriceChange(SalesInvoiceLine line, BigDecimal listPrice, BigDecimal price, BigDecimal discount,
+                              SaleApproval approval) {
     }
 
     /** How far a custom size is: pieces ordered, handed over and still to hand over. */
@@ -172,6 +191,22 @@ public class SalesService {
     /** The issued invoices of a till session, in the order they were paid. */
     public List<SalesInvoice> invoicesOf(TillSession session) {
         return repo.findByTillSession_IdAndStatusOrderByPostedAtAsc(session.getId(), SalesInvoiceStatus.POSTED);
+    }
+
+    /** A sale's approval requests (POS-05, POS-06), oldest first. */
+    public List<SaleApproval> approvals(SalesInvoice sale) {
+        return sale == null || sale.getId() == null ? List.of() : approvalRepo.findByInvoice_IdOrderByNumberAsc(sale.getId());
+    }
+
+    /**
+     * The signed-in user's discount limit (POS-06): the largest of their active roles' limits, a role without its own
+     * taking the Settings value.
+     */
+    public BigDecimal discountLimit() {
+        List<BigDecimal> limits = AppUserPrincipal.current().flatMap(u -> userRepo.findById(u.getId()))
+                .map(u -> u.getRoles().stream().filter(Role::isEnabled).map(Role::getDiscountLimitPercent).toList())
+                .orElse(List.of());
+        return Discounts.limitOf(limits, settingService.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT));
     }
 
     public List<Customer> customers() {
@@ -241,10 +276,23 @@ public class SalesService {
     public SalesInvoiceLine removeLine(UUID lineId) {
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
-        SalesInvoiceLine line = sale.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst()
-                .orElseThrow(() -> new NotFoundException("SalesInvoiceLine", lineId));
+        SalesInvoiceLine line = lineOf(sale, lineId);
+        Set<UUID> leaving = new HashSet<>();
+        leaving.add(line.getId());
+        sale.getLines().stream().filter(l -> l.getParentLine() == line).forEach(l -> leaving.add(l.getId()));
+        for (SaleApproval a : approvalRepo.findByInvoice_IdOrderByNumberAsc(sale.getId())) {
+            if (a.getLineId() != null && leaving.contains(a.getLineId())) {
+                if (a.isPending() || a.isApproved()) {
+                    withdraw(a, "The line was removed from the sale");
+                }
+                a.setLineId(null);
+            }
+        }
         sale.getLines().remove(line);
         sale.getLines().removeIf(l -> l.getParentLine() == line);   // a size takes its processing with it
+        if (sale.getLines().isEmpty()) {
+            withdrawAll(sale, "The sale was emptied");                // a credit request too: closing the till drops the sale
+        }
         renumber(sale);
         return line;
     }
@@ -275,6 +323,7 @@ public class SalesService {
                 }
             }
             sale.setCustomer(customer);
+            withdrawAll(sale, "The customer changed: the sale was priced again");
             sale.getLines().forEach(l -> {
                 if (l.isServiceLine()) {
                     priceService(l, customer);
@@ -293,6 +342,7 @@ public class SalesService {
     public SalesInvoice cancel() {
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        withdrawAll(sale, "The sale was cancelled");
         sale.setStatus(SalesInvoiceStatus.CANCELLED);
         return sale;
     }
@@ -326,6 +376,13 @@ public class SalesService {
             requireSellable(unit, sale.getCustomer(), session.getNumber());
         }
 
+        List<SaleApproval> approvals = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
+                List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED));
+        String pending = approvals.stream().filter(SaleApproval::isPending).map(SaleApproval::getNumber).sorted()
+                .collect(Collectors.joining(", "));
+        if (!pending.isEmpty()) {
+            throw BusinessException.of("sale.pay.pending", pending);
+        }
         Vat.Totals totals = totals(sale);
         SalePayments.Split split = SalePayments.split(totals.gross(), entered);
         BigDecimal credit = split.amountOf(PaymentMethod.CREDIT);
@@ -334,8 +391,12 @@ public class SalesService {
             if (!c.allowed()) {
                 throw BusinessException.onField("credit", "sale.pay.credit.notAllowed", sale.getCustomer().getName());
             }
-            if (credit.compareTo(c.getAvailable()) > 0) {
-                throw BusinessException.onField("credit", "sale.pay.credit.over", c.getAvailable(), c.limit());
+            // Above what the customer has left only as far as a manager approved (POS-05)
+            BigDecimal approved = approvedCredit(approvals);
+            if (credit.compareTo(c.getAvailable()) > 0 && credit.compareTo(approved) > 0) {
+                throw approved.signum() > 0
+                        ? BusinessException.onField("credit", "sale.pay.credit.overApproved", approved, c.getAvailable())
+                        : BusinessException.onField("credit", "sale.pay.credit.over", c.getAvailable(), c.limit());
             }
         }
 
@@ -409,6 +470,195 @@ public class SalesService {
             jobs.add(job);
         }
         return jobs;
+    }
+
+    // ---------------------------------------------------------------- price changes and credit (POS-05, POS-06)
+
+    /**
+     * Changes a line's price with a reason (POS-06). Back to the list price: no reason, any approved change is dropped.
+     * A discount within the cashier's limit (or a higher price) applies at once; above it the line keeps its price and a
+     * request waits for another person's approval.
+     */
+    @Transactional
+    public PriceChange changePrice(UUID lineId, BigDecimal price, String reason) {
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        SalesInvoiceLine line = lineOf(sale, lineId);
+        List<SaleApproval> requests = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
+                List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED));
+        if (requests.stream().anyMatch(a -> a.isPending() && lineId.equals(a.getLineId()))) {
+            throw BusinessException.of("sale.price.pending", line.getLabel());
+        }
+        if (price == null || price.signum() <= 0 || price.compareTo(MAX_PRICE) > 0) {
+            throw BusinessException.onField("price", "sale.price.invalid");
+        }
+        BigDecimal newPrice = price.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal list = listPriceOf(line);
+        Optional<SaleApproval> applied = requests.stream().filter(a -> a.isApproved() && lineId.equals(a.getLineId())).findFirst();
+        if (newPrice.compareTo(list) == 0) {
+            applied.ifPresent(a -> withdraw(a, "Back to the list price"));
+            setPrice(line, list, null, null);
+            return new PriceChange(line, list, list, BigDecimal.ZERO.setScale(2), null);
+        }
+        String why = PartyRules.clean(reason);
+        if (why == null) {
+            throw BusinessException.onField("reason", "sale.price.reason");
+        }
+        if (why.length() > 200) {
+            throw BusinessException.onField("reason", "sale.price.reasonSize");
+        }
+        BigDecimal discount = Discounts.percent(list, newPrice);
+        BigDecimal limit = discountLimit();
+        if (!Discounts.needsApproval(discount, limit)) {
+            applied.ifPresent(a -> withdraw(a, "Replaced by a new price"));
+            setPrice(line, newPrice, list, why);
+            return new PriceChange(line, list, newPrice, discount, null);
+        }
+        SaleApproval request = newRequest(sale, SaleApprovalKind.PRICE, line.getLabel(), why);
+        request.setLineId(line.getId());
+        request.setListPrice(list);
+        request.setRequestedPrice(newPrice);
+        request.setDiscountPercent(discount);
+        request.setLimitPercent(limit);
+        request.setAmountBefore(line.getAmount());
+        request.setAmountAfter(amountAt(line, newPrice));
+        return new PriceChange(line, list, newPrice, discount, approvalRepo.save(request));
+    }
+
+    /**
+     * Asks a manager to approve customer credit above what the customer has left (POS-05): the credit wanted on this
+     * sale, with the limit and what the customer owes now. A newer request replaces an approved one.
+     */
+    @Transactional
+    public SaleApproval requestCredit(BigDecimal amount, String reason) {
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        if (sale.getLines().isEmpty()) {
+            throw BusinessException.of("sale.empty");
+        }
+        Credit c = credit(sale.getCustomer());
+        if (!c.allowed()) {
+            throw BusinessException.onField("credit", "sale.pay.credit.notAllowed", sale.getCustomer().getName());
+        }
+        BigDecimal total = totals(sale).gross();
+        if (amount == null || amount.signum() <= 0) {
+            throw BusinessException.onField("credit", "sale.credit.amount");
+        }
+        if (amount.compareTo(total) > 0) {
+            throw BusinessException.onField("credit", "sale.credit.overTotal", total);
+        }
+        if (amount.compareTo(c.getAvailable()) <= 0) {
+            throw BusinessException.onField("credit", "sale.credit.withinLimit", c.getAvailable());
+        }
+        String why = PartyRules.clean(reason);
+        if (why == null) {
+            throw BusinessException.onField("creditReason", "sale.credit.reason");
+        }
+        if (why.length() > 200) {
+            throw BusinessException.onField("creditReason", "sale.price.reasonSize");
+        }
+        List<SaleApproval> requests = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
+                List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED));
+        Optional<SaleApproval> waiting = requests.stream().filter(a -> a.isCredit() && a.isPending()).findFirst();
+        if (waiting.isPresent()) {
+            throw BusinessException.onField("credit", "sale.credit.pending", waiting.get().getNumber());
+        }
+        SaleApproval request = newRequest(sale, SaleApprovalKind.CREDIT,
+                sale.getCustomer().getName() + " · " + sale.getCustomer().getCode(), why);
+        requests.stream().filter(a -> a.isCredit() && a.isApproved()).forEach(a -> withdraw(a, "Replaced by a new request"));
+        request.setCreditLimit(c.limit());
+        request.setOwed(c.owed());
+        request.setCreditAmount(amount.setScale(2, RoundingMode.HALF_UP));
+        return approvalRepo.save(request);
+    }
+
+    /** The cashier takes back a request of the till's sale that is still pending, with a reason. */
+    @Transactional
+    public SaleApproval withdrawRequest(UUID approvalId, String reason) {
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        approvalRepo.lockById(approvalId).orElseThrow(() -> new NotFoundException("SaleApproval", approvalId));
+        SaleApproval request = approvalRepo.findDetailedById(approvalId)
+                .filter(a -> a.getInvoice().getId().equals(sale.getId()))
+                .orElseThrow(() -> new NotFoundException("SaleApproval", approvalId));
+        if (!request.isPending()) {
+            throw BusinessException.of("saleApproval.notPending", request.getNumber());
+        }
+        String why = PartyRules.clean(reason);
+        if (why == null || why.length() > 200) {
+            throw BusinessException.of("po.reason.required");
+        }
+        withdraw(request, why);
+        return request;
+    }
+
+    /**
+     * Sets a line's price and its amount (whole RWF, VAT included as the line's list says); a changed price keeps the
+     * list price it replaced and the reason. Used by the approval of a price change too.
+     */
+    void setPrice(SalesInvoiceLine line, BigDecimal price, BigDecimal listPrice, String reason) {
+        if (line.isServiceLine()) {
+            line.setServiceUnitPrice(price);
+        } else {
+            line.setPricePerM2(price);
+        }
+        line.setListPrice(listPrice);
+        line.setPriceReason(reason);
+        line.setAmount(amountAt(line, price));
+    }
+
+    /** The list price of a line, whatever it is charged at. */
+    static BigDecimal listPriceOf(SalesInvoiceLine line) {
+        return line.getListPrice() != null ? line.getListPrice() : line.getPrice();
+    }
+
+    /** The credit a manager approved on a sale, 0 when none. */
+    static BigDecimal approvedCredit(Collection<SaleApproval> approvals) {
+        return approvals.stream().filter(a -> a.isCredit() && a.isApproved()).map(SaleApproval::getCreditAmount)
+                .max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+    }
+
+    /** What a line would come to at another price. */
+    private BigDecimal amountAt(SalesInvoiceLine line, BigDecimal price) {
+        return line.isServiceLine()
+                ? Vat.lineAmount(price, line.getServiceQuantity(), 1, line.isPricesIncludeVat(), line.getVatRate(), baseDecimals())
+                : Vat.lineAmount(price, line.getChargeableAreaM2(), line.getQuantity(), line.isPricesIncludeVat(), line.getVatRate(),
+                baseDecimals());
+    }
+
+    private SaleApproval newRequest(SalesInvoice sale, SaleApprovalKind kind, String subject, String reason) {
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        SaleApproval request = new SaleApproval();
+        request.setNumber(numbers.next(DocumentType.SALE_APPROVAL));
+        request.setKind(kind);
+        request.setInvoice(sale);
+        request.setCustomer(sale.getCustomer());
+        request.setSubject(subject.length() > 200 ? subject.substring(0, 200) : subject);
+        request.setReason(reason);
+        request.setRequestedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        request.setRequestedById(user.map(AppUserPrincipal::getId).orElse(null));
+        return request;
+    }
+
+    /** Takes back a request that is pending, or approved but no longer used, with the note why. */
+    void withdraw(SaleApproval request, String note) {
+        request.setStatus(SaleApprovalStatus.WITHDRAWN);
+        request.setDecidedBy(AppUserPrincipal.current().map(AppUserPrincipal::getUsername).orElse("system"));
+        request.setDecidedAt(LocalDateTime.now(clock));
+        request.setDecisionNote(note);
+    }
+
+    private void withdrawAll(SalesInvoice sale, String note) {
+        if (sale.getId() == null) {
+            return;
+        }
+        approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(), List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED))
+                .forEach(a -> withdraw(a, note));
+    }
+
+    private static SalesInvoiceLine lineOf(SalesInvoice sale, UUID lineId) {
+        return sale.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst()
+                .orElseThrow(() -> new NotFoundException("SalesInvoiceLine", lineId));
     }
 
     // ---------------------------------------------------------------- sizes to cut (POS-02)
@@ -671,6 +921,8 @@ public class SalesService {
         line.setVatRate(tax.getRate());
         line.setAmount(Vat.lineAmount(price.pricePerM2(), area, line.getQuantity(), price.list().isPricesIncludeVat(), tax.getRate(),
                 baseDecimals()));
+        line.setListPrice(null);
+        line.setPriceReason(null);
     }
 
     /**
@@ -693,6 +945,8 @@ public class SalesService {
         line.setTaxCode(tax.getEbmCode());
         line.setVatRate(tax.getRate());
         line.setAmount(Vat.lineAmount(price.price(), quantity, 1, price.list().isPricesIncludeVat(), tax.getRate(), baseDecimals()));
+        line.setListPrice(null);
+        line.setPriceReason(null);
     }
 
     private Map<UUID, StockUnit> unitsOf(SalesInvoice sale) {

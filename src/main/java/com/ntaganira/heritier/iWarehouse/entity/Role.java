@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -35,6 +36,10 @@ public class Role {
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;
+
+    /** The largest discount its users give at the counter without approval (POS-06); null = the Settings value. */
+    @Column(name = "discount_limit_percent", precision = 5, scale = 2)
+    private BigDecimal discountLimitPercent;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

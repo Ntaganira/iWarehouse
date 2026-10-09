@@ -203,20 +203,34 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="l : ${lines}">
-                                <td><th:block th:replace="~{invoices/list :: lineWhat(${l})}"></th:block></td>
+                            <tr th:each="l : ${lines}" th:with="la=${lineApprovals.get(l.id)}">
+                                <td>
+                                    <th:block th:replace="~{invoices/list :: lineWhat(${l})}"></th:block>
+                                    <div class="cell-sub" th:if="${la != null and la.pending}">
+                                        <span class="badge badge-warning" th:text="#{saleApproval.status.PENDING}">Waiting</span>
+                                        <span th:text="#{pos.priceAsked(${@num.money(la.requestedPrice)}, ${@num.m2(la.discountPercent)}, ${la.number})}">asked 24,000 (11.11% off) · APR-WH-2026-000001</span>
+                                    </div>
+                                    <div class="cell-sub text-danger" th:if="${la != null and la.status.name() == 'REJECTED'}"
+                                         th:text="#{pos.priceRefused(${la.number}, ${la.decidedBy}, ${la.decisionNote})}">APR-WH-2026-000001 refused by owner: too deep</div>
+                                </td>
                                 <td class="num nowrap"><th:block th:replace="~{invoices/list :: lineCharge(${l})}"></th:block></td>
                                 <td class="num">
                                     <span class="strong" th:text="${@num.money(l.amount)}">195,008</span>
                                     <div class="cell-sub" th:text="#{pos.vatShort(${l.taxCode}, ${@num.m2(l.vatRate)})}">VAT B 18%</div>
                                 </td>
                                 <td>
-                                    <form th:action="@{/pos/lines/{id}/remove(id=${l.id})}" method="post" class="row-action-form">
-                                        <input type="hidden" name="back" th:value="${searchQuery}">
-                                        <button type="submit" class="action-icon delete" th:title="#{pos.remove}" th:aria-label="#{pos.remove}">
-                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    <div class="btn-group">
+                                        <button type="button" class="action-icon edit" th:attr="data-modal-open=${'price-modal-' + l.lineNo}"
+                                                th:title="#{pos.changePrice}" th:aria-label="#{pos.changePrice}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                                         </button>
-                                    </form>
+                                        <form th:action="@{/pos/lines/{id}/remove(id=${l.id})}" method="post" class="row-action-form">
+                                            <input type="hidden" name="back" th:value="${searchQuery}">
+                                            <button type="submit" class="action-icon delete" th:title="#{pos.remove}" th:aria-label="#{pos.remove}">
+                                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             <tr th:if="${empty}">
@@ -242,8 +256,21 @@
                     </div>
                 </div>
 
+                <div class="doc-note is-warning pos-waiting" th:unless="${#lists.isEmpty(waiting)}" th:attr="data-approvals-state=${approvalState}">
+                    <strong th:text="#{pos.waitingTitle}">Waiting for a manager:</strong>
+                    <th:block th:each="a, st : ${waiting}"><span class="mono" th:text="${a.number}">APR-WH-2026-000001</span> <span th:text="${a.price} ? #{pos.waitingPrice(${@num.m2(a.discountPercent)})} : #{pos.waitingCredit(${@num.money(a.creditAmount)})}">(11.11% off)</span><th:block th:unless="${st.last}">, </th:block></th:block>.
+                    <span th:text="#{pos.waitingHint}">The sale can be paid once they are decided; this page updates by itself.</span>
+                    <th:block th:each="a : ${waiting}" th:if="${a.credit}">
+                        <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'withdraw-' + a.number}" th:text="#{pos.withdrawCredit}">Withdraw the credit request</button>
+                    </th:block>
+                </div>
+                <div class="doc-note" th:if="${creditApproval != null and creditApproval.approved}"
+                     th:text="#{pos.creditApproved(${@num.money(creditApproval.creditAmount)}, ${creditApproval.decidedBy}, ${creditApproval.number})}">Credit up to 300,000 RWF approved by owner (APR-WH-2026-000002).</div>
+                <div class="doc-note is-danger" th:if="${creditApproval != null and creditApproval.status.name() == 'REJECTED'}"
+                     th:text="#{pos.creditRefused(${creditApproval.number}, ${creditApproval.decidedBy}, ${creditApproval.decisionNote})}">Credit refused (APR-WH-2026-000002) by owner: pays on account first.</div>
+
                 <div class="form-actions pos-actions">
-                    <button type="button" class="btn btn-primary" data-modal-open="pay-modal" th:disabled="${empty}" th:text="#{pos.pay}">Pay</button>
+                    <button type="button" class="btn btn-primary" data-modal-open="pay-modal" th:disabled="${empty or !#lists.isEmpty(waiting)}" th:text="#{pos.pay}">Pay</button>
                     <form th:if="${!empty}" th:action="@{/pos/cancel}" method="post" class="row-action-form confirm-submit danger"
                           th:attr="data-confirm=#{pos.cancelConfirm}">
                         <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{pos.cancelSale}">Cancel the sale</button>
@@ -305,6 +332,14 @@
                                 <input type="number" id="pay-credit" name="credit" min="0" step="any" inputmode="decimal" data-pay="other"
                                        th:value="${payForm != null ? payForm.get('credit') : ''}" th:classappend="${payField == 'credit'} ? 'is-invalid'">
                                 <span class="hint" th:text="#{pos.creditAvailable(${@num.money(credit.available)}, ${@num.money(credit.limit)})}">Credit available</span>
+                                <span class="hint" th:if="${creditApproval != null and creditApproval.approved}"
+                                      th:text="#{pos.creditApprovedHint(${@num.money(creditApproval.creditAmount)}, ${creditApproval.number})}">Approved on this sale: up to 300,000 (APR-WH-2026-000002)</span>
+                            </div>
+                            <div class="form-group full-width" th:if="${creditOver == true and credit != null and credit.allowed}">
+                                <label for="pay-credit-reason" th:text="#{pos.creditReason}">Why the customer needs more credit</label>
+                                <input type="text" id="pay-credit-reason" name="creditReason" maxlength="200" autocomplete="off"
+                                       th:value="${payForm != null ? payForm.get('creditReason') : ''}" th:classappend="${payField == 'creditReason'} ? 'is-invalid'">
+                                <span class="hint" th:text="#{pos.creditAskHint}">Credit above what the customer has left needs a manager's approval: ask, then take the payment once approved.</span>
                             </div>
                         </div>
                         <div class="pay-status" aria-live="polite" th:attr="data-due-label=#{pos.pay.due}, data-change-label=#{pos.pay.change}, data-done-label=#{pos.pay.done}">
@@ -314,11 +349,82 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline" data-modal-close="pay-modal" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-outline" th:if="${creditOver == true and credit != null and credit.allowed}" th:formaction="@{/pos/credit-approval}"
+                                th:text="#{pos.creditAsk}">Ask a manager</button>
                         <button type="submit" class="btn btn-primary" th:text="#{pos.pay.confirm}">Take the payment</button>
                     </div>
                 </form>
             </div>
         </div>
+
+        <!-- Changing a line's price (POS-06): at once within the cashier's limit, otherwise asked of a manager -->
+        <div class="modal-overlay" th:each="l : ${lines}" th:id="${'price-modal-' + l.lineNo}"
+             th:with="la=${lineApprovals.get(l.id)}, waitingHere=${la != null and la.pending},
+                      reopen=${priceForm != null and priceForm.get('lineId') == l.id},
+                      unit=${l.serviceLine} ? ${#messages.msg('sale.unit.' + l.service.chargeUnit)} : 'm²'"
+             th:classappend="${reopen} ? 'open'">
+            <div class="modal" role="dialog" aria-modal="true" th:attr="aria-labelledby=${'price-title-' + l.lineNo}">
+                <div class="modal-header">
+                    <h3 th:id="${'price-title-' + l.lineNo}" th:text="#{pos.priceTitle(${l.lineNo})}">Price of line 1</h3>
+                    <button type="button" class="modal-close" th:attr="data-modal-close=${'price-modal-' + l.lineNo}" th:aria-label="#{common.cancel}">&times;</button>
+                </div>
+                <form th:if="${waitingHere}" th:action="@{/pos/approvals/{id}/withdraw(id=${la.id})}" method="post" novalidate>
+                    <input type="hidden" name="back" th:value="${searchQuery}">
+                    <div class="modal-body">
+                        <p class="text-muted" th:text="#{pos.priceWaitingText(${l.label}, ${la.number}, ${@num.money(la.requestedPrice)}, ${@num.m2(la.discountPercent)})}">U-WH-000012: APR-WH-2026-000001 asks 24,000 (11.11% off), waiting for a manager.</p>
+                        <div class="form-group">
+                            <label th:for="${'withdraw-reason-' + l.lineNo}" th:text="#{reason.label}">Reason</label>
+                            <input type="text" th:id="${'withdraw-reason-' + l.lineNo}" name="reason" maxlength="200" required autocomplete="off"
+                                   th:placeholder="#{reason.placeholder}">
+                            <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" th:attr="data-modal-close=${'price-modal-' + l.lineNo}" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-danger" th:text="#{pos.withdraw}">Withdraw the request</button>
+                    </div>
+                </form>
+                <form th:unless="${waitingHere}" th:action="@{/pos/lines/{id}/price(id=${l.id})}" method="post" class="pos-price" novalidate
+                      th:attr="data-list-price=${@num.plain(l.priceChanged ? l.listPrice : l.price)}, data-limit=${@num.plain(discountLimit)},
+                               data-within-label=#{pos.priceWithin}, data-approval-label=#{pos.priceApproval('{0}', ${@num.m2(discountLimit)})},
+                               data-raised-label=#{pos.priceRaised}, data-list-label=#{pos.priceAtList}">
+                    <input type="hidden" name="back" th:value="${searchQuery}">
+                    <div class="modal-body">
+                        <p class="text-muted" th:text="#{pos.priceText(${l.label}, ${@num.money(l.priceChanged ? l.listPrice : l.price)}, ${unit}, ${@num.m2(discountLimit)})}">U-WH-000012: list price 27,000 per m². You give up to 5% off without approval.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label th:for="${'price-discount-' + l.lineNo}" th:text="#{pos.discountPercent}">Discount (%)</label>
+                                <input type="number" th:id="${'price-discount-' + l.lineNo}" step="0.01" min="0" max="100" inputmode="decimal" data-price-discount
+                                       th:value="${l.priceChanged and l.discountPercent.signum() > 0} ? ${@num.plain(l.discountPercent)} : ''">
+                            </div>
+                            <div class="form-group">
+                                <label th:for="${'price-value-' + l.lineNo}" th:text="#{pos.pricePer(${unit})}">Price per m² (RWF)</label>
+                                <input type="number" th:id="${'price-value-' + l.lineNo}" name="price" step="0.01" min="0.01" inputmode="decimal" required data-price-value
+                                       th:value="${reopen} ? ${priceForm.get('price')} : ${@num.plain(l.price)}" th:classappend="${reopen and priceField == 'price'} ? 'is-invalid'">
+                            </div>
+                            <div class="form-group full-width">
+                                <label th:for="${'price-reason-' + l.lineNo}" th:text="#{pos.priceReason}">Reason</label>
+                                <input type="text" th:id="${'price-reason-' + l.lineNo}" name="reason" maxlength="200" autocomplete="off" data-price-reason
+                                       th:value="${reopen} ? ${priceForm.get('reason')} : ${l.priceReason}" th:classappend="${reopen and priceField == 'reason'} ? 'is-invalid'">
+                                <span class="hint" th:text="#{pos.priceReasonHint}">Needed for any price other than the list price</span>
+                            </div>
+                        </div>
+                        <div class="doc-note price-status" aria-live="polite"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" th:if="${l.priceChanged}" data-price-restore th:text="#{pos.backToList}">Back to the list price</button>
+                        <button type="button" class="btn btn-outline" th:attr="data-modal-close=${'price-modal-' + l.lineNo}" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{pos.changePrice}">Change the price</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Withdrawing a credit request still waiting -->
+        <th:block th:each="a : ${waiting}" th:if="${a.credit}">
+            <div th:replace="~{fragments/reason-modal :: reasonModal(${'withdraw-' + a.number}, #{pos.withdrawTitle(${a.number})},
+                    @{/pos/approvals/{id}/withdraw(id=${a.id})}, #{pos.withdrawText}, #{pos.withdraw})}"></div>
+        </th:block>
     </th:block>
     <script defer src="/js/stock-ops.js"></script>
     <script defer src="/js/pos.js"></script>

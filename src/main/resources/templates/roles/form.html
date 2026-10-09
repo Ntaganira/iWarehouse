@@ -26,6 +26,16 @@
                     <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
                     <span class="hint" th:text="${roleDto.id == null} ? #{role.codeHint} : #{role.codeFixed}">Capital letters, digits and underscores.</span>
                 </div>
+                <div class="form-group">
+                    <label for="discountLimitPercent" th:text="#{role.discountLimit}">Discount without approval</label>
+                    <div class="input-unit">
+                        <input type="number" id="discountLimitPercent" th:field="*{discountLimitPercent}" step="0.01" min="0" max="100"
+                               th:placeholder="${@num.m2(defaultDiscountLimit)}" th:classappend="${#fields.hasErrors('discountLimitPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('discountLimitPercent')}" th:errors="*{discountLimitPercent}"></span>
+                    <span class="hint" th:text="#{role.discountLimitHint(${@num.m2(defaultDiscountLimit)})}">The largest discount its users give at the counter; above it a manager approves. Empty: the Settings value (0%).</span>
+                </div>
                 <div class="form-group full-width">
                     <label for="description" th:text="#{role.description}">Description</label>
                     <textarea id="description" th:field="*{description}" th:placeholder="#{role.descriptionPh}"

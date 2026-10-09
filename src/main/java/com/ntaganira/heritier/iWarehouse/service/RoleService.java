@@ -118,6 +118,7 @@ public class RoleService {
                 .name("ROLE_" + code)
                 .code(code)
                 .description(dto.getDescription().trim())
+                .discountLimitPercent(dto.getDiscountLimitPercent())
                 .permissions(permissions)
                 .pages(pages)
                 .build());
@@ -132,6 +133,7 @@ public class RoleService {
     public Role update(Long id, RoleDto dto) {
         Role role = findById(id);
         role.setDescription(dto.getDescription().trim());
+        role.setDiscountLimitPercent(dto.getDiscountLimitPercent());
         if (isAdmin(role)) {
             return role;
         }

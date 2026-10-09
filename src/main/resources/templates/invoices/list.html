@@ -53,6 +53,8 @@
     <span th:if="${l.customPiece}" th:text="${l.quantity + ' × ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.pricePerM2)}">3 × 0.25 m² × 27,000</span>
     <span th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit) + ' × ' + @num.money(l.serviceUnitPrice)}">4 m × 1,500</span>
     <div class="cell-sub" th:text="${l.pricesIncludeVat} ? #{pos.vatIncluded} : #{pos.vatExcluded}">VAT included</div>
+    <div class="cell-sub" th:if="${l.priceChanged}" th:title="${l.priceReason}"
+         th:text="#{pos.priceFromList(${@num.money(l.listPrice)}, ${@num.signedPercent(l.discountPercent.negate())})}">list 27,000 (-11.11%)</div>
 </th:block>
 
 <!--/* Issued invoices: number, date, customer and TIN, total, cashier */-->

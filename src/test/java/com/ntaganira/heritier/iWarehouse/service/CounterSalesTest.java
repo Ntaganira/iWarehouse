@@ -30,8 +30,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Counter sales (POS-01, POS-04, POS-05, POS-10, TAX-01, TAX-04): ringing up units from stock, pricing them from the
- * customer's list, paying with split payments, and the till session around it.
+ * Counter sales (POS-01, POS-04, POS-05, POS-06, POS-10, TAX-01, TAX-04): ringing up units from stock, pricing them from
+ * the customer's list, changing a price or giving credit beyond the limits with a manager's approval, paying with split
+ * payments, and the till session around it.
  */
 class CounterSalesTest {
 
@@ -58,6 +59,9 @@ class CounterSalesTest {
     private final List<CuttingJobDto> jobRequests = new ArrayList<>();
     private final List<CuttingJob> jobs = new ArrayList<>();
     private final List<CuttingJobOutput> outputs = new ArrayList<>();
+    private final List<SaleApproval> approvals = new ArrayList<>();
+    private final Map<Long, List<Role>> rolesOf = new HashMap<>();
+    private SaleApprovalService approvalService;
     private ProcessingService edging;
     private ProcessingService drilling;
     private ProcessingService polishing;
@@ -245,9 +249,41 @@ class CounterSalesTest {
             }
             return job;
         });
+        // Approval requests (POS-05, POS-06); the cashier's role takes the Settings limit (5%), the owner's gives any discount
+        SaleApprovalRepository approvalRepo = mock(SaleApprovalRepository.class);
+        when(approvalRepo.save(any())).thenAnswer(a -> {
+            SaleApproval r = a.getArgument(0);
+            if (r.getId() == null) {
+                r.setId(UUID.randomUUID());
+                r.setCreatedAt(LocalDateTime.now(CLOCK));
+                approvals.add(r);
+            }
+            return r;
+        });
+        when(approvalRepo.findByInvoice_IdOrderByNumberAsc(any())).thenAnswer(a -> approvals.stream()
+                .filter(r -> r.getInvoice().getId().equals(a.getArgument(0))).toList());
+        when(approvalRepo.findByInvoice_IdAndStatusIn(any(), any())).thenAnswer(a -> {
+            Collection<SaleApprovalStatus> statuses = a.getArgument(1);
+            return approvals.stream().filter(r -> r.getInvoice().getId().equals(a.getArgument(0)) && statuses.contains(r.getStatus())).toList();
+        });
+        when(approvalRepo.lockById(any())).thenAnswer(a -> approvals.stream().filter(r -> r.getId().equals(a.getArgument(0))).findFirst());
+        when(approvalRepo.findDetailedById(any())).thenAnswer(a -> approvals.stream().filter(r -> r.getId().equals(a.getArgument(0))).findFirst());
+        when(approvalRepo.tillOf(any())).thenAnswer(a -> approvals.stream().filter(r -> r.getId().equals(a.getArgument(0))).findFirst()
+                .map(r -> r.getInvoice().getTillSession().getId()));
+        when(numbers.next(DocumentType.SALE_APPROVAL)).thenAnswer(a -> String.format("APR-WH-2026-%06d", approvals.size() + 1));
+        UserRepository userRepo = mock(UserRepository.class);
+        when(userRepo.findById(any())).thenAnswer(a -> Optional.of(User.builder().id(a.getArgument(0))
+                .roles(new HashSet<>(rolesOf.getOrDefault((Long) a.getArgument(0), List.of()))).build()));
+        rolesOf.put(5L, List.of(role("CASHIER", null)));
+        rolesOf.put(6L, List.of(role("CASHIER", null)));
+        rolesOf.put(9L, List.of(role("OWNER", "100")));
+        SettingService settings = mock(SettingService.class);
+        when(settings.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT)).thenReturn(new BigDecimal("5"));
+
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, currencyRepo, serviceRepo, taxRepo,
-                jobRepo, outputRepo, jobLineRepo, deliveryRepo, tills, cuttingJobs, stockService, priceLists, postings, journals, numbers,
-                CLOCK);
+                jobRepo, outputRepo, jobLineRepo, deliveryRepo, approvalRepo, userRepo, tills, cuttingJobs, stockService, priceLists,
+                postings, journals, numbers, settings, CLOCK);
+        approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
     }
 
     @AfterEach
@@ -445,6 +481,193 @@ class CounterSalesTest {
         assertThat(unit.getStatus()).isEqualTo(StockStatus.AVAILABLE);
     }
 
+    // ---------------------------------------------------------------- price changes and credit (POS-05, POS-06)
+
+    @Test
+    void aPriceWithinTheCashiersLimitAppliesAtOnceWithItsReason() {
+        tills.open(BigDecimal.ZERO);
+        unit("U-WH-000030", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        SalesInvoice sale = sales.addUnit("U-WH-000030", null);                      // 7.2225 m² x 27,000 = 195,008
+        UUID lineId = assignIds(sale);
+        SalesInvoiceLine line = sale.getLines().get(0);
+        assertThat(sales.discountLimit()).isEqualByComparingTo("5");
+
+        assertThatThrownBy(() -> sales.changePrice(lineId, new BigDecimal("26000"), " "))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.price.reason"));
+        assertThatThrownBy(() -> sales.changePrice(lineId, BigDecimal.ZERO, "free"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.price.invalid"));
+
+        SalesService.PriceChange change = sales.changePrice(lineId, new BigDecimal("26000"), "Regular customer");   // 3.70% off
+        assertThat(change.approval()).isNull();
+        assertThat(change.discount()).isEqualByComparingTo("3.70");
+        assertThat(line.getPricePerM2()).isEqualByComparingTo("26000");
+        assertThat(line.getListPrice()).isEqualByComparingTo("27000");
+        assertThat(line.getPriceReason()).isEqualTo("Regular customer");
+        assertThat(line.getAmount()).isEqualByComparingTo("187785");                  // 7.2225 x 26,000
+        assertThat(approvals).isEmpty();
+
+        sales.changePrice(lineId, new BigDecimal("28000"), "Delivered to site");       // a higher price never needs approval
+        assertThat(line.getDiscountPercent()).isEqualByComparingTo("-3.70");
+        assertThat(approvals).isEmpty();
+
+        sales.changePrice(lineId, new BigDecimal("27000"), null);                      // back to the list price: no reason
+        assertThat(line.isPriceChanged()).isFalse();
+        assertThat(line.getPriceReason()).isNull();
+        assertThat(line.getAmount()).isEqualByComparingTo("195008");
+    }
+
+    @Test
+    void aDeeperDiscountWaitsForAnotherPersonsApprovalBeforeTheSaleIsPaid() {
+        TillSession session = tills.open(BigDecimal.ZERO);
+        unit("U-WH-000031", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        SalesInvoice sale = sales.addUnit("U-WH-000031", null);
+        UUID lineId = assignIds(sale);
+        SalesInvoiceLine line = sale.getLines().get(0);
+
+        SalesService.PriceChange change = sales.changePrice(lineId, new BigDecimal("24000"), "Buys 20 sheets a month");
+        SaleApproval request = change.approval();
+        assertThat(request).isNotNull();
+        assertThat(request.getNumber()).isEqualTo("APR-WH-2026-000001");
+        assertThat(request.getStatus()).isEqualTo(SaleApprovalStatus.PENDING);
+        assertThat(request.getKind()).isEqualTo(SaleApprovalKind.PRICE);
+        assertThat(request.getLineId()).isEqualTo(lineId);
+        assertThat(request.getSubject()).isEqualTo("U-WH-000031 · CLR-6 3210 x 2250");
+        assertThat(request.getListPrice()).isEqualByComparingTo("27000");
+        assertThat(request.getRequestedPrice()).isEqualByComparingTo("24000");
+        assertThat(request.getDiscountPercent()).isEqualByComparingTo("11.11");
+        assertThat(request.getLimitPercent()).isEqualByComparingTo("5");
+        assertThat(request.getAmountBefore()).isEqualByComparingTo("195008");
+        assertThat(request.getAmountAfter()).isEqualByComparingTo("173340");
+        assertThat(request.getRequestedBy()).isEqualTo("cashier1");
+        assertThat(line.getAmount()).isEqualByComparingTo("195008");                  // unchanged until approved
+
+        assertThatThrownBy(() -> sales.pay(new SalePayments.Entered(new BigDecimal("195008"), null, null, null, null, null, null, null)))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.pay.pending");
+                    assertThat(e.getArgs()).containsExactly("APR-WH-2026-000001");
+                });
+        assertThatThrownBy(() -> sales.changePrice(lineId, new BigDecimal("25000"), "less"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.price.pending"));
+        assertThatThrownBy(() -> approvalService.approve(request.getId(), null))         // never your own
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("saleApproval.own"));
+
+        signIn(9L, "owner");
+        approvalService.approve(request.getId(), "Good customer");
+        assertThat(request.getStatus()).isEqualTo(SaleApprovalStatus.APPROVED);
+        assertThat(request.getDecidedBy()).isEqualTo("owner");
+        assertThat(request.getDecisionNote()).isEqualTo("Good customer");
+        assertThat(line.getPricePerM2()).isEqualByComparingTo("24000");
+        assertThat(line.getListPrice()).isEqualByComparingTo("27000");
+        assertThat(line.getPriceReason()).isEqualTo("Buys 20 sheets a month");
+        assertThat(line.getAmount()).isEqualByComparingTo("173340");
+        assertThatThrownBy(() -> approvalService.reject(request.getId(), "late"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("saleApproval.notPending"));
+
+        signIn(5L, "cashier1");
+        SalesService.Paid paid = sales.pay(new SalePayments.Entered(new BigDecimal("173340"), null, null, null, null, null, null, null));
+        assertThat(paid.invoice().getTotalAmount()).isEqualByComparingTo("173340");
+        assertThat(tills.summary(session).getExpectedCash()).isEqualByComparingTo("173340");
+    }
+
+    @Test
+    void aRejectedRequestLeavesTheSaleAndRequestsLapseWithTheirLineCustomerOrSale() {
+        tills.open(BigDecimal.ZERO);
+        unit("U-WH-000032", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        unit("U-WH-000033", clear6, 1000, 1000, StockStatus.AVAILABLE, null);
+        sales.addUnit("U-WH-000032", null);
+        SalesInvoice sale = sales.addUnit("U-WH-000033", null);
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));
+        SalesInvoiceLine first = sale.getLines().get(0);
+        SalesInvoiceLine second = sale.getLines().get(1);
+
+        SaleApproval refused = sales.changePrice(first.getId(), new BigDecimal("20000"), "Competitor price").approval();
+        signIn(9L, "owner");
+        approvalService.reject(refused.getId(), "Too deep");
+        assertThat(refused.getStatus()).isEqualTo(SaleApprovalStatus.REJECTED);
+        assertThat(refused.getDecisionNote()).isEqualTo("Too deep");
+        assertThat(first.isPriceChanged()).isFalse();
+        assertThat(first.getAmount()).isEqualByComparingTo("195008");
+
+        // Its line leaves the sale: the request lapses and lets go of the line
+        signIn(5L, "cashier1");
+        SaleApproval lapsed = sales.changePrice(second.getId(), new BigDecimal("20000"), "Scratched").approval();
+        sales.removeLine(second.getId());
+        assertThat(lapsed.getStatus()).isEqualTo(SaleApprovalStatus.WITHDRAWN);
+        assertThat(lapsed.getDecisionNote()).isEqualTo("The line was removed from the sale");
+        assertThat(lapsed.getLineId()).isNull();
+
+        // Another customer prices the sale again: changed prices and approved requests go
+        sales.changePrice(first.getId(), new BigDecimal("26000"), "Regular customer");
+        SaleApproval waiting = sales.changePrice(first.getId(), new BigDecimal("21000"), "Even less").approval();
+        sales.setCustomer(builders.getId(), null, null);
+        assertThat(waiting.getStatus()).isEqualTo(SaleApprovalStatus.WITHDRAWN);
+        assertThat(first.isPriceChanged()).isFalse();
+        assertThat(first.getPricePerM2()).isEqualByComparingTo("22881.36");
+
+        // The cashier withdraws one, with a reason; a cancelled sale takes the rest with it
+        SaleApproval mine = sales.changePrice(first.getId(), new BigDecimal("15000"), "Old stock").approval();
+        assertThatThrownBy(() -> sales.withdrawRequest(mine.getId(), " "))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("po.reason.required"));
+        sales.withdrawRequest(mine.getId(), "Customer changed their mind");
+        assertThat(mine.getStatus()).isEqualTo(SaleApprovalStatus.WITHDRAWN);
+        assertThat(mine.getDecidedBy()).isEqualTo("cashier1");
+        SaleApproval last = sales.changePrice(first.getId(), new BigDecimal("15000"), "Old stock").approval();
+        sales.cancel();
+        assertThat(last.getStatus()).isEqualTo(SaleApprovalStatus.WITHDRAWN);
+        assertThat(last.getDecisionNote()).isEqualTo("The sale was cancelled");
+    }
+
+    @Test
+    void creditAboveTheCustomersLimitNeedsAManagersApproval() {
+        tills.open(BigDecimal.ZERO);
+        unit("U-WH-000034", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        sales.addUnit("U-WH-000034", null);
+        assertThatThrownBy(() -> sales.requestCredit(new BigDecimal("1000"), "x"))      // a walk-in never buys on credit
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.pay.credit.notAllowed"));
+
+        sales.setCustomer(builders.getId(), null, null);                                // 195,008 on the contractor list
+        when(journals.receivable(builders.getId())).thenReturn(new BigDecimal("400000"));  // 100,000 of 500,000 left
+        assertThatThrownBy(() -> sales.requestCredit(new BigDecimal("50000"), "x"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.credit.withinLimit"));
+        assertThatThrownBy(() -> sales.requestCredit(new BigDecimal("300000"), "x"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.credit.overTotal"));
+        assertThatThrownBy(() -> sales.requestCredit(new BigDecimal("150000"), null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.credit.reason"));
+
+        SaleApproval request = sales.requestCredit(new BigDecimal("150000"), "Pays every Friday");
+        assertThat(request.getKind()).isEqualTo(SaleApprovalKind.CREDIT);
+        assertThat(request.getSubject()).isEqualTo("Umucyo Builders · " + builders.getCode());
+        assertThat(request.getCreditLimit()).isEqualByComparingTo("500000");
+        assertThat(request.getOwed()).isEqualByComparingTo("400000");
+        assertThat(request.getCreditAmount()).isEqualByComparingTo("150000");
+        assertThat(request.getOverLimit()).isEqualByComparingTo("50000");
+        assertThatThrownBy(() -> sales.requestCredit(new BigDecimal("160000"), "more"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.credit.pending"));
+        assertThatThrownBy(() -> sales.pay(new SalePayments.Entered(new BigDecimal("45008"), null, null, null, null, null, null, new BigDecimal("150000"))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.pay.pending"));
+
+        signIn(9L, "owner");
+        approvalService.approve(request.getId(), null);
+        signIn(5L, "cashier1");
+        assertThatThrownBy(() -> sales.pay(new SalePayments.Entered(null, null, null, null, null, null, null, new BigDecimal("195008"))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.pay.credit.overApproved");
+                    assertThat(e.getArgs()).containsExactly(new BigDecimal("150000.00"), new BigDecimal("100000"));
+                });
+        SalesService.Paid paid = sales.pay(new SalePayments.Entered(new BigDecimal("45008"), null, null, null, null, null, null, new BigDecimal("150000")));
+        assertThat(paid.invoice().getTotalAmount()).isEqualByComparingTo("195008");
+        assertThat(payments).extracting(SalesPayment::getMethod).containsExactly(PaymentMethod.CASH, PaymentMethod.CREDIT);
+
+        // A credit request on a sale emptied line by line lapses (closing the till would drop the empty sale)
+        unit("U-WH-000035", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        SalesInvoice next = sales.addUnit("U-WH-000035", null);
+        sales.setCustomer(builders.getId(), null, null);
+        SaleApproval asked = sales.requestCredit(new BigDecimal("150000"), "Pays every Friday");
+        sales.removeLine(assignIds(next));
+        assertThat(asked.getStatus()).isEqualTo(SaleApprovalStatus.WITHDRAWN);
+        assertThat(asked.getDecisionNote()).isEqualTo("The sale was emptied");
+    }
+
     // ---------------------------------------------------------------- sizes to cut (POS-02)
 
     @Test
@@ -594,6 +817,11 @@ class CounterSalesTest {
         sv.setChargeUnit(unit);
         sv.setEnabled(true);
         return sv;
+    }
+
+    private static Role role(String code, String discountLimit) {
+        return Role.builder().code(code).name("ROLE_" + code).enabled(true)
+                .discountLimitPercent(discountLimit == null ? null : new BigDecimal(discountLimit)).build();
     }
 
     /** Records a unit as an output of a cutting job line. */

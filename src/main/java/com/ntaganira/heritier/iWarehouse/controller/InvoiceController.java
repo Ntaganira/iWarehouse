@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
+import com.ntaganira.heritier.iWarehouse.entity.SaleApproval;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoiceLine;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
@@ -18,6 +19,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -85,6 +87,11 @@ public class InvoiceController {
         model.addAttribute("jobs", custom ? salesService.jobsOf(invoice) : List.of());
         model.addAttribute("ready", custom ? salesService.readyPieces(invoice) : List.of());
         model.addAttribute("deliveries", custom ? salesService.deliveries(id) : List.of());
+        // Lines whose price a manager approved (POS-06): the approval, by line
+        Map<UUID, SaleApproval> priceApprovals = new HashMap<>();
+        salesService.approvals(invoice).stream().filter(a -> a.isPrice() && a.isApproved() && a.getLineId() != null)
+                .forEach(a -> priceApprovals.put(a.getLineId(), a));
+        model.addAttribute("priceApprovals", priceApprovals);
         model.addAttribute("history", dataChangeService.historyWithChildren("SalesInvoice", id.toString(), "SalesInvoiceLine",
                 "invoice", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

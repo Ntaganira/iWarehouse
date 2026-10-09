@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
 import com.ntaganira.heritier.iWarehouse.enums.SaleLineKind;
+import com.ntaganira.heritier.iWarehouse.service.Discounts;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -112,6 +113,14 @@ public class SalesInvoiceLine extends BaseEntity {
     @Column(length = 60)
     private String mark;
 
+    /** A price changed at the counter (POS-06): the list price it replaced, per m² or per unit of the service. */
+    @Column(name = "list_price", precision = 18, scale = 2)
+    private BigDecimal listPrice;
+
+    /** Why the price was changed. */
+    @Column(name = "price_reason", length = 200)
+    private String priceReason;
+
     public boolean isStockUnit() {
         return kind == SaleLineKind.STOCK_UNIT;
     }
@@ -122,5 +131,28 @@ public class SalesInvoiceLine extends BaseEntity {
 
     public boolean isServiceLine() {
         return kind == SaleLineKind.SERVICE;
+    }
+
+    /** The price charged: per m² for glass, per unit of the service for processing. */
+    public BigDecimal getPrice() {
+        return isServiceLine() ? serviceUnitPrice : pricePerM2;
+    }
+
+    public boolean isPriceChanged() {
+        return listPrice != null;
+    }
+
+    /** The discount on the list price, in percent (negative when the price was raised); null when unchanged. */
+    public BigDecimal getDiscountPercent() {
+        return listPrice == null ? null : Discounts.percent(listPrice, getPrice());
+    }
+
+    /** What the line is, for an approval request and the activity log: its label, or the size or processing. */
+    public String getLabel() {
+        if (isStockUnit()) {
+            return unitCode + " · " + product.getCode() + " " + widthMm + " x " + heightMm;
+        }
+        String size = product.getCode() + " " + widthMm + " x " + heightMm + " x " + quantity;
+        return isServiceLine() ? service.getName() + " · " + size : size;
     }
 }

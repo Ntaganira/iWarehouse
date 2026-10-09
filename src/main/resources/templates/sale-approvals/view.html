@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${approval.number}, ~{::content})}">
+<head><title>Sale approval - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${approval.status.name()}, sale=${approval.invoice},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_SALE'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${approval.number}">APR-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{adjustment.askedBy(${approval.requestedBy}, ${#temporals.format(approval.createdAt, 'dd/MM/yyyy HH:mm')})}">asked by cashier1 on 09/10/2026 16:20</span>
+                &middot; <th:block th:replace="~{sale-approvals/list :: approvalStatus(${approval.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/sale-approvals" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'PENDING' and canApprove and !mine}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{adjustment.reject}">Reject</button>
+                <form th:action="@{/sale-approvals/{id}/approve(id=${approval.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=${approval.price} ? #{saleApproval.approvePriceConfirm(${approval.number}, ${@num.money(approval.requestedPrice)}, ${@num.m2(approval.discountPercent)})} : #{saleApproval.approveCreditConfirm(${approval.number}, ${@num.money(approval.creditAmount)})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{saleApproval.approve}">Approve</button>
+                </form>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="#{adjustment.reason} + ':'">Reason:</strong> <span th:text="${approval.reason}">Regular customer</span></div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING'}">
+        <span th:text="${approval.price} ? #{saleApproval.waitingPrice(${@num.m2(approval.discountPercent)}, ${@num.m2(approval.limitPercent)})} : #{saleApproval.waitingCredit(${@num.money(approval.overLimit)})}">11.11% off, above the cashier's 5% limit: another person with approval rights decides. The sale cannot be paid meanwhile.</span>
+        <span th:if="${mine}" th:text="#{saleApproval.notYourOwn}">You cannot decide your own request.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'WITHDRAWN'}">
+        <strong th:text="${s == 'REJECTED'} ? #{adjustment.rejectedBy(${approval.decidedBy})} : #{adjustment.cancelledBy(${approval.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${approval.decisionNote}">Too deep</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED'}">
+        <strong th:text="#{saleApproval.approvedOn(${approval.decidedBy}, ${#temporals.format(approval.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 09/10/2026 16:22</strong>
+        <span th:if="${approval.decisionNote != null}" th:text="${'· ' + approval.decisionNote}">· ok</span>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <h3 class="detail-heading" th:text="#{${'saleApproval.kind.' + approval.kind}}">Discount</h3>
+                <div class="detail-list">
+                    <div class="item item-full">
+                        <label th:text="#{saleApproval.what}">For</label>
+                        <div class="value strong" th:text="${approval.subject}">U-WH-000012 · CLR-6 3210 x 2250</div>
+                    </div>
+                    <th:block th:if="${approval.price}">
+                        <div class="item">
+                            <label th:text="#{saleApproval.listPrice}">List price</label>
+                            <div class="value" th:text="${@num.money(approval.listPrice)}">27,000</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.requestedPrice}">Price asked</label>
+                            <div class="value strong" th:text="${@num.money(approval.requestedPrice)}">24,000</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.discount}">Discount</label>
+                            <div class="value" th:text="#{saleApproval.discountOf(${@num.m2(approval.discountPercent)}, ${@num.m2(approval.limitPercent)})}">11.11% off (limit 5%)</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.lineAmount}">Line amount (RWF)</label>
+                            <div class="value" th:text="${@num.money(approval.amountBefore) + ' → ' + @num.money(approval.amountAfter)}">195,008 → 173,340</div>
+                        </div>
+                    </th:block>
+                    <th:block th:if="${approval.credit}">
+                        <div class="item">
+                            <label th:text="#{customer.creditLimit}">Credit limit</label>
+                            <div class="value" th:text="${@num.money(approval.creditLimit) + ' RWF'}">500,000 RWF</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.owed}">Owed when asked</label>
+                            <div class="value" th:text="${@num.money(approval.owed) + ' RWF'}">320,000 RWF</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.creditAmount}">Credit asked on this sale</label>
+                            <div class="value strong" th:text="${@num.money(approval.creditAmount) + ' RWF'}">300,000 RWF</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.overLimit}">Over the limit</label>
+                            <div class="value" th:text="${@num.money(approval.overLimit) + ' RWF'}">120,000 RWF</div>
+                        </div>
+                    </th:block>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{saleApproval.sale}">Sale</h3>
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{pos.customer}">Customer</label>
+                        <div class="value">
+                            <a sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:href="@{/customers/{id}(id=${approval.customer.id})}" th:text="${approval.customer.name}">ACME Builders</a>
+                            <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${approval.customer.name}">ACME Builders</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{saleApproval.till}">Till</label>
+                        <div class="value">
+                            <a class="mono" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS') and hasAuthority('PERM_VIEW_TILL_SESSION')"
+                               th:href="@{/till-sessions/{id}(id=${sale.tillSession.id})}" th:text="${sale.tillSession.number}">TILL-WH-2026-000012</a>
+                            <span class="mono" sec:authorize="!(hasAuthority('PAGE_TILL_SESSIONS') and hasAuthority('PERM_VIEW_TILL_SESSION'))" th:text="${sale.tillSession.number}">TILL-WH-2026-000012</span>
+                            <div class="cell-sub" th:text="${sale.tillSession.cashierUsername}">cashier1</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{invoice.number}">Invoice</label>
+                        <div class="value">
+                            <a class="mono" th:if="${sale.number != null}" th:href="@{/invoices/{id}(id=${sale.id})}" th:text="${sale.number}">INV-WH-2026-000008</a>
+                            <span th:if="${sale.number == null}" th:text="${sale.status.name() == 'DRAFT'} ? #{saleApproval.saleOpen} : #{saleApproval.saleCancelled}">Still being rung up</span>
+                        </div>
+                    </div>
+                    <div class="item" th:if="${approval.price and line != null}">
+                        <label th:text="#{saleApproval.lineNow}">Line now</label>
+                        <div class="value">
+                            <span th:text="${@num.money(line.amount) + ' RWF'}">173,340 RWF</span>
+                            <div class="cell-sub" th:text="${line.priceChanged} ? #{saleApproval.lineChanged(${@num.money(line.price)}, ${@num.m2(line.discountPercent)})} : #{saleApproval.lineAtList(${@num.money(line.price)})}">at 24,000 (11.11% off)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/sale-approvals/' + approval.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+    <th:block th:if="${s == 'PENDING' and canApprove and !mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{saleApproval.rejectTitle(${approval.number})},
+                @{/sale-approvals/{id}/reject(id=${approval.id})}, #{saleApproval.rejectText}, #{adjustment.reject})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

@@ -6,6 +6,7 @@ import com.ntaganira.heritier.iWarehouse.dto.RoleDto;
 import com.ntaganira.heritier.iWarehouse.entity.AppPage;
 import com.ntaganira.heritier.iWarehouse.entity.Role;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.*;
 import jakarta.validation.Valid;
@@ -40,16 +41,18 @@ public class RoleController {
     private final UserService userService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
+    private final SettingService settingService;
     private final Messages messages;
 
     public RoleController(RoleService roleService, PermissionService permissionService, UserService userService,
                           DataChangeService dataChangeService, ActivityLogService activityLogService,
-                          Messages messages) {
+                          SettingService settingService, Messages messages) {
         this.roleService = roleService;
         this.permissionService = permissionService;
         this.userService = userService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
+        this.settingService = settingService;
         this.messages = messages;
     }
 
@@ -74,6 +77,7 @@ public class RoleController {
         String open = List.of("access", "members", "history").contains(tab) ? tab : "access";
         Role role = roleService.findById(id);
         model.addAttribute("role", role);
+        model.addAttribute("defaultDiscountLimit", settingService.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT));
         model.addAttribute("isAdminRole", RoleService.isAdmin(role));
         model.addAttribute("grantedPermissions", RoleService.permissionsByModule(role));
         model.addAttribute("grantedPages", role.getPages().stream()
@@ -118,6 +122,7 @@ public class RoleController {
         dto.setId(role.getId());
         dto.setCode(role.getCode());
         dto.setDescription(role.getDescription());
+        dto.setDiscountLimitPercent(role.getDiscountLimitPercent());
         role.getPermissions().forEach(p -> dto.getPermissionIds().add(p.getId()));
         role.getPages().forEach(p -> dto.getPageIds().add(p.getId()));
         return form(model, dto, RoleService.isAdmin(role));
@@ -182,6 +187,7 @@ public class RoleController {
     private String form(Model model, RoleDto dto, boolean adminRole) {
         model.addAttribute("roleDto", dto);
         model.addAttribute("isAdminRole", adminRole);
+        model.addAttribute("defaultDiscountLimit", settingService.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT));
         model.addAttribute("permissionsByModule", permissionService.byModule());
         model.addAttribute("pagesByModule", roleService.pagesByModule());
         return "roles/form";

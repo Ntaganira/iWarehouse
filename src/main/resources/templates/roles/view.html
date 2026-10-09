@@ -12,6 +12,7 @@
             </h1>
             <div class="subtitle">
                 <span th:text="${role.description}">Description</span> &middot;
+                <span th:text="${role.discountLimitPercent != null} ? #{role.discountLimitShow(${@num.m2(role.discountLimitPercent)})} : #{role.discountLimitDefault(${@num.m2(defaultDiscountLimit)})}">Discount without approval: 0% (Settings)</span> &middot;
                 <span class="badge badge-success" th:if="${role.enabled}" th:text="#{common.active}">Active</span>
                 <span class="badge badge-secondary" th:unless="${role.enabled}" th:text="#{common.inactive}">Inactive</span>
             </div>

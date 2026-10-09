@@ -1,5 +1,8 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -7,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,6 +39,12 @@ public class RoleDto {
     @NotBlank(message = "{role.description.required}")
     @Size(max = 255, message = "{role.description.size}")
     private String description;
+
+    /** The largest discount at the counter without approval (POS-06); empty = the Settings value. */
+    @DecimalMin(value = "0", message = "{role.discountLimit.range}")
+    @DecimalMax(value = "100", message = "{role.discountLimit.range}")
+    @Digits(integer = 3, fraction = 2, message = "{role.discountLimit.range}")
+    private BigDecimal discountLimitPercent;
 
     private Set<Long> permissionIds = new HashSet<>();
 

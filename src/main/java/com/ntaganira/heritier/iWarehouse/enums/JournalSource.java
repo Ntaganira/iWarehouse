@@ -32,7 +32,8 @@ public enum JournalSource {
     CUSTOMER_PAYMENT("/customer-payments/"),
     SUPPLIER_INVOICE("/supplier-invoices/"),
     SUPPLIER_PAYMENT("/supplier-payments/"),
-    FX_REVALUATION("/accounting/fx-revaluations/");
+    FX_REVALUATION("/accounting/fx-revaluations/"),
+    MANUAL_JOURNAL("/accounting/manual-journals/");
 
     private final String path;
 

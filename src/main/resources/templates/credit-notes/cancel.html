@@ -117,8 +117,8 @@
         </div>
 
         <div class="form-actions sticky-actions">
-            <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
             <button type="submit" class="btn btn-primary" th:text="#{creditNote.issue}">Issue the credit note</button>
+            <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
         </div>
     </form>
     <script defer src="/js/credit-note.js"></script>

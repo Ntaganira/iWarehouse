@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{manualJournal.title}, ~{::content})}">
+<head><title>Manual journals - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{manualJournal.title}">Manual journals</h1>
+            <div class="subtitle" th:text="#{manualJournal.subtitle}">Journals entered by account, approved by another person, reversed instead of deleted</div>
+        </div>
+        <a href="/accounting/manual-journals/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_MANUAL_JOURNAL')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{manualJournal.add}">New manual journal</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${pending > 0}" sec:authorize="hasAuthority('PERM_APPROVE_MANUAL_JOURNAL')">
+        <span th:text="#{manualJournal.pendingNote(${pending})}">2 manual journals wait for approval.</span>
+        <a th:href="@{/accounting/manual-journals(status='PENDING_APPROVAL')}" th:text="#{manualJournal.showPending}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{manualJournal.sectionTitle}">Manual journals</span>
+                <span class="section-count" th:text="${journals.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/accounting/manual-journals}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{manualJournal.searchPh}" th:aria-label="#{manualJournal.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'manualJournal.status.' + st}}">Posted</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{manualJournal.number}">Manual journal</th>
+                        <th th:text="#{manualJournal.date}">Date</th>
+                        <th th:text="#{manualJournal.description}">Description</th>
+                        <th class="num" th:text="#{manualJournal.amount}">Amount (RWF)</th>
+                        <th th:text="#{manualJournal.requestedBy}">Asked by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="m : ${journals.content}">
+                        <td><a class="row-link strong mono" th:href="@{/accounting/manual-journals/{id}(id=${m.id})}" th:text="${m.number}">MJ-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(m.entryDate, 'dd/MM/yyyy')}">30/09/2026</td>
+                        <td th:text="${m.description}">Bank charges for September</td>
+                        <td class="num" th:text="${@num.money(m.total)}">12,500</td>
+                        <td>
+                            <span th:text="${m.requestedBy}">accountant</span>
+                            <div class="cell-sub" th:text="${#temporals.format(m.requestedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</div>
+                        </td>
+                        <td><th:block th:replace="~{manual-journals/list :: mjStatus(${m.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${journals.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{manualJournal.empty}">No manual journals yet</h3>
+                                <p th:text="#{manualJournal.emptyHint}">Accruals, bank charges, cash taken to the bank: journals that no document posts</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${journals}, '/accounting/manual-journals', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A manual journal's status as a badge */-->
+<th:block th:fragment="mjStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{manualJournal.status.PENDING_APPROVAL}">Waiting for approval</span>
+    <span th:case="'POSTED'" class="badge badge-success" th:text="#{manualJournal.status.POSTED}">Posted</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{manualJournal.status.REJECTED}">Rejected</span>
+    <span th:case="'REVERSED'" class="badge badge-info" th:text="#{manualJournal.status.REVERSED}">Reversed</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{manualJournal.status.CANCELLED}">Withdrawn</span>
+</th:block>
+</body>
+</html>

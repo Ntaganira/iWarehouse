@@ -4441,3 +4441,9 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
 /* A dialog's opening sentence keeps the same space above its first field in every dialog */
 .modal-body > p.text-muted:first-child { margin-bottom: 16px; }
+
+/* Manual journal lines (ACC-05): the account and memo take the room, debit and credit keep a fixed width */
+.journal-line-table .line-product { min-width: 240px; }
+.journal-line-table td:nth-child(2) { min-width: 180px; }
+.journal-line-table td.num:nth-child(3), .journal-line-table td.num:nth-child(4) { width: 150px; }
+.journal-balance { margin-top: 12px; }

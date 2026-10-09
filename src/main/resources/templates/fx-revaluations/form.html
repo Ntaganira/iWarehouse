@@ -81,8 +81,8 @@
         <form th:action="@{/accounting/fx-revaluations/new}" method="post" class="form-actions sticky-actions confirm-submit"
               th:attr="data-confirm=#{fxRevaluation.confirm(${#temporals.format(preview.periodEnd, 'MMMM yyyy')})}">
             <input type="hidden" name="month" th:value="${month}">
-            <a href="/accounting/fx-revaluations" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
             <button type="submit" class="btn btn-primary" th:disabled="${!preview.ready}" th:text="#{fxRevaluation.post}">Post the revaluation</button>
+            <a href="/accounting/fx-revaluations" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
         </form>
     </th:block>
 </div>

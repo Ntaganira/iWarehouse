@@ -99,8 +99,8 @@
         </div>
 
         <div class="form-actions sticky-actions">
-            <a th:href="@{/suppliers/{id}(id=${supplier.id}, tab='account')}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
             <button type="submit" class="btn btn-primary" th:text="#{supplierInvoice.record}">Record the invoice</button>
+            <a th:href="@{/suppliers/{id}(id=${supplier.id}, tab='account')}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
         </div>
     </form>
     <script defer src="/js/supplier-invoice.js"></script>

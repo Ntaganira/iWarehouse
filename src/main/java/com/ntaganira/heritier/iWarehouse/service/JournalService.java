@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -93,20 +94,8 @@ public class JournalService {
         }
         Map<AccountKey, Account> accounts = accountRepo.findBySystemKeyIsNotNull().stream()
                 .collect(Collectors.toMap(Account::getSystemKey, Function.identity()));
-        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
-        JournalEntry entry = new JournalEntry();
-        entry.setNumber(numbers.next(DocumentType.JOURNAL));
-        entry.setEntryDate(journal.date());
-        entry.setSourceType(journal.source());
-        entry.setSourceId(journal.sourceId());
-        entry.setSourceNumber(journal.sourceNumber());
-        entry.setDescription(journal.description());
-        entry.setTotal(journal.debits());
-        entry.setReversesId(journal.reversesId());
-        entry.setPostedAt(LocalDateTime.now(clock));
-        entry.setUserId(user.map(AppUserPrincipal::getId).orElse(null));
-        entry.setUsername(user.map(AppUserPrincipal::getUsername).orElse("system"));
-        entryRepo.save(entry);
+        JournalEntry entry = newEntry(journal.source(), journal.sourceId(), journal.sourceNumber(), journal.date(), journal.description(),
+                journal.debits(), journal.reversesId());
         int no = 1;
         for (Journal.Line l : lines) {
             Account account = accounts.get(l.account());
@@ -130,6 +119,97 @@ public class JournalService {
             }
             lineRepo.save(line);
         }
+        return entry;
+    }
+
+    /** A line by account (a manual journal's, ACC-05): a debit or a credit, never both, and a memo. */
+    public record AccountLine(Account account, BigDecimal debit, BigDecimal credit, String memo) {
+    }
+
+    /**
+     * Saves a journal given by account, not by posting rule (a manual journal, ACC-05), in the caller's transaction. At least
+     * two lines, each a debit or a credit with 2 decimals, balanced: anything else is a programming error, refused here and by
+     * the database at commit.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public JournalEntry postLines(JournalSource source, UUID sourceId, String sourceNumber, LocalDate date, String description,
+                                  List<AccountLine> lines) {
+        BigDecimal debits = BigDecimal.ZERO;
+        BigDecimal credits = BigDecimal.ZERO;
+        for (AccountLine l : lines) {
+            if (l.account() == null || (l.debit().signum() > 0) == (l.credit().signum() > 0) || l.debit().signum() < 0 || l.credit().signum() < 0) {
+                throw new IllegalStateException("Journal for " + sourceNumber + ": a line is not a debit or a credit");
+            }
+            debits = debits.add(l.debit());
+            credits = credits.add(l.credit());
+        }
+        if (lines.size() < 2 || debits.compareTo(credits) != 0) {
+            throw new IllegalStateException("Journal for " + sourceNumber + " does not balance: debits " + debits + ", credits " + credits);
+        }
+        JournalEntry entry = newEntry(source, sourceId, sourceNumber, date, description, debits.setScale(Journal.SCALE, RoundingMode.HALF_UP), null);
+        int no = 1;
+        for (AccountLine l : lines) {
+            JournalLine line = new JournalLine();
+            line.setEntry(entry);
+            line.setLineNo(no++);
+            line.setAccount(l.account());
+            line.setDebit(l.debit().setScale(Journal.SCALE, RoundingMode.HALF_UP));
+            line.setCredit(l.credit().setScale(Journal.SCALE, RoundingMode.HALF_UP));
+            line.setMemo(l.memo());
+            lineRepo.save(line);
+        }
+        return entry;
+    }
+
+    /**
+     * Reverses a posted journal (ACC-05: never deleted): a new journal on {@code date}, of the same event and document, every
+     * line the other way with the same account, glass, supplier, customer, memo and foreign amount, naming the journal it
+     * reverses. A journal is reversed once.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public JournalEntry reverse(JournalEntry original, LocalDate date, String description) {
+        if (!entryRepo.findByReversesIdOrderByNumber(original.getId()).isEmpty()) {
+            throw new IllegalStateException(original.getNumber() + " is reversed already");
+        }
+        List<JournalLine> lines = lineRepo.findByEntry_IdOrderByLineNo(original.getId());
+        JournalEntry entry = newEntry(original.getSourceType(), original.getSourceId(), original.getSourceNumber(), date, description,
+                original.getTotal(), original.getId());
+        for (JournalLine l : lines) {
+            JournalLine line = new JournalLine();
+            line.setEntry(entry);
+            line.setLineNo(l.getLineNo());
+            line.setAccount(l.getAccount());
+            line.setDebit(l.getCredit());
+            line.setCredit(l.getDebit());
+            line.setMemo(l.getMemo());
+            line.setProduct(l.getProduct());
+            line.setSupplier(l.getSupplier());
+            line.setCustomer(l.getCustomer());
+            line.setCurrencyCode(l.getCurrencyCode());
+            line.setFxAmount(l.getFxAmount());
+            line.setRate(l.getRate());
+            lineRepo.save(line);
+        }
+        return entry;
+    }
+
+    /** A journal's header, numbered JV-WH-2026-000001 and saved: posted now by the current user. */
+    private JournalEntry newEntry(JournalSource source, UUID sourceId, String sourceNumber, LocalDate date, String description,
+                                  BigDecimal total, UUID reversesId) {
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        JournalEntry entry = new JournalEntry();
+        entry.setNumber(numbers.next(DocumentType.JOURNAL));
+        entry.setEntryDate(date);
+        entry.setSourceType(source);
+        entry.setSourceId(sourceId);
+        entry.setSourceNumber(sourceNumber);
+        entry.setDescription(description);
+        entry.setTotal(total);
+        entry.setReversesId(reversesId);
+        entry.setPostedAt(LocalDateTime.now(clock));
+        entry.setUserId(user.map(AppUserPrincipal::getId).orElse(null));
+        entry.setUsername(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        entryRepo.save(entry);
         return entry;
     }
 

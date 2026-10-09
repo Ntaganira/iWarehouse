@@ -1,6 +1,7 @@
 /*
  * iWarehouse - forms with editable rows: purchase order lines (PRC-01), goods receipt crates (PRC-02),
- * shipment bills (PRC-03) and quotation lines (POS-03: whole sheets have no processing, holes or mark).
+ * shipment bills (PRC-03), quotation lines (POS-03: whole sheets have no processing, holes or mark) and
+ * manual journal lines (ACC-05: a debit or a credit per line, the totals and whether they balance).
  * Add and remove rows, keep the row numbers in the field names continuous (lines[0], lines[1]...), drop
  * empty rows before sending, and show live m² and amounts. The server checks everything again; these
  * figures are only a preview (the order total is rounded once, like the server does).
@@ -8,13 +9,14 @@
 (function () {
     'use strict';
 
-    const form = document.querySelector('form.po-form, form.receipt-form, form.shipment-form, form.quote-form');
+    const form = document.querySelector('form.po-form, form.receipt-form, form.shipment-form, form.quote-form, form.journal-form');
     if (!form) return;
 
     const isOrder = form.classList.contains('po-form');
     const isShipment = form.classList.contains('shipment-form');
     const isQuote = form.classList.contains('quote-form');
-    const prefix = isOrder || isQuote ? 'lines' : (isShipment ? 'costs' : 'crates');
+    const isJournal = form.classList.contains('journal-form');
+    const prefix = isOrder || isQuote || isJournal ? 'lines' : (isShipment ? 'costs' : 'crates');
     const body = form.querySelector('tbody.line-body');
     const template = form.querySelector('template.line-template');
     const addButton = form.querySelector('.line-add');
@@ -52,6 +54,10 @@
         if (isOrder) {
             return !field(row, 'productId').value && ['widthMm', 'heightMm', 'quantity', 'pricePerM2']
                 .every(n => !field(row, n).value);
+        }
+        if (isJournal) {
+            return !field(row, 'accountId').value && !field(row, 'debit').value && !field(row, 'credit').value
+                && !field(row, 'memo').value.trim();
         }
         if (isQuote) {
             // The quantity and the kind start filled, so they do not count
@@ -185,11 +191,38 @@
         document.getElementById('quote-total-area').textContent = fmt(area, 0, 4);
     }
 
+    // ---------------------------------------------------------------- manual journal
+
+    // A line is a debit or a credit: typing one side empties the other
+    function onSide(input) {
+        if (!input.value) return;
+        const other = field(input.closest('tr'), input.dataset.side === 'debit' ? 'credit' : 'debit');
+        if (other.value) other.value = '';
+    }
+
+    function recalcJournal() {
+        let debits = 0, credits = 0;
+        rows().forEach(row => {
+            debits += num(field(row, 'debit')) || 0;
+            credits += num(field(row, 'credit')) || 0;
+        });
+        // Cents, so 0.1 + 0.2 still balances 0.3
+        const d = Math.round(debits * 100), c = Math.round(credits * 100);
+        document.getElementById('mj-total-debit').textContent = fmt(d / 100, 0, 2);
+        document.getElementById('mj-total-credit').textContent = fmt(c / 100, 0, 2);
+        const status = form.querySelector('.journal-balance');
+        const balanced = d === c && d > 0;
+        status.classList.toggle('is-done', balanced);
+        status.querySelector('.pay-status-label').textContent = d === c ? status.dataset.balancedLabel : status.dataset.unbalancedLabel;
+        status.querySelector('.pay-status-amount').textContent = d === c ? '' : fmt(Math.abs(d - c) / 100, 0, 2) + ' RWF';
+        status.hidden = d + c === 0;
+    }
+
     // ---------------------------------------------------------------- shared
 
     function recalc() {
         if (isShipment) return; // bills are in several currencies: the shipment page shows them in RWF
-        if (isQuote) recalcQuote(); else if (isOrder) recalcOrder(); else recalcReceipt();
+        if (isJournal) recalcJournal(); else if (isQuote) recalcQuote(); else if (isOrder) recalcOrder(); else recalcReceipt();
     }
 
     function addRow() {
@@ -205,11 +238,14 @@
         if (first) first.focus();
     }
 
-    body.addEventListener('input', recalc);
+    body.addEventListener('input', (e) => {
+        if (isJournal && e.target.matches('[data-side]')) onSide(e.target);
+        recalc();
+    });
     body.addEventListener('change', (e) => {
         if (isQuote && e.target.matches('[data-quote-kind]')) {
             onKind(e.target.closest('tr'));
-        } else if (!isOrder && !isShipment && !isQuote && e.target.matches('select[name$="].poLineId"]')) {
+        } else if (!isOrder && !isShipment && !isQuote && !isJournal && e.target.matches('select[name$="].poLineId"]')) {
             onLineChange(e.target);
         } else {
             recalc();
@@ -237,7 +273,7 @@
     if (isQuote) {
         rows().forEach(onKind);
     }
-    if (!isOrder && !isShipment && !isQuote) {
+    if (!isOrder && !isShipment && !isQuote && !isJournal) {
         body.querySelectorAll('select[name$="].poLineId"]').forEach(select => {
             const option = select.selectedOptions[0];
             if (option && option.dataset.w) {

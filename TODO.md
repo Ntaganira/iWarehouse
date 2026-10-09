@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V27.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V28.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-09)
@@ -35,7 +35,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 375, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
+Unit tests: 386, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -75,7 +75,7 @@ Goal: the accountant runs receivables, payables and the month end (ACC-05, ACC-0
 - [x] Supplier invoices against receipts (Dr GRNI / Cr AP in the supplier's currency), supplier payments, shipment bills paid to a supplier in its balance, ageing (ACC-09) (M) — 2026-10-09 (V25): the supplier page's Account tab shows what is owed (RWF as booked, and per currency), the ageing at the supplier's terms, the posted goods receipts not invoiced yet and the statement. "Record an invoice" (SINV-WH-2026-000001) ticks the receipts the supplier's invoice bills, its number, date (due + terms) and total, which must match: each receipt moves Dr GRNI / Cr AP at its own value and rate. Shipment bills naming a supplier are payables already. "Pay" (SPAY-WH-2026-000001) pays a currency owed, by transfer, cash from the vault or mobile money, at today's rate, up to what is owed; it settles the oldest items. `/supplier-invoices`, `/supplier-payments`, `/accounting/payables` (aged per supplier, with the foreign amounts). Receipts posted before the ledger started (GRN-WH-2026-000001..4) have no GRNI line and are not offered
 - [x] Realised FX gain/loss when a foreign invoice is paid at another rate (ACC-08) (S) — 2026-10-09 (V25): a supplier payment settles the RWF its items were booked at; the RWF paid at the day's rate less that is the gain or loss, on the payment and its journal (FX gain/loss account)
 - [x] Revaluation of open foreign balances at month end (unrealised FX, reversed the next day) (S) — 2026-10-09 (V26): `/accounting/fx-revaluations` (FX Revaluations, Accounting). "Revalue a month" offers each ended month not revalued yet, from the ledger's first month: what is owed in a foreign currency at its last day on Accounts Payable and GRNI (per supplier) and Accrued Import Charges, at that day's rate (a missing or stale rate is shown and stops the posting). Posting (FXR-WH-2026-000001) keeps each line's rate and posts the differences to the new account 5070 Unrealised FX Gain/Loss on the last day, reversed the next day; supplier balances, payments and the ageing keep the RWF items were booked at. Journals now link a reversal and the journal it reverses (`reverses_id`), ready for manual journals. Once per month: a document dated into a revalued month later is not revalued (the period close, ACC-10, will refuse it)
-- [ ] Manual journals with approval; reversal, never delete (ACC-05) (M)
+- [x] Manual journals with approval; reversal, never delete (ACC-05) (M) — 2026-10-09 (V27): `/accounting/manual-journals` (Manual Journals, Accounting). The accountant asks for one (MJ-WH-2026-000001): a date up to today, a description, lines by account with a debit or a credit and a memo, live totals, balanced; control accounts (till cash, driver floats, receivables, claims, inventory, payables, GRNI) are not offered, so their subledgers stay right. Another person approves it (posted on its date) or rejects it with a reason; the requester can withdraw it; nobody approves their own. A posted one is reversed, never deleted: the opposite journal on a day from its date to today, with a reason; both journals name each other. "Copy" starts a new one from its lines. The list tells approvers how many wait
 - [ ] Monthly period close; posting into a closed period is refused (ACC-10) (M)
 - [ ] Trial balance, general ledger, income statement, balance sheet, Excel export (ACC-11) (M)
 - [ ] Monthly VAT report, output and input (TAX-05) (S)
@@ -185,7 +185,8 @@ Answers change what gets built; record each answer next to the question.
 
 **Accounting**
 - [ ] The chart of accounts (V16) is a template in English: confirm the numbering and names with the accountant, and whether they should read in French (ACC-03)
-- [ ] Import bills entered without a supplier (duty, port charges) wait in Accrued Import Charges until their payment is recorded (M5). Are they paid in cash at the border, by bank, by the clearing agent? (SRS 4.9.1: "Accounts Payable / Cash")
+- [ ] Manual journals: built as the accountant (and admin) asks for and reverses them, the owner (and admin) approves them, every one needs approval. Confirm, and whether small ones (under an amount) may post at once (ACC-05)
+- [ ] Import bills entered without a supplier (duty, port charges) wait in Accrued Import Charges until their payment is recorded (M5); until a payment screen exists, a manual journal records it (Dr Accrued Import Charges / Cr Bank or Main Cash Vault). Are they paid in cash at the border, by bank, by the clearing agent? (SRS 4.9.1: "Accounts Payable / Cash")
 - [ ] Import VAT paid at customs is recoverable (VAT Input), not a cost of the glass: keep it out of the shipment bills. Confirm how it is paid and declared (TAX-05)
 - [ ] Import costs reaching glass already sold or cut go to Cost of Goods Sold (built). Agree
 - [ ] Sheets broken on arrival are expensed to Glass Spoilage at receipt; a claim brings back what it recovers (built). Agree
@@ -219,6 +220,7 @@ Answers change what gets built; record each answer next to the question.
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
 - Counter sales on 2026-10-09 by qa-admin: tills TILL-WH-2026-000001..6 (all closed; -000002 sold U-WH-000061 and U-WH-000011 on INV-WH-2026-000001, 389,408 RWF to "Jean Habimana", TIN 102938475, half cash half mobile money MP-778812, and closed 500 RWF short, "Change given twice"; the others opened and closed for checks without a sale), and their journals
+- Manual journal tests on 2026-10-09: MJ-WH-2026-000001 (qa-admin, Dr Bank / Cr Main Cash Vault 100,000, approved by owner38648 as JV-WH-2026-000074, reversed by qa-admin as JV-WH-2026-000075 "E2E: the deposit did not happen"), -000002 (a copy, withdrawn), -000003 (a copy, rejected by owner38648). Journals up to JV-WH-2026-000075
 - FX revaluation tests on 2026-10-09: USD BNR rate of 30/09 recorded as 1,455 (replace with the real rate); PO-WH-2026-000017 (Shandong, 1 sheet CLR-6) received as GRN-WH-2026-000006 (E2E-FXR-1, on WH-A-R02, at 1,470) and invoiced as SINV-WH-2026-000002 (INV-E2E-FXR, 31.42 USD, dated 30/09/2026, still owed); FXR-WH-2026-000001 revalued September (payable +468.18, GRNI -468.18, nothing to Unrealised FX) with JV-WH-2026-000072 and its reversal -000073. Journals up to JV-WH-2026-000073
 - Supplier account tests on 2026-10-09: USD BNR rate of 09/10 recorded as 1,460 then corrected to 1,470 (replace with the real rate); PO-WH-2026-000016 (Shandong, 2 sheets CLR-6) received as GRN-WH-2026-000005 (E2E-SUP-1, on WH-A-R02), invoiced as SINV-WH-2026-000001 (INV-E2E-001, 62.84 USD) and paid by SPAY-WH-2026-000001 (SWIFT-E2E, 634.60 FX loss); PO-WH-2026-000013..15 cancelled. Journals up to JV-WH-2026-000069
 - Customer account tests on 2026-10-09: RCT-WH-2026-000001 (Umucyo, 100,000 by transfer TRF-901) and -000002 (Umucyo, 50,000 cash, 60,000 handed over, in TILL-WH-2026-000027, closed): Umucyo now owes 46,019. Journals up to JV-WH-2026-000066

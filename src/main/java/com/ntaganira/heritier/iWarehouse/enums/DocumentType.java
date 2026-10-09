@@ -36,6 +36,8 @@ public enum DocumentType {
     SUPPLIER_PAYMENT("SPAY"),
     /** Open foreign balances revalued at a month's end (ACC-08): FXR-WH-2026-000001. */
     FX_REVALUATION("FXR"),
+    /** A journal asked for by account and approved by another person (ACC-05): MJ-WH-2026-000001. */
+    MANUAL_JOURNAL("MJ"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

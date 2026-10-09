@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${mj.number}, ~{::content})}">
+<head><title>Manual journal - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${mj.status.name()},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_MANUAL_JOURNAL'')')},
+        canCreate=${#authorization.expression('hasAuthority(''PERM_CREATE_MANUAL_JOURNAL'')')},
+        canReverse=${#authorization.expression('hasAuthority(''PERM_REVERSE_MANUAL_JOURNAL'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${mj.number}">MJ-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{manualJournal.askedBy(${mj.requestedBy}, ${#temporals.format(mj.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by accountant on 09/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{manual-journals/list :: mjStatus(${mj.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/manual-journals" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/accounting/manual-journals/new(copy=${mj.id})}" class="btn btn-outline" th:if="${canCreate}" th:text="#{manualJournal.copy}">Copy</a>
+            <th:block th:if="${s == 'PENDING_APPROVAL'}">
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canCreate and mine}" th:text="#{manualJournal.cancel}">Withdraw</button>
+                <th:block th:if="${canApprove and !mine}">
+                    <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{manualJournal.reject}">Reject</button>
+                    <form th:action="@{/accounting/manual-journals/{id}/approve(id=${mj.id})}" method="post" class="row-action-form confirm-submit"
+                          th:attr="data-confirm=#{manualJournal.approveConfirm(${mj.number}, ${@num.money(mj.total)}, ${#temporals.format(mj.entryDate, 'dd/MM/yyyy')})}">
+                        <button type="submit" class="btn btn-primary" th:text="#{manualJournal.approve}">Approve and post</button>
+                    </form>
+                </th:block>
+            </th:block>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reverse-modal" th:if="${s == 'POSTED' and canReverse}"
+                    th:text="#{manualJournal.reverse}">Reverse</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
+        <span th:text="#{manualJournal.waitingNote}">Nothing is posted until another person with approval rights approves it.</span>
+        <span th:if="${mine}" th:text="#{manualJournal.notYourOwn}">You cannot approve your own manual journal.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{manualJournal.rejectedBy(${mj.decidedBy})} : #{manualJournal.cancelledBy(${mj.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${mj.decisionNote}">Wrong account</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'POSTED' or s == 'REVERSED'}">
+        <strong th:text="#{manualJournal.approvedBy(${mj.decidedBy}, ${#temporals.format(mj.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 09/10/2026 11:00</strong>
+        <span th:if="${mj.decisionNote != null}" th:text="${'· ' + mj.decisionNote}">· ok</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REVERSED'}">
+        <strong th:text="#{manualJournal.reversedBy(${mj.reversedBy}, ${#temporals.format(mj.reversalDate, 'dd/MM/yyyy')})}">Reversed by accountant on 10/10/2026:</strong>
+        <span th:text="${mj.reversalReason}">Booked twice</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{manualJournal.date}">Date</label>
+                    <div class="value" th:text="${#temporals.format(mj.entryDate, 'dd/MM/yyyy')}">30/09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{manualJournal.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(mj.total)}">12,500</div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{manualJournal.description}">Description</label>
+                    <div class="value" th:text="${mj.description}">Bank charges for September</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{manualJournal.lines}">Lines</span>
+                <span class="section-count" th:text="${lines.size()}">2</span>
+            </h2>
+        </div>
+        <div class="section-body">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="num">#</th>
+                            <th th:text="#{manualJournal.account}">Account</th>
+                            <th th:text="#{manualJournal.memo}">Memo</th>
+                            <th class="num" th:text="#{manualJournal.debit}">Debit (RWF)</th>
+                            <th class="num" th:text="#{manualJournal.credit}">Credit (RWF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="l : ${lines}">
+                            <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                            <td>
+                                <a th:href="@{/accounting/accounts/{id}(id=${l.account.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTS')">
+                                    <span class="mono" th:text="${l.account.code}">5190</span> <span th:text="${l.account.name}">Bank charges</span>
+                                </a>
+                                <span sec:authorize="!hasAuthority('PAGE_ACCOUNTS')"><span class="mono" th:text="${l.account.code}">5190</span> <span th:text="${l.account.name}">Bank charges</span></span>
+                            </td>
+                            <td th:text="${l.memo != null} ? ${l.memo} : '—'">Statement of 30/09</td>
+                            <td class="num" th:text="${l.debit.signum() > 0} ? ${@num.money(l.debit)} : ''">12,500</td>
+                            <td class="num" th:text="${l.credit.signum() > 0} ? ${@num.money(l.credit)} : ''"></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th></th>
+                            <th colspan="2" th:text="#{manualJournal.total}">Total</th>
+                            <th class="num" th:text="${@num.money(mj.total)}">12,500</th>
+                            <th class="num" th:text="${@num.money(mj.total)}">12,500</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/accounting/manual-journals/' + mj.id}, '')}"></th:block>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'PENDING_APPROVAL'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{manualJournal.rejectTitle(${mj.number})},
+                @{/accounting/manual-journals/{id}/reject(id=${mj.id})}, #{manualJournal.rejectText}, #{manualJournal.reject})}"></div>
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{manualJournal.cancelTitle(${mj.number})},
+                @{/accounting/manual-journals/{id}/cancel(id=${mj.id})}, #{manualJournal.cancelText}, #{manualJournal.cancel})}"></div>
+    </th:block>
+
+    <!--/* Reversing: the day of the opposite journal (from the journal's date to today) and the reason */-->
+    <div class="modal-overlay" id="reverse-modal" th:if="${s == 'POSTED' and canReverse}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reverse-modal-title">
+            <div class="modal-header">
+                <h3 id="reverse-modal-title" th:text="#{manualJournal.reverseTitle(${mj.number})}">Reverse MJ-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="reverse-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/accounting/manual-journals/{id}/reverse(id=${mj.id})}" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{manualJournal.reverseText}">A new journal posts every line the other way. The manual journal and its journal stay as they are.</p>
+                    <div class="form-group">
+                        <label for="reverse-modal-date" th:text="#{manualJournal.reversalDate}">Reversal date</label>
+                        <input type="date" id="reverse-modal-date" name="reversalDate" required th:value="${today}" th:min="${mj.entryDate}" th:max="${today}">
+                    </div>
+                    <div class="form-group">
+                        <label for="reverse-modal-reason" th:text="#{reason.label}">Reason</label>
+                        <input type="text" id="reverse-modal-reason" name="reason" maxlength="255" required autocomplete="off" th:placeholder="#{reason.placeholder}">
+                        <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="reverse-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-danger" th:text="#{manualJournal.reverse}">Reverse</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

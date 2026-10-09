@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{manualJournal.addTitle}, ~{::content})}">
+<head><title>New manual journal - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{manualJournal.addTitle}">New manual journal</h1>
+            <div class="subtitle" th:text="#{manualJournal.formSubtitle}">It waits for another person's approval, then posts on its date.</div>
+        </div>
+        <a href="/accounting/manual-journals" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/accounting/manual-journals/new}" th:object="${mjDto}" method="post" class="journal-form" novalidate>
+        <div class="section">
+            <div class="section-body">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="entryDate" th:text="#{manualJournal.date}">Date</label>
+                        <input type="date" id="entryDate" th:field="*{entryDate}" required th:max="${today}"
+                               th:classappend="${#fields.hasErrors('entryDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('entryDate')}" th:errors="*{entryDate}"></span>
+                        <span class="hint" th:text="#{manualJournal.dateHint}">The day it is booked on: today or before (a month-end accrual on the month's last day)</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="description" th:text="#{manualJournal.description}">Description</label>
+                        <input type="text" id="description" th:field="*{description}" maxlength="255" required autocomplete="off"
+                               th:placeholder="#{manualJournal.descriptionPh}" th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{manualJournal.lines}">Lines</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{manualJournal.addLine}">Add line</span>
+                </button>
+            </div>
+            <div class="section-body">
+            <div class="table-container">
+                <table class="line-table journal-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{manualJournal.account}">Account</th>
+                            <th th:text="#{manualJournal.memo}">Memo</th>
+                            <th class="num" th:text="#{manualJournal.debit}">Debit (RWF)</th>
+                            <th class="num" th:text="#{manualJournal.credit}">Credit (RWF)</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body">
+                        <tr class="line-row" th:each="line, st : *{lines}">
+                            <td class="line-product">
+                                <select th:field="*{lines[__${st.index}__].accountId}" th:aria-label="#{manualJournal.account}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].accountId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{manualJournal.chooseAccount}">Choose an account</option>
+                                    <optgroup th:each="t : ${accountTypes}" th:label="#{${'account.type.' + t}}">
+                                        <option th:each="a : ${accounts}" th:if="${a.type == t}" th:value="${a.id}" th:text="${a.code + ' · ' + a.name}">5050 · Cash Over/Short</option>
+                                    </optgroup>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].accountId')}" th:errors="*{lines[__${st.index}__].accountId}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{lines[__${st.index}__].memo}" maxlength="255" autocomplete="off" th:aria-label="#{manualJournal.memo}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].memo')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].memo')}" th:errors="*{lines[__${st.index}__].memo}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].debit}" min="0" step="0.01" inputmode="decimal" data-side="debit"
+                                       th:aria-label="#{manualJournal.debit}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].debit')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].debit')}" th:errors="*{lines[__${st.index}__].debit}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].credit}" min="0" step="0.01" inputmode="decimal" data-side="credit"
+                                       th:aria-label="#{manualJournal.credit}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].credit')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].credit')}" th:errors="*{lines[__${st.index}__].credit}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{manualJournal.removeLine}" th:aria-label="#{manualJournal.removeLine}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="2" th:text="#{manualJournal.total}">Total</th>
+                            <th class="num" id="mj-total-debit">0</th>
+                            <th class="num" id="mj-total-credit">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="pay-status journal-balance" aria-live="polite"
+                 th:attr="data-balanced-label=#{manualJournal.balanced}, data-unbalanced-label=#{manualJournal.difference}">
+                <span class="pay-status-label" th:text="#{manualJournal.balanced}">The lines balance</span>
+                <span class="pay-status-amount"></span>
+            </div>
+            <p class="form-note">
+                <span th:text="#{manualJournal.linesNote}">Each line is a debit or a credit, in RWF; the debits must equal the credits. Empty lines are ignored.</span>
+                <span th:text="#{manualJournal.controlledNote(${#strings.listJoin(controlled.![code + ' ' + name], ', ')})}">Control accounts are posted by their documents only and cannot be used: 1010 Cash on Hand, 1100 Accounts Receivable...</span>
+            </p>
+            </div>
+        </div>
+
+        <!-- A new line (copied by js/line-form.js; {i} becomes the row number) -->
+        <template class="line-template">
+            <tr class="line-row">
+                <td class="line-product">
+                    <select name="lines[{i}].accountId" th:aria-label="#{manualJournal.account}">
+                        <option value="" th:text="#{manualJournal.chooseAccount}">Choose an account</option>
+                        <optgroup th:each="t : ${accountTypes}" th:label="#{${'account.type.' + t}}">
+                            <option th:each="a : ${accounts}" th:if="${a.type == t}" th:value="${a.id}" th:text="${a.code + ' · ' + a.name}">5050 · Cash Over/Short</option>
+                        </optgroup>
+                    </select>
+                </td>
+                <td><input type="text" name="lines[{i}].memo" maxlength="255" autocomplete="off" th:aria-label="#{manualJournal.memo}"></td>
+                <td class="num"><input type="number" name="lines[{i}].debit" min="0" step="0.01" inputmode="decimal" data-side="debit" th:aria-label="#{manualJournal.debit}"></td>
+                <td class="num"><input type="number" name="lines[{i}].credit" min="0" step="0.01" inputmode="decimal" data-side="credit" th:aria-label="#{manualJournal.credit}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{manualJournal.removeLine}" th:aria-label="#{manualJournal.removeLine}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{manualJournal.submit}">Send for approval</button>
+            <a href="/accounting/manual-journals" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

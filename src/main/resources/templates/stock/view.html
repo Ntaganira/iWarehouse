@@ -256,7 +256,7 @@
 </div>
 
 <!--/* Link to the document a movement or cost entry came from. */-->
-<th:block th:fragment="refLink(type, id, number)" th:with="url=${type == 'GOODS_RECEIPT' ? '/goods-receipts/' : (type == 'SHIPMENT' ? '/shipments/' : (type == 'CUTTING_JOB' ? '/cutting-jobs/' : (type == 'TRANSFER' ? '/stock-transfers/' : (type == 'ADJUSTMENT' ? '/stock-adjustments/' : (type == 'CUSTOMER' ? '/customers/' : (type == 'STOCK_COUNT' ? '/stock-counts/' : (type == 'SALES_INVOICE' ? '/invoices/' : null)))))))}">
+<th:block th:fragment="refLink(type, id, number)" th:with="url=${type == 'GOODS_RECEIPT' ? '/goods-receipts/' : (type == 'SHIPMENT' ? '/shipments/' : (type == 'CUTTING_JOB' ? '/cutting-jobs/' : (type == 'TRANSFER' ? '/stock-transfers/' : (type == 'ADJUSTMENT' ? '/stock-adjustments/' : (type == 'CUSTOMER' ? '/customers/' : (type == 'STOCK_COUNT' ? '/stock-counts/' : (type == 'SALES_INVOICE' ? '/invoices/' : (type == 'CREDIT_NOTE' ? '/credit-notes/' : null))))))))}">
     <a class="mono" th:if="${url != null and id != null}" th:href="${url + id}" th:text="${number}">GRN-WH-2026-000001</a>
     <span class="mono" th:unless="${url != null and id != null}" th:text="${number ?: '—'}">—</span>
 </th:block>

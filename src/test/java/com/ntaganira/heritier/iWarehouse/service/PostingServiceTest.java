@@ -357,6 +357,70 @@ class PostingServiceTest {
         assertThat(debits).isEqualByComparingTo(credits);
     }
 
+    @Test
+    void aCreditNoteReversesTheSaleAndPutsGlassBackAtItsOwnCost() {   // POS-09, AT-10
+        held.put(clear6.getId(), new BigDecimal("100.0000"));
+        clear6.setMacPerM2(new BigDecimal("5000.0000"));
+        postings.openingStock();
+
+        Customer walkIn = new Customer();
+        walkIn.setId(UUID.randomUUID());
+        walkIn.setName("Walk-in customer");
+        SalesInvoice invoice = new SalesInvoice();
+        invoice.setId(UUID.randomUUID());
+        invoice.setNumber("INV-WH-2026-000001");
+        invoice.setCustomer(walkIn);
+        CreditNote note = new CreditNote();
+        note.setId(UUID.randomUUID());
+        note.setNumber("CN-WH-2026-000001");
+        note.setInvoice(invoice);
+        note.setCustomer(walkIn);
+        note.setCreditDate(LocalDate.of(2026, 10, 9));
+        note.setReason("Wrong size ordered");
+        note.setNetAmount(new BigDecimal("165261.02"));
+        note.setVatAmount(new BigDecimal("29746.98"));
+        note.setTotalAmount(new BigDecimal("195008.00"));
+        note.setBalanceReduced(new BigDecimal("0.00"));
+        note.setRefundMethod(PaymentMethod.CASH);
+        note.setRefundAmount(new BigDecimal("195008.00"));
+
+        // A 7.2225 m² sheet back on its rack at its own cost (36,500): the MAC moves; a piece back as cullet (1,200)
+        PostingService.StockValues before = postings.stockValues(List.of(clear6));
+        clear6.setMacPerM2(Costing.afterStockChange(held(), clear6.getMacPerM2(), new BigDecimal("7.2225"), new BigDecimal("36500.00")));
+        held.put(clear6.getId(), held().add(new BigDecimal("7.2225")));
+        postings.creditNote(note, new BigDecimal("36500.00"), new BigDecimal("1200.00"), before);
+
+        Journal credit = last();
+        assertThat(credit.source()).isEqualTo(JournalSource.CREDIT_NOTE);
+        assertThat(line(credit, AccountKey.SALES_RETURNS).debit()).isEqualByComparingTo("165261.02");
+        assertThat(line(credit, AccountKey.VAT_OUTPUT).debit()).isEqualByComparingTo("29746.98");
+        assertThat(line(credit, AccountKey.CASH).credit()).isEqualByComparingTo("195008");
+        assertThat(line(credit, AccountKey.COGS).credit()).isEqualByComparingTo("37700");   // both costs back from COGS
+        assertThat(line(credit, AccountKey.SPOILAGE).debit()).isEqualByComparingTo("1200");
+        assertThat(credit.debits()).isEqualByComparingTo(credit.credits());
+        assertInventoryEqualsValuation();
+
+        // To the customer's account: the receivable line names them
+        CreditNote onAccount = new CreditNote();
+        onAccount.setId(UUID.randomUUID());
+        onAccount.setNumber("CN-WH-2026-000002");
+        onAccount.setInvoice(invoice);
+        onAccount.setCustomer(walkIn);
+        onAccount.setCreditDate(LocalDate.of(2026, 10, 9));
+        onAccount.setReason("Overcharged piece");
+        onAccount.setNetAmount(new BigDecimal("8474.58"));
+        onAccount.setVatAmount(new BigDecimal("1525.42"));
+        onAccount.setTotalAmount(new BigDecimal("10000.00"));
+        onAccount.setBalanceReduced(new BigDecimal("4000.00"));
+        onAccount.setRefundMethod(PaymentMethod.CREDIT);
+        onAccount.setRefundAmount(new BigDecimal("6000.00"));
+        postings.creditNote(onAccount, BigDecimal.ZERO, new BigDecimal("500.00"), postings.stockValues(List.of(clear6)));
+        assertThat(lines(AccountKey.RECEIVABLE).stream().filter(l -> walkIn.getId().equals(l.customerId()))
+                .map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("-10000");
+        assertThat(last().debits()).isEqualByComparingTo(last().credits());
+        assertInventoryEqualsValuation();
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static SalesPayment salePayment(PaymentMethod method, String amount, String reference) {

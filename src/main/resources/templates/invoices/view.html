@@ -12,6 +12,8 @@
         <div class="btn-group">
             <a href="/invoices" class="btn btn-outline" th:text="#{common.back}">Back</a>
             <a href="/pos" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')" th:text="#{pos.newSale}">New sale</a>
+            <a th:href="@{/credit-notes/new(invoice=${invoice.id})}" class="btn btn-outline" th:if="${canReturn}"
+               sec:authorize="hasAuthority('PERM_RETURN_SALE')" th:text="#{creditNote.returnGoods}">Return goods</a>
             <a th:href="@{/invoices/{id}/receipt(id=${invoice.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{invoice.printReceipt}">Print the receipt</a>
         </div>
     </div>
@@ -62,6 +64,16 @@
                         <div class="value strong" th:text="${invoice.hasBalanceDue()} ? ${@num.money(invoice.balanceDue)} : #{invoice.balancePaidShort}">97,504</div>
                     </div>
                 </th:block>
+                <div class="item" th:unless="${#lists.isEmpty(creditNotes)}">
+                    <label th:text="#{creditNote.title}">Credit notes</label>
+                    <div class="value">
+                        <span th:each="c, st : ${creditNotes}">
+                            <a class="mono" th:href="@{/credit-notes/{id}(id=${c.id})}" sec:authorize="hasAuthority('PAGE_CREDIT_NOTES')" th:text="${c.number}">CN-WH-2026-000001</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_CREDIT_NOTES')" th:text="${c.number}">CN-WH-2026-000001</span>
+                            <span th:text="${@num.money(c.totalAmount)}">13,500</span><th:block th:unless="${st.last}">, </th:block>
+                        </span>
+                    </div>
+                </div>
                 <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
             </div>
         </div>
@@ -182,6 +194,8 @@
                                     <th:block th:replace="~{invoices/list :: lineWhat(${l})}"></th:block>
                                     <div class="cell-sub" th:if="${l.customPiece}" th:with="p=${progress.get(l.id)}"
                                          th:text="#{sale.line.handedOver(${p.delivered}, ${p.ordered})}">Handed over 1 of 3</div>
+                                    <div class="cell-sub" th:if="${returned.get(l.id) != null}"
+                                         th:text="#{creditNote.lineReturned(${returned.get(l.id)}, ${l.quantity})}">Brought back 1 of 3</div>
                                     <div class="cell-sub" th:if="${l.priceChanged}" th:with="a=${priceApprovals.get(l.id)}">
                                         <span th:text="#{invoice.priceReason(${l.priceReason})}">Price changed: regular customer</span>
                                         <th:block th:if="${a != null}">·

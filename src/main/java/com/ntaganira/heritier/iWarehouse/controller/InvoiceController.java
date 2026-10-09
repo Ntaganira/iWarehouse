@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 public class InvoiceController {
 
     private final SalesService salesService;
+    private final CreditNoteService creditNoteService;
     private final JournalService journalService;
     private final DataChangeService dataChangeService;
     private final SettingService settingService;
@@ -52,10 +53,12 @@ public class InvoiceController {
     private final Messages messages;
     private final NumberFormats num;
 
-    public InvoiceController(SalesService salesService, JournalService journalService, DataChangeService dataChangeService,
+    public InvoiceController(SalesService salesService, CreditNoteService creditNoteService, JournalService journalService,
+                             DataChangeService dataChangeService,
                              SettingService settingService, ActivityLogService activityLogService,
                              Messages messages, NumberFormats num) {
         this.salesService = salesService;
+        this.creditNoteService = creditNoteService;
         this.journalService = journalService;
         this.dataChangeService = dataChangeService;
         this.settingService = settingService;
@@ -106,6 +109,10 @@ public class InvoiceController {
         salesService.approvals(invoice).stream().filter(a -> a.isPrice() && a.isApproved() && a.getLineId() != null)
                 .forEach(a -> priceApprovals.put(a.getLineId(), a));
         model.addAttribute("priceApprovals", priceApprovals);
+        // Returns (POS-09): its credit notes, the pieces back per line, whether anything can still come back
+        model.addAttribute("creditNotes", creditNoteService.ofInvoice(id));
+        model.addAttribute("returned", creditNoteService.returnedCounts(id));
+        model.addAttribute("canReturn", !creditNoteService.returnables(invoice).isEmpty());
         model.addAttribute("history", dataChangeService.historyWithChildren("SalesInvoice", id.toString(), "SalesInvoiceLine",
                 "invoice", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

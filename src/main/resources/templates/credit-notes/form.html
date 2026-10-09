@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{creditNote.formTitle}, ~{::content})}">
+<head><title>Return goods - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{creditNote.formTitle}">Return goods</h1>
+            <div class="subtitle" th:text="#{creditNote.formSubtitle(${invoice.number}, ${invoice.billTo})}">Against INV-WH-2026-000001 · Jean Habimana</div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section" th:if="${#lists.isEmpty(creditNoteDto.items)}">
+        <div class="section-body">
+            <div class="empty-state">
+                <h3 th:text="#{creditNote.nothing}">Nothing to bring back</h3>
+                <p th:text="#{creditNote.nothingHint}">Only sheets sold from stock and pieces already handed over can come back, each once.</p>
+            </div>
+        </div>
+    </div>
+
+    <form th:unless="${#lists.isEmpty(creditNoteDto.items)}" th:action="@{/credit-notes}" th:object="${creditNoteDto}" method="post"
+          class="credit-note-form" novalidate>
+        <input type="hidden" th:field="*{invoiceId}">
+        <div th:replace="~{layout/errors :: error-summary}"></div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{creditNote.whatComesBack}">What comes back</h2>
+            </div>
+            <div class="section-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><span class="sr-only" th:text="#{invoice.choose}">Choose</span></th>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{invoice.item}">Item</th>
+                                <th th:text="#{creditNote.goesTo}">Goes to</th>
+                                <th class="num" th:text="#{creditNote.valueEach}">Worth (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <th:block th:each="item, st : *{items}" th:with="r=${returnables.get(item.unitId)}">
+                            <tr th:if="${r != null}"
+                                th:attr="data-line=${r.line.id}, data-quantity=${r.quantity}, data-returned=${r.returned}, data-amounts=${r.amountList}">
+                                <td>
+                                    <input type="hidden" th:name="|items[${st.index}].unitId|" th:value="${item.unitId}">
+                                    <input type="checkbox" class="checkbox" th:name="|items[${st.index}].selected|" value="true" data-return-pick
+                                           th:checked="${item.selected}" th:aria-label="${r.unit.code}">
+                                </td>
+                                <td class="mono strong" th:text="${r.unit.code}">U-WH-000012</td>
+                                <td>
+                                    <span class="mono nowrap" th:text="${r.line.product.code + ' · ' + r.unit.widthMm + ' × ' + r.unit.heightMm}">CLR-6 · 600 × 400</span>
+                                    <div class="cell-sub" th:text="${r.line.stockUnit} ? #{creditNote.fromStock(${r.line.lineNo})} : #{creditNote.cutPiece(${r.line.lineNo}, ${r.returned}, ${r.quantity})}">Line 1: sheet from stock</div>
+                                </td>
+                                <td>
+                                    <div class="proc-checks">
+                                        <label class="proc-check">
+                                            <input type="checkbox" th:name="|items[${st.index}].cullet|" value="true" th:checked="${item.cullet}">
+                                            <span th:text="#{creditNote.outcome.CULLET}">Cullet</span>
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="num" th:text="${@num.money(r.valueEach)}">13,500</td>
+                            </tr>
+                            </th:block>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{creditNote.itemsNote}">Tick what comes back. It goes back on the rack below, available again at its own cost; mark Cullet what cannot be sold again. Each line is credited its share of the pieces back, with its processing.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{creditNote.details}">Reason and refund</h2>
+            </div>
+            <div class="section-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="locationId" th:text="#{creditNote.location}">Rack or slot for glass back in stock</label>
+                        <select id="locationId" th:field="*{locationId}" data-searchable th:classappend="${#fields.hasErrors('locationId')} ? 'is-invalid'">
+                            <option value="" th:text="#{creditNote.locationPh}">Choose the rack</option>
+                            <option th:each="l : ${places}" th:value="${l.id}" th:text="${l.code + ' · ' + l.name}">WH-A-R04 · Rack 4</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('locationId')}" th:errors="*{locationId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="reason" th:text="#{creditNote.reason}">Why it comes back</label>
+                        <input type="text" id="reason" th:field="*{reason}" maxlength="255" required autocomplete="off"
+                               th:placeholder="#{creditNote.reasonPh}" th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                        <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="refundMethod" th:text="#{creditNote.refundMethod}">Refund</label>
+                        <select id="refundMethod" th:field="*{refundMethod}" th:classappend="${#fields.hasErrors('refundMethod')} ? 'is-invalid'">
+                            <option value="" th:text="#{creditNote.refundPh}">How the customer is refunded</option>
+                            <option th:each="m : ${refundMethods}" th:value="${m}" th:text="#{${'creditNote.refund.' + m}}">Cash from the till</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('refundMethod')}" th:errors="*{refundMethod}"></span>
+                        <span class="hint" th:if="${myTill != null}" th:text="#{creditNote.tillHint(${myTill.session.number}, ${@num.money(myTill.expectedCash)})}">Cash comes out of TILL-WH-2026-000019, holding 6,500 RWF</span>
+                        <span class="hint" th:if="${myTill == null}" th:text="#{creditNote.noTillHint}">Cash needs your open till</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="refundReference" th:text="#{pos.pay.reference}">Reference</label>
+                        <input type="text" id="refundReference" th:field="*{refundReference}" maxlength="60" class="input-code" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('refundReference')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('refundReference')}" th:errors="*{refundReference}"></span>
+                        <span class="hint" th:text="#{creditNote.referenceHint}">For mobile money, card or transfer</span>
+                    </div>
+                </div>
+                <div class="pay-status credit-note-total" aria-live="polite"
+                     th:attr="data-balance-due=${invoice.hasBalanceDue() ? invoice.balanceDue : 0}, data-none-label=#{creditNote.totalNone},
+                     data-total-label=#{creditNote.totalLabel}, data-reduces-label=#{creditNote.totalReduces}">
+                    <span class="pay-status-label" th:text="#{creditNote.totalNone}">Tick what comes back</span>
+                    <span class="pay-status-amount"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            <button type="submit" class="btn btn-primary" th:text="#{creditNote.issue}">Issue the credit note</button>
+        </div>
+    </form>
+    <script defer src="/js/credit-note.js"></script>
+</div>
+</body>
+</html>

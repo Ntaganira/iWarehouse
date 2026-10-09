@@ -30,6 +30,7 @@ import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -81,6 +82,8 @@ public class StockService {
     public static final String REF_STOCK_COUNT = "STOCK_COUNT";
     /** Movements of units sold, referring to their invoice. */
     public static final String REF_SALES_INVOICE = "SALES_INVOICE";
+    /** Movement reference type for units brought back on a credit note (POS-09). */
+    public static final String REF_CREDIT_NOTE = "CREDIT_NOTE";
     /** Status filter value for every status; empty means "in stock". */
     public static final String ALL_STATUSES = "all";
 
@@ -449,6 +452,35 @@ public class StockService {
         unit.setReservedCustomer(null);
         unit.setReservedNote(null);
         record(unit, MovementType.SALE, from, fromStatus, LocalDateTime.now(clock), null, REF_SALES_INVOICE, invoiceId, invoiceNumber);
+    }
+
+    /**
+     * A sold unit the customer brought back (POS-09): available again on the rack or slot chosen, at its own cost. The
+     * caller checked rack limits and moves the MAC.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void returnToStock(StockUnit unit, Location location, UUID creditNoteId, String creditNoteNumber) {
+        requireSold(unit);
+        unit.setStatus(StockStatus.AVAILABLE);
+        unit.setLocation(location);
+        record(unit, MovementType.RETURN, null, StockStatus.SOLD, LocalDateTime.now(clock), null, REF_CREDIT_NOTE,
+                creditNoteId, creditNoteNumber);
+    }
+
+    /** A sold unit brought back broken or unsellable (POS-09): cullet, BROKEN; it stays out of stock. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void returnAsCullet(StockUnit unit, UUID creditNoteId, String creditNoteNumber) {
+        requireSold(unit);
+        unit.setStatus(StockStatus.BROKEN);
+        record(unit, MovementType.RETURN, null, StockStatus.SOLD, LocalDateTime.now(clock), null, REF_CREDIT_NOTE,
+                creditNoteId, creditNoteNumber);
+    }
+
+    private static void requireSold(StockUnit unit) {
+        if (unit.getStatus() != StockStatus.SOLD) {
+            throw BusinessException.of("creditNote.unit.notSold", unit.getCode(),
+                    new DefaultMessageSourceResolvable("stock.status." + unit.getStatus().name()));
+        }
     }
 
     // ---------------------------------------------------------------- transfers and adjustments (INV-07)

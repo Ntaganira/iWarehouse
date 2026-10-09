@@ -112,6 +112,9 @@
         <a sec:authorize="hasAuthority('PAGE_INVOICES')" th:classappend="${#strings.startsWith(requestURI, '/invoices')} ? 'active' : ''" href="/invoices">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span> <span th:text="#{nav.invoices}">Invoices</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')" th:classappend="${#strings.startsWith(requestURI, '/credit-notes')} ? 'active' : ''" href="/credit-notes">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span> <span th:text="#{nav.creditNotes}">Credit Notes</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_SALE_APPROVALS') and hasAuthority('PERM_VIEW_INVOICE')" th:classappend="${#strings.startsWith(requestURI, '/sale-approvals')} ? 'active' : ''" href="/sale-approvals">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg></span> <span th:text="#{nav.saleApprovals}">Sale Approvals</span>
             <th:block sec:authorize="hasAuthority('PERM_APPROVE_SALE')" th:with="waiting=${@saleApprovalService.pendingCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.saleApprovalsWaiting}">2</span></th:block>

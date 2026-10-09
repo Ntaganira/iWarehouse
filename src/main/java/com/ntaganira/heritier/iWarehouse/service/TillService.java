@@ -8,6 +8,7 @@ import com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TillStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.repository.CreditNoteRepository;
 import com.ntaganira.heritier.iWarehouse.repository.SalesInvoiceRepository;
 import com.ntaganira.heritier.iWarehouse.repository.SalesPaymentRepository;
 import com.ntaganira.heritier.iWarehouse.repository.TillSessionRepository;
@@ -50,29 +51,38 @@ public class TillService {
     private final TillSessionRepository repo;
     private final SalesInvoiceRepository invoiceRepo;
     private final SalesPaymentRepository paymentRepo;
+    private final CreditNoteRepository creditNoteRepo;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
     private final Clock clock;
 
     public TillService(TillSessionRepository repo, SalesInvoiceRepository invoiceRepo, SalesPaymentRepository paymentRepo,
-                       PostingService postingService, DocumentNumberService numbers, Clock clock) {
+                       CreditNoteRepository creditNoteRepo, PostingService postingService, DocumentNumberService numbers, Clock clock) {
         this.repo = repo;
         this.invoiceRepo = invoiceRepo;
         this.paymentRepo = paymentRepo;
+        this.creditNoteRepo = creditNoteRepo;
         this.postingService = postingService;
         this.numbers = numbers;
         this.clock = clock;
     }
 
-    /** What a till took so far: per payment method, the cash kept from sales and the cash expected in the drawer. */
-    public record Summary(TillSession session, Map<PaymentMethod, BigDecimal> byMethod, long invoices) {
+    /**
+     * What a till took so far: per payment method, the cash kept from sales, the cash refunded on credit notes (POS-09)
+     * and the cash expected in the drawer.
+     */
+    public record Summary(TillSession session, Map<PaymentMethod, BigDecimal> byMethod, long invoices, BigDecimal cashRefunds) {
 
         public BigDecimal getCashSales() {
             return byMethod.getOrDefault(PaymentMethod.CASH, BigDecimal.ZERO);
         }
 
+        public BigDecimal getCashRefunds() {
+            return cashRefunds;
+        }
+
         public BigDecimal getExpectedCash() {
-            return session.getOpeningFloat().add(getCashSales());
+            return session.getOpeningFloat().add(getCashSales()).subtract(cashRefunds);
         }
 
         public BigDecimal getTotal() {
@@ -96,7 +106,9 @@ public class TillService {
         for (Object[] row : paymentRepo.totalsOfSession(session.getId())) {
             byMethod.put((PaymentMethod) row[0], (BigDecimal) row[1]);
         }
-        return new Summary(session, byMethod, invoiceRepo.countByTillSession_IdAndStatus(session.getId(), SalesInvoiceStatus.POSTED));
+        BigDecimal refunds = creditNoteRepo.cashRefundsOfSession(session.getId());
+        return new Summary(session, byMethod, invoiceRepo.countByTillSession_IdAndStatus(session.getId(), SalesInvoiceStatus.POSTED),
+                refunds == null ? BigDecimal.ZERO : refunds);
     }
 
     public Page<TillSession> findPage(String search, String status, int page, int size) {
@@ -172,6 +184,7 @@ public class TillService {
         }
         // Status and the amounts its check needs, together, after the queries
         session.setCashSales(summary.getCashSales());
+        session.setCashRefunds(summary.getCashRefunds());
         session.setExpectedCash(expected);
         session.setCountedCash(counted.setScale(2));
         session.setDifference(difference.setScale(2));

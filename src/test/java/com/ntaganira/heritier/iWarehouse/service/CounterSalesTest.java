@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.dto.CreditNoteDto;
 import com.ntaganira.heritier.iWarehouse.dto.CuttingJobDto;
 import com.ntaganira.heritier.iWarehouse.dto.QuotationDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
@@ -78,6 +79,12 @@ class CounterSalesTest {
     private Product clear6;
     private Product exemptGlass;
     private int invoiceNo = 1;
+    private final List<CreditNote> creditNotes = new ArrayList<>();
+    private final List<CreditNoteLine> creditLines = new ArrayList<>();
+    private final List<CreditNoteUnit> unitsBack = new ArrayList<>();
+    private CreditNoteService creditNoteService;
+    private Location rack;
+    private Location offcutRack;
 
     @BeforeEach
     void setUp() {
@@ -189,9 +196,41 @@ class CounterSalesTest {
         when(priceLists.minChargeableArea(any())).thenReturn(new BigDecimal("0.25"));
         when(journals.receivable(any())).thenReturn(BigDecimal.ZERO);
 
+        // A rack for full sheets and an off-cut rack; 100 m² of each glass held
+        rack = location("WH-A-R04", false);
+        offcutRack = location("WH-A-OC", true);
+        LocationRepository locationRepo = mock(LocationRepository.class);
+        when(locationRepo.findAll()).thenReturn(List.of(rack, offcutRack));
+        when(unitRepo.sumArea(any(), any())).thenReturn(new BigDecimal("100.0000"));
         StockService stockService = new StockService(unitRepo, movementRepo, mock(StockCostEntryRepository.class), adjustmentLineRepo,
-                mock(StockCountRepository.class), saleLineRepo, mock(LocationRepository.class), numbers, CLOCK);
-        tills = new TillService(tillRepo, invoiceRepo, paymentRepo, postings, numbers, CLOCK);
+                mock(StockCountRepository.class), saleLineRepo, locationRepo, numbers, CLOCK);
+        // Credit notes (POS-09): what they credit, the units back, the cash a till refunded
+        CreditNoteRepository creditNoteRepo = mock(CreditNoteRepository.class);
+        when(creditNoteRepo.save(any())).thenAnswer(a -> {
+            CreditNote c = a.getArgument(0);
+            c.setId(UUID.randomUUID());
+            creditNotes.add(c);
+            return c;
+        });
+        when(creditNoteRepo.cashRefundsOfSession(any())).thenAnswer(a -> creditNotes.stream()
+                .filter(c -> a.getArgument(0).equals(c.getTillSessionId()) && c.getRefundMethod() == PaymentMethod.CASH)
+                .map(CreditNote::getRefundAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+        CreditNoteLineRepository creditLineRepo = mock(CreditNoteLineRepository.class);
+        when(creditLineRepo.save(any())).thenAnswer(a -> {
+            creditLines.add(a.getArgument(0));
+            return a.getArgument(0);
+        });
+        when(creditLineRepo.findByCreditNoteIdOrderByLineNo(any())).thenAnswer(a -> creditLines.stream()
+                .filter(l -> l.getCreditNoteId().equals(a.getArgument(0))).toList());
+        CreditNoteUnitRepository unitsBackRepo = mock(CreditNoteUnitRepository.class);
+        when(unitsBackRepo.save(any())).thenAnswer(a -> {
+            unitsBack.add(a.getArgument(0));
+            return a.getArgument(0);
+        });
+        when(unitsBackRepo.findByInvoiceId(any())).thenAnswer(a -> unitsBack.stream()
+                .filter(u -> u.getInvoiceId().equals(a.getArgument(0))).toList());
+        tills = new TillService(tillRepo, invoiceRepo, paymentRepo, creditNoteRepo, postings, numbers, CLOCK);
+        when(numbers.next(DocumentType.CREDIT_NOTE)).thenAnswer(a -> String.format("CN-WH-2026-%06d", creditNotes.size() + 1));
         ProcessingServiceRepository serviceRepo = mock(ProcessingServiceRepository.class);
         when(serviceRepo.findAllById(any())).thenAnswer(a -> {
             Collection<UUID> ids = a.getArgument(0);
@@ -324,6 +363,8 @@ class CounterSalesTest {
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
                 numbers, settings, CLOCK);
+        creditNoteService = new CreditNoteService(creditNoteRepo, creditLineRepo, unitsBackRepo, invoiceRepo, deliveryRepo, unitRepo,
+                productRepo, tills, stockService, postings, numbers, CLOCK);
     }
 
     @AfterEach
@@ -1076,7 +1117,161 @@ class CounterSalesTest {
         assertThat(sale.getBalanceDue()).isEqualByComparingTo(total.subtract(sale.getLines().get(0).getAmount()));
     }
 
+    // ---------------------------------------------------------------- returns and credit notes (POS-09)
+
+    @Test
+    void aReturnCreditsItsShareRestocksOrCulletsAndRefundsFromTheTill() {
+        tills.open(new BigDecimal("50000"));
+        clear6.setMacPerM2(new BigDecimal("5000.0000"));
+        StockUnit sheet = unit("U-WH-000020", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        sheet.setUnitCost(new BigDecimal("36112.50"));
+        sheet.setKind(UnitKind.SHEET);
+        sales.addUnit("U-WH-000020", null);                                            // 195,008
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 2, List.of(edging.getId()), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));                      // + 13,500 and edging 6,000
+        CuttingJobLine size = sales.pay(new SalePayments.Entered(new BigDecimal("214508"), null, null, null, null, null, null, null))
+                .jobs().get(0).getLines().get(0);
+        StockUnit first = cut(size, CuttingOutputKind.PIECE, unit("U-WH-000071", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+        StockUnit second = cut(size, CuttingOutputKind.PIECE, unit("U-WH-000072", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+        first.setUnitCost(new BigDecimal("1200.00"));
+        second.setUnitCost(new BigDecimal("1200.00"));
+        first.setKind(UnitKind.CUT_PIECE);
+        second.setKind(UnitKind.CUT_PIECE);
+        sales.deliver(sale.getId(), List.of(first.getId(), second.getId()), null);
+        assertThat(creditNoteService.returnables(sale)).extracting(r -> r.unit().getCode())
+                .containsExactly("U-WH-000020", "U-WH-000071", "U-WH-000072");
+
+        CreditNoteDto form = creditNoteService.newForm(sale);
+        assertThatThrownBy(() -> creditNoteService.issue(form))                         // nothing ticked yet
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("creditNote.reason.required"));
+        form.setReason("Wrong size ordered");
+        assertThatThrownBy(() -> creditNoteService.issue(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("creditNote.items.required"));
+        form.getItems().get(0).setSelected(true);                                      // the sheet back to stock
+        form.getItems().get(1).setSelected(true);                                      // a piece as cullet
+        form.getItems().get(1).setCullet(true);
+        form.setRefundMethod(PaymentMethod.CASH);
+        assertThatThrownBy(() -> creditNoteService.issue(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("creditNote.location.required"));
+        form.setLocationId(offcutRack.getId());
+        assertThatThrownBy(() -> creditNoteService.issue(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("creditNote.sheetToOffcut");
+                    assertThat(e.getArgs()).containsExactly("U-WH-000020", "WH-A-OC");
+                });
+        form.setLocationId(rack.getId());
+
+        CreditNote note = creditNoteService.issue(form);
+
+        assertThat(note.getNumber()).isEqualTo("CN-WH-2026-000001");
+        assertThat(note.getTotalAmount()).isEqualByComparingTo("204758");             // 195,008 + 6,750 + 3,000
+        assertThat(creditLines).extracting(CreditNoteLine::getAmount).extracting(BigDecimal::intValue).containsExactly(195008, 6750, 3000);
+        assertThat(note.getRefundMethod()).isEqualTo(PaymentMethod.CASH);
+        assertThat(note.getRefundAmount()).isEqualByComparingTo("204758");
+        assertThat(note.getTillSessionId()).isEqualTo(till.getId());
+        assertThat(sheet.getStatus()).isEqualTo(StockStatus.AVAILABLE);
+        assertThat(sheet.getLocation()).isEqualTo(rack);
+        assertThat(first.getStatus()).isEqualTo(StockStatus.BROKEN);
+        assertThat(unitsBack).extracting(CreditNoteUnit::getOutcome).containsExactly(ReturnOutcome.RESTOCK, ReturnOutcome.CULLET);
+        // 100 m² at 5,000 and the sheet back at its own cost: (500,000 + 36,112.50) / 107.2225
+        assertThat(clear6.getMacPerM2()).isEqualByComparingTo("5000.0000");
+        assertThat(tills.summary(till).getExpectedCash()).isEqualByComparingTo("59750");   // 50,000 + 214,508 - 204,758
+        verify(postings).creditNote(eq(note), eq(new BigDecimal("36112.50")), eq(new BigDecimal("1200.00")), any());
+
+        // The other piece later: the size and its edging come to their whole amount, never more
+        CreditNoteDto again = creditNoteService.newForm(sale);
+        assertThat(again.getItems()).hasSize(1);
+        again.getItems().get(0).setSelected(true);
+        again.setLocationId(rack.getId());
+        again.setReason("Customer changed their mind");
+        again.setRefundMethod(PaymentMethod.CREDIT);
+        assertThatThrownBy(() -> creditNoteService.issue(again))                        // a walk-in has no account
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("creditNote.refund.walkIn"));
+        again.setRefundMethod(PaymentMethod.MOBILE_MONEY);
+        assertThatThrownBy(() -> creditNoteService.issue(again))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("creditNote.refund.refRequired"));
+        again.setRefundReference("MP-901");
+        CreditNote later = creditNoteService.issue(again);
+        assertThat(later.getTotalAmount()).isEqualByComparingTo("9750");
+        assertThat(later.getTillSessionId()).isNull();
+        assertThat(creditNoteService.returnables(sale)).isEmpty();
+
+        // A unit comes back once
+        CreditNoteDto twice = new CreditNoteDto();
+        twice.setInvoiceId(sale.getId());
+        twice.setReason("Again");
+        CreditNoteDto.Item item = new CreditNoteDto.Item();
+        item.setUnitId(second.getId());
+        item.setSelected(true);
+        item.setCullet(true);
+        twice.getItems().add(item);
+        assertThatThrownBy(() -> creditNoteService.issue(twice))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("creditNote.unit.notReturnable"));
+    }
+
+    @Test
+    void aReturnOnAnOrderStillOwedComesOffItsBalanceFirstAndCashNeedsTheTillToHoldIt() {
+        tills.open(BigDecimal.ZERO);
+        StockUnit sheet = unit("U-WH-000020", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        sheet.setUnitCost(new BigDecimal("36112.50"));
+        sales.addUnit("U-WH-000020", null);                                            // 195,008
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 2, List.of(), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));                      // + 13,500
+        sales.setCustomer(walkIn.getId(), "Mukamana Alice", null);
+        sales.pay(new SalePayments.Entered(new BigDecimal("195008"), null, null, null, null, null, null, null), true);
+        assertThat(sale.getBalanceDue()).isEqualByComparingTo("13500");
+
+        CreditNoteDto form = creditNoteService.newForm(sale);
+        form.getItems().get(0).setSelected(true);
+        form.getItems().get(0).setCullet(true);                                        // broken on the way home
+        form.setReason("Broken on the way");
+        form.setRefundMethod(PaymentMethod.CASH);
+        // The till took 195,008: enough. Had it not, the refund goes another way
+        CreditNote note = creditNoteService.issue(form);
+
+        assertThat(note.getBalanceReduced()).isEqualByComparingTo("13500");
+        assertThat(note.getRefundAmount()).isEqualByComparingTo("181508");
+        assertThat(sale.hasBalanceDue()).isFalse();
+        assertThat(sheet.getStatus()).isEqualTo(StockStatus.BROKEN);
+        assertThat(tills.summary(till).getExpectedCash()).isEqualByComparingTo("13500");  // 195,008 - 181,508
+    }
+
+    @Test
+    void aCashRefundLargerThanTheTillHoldsIsRefused() {
+        tills.open(BigDecimal.ZERO);
+        StockUnit sheet = unit("U-WH-000020", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        sheet.setUnitCost(new BigDecimal("36112.50"));
+        SalesInvoice sale = sales.addUnit("U-WH-000020", null);
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));
+        sales.pay(new SalePayments.Entered(null, new BigDecimal("195008"), "MP-1", null, null, null, null, null));   // mobile money
+
+        CreditNoteDto form = creditNoteService.newForm(sale);
+        form.getItems().get(0).setSelected(true);
+        form.setLocationId(rack.getId());
+        form.setReason("Wrong glass");
+        form.setRefundMethod(PaymentMethod.CASH);
+        assertThatThrownBy(() -> creditNoteService.issue(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("creditNote.refund.tillShort");
+                    assertThat(e.getArgs()[0]).isEqualTo("TILL-WH-2026-000001");
+                    assertThat((BigDecimal) e.getArgs()[1]).isEqualByComparingTo("0");
+                    assertThat((BigDecimal) e.getArgs()[2]).isEqualByComparingTo("195008");
+                });
+        assertThat(sheet.getStatus()).isEqualTo(StockStatus.SOLD);
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static Location location(String code, boolean offcut) {
+        Location l = new Location();
+        l.setId(UUID.randomUUID());
+        l.setCode(code);
+        l.setName(code);
+        l.setType(LocationType.RACK);
+        l.setOffcut(offcut);
+        l.setEnabled(true);
+        return l;
+    }
 
     private static ProcessingService service(String code, String name, ChargeUnit unit) {
         ProcessingService sv = new ProcessingService();

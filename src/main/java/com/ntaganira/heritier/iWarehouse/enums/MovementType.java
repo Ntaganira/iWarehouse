@@ -34,5 +34,7 @@ public enum MovementType {
     /** Found on another rack or slot by a stock count: its location corrected (INV-08). */
     COUNT,
     /** Sold at the counter: the unit leaves stock (POS-01). */
-    SALE
+    SALE,
+    /** Brought back by the customer on a credit note (POS-09): back in stock, or cullet. */
+    RETURN
 }

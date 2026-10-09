@@ -277,6 +277,31 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    /**
+     * A credit note (POS-09, SRS 4.9.1 "customer return"): Dr Sales Returns (net) and VAT Output / Cr the customer's
+     * receivable for the part that reduced the invoice's balance due, and the refund's account (cash in the till, mobile
+     * money, bank for card and transfer, the customer's receivable for a refund to their account). Glass back in stock:
+     * Dr Inventory, the change of each glass's value / Cr Cost of Goods Sold, the units' own cost (the MAC rounding to
+     * Inventory Revaluation); glass back as cullet: Dr Spoilage / Cr Cost of Goods Sold, its cost.
+     */
+    public JournalEntry creditNote(CreditNote note, BigDecimal restockedCost, BigDecimal culletCost, StockValues before) {
+        UUID customerId = note.getCustomer().getId();
+        Journal journal = Journal.of(JournalSource.CREDIT_NOTE, note.getId(), note.getNumber(), note.getCreditDate(),
+                "Credit note " + note.getNumber() + " on " + note.getInvoice().getNumber() + ": " + note.getReason());
+        journal.debit(AccountKey.SALES_RETURNS, note.getNetAmount())
+                .debit(AccountKey.VAT_OUTPUT, note.getVatAmount());
+        journal.add(AccountKey.RECEIVABLE, note.getBalanceReduced().negate(), null, null, customerId, "Balance due reduced", null);
+        if (note.isRefunded()) {
+            journal.add(note.getRefundMethod().account(), note.getRefundAmount().negate(), null, null,
+                    note.getRefundMethod() == PaymentMethod.CREDIT ? customerId : null, note.getRefundReference(), null);
+        }
+        journal.stockChange(before.values(), valuesNow(before))
+                .credit(AccountKey.COGS, restockedCost.add(culletCost))
+                .debit(AccountKey.SPOILAGE, culletCost)
+                .balanceOn(AccountKey.STOCK_REVALUATION);
+        return journalService.post(journal);
+    }
+
     /** A till opened: its float leaves the main cash vault for the till (Dr Cash on Hand / Cr Main Cash Vault). */
     public JournalEntry tillOpened(TillSession session) {
         Journal journal = Journal.of(JournalSource.TILL_OPENED, session.getId(), session.getNumber(),

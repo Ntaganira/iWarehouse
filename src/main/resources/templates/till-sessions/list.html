@@ -92,6 +92,10 @@
             <label th:text="#{${'payment.method.' + e.key}}">Mobile money</label>
             <div class="value" th:text="${@num.money(e.value)}">100,000</div>
         </div>
+        <div class="item" th:if="${summary.cashRefunds.signum() > 0}">
+            <label th:text="#{till.cashRefunds}">Cash refunded</label>
+            <div class="value" th:text="${@num.money(summary.cashRefunds)}">13,500</div>
+        </div>
         <div class="item">
             <label th:text="#{till.expected}">Cash the till should hold</label>
             <div class="value strong" th:text="${@num.money(summary.expectedCash)}">145,008</div>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{creditNote.title}, ~{::content})}">
+<head><title>Credit notes - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{creditNote.title}">Credit notes</h1>
+            <div class="subtitle" th:text="#{creditNote.subtitle}">Glass brought back against an invoice, and what was refunded</div>
+        </div>
+        <a href="/invoices" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')" th:text="#{nav.invoices}">Invoices</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{creditNote.sectionTitle}">Issued credit notes</span>
+                <span class="section-count" th:text="${creditNotes.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/credit-notes}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{creditNote.searchPh}" th:aria-label="#{creditNote.searchPh}">
+                </div>
+            </form>
+        </div>
+        <th:block th:replace="~{credit-notes/list :: creditNoteTable(${creditNotes.content})}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${creditNotes}, '/credit-notes', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Credit notes: number, date, invoice, customer, total, refund, by */-->
+<div th:fragment="creditNoteTable(rows)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{creditNote.number}">Credit note</th>
+                <th th:text="#{invoice.date}">Date</th>
+                <th th:text="#{creditNote.invoice}">Invoice</th>
+                <th th:text="#{invoice.customer}">Customer</th>
+                <th class="num" th:text="#{invoice.total}">Total (RWF)</th>
+                <th th:text="#{creditNote.refund}">Refund</th>
+                <th th:text="#{creditNote.by}">By</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="c : ${rows}">
+                <td><a class="row-link strong mono" th:href="@{/credit-notes/{id}(id=${c.id})}" th:text="${c.number}">CN-WH-2026-000001</a></td>
+                <td class="nowrap" th:text="${#temporals.format(c.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</td>
+                <td><a class="mono" th:href="@{/invoices/{id}(id=${c.invoice.id})}" th:text="${c.invoice.number}">INV-WH-2026-000001</a></td>
+                <td th:text="${c.invoice.billTo}">Jean Habimana</td>
+                <td class="num" th:text="${@num.money(c.totalAmount)}">27,000</td>
+                <td>
+                    <span th:text="${c.refunded} ? #{${'creditNote.refund.' + c.refundMethod}} : #{creditNote.refund.none}">Cash from the till</span>
+                    <div class="cell-sub" th:if="${c.refunded}" th:text="${@num.money(c.refundAmount)}">27,000</div>
+                </td>
+                <td th:text="${c.postedBy}">cashier1</td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}">
+                <td colspan="7">
+                    <div class="empty-state">
+                        <h3 th:text="#{creditNote.empty}">No credit notes yet</h3>
+                        <p th:text="#{creditNote.emptyHint}">Returns are taken from the invoice the glass was sold on</p>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

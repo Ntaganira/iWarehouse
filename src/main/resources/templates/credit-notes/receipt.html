@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{creditNote.slipTitle(${note.number})} + ' - ' + #{app.name}">Credit note - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page receipt-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{creditNote.slipTitle(${note.number})}">Credit note: CN-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{posReceipt.pageHint}">80 mm wide. Print on the receipt printer at 100% (no scaling).</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/credit-notes/{id}(id=${note.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- The credit note (POS-09, without the EBM signature until M4) -->
+    <div class="receipt">
+        <div class="receipt-head">
+            <div class="receipt-company" th:text="${companyName}">iWarehouse</div>
+            <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+            <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>
+            <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row receipt-total"><span th:text="#{creditNote.slipKind}">CREDIT NOTE</span><span class="mono" th:text="${note.number}">CN-WH-2026-000001</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.invoice}">Invoice</span><span class="mono" th:text="${invoice.number}">INV-WH-2026-000001</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.date}">Date</span><span th:text="${#temporals.format(note.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.cashier}">Cashier</span><span th:text="${note.postedBy}">cashier1</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.customer}">Customer</span><span th:text="${invoice.billTo}">Jean Habimana</span></div>
+        <div class="receipt-row" th:if="${invoice.buyerTin != null}"><span th:text="#{posReceipt.buyerTin}">Buyer's TIN</span><span class="mono" th:text="${invoice.buyerTin}">102938475</span></div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-line" th:each="l : ${lines}" th:with="il=${invoiceLines.get(l.invoiceLineId)}">
+            <div class="receipt-row">
+                <span th:if="${!il.serviceLine}" th:text="${il.product.code + ' ' + il.widthMm + '×' + il.heightMm + ' ×' + l.quantity}">CLR-6 600×400 ×1</span>
+                <span th:if="${il.serviceLine}" th:text="${il.service.name + ' ×' + l.quantity}">Edging ×1</span>
+                <span th:text="${'-' + @num.money(l.amount) + ' ' + l.taxCode}">-13,500 B</span>
+            </div>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row receipt-total"><span th:text="#{creditNote.slipTotal}">TOTAL CREDIT</span><span th:text="${@num.money(note.totalAmount)}">13,500</span></div>
+        <div class="receipt-row" th:each="g : ${totals.groups}">
+            <span th:text="#{posReceipt.vatLine(${g.taxCode}, ${@num.m2(g.rate)})}">TOTAL B-18%</span>
+            <span th:text="${@num.money(g.gross)}">13,500</span>
+        </div>
+        <div class="receipt-row" th:each="g : ${totals.groups}" th:if="${g.rate.signum() > 0}">
+            <span th:text="#{posReceipt.taxLine(${g.taxCode})}">TOTAL TAX B</span>
+            <span th:text="${@num.money(g.vat)}">2,059.32</span>
+        </div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row" th:if="${note.balanceReduced.signum() > 0}"><span th:text="#{creditNote.slipBalance}">Off the balance due</span><span th:text="${@num.money(note.balanceReduced)}">6,500</span></div>
+        <div class="receipt-row" th:if="${note.refunded}">
+            <span th:text="#{${'creditNote.refund.' + note.refundMethod}} + ${note.refundReference != null ? ' ' + note.refundReference : ''}">Cash from the till</span>
+            <span th:text="${@num.money(note.refundAmount)}">13,500</span>
+        </div>
+        <div class="receipt-foot" th:text="${note.reason}">Wrong size ordered</div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-foot" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
+    </div>
+</body>
+</html>

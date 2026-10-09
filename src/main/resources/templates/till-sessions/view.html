@@ -45,6 +45,10 @@
                 <span th:text="#{till.balances}">Balances taken</span>
                 <span class="section-count" th:text="${balances.totalElements}">0</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-refunds" th:classappend="${tab == 'refunds'} ? 'active'">
+                <span th:text="#{till.refunds}">Refunds</span>
+                <span class="section-count" th:text="${refunds.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -85,6 +89,10 @@
                     </table>
                 </div>
                 <th:block th:replace="~{layout/pagination :: pager(${balances}, ${'/till-sessions/' + till.id}, 'tab=balances')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-refunds" th:classappend="${tab == 'refunds'} ? 'active'">
+                <th:block th:replace="~{credit-notes/list :: creditNoteTable(${refunds.content})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${refunds}, ${'/till-sessions/' + till.id}, 'tab=refunds')}"></th:block>
             </div>
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>

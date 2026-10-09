@@ -1,7 +1,8 @@
 /*
- * iWarehouse - the return form (POS-09). As units are ticked it shows the credit: per invoice line, the running share
- * of its amount and its processing for the pieces back (whole RWF, half up, as the server credits it), and how much of
- * it comes off the invoice's balance due. The server works it out again.
+ * iWarehouse - the return and cancel forms (POS-09). As units are ticked, or the pieces of a size given up are entered,
+ * it shows the credit: per invoice line, the running share of its amount and its processing for those pieces (whole
+ * RWF, half up, as the server credits it), and how much of it comes off the invoice's balance due. The server works it
+ * out again.
  */
 (function () {
     'use strict';
@@ -18,9 +19,14 @@
     function update() {
         const lines = new Map();
         form.querySelectorAll('tr[data-line]').forEach(row => {
-            if (!row.querySelector('[data-return-pick]').checked) return;
+            // A unit ticked (return), or the pieces given up of a size (cancel), never more than it can give up
+            const tick = row.querySelector('[data-return-pick]');
+            const qty = row.querySelector('[data-cancel-qty]');
+            const picked = tick ? (tick.checked ? 1 : 0)
+                : Math.min(Math.max(parseInt(qty.value, 10) || 0, 0), parseInt(qty.max, 10) || 0);
+            if (!picked) return;
             const line = lines.get(row.dataset.line) || { row, picked: 0 };
-            line.picked++;
+            line.picked += picked;
             lines.set(row.dataset.line, line);
         });
         let total = 0;
@@ -47,5 +53,6 @@
     }
 
     form.addEventListener('change', update);
+    form.addEventListener('input', update);
     update();
 })();

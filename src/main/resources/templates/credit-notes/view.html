@@ -8,6 +8,7 @@
         <div>
             <h1 class="mono" th:text="${note.number}">CN-WH-2026-000001</h1>
             <div class="subtitle" th:text="#{creditNote.subtitleOne(${invoice.billTo}, ${#temporals.format(note.postedAt, 'dd/MM/yyyy HH:mm')}, ${note.postedBy})}">Jean Habimana · 09/10/2026 10:30 · cashier1</div>
+            <div class="subtitle" th:if="${note.cancel}" th:text="#{creditNote.kind.CANCEL}">Pieces of the order given up before they were handed over</div>
         </div>
         <div class="btn-group">
             <a href="/credit-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
@@ -57,7 +58,7 @@
                     </div>
                 </div>
                 <div class="item item-full">
-                    <label th:text="#{creditNote.reason}">Why it comes back</label>
+                    <label th:text="${note.cancel} ? #{creditNote.cancelReason} : #{creditNote.reason}">Why it comes back</label>
                     <div class="value" th:text="${note.reason}">Wrong size ordered</div>
                 </div>
                 <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
@@ -65,9 +66,9 @@
         </div>
     </div>
 
-    <div class="section">
+    <div class="section" th:unless="${#lists.isEmpty(units)}">
         <div class="section-header">
-            <h2 th:text="#{creditNote.cameBack}">What came back</h2>
+            <h2 th:text="${note.cancel} ? #{creditNote.released} : #{creditNote.cameBack}">What came back</h2>
         </div>
         <div class="section-body">
             <div class="table-container">
@@ -90,6 +91,7 @@
                             <td>
                                 <span th:if="${u.outcome.name() == 'RESTOCK'}" th:text="#{creditNote.backOn(${u.location.code})}">Back in stock on WH-A-R04</span>
                                 <span th:if="${u.outcome.name() == 'CULLET'}" th:text="#{creditNote.outcome.CULLET}">Cullet</span>
+                                <span th:if="${u.outcome.name() == 'RELEASE'}" th:text="${u.location != null} ? #{creditNote.releasedOn(${u.location.code})} : #{creditNote.outcome.RELEASE}">Released to stock on WH-A-R04</span>
                             </td>
                         </tr>
                     </tbody>
@@ -115,7 +117,7 @@
                             <tr>
                                 <th class="num">#</th>
                                 <th th:text="#{invoice.item}">Item</th>
-                                <th class="num" th:text="#{creditNote.piecesBack}">Pieces back</th>
+                                <th class="num" th:text="${note.cancel} ? #{creditNote.piecesGivenUp} : #{creditNote.piecesBack}">Pieces back</th>
                                 <th th:text="#{pos.vat}">VAT</th>
                                 <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
                             </tr>

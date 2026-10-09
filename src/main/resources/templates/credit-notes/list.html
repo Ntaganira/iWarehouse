@@ -46,7 +46,10 @@
         </thead>
         <tbody>
             <tr th:each="c : ${rows}">
-                <td><a class="row-link strong mono" th:href="@{/credit-notes/{id}(id=${c.id})}" th:text="${c.number}">CN-WH-2026-000001</a></td>
+                <td>
+                    <a class="row-link strong mono" th:href="@{/credit-notes/{id}(id=${c.id})}" th:text="${c.number}">CN-WH-2026-000001</a>
+                    <div class="cell-sub" th:if="${c.cancel}" th:text="#{creditNote.kindShort.CANCEL}">Pieces given up</div>
+                </td>
                 <td class="nowrap" th:text="${#temporals.format(c.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</td>
                 <td><a class="mono" th:href="@{/invoices/{id}(id=${c.invoice.id})}" th:text="${c.invoice.number}">INV-WH-2026-000001</a></td>
                 <td th:text="${c.invoice.billTo}">Jean Habimana</td>

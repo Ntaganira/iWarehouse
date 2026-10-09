@@ -17,8 +17,8 @@ import java.util.UUID;
  * - Date      : 2026. 10. 09.
  * - User      : Hntaganira
  * - Desc      : The return form (POS-09): the invoice, each unit the customer took (ticked if it comes back, and where
- *               it goes), the rack for glass back in stock, the reason and how the refund goes. Checked by
- *               CreditNoteService.
+ *               it goes), the rack for glass back in stock, the reason and how the refund goes. The cancel form uses
+ *               its sizes instead: the pieces of each size of an order given up. Checked by CreditNoteService.
  * </pre>
  */
 @Getter
@@ -29,6 +29,9 @@ public class CreditNoteDto {
     private UUID invoiceId;
 
     private List<Item> items = new ArrayList<>();
+
+    /** Cancelling an order: the pieces of each size given up. */
+    private List<Size> sizes = new ArrayList<>();
 
     /** Where glass back in stock goes: a rack or slot. */
     private UUID locationId;
@@ -51,5 +54,16 @@ public class CreditNoteDto {
         private boolean selected;
 
         private boolean cullet;
+    }
+
+    /** A size of an order: how many of its pieces not handed over are given up. */
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class Size {
+
+        private UUID lineId;
+
+        private Integer quantity;
     }
 }

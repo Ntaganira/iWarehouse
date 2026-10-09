@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.CreditNoteKind;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -22,8 +23,9 @@ import java.util.UUID;
  * - Desc      : A credit note against an issued invoice (POS-09): the glass the customer brought back (its units,
  *               CreditNoteUnit), what each invoice line is credited (CreditNoteLine), its totals with VAT, the part
  *               that reduced the invoice's balance due and how the rest was refunded (cash from a till, mobile
- *               money, card, transfer, or to the customer's account: CREDIT). Posted when saved, with a reason;
- *               never changed: a mistake is corrected by a new sale.
+ *               money, card, transfer, or to the customer's account: CREDIT). A RETURN credits glass brought back; a
+ *               CANCEL credits pieces of an order given up before they were handed over. Posted when saved, with a
+ *               reason; never changed: a mistake is corrected by a new sale.
  * </pre>
  */
 @Entity
@@ -36,6 +38,10 @@ public class CreditNote extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 30, updatable = false)
     private String number;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10, updatable = false)
+    private CreditNoteKind kind = CreditNoteKind.RETURN;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "invoice_id", nullable = false, updatable = false)
@@ -84,6 +90,10 @@ public class CreditNote extends BaseEntity {
 
     @Column(name = "posted_by", nullable = false, length = 50, updatable = false)
     private String postedBy;
+
+    public boolean isCancel() {
+        return kind == CreditNoteKind.CANCEL;
+    }
 
     public boolean isRefunded() {
         return refundMethod != null;

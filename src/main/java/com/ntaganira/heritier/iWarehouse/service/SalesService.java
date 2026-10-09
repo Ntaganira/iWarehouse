@@ -69,6 +69,7 @@ public class SalesService {
     private final SaleApprovalRepository approvalRepo;
     private final UserRepository userRepo;
     private final QuotationRepository quotationRepo;
+    private final CreditNoteLineRepository creditLineRepo;
     private final TillService tillService;
     private final CuttingJobService cuttingJobService;
     private final StockService stockService;
@@ -83,7 +84,8 @@ public class SalesService {
                         ProductRepository productRepo, CustomerRepository customerRepo, ProcessingServiceRepository serviceRepo,
                         CuttingJobRepository jobRepo, CuttingJobOutputRepository outputRepo, CuttingJobLineRepository jobLineRepo,
                         SalesDeliveryRepository deliveryRepo, SaleApprovalRepository approvalRepo, UserRepository userRepo,
-                        QuotationRepository quotationRepo, TillService tillService, CuttingJobService cuttingJobService,
+                        QuotationRepository quotationRepo, CreditNoteLineRepository creditLineRepo, TillService tillService,
+                        CuttingJobService cuttingJobService,
                         StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
                         DocumentNumberService numbers, SettingService settingService, Clock clock) {
         this.repo = repo;
@@ -99,6 +101,7 @@ public class SalesService {
         this.approvalRepo = approvalRepo;
         this.userRepo = userRepo;
         this.quotationRepo = quotationRepo;
+        this.creditLineRepo = creditLineRepo;
         this.tillService = tillService;
         this.cuttingJobService = cuttingJobService;
         this.stockService = stockService;
@@ -144,11 +147,11 @@ public class SalesService {
                               SaleApproval approval) {
     }
 
-    /** How far a custom size is: pieces ordered, handed over and still to hand over. */
-    public record Progress(int ordered, int delivered) {
+    /** How far a custom size is: pieces ordered, handed over, given up (cancelled, POS-09) and still to hand over. */
+    public record Progress(int ordered, int delivered, int cancelled) {
 
         public int getRemaining() {
-            return Math.max(ordered - delivered, 0);
+            return Math.max(ordered - delivered - cancelled, 0);
         }
     }
 
@@ -948,13 +951,22 @@ public class SalesService {
         return deliveryRepo.findByInvoiceIdOrderByDeliveredAtAscUnitCodeAsc(invoiceId);
     }
 
-    /** Each size of an invoice: pieces ordered and handed over. */
+    /** Each size of an invoice: pieces ordered, handed over and given up. */
     public Map<UUID, Progress> progress(SalesInvoice invoice) {
         Map<UUID, Long> delivered = deliveries(invoice.getId()).stream()
                 .collect(Collectors.groupingBy(SalesDelivery::getLineId, Collectors.counting()));
+        List<UUID> sizes = invoice.getLines().stream().filter(SalesInvoiceLine::isCustomPiece).map(SalesInvoiceLine::getId)
+                .filter(Objects::nonNull).toList();
+        Map<UUID, Integer> cancelled = new HashMap<>();
+        if (!sizes.isEmpty()) {
+            for (Object[] row : creditLineRepo.cancelledPieces(sizes)) {
+                cancelled.put((UUID) row[0], ((Number) row[1]).intValue());
+            }
+        }
         Map<UUID, Progress> progress = new LinkedHashMap<>();
         invoice.getLines().stream().filter(SalesInvoiceLine::isCustomPiece)
-                .forEach(l -> progress.put(l.getId(), new Progress(l.getQuantity(), delivered.getOrDefault(l.getId(), 0L).intValue())));
+                .forEach(l -> progress.put(l.getId(), new Progress(l.getQuantity(), delivered.getOrDefault(l.getId(), 0L).intValue(),
+                        cancelled.getOrDefault(l.getId(), 0))));
         return progress;
     }
 
@@ -976,7 +988,7 @@ public class SalesService {
     }
 
     /** The pieces cut for an invoice: unit id -> the invoice line (size) its cutting job line was made for. */
-    private Map<UUID, UUID> piecesOf(SalesInvoice invoice) {
+    Map<UUID, UUID> piecesOf(SalesInvoice invoice) {
         List<UUID> jobIds = jobsOf(invoice).stream().map(CuttingJob::getId).toList();
         if (jobIds.isEmpty()) {
             return Map.of();

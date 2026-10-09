@@ -222,6 +222,9 @@ class CounterSalesTest {
         });
         when(creditLineRepo.findByCreditNoteIdOrderByLineNo(any())).thenAnswer(a -> creditLines.stream()
                 .filter(l -> l.getCreditNoteId().equals(a.getArgument(0))).toList());
+        // Pieces credited per invoice line (all credit notes), and given up (CANCEL ones)
+        when(creditLineRepo.creditedPieces(any())).thenAnswer(a -> piecesPerLine(a.getArgument(0), false));
+        when(creditLineRepo.cancelledPieces(any())).thenAnswer(a -> piecesPerLine(a.getArgument(0), true));
         CreditNoteUnitRepository unitsBackRepo = mock(CreditNoteUnitRepository.class);
         when(unitsBackRepo.save(any())).thenAnswer(a -> {
             unitsBack.add(a.getArgument(0));
@@ -358,13 +361,13 @@ class CounterSalesTest {
 
         LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
-                jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, tills, cuttingJobs, stockService, pricing, postings,
-                journals, numbers, settings, CLOCK);
+                jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, creditLineRepo, tills, cuttingJobs, stockService, pricing,
+                postings, journals, numbers, settings, CLOCK);
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
                 numbers, settings, CLOCK);
         creditNoteService = new CreditNoteService(creditNoteRepo, creditLineRepo, unitsBackRepo, invoiceRepo, deliveryRepo, unitRepo,
-                productRepo, tills, stockService, postings, numbers, CLOCK);
+                productRepo, jobRepo, jobLineRepo, sales, cuttingJobs, tills, stockService, postings, numbers, CLOCK);
     }
 
     @AfterEach
@@ -1260,7 +1263,120 @@ class CounterSalesTest {
         assertThat(sheet.getStatus()).isEqualTo(StockStatus.SOLD);
     }
 
+    @Test
+    void piecesOfAnOrderGivenUpComeOffTheJobsOrBackToStockAndOffTheBalanceFirst() {
+        tills.open(BigDecimal.ZERO);
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 3, List.of(edging.getId()), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));                      // 20,250 and edging 9,000
+        SalesInvoiceLine size = sale.getLines().get(0);
+        sales.setCustomer(walkIn.getId(), "Mukamana Alice", null);
+        CuttingJob job = sales.pay(new SalePayments.Entered(new BigDecimal("15000"), null, null, null, null, null, null, null), true)
+                .jobs().get(0);
+        assertThat(sale.getBalanceDue()).isEqualByComparingTo("14250");
+        // The job cut one piece (waiting for the customer) and a "Cut the rest" job has the other two
+        job.setStatus(CuttingJobStatus.COMPLETED);
+        StockUnit waiting = cut(job.getLines().get(0), CuttingOutputKind.PIECE, unit("U-WH-000091", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+        waiting.setLocation(rack);
+        waiting.setUnitCost(new BigDecimal("1200.00"));
+        CuttingJob rest = new CuttingJob();
+        rest.setId(UUID.randomUUID());
+        rest.setNumber("CUT-WH-2026-000012");
+        rest.setSalesInvoiceId(sale.getId());
+        CuttingJobLine restLine = new CuttingJobLine();
+        restLine.setId(UUID.randomUUID());
+        restLine.setJob(rest);
+        restLine.setQuantity(2);
+        restLine.setSalesLineId(size.getId());
+        rest.getLines().add(restLine);
+        jobs.add(rest);
+        assertThat(creditNoteService.cancellables(sale)).singleElement().satisfies(c -> {
+            assertThat(c.getRemaining()).isEqualTo(3);
+            assertThat(c.ready()).containsExactly(waiting);
+            assertThat(c.drafted()).isEqualTo(2);
+            assertThat(c.getCancellableNow()).isEqualTo(3);
+        });
+        when(cuttingJobs.takeOffSale(eq(sale.getId()), eq(size.getId()), eq(2), any())).thenAnswer(a -> {
+            rest.setStatus(CuttingJobStatus.CANCELLED);                              // as the job service does once empty
+            return 2;
+        });
+
+        CreditNoteDto form = creditNoteService.newCancelForm(sale);
+        form.setReason("The customer changed the window sizes");
+        form.getSizes().get(0).setQuantity(4);
+        assertThatThrownBy(() -> creditNoteService.cancelPieces(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getField()).isEqualTo("sizes[0].quantity");
+                    assertThat(e.getMessageKey()).isEqualTo("creditNote.cancel.tooMany");
+                });
+        form.getSizes().get(0).setQuantity(2);                                         // the two not cut yet
+        form.setRefundMethod(PaymentMethod.CASH);
+
+        CreditNote note = creditNoteService.cancelPieces(form);
+
+        assertThat(note.getKind()).isEqualTo(CreditNoteKind.CANCEL);
+        assertThat(creditLines).extracting(CreditNoteLine::getAmount).extracting(BigDecimal::intValue).containsExactly(13500, 6000);
+        assertThat(note.getBalanceReduced()).isEqualByComparingTo("14250");             // the balance first
+        assertThat(note.getRefundAmount()).isEqualByComparingTo("5250");
+        assertThat(sale.hasBalanceDue()).isFalse();
+        verify(cuttingJobs).takeOffSale(eq(sale.getId()), eq(size.getId()), eq(2), any());
+        assertThat(waiting.getStatus()).isEqualTo(StockStatus.RESERVED);                 // still the customer's
+        assertThat(sales.progress(sale).get(size.getId())).satisfies(p -> {
+            assertThat(p.cancelled()).isEqualTo(2);
+            assertThat(p.getRemaining()).isEqualTo(1);
+        });
+        verify(postings).creditNote(eq(note), eq(BigDecimal.ZERO), eq(BigDecimal.ZERO), any());
+
+        // The piece cut and waiting, given up too: released to stock, the size credited in full, never more
+        CreditNoteDto last = creditNoteService.newCancelForm(sale);
+        last.setReason("Not needed after all");
+        last.getSizes().get(0).setQuantity(1);
+        last.setRefundMethod(PaymentMethod.CASH);
+        CreditNote second = creditNoteService.cancelPieces(last);
+        assertThat(second.getTotalAmount()).isEqualByComparingTo("9750");             // 6,750 + 3,000
+        assertThat(waiting.getStatus()).isEqualTo(StockStatus.AVAILABLE);
+        assertThat(waiting.getReservedCustomer()).isNull();
+        assertThat(unitsBack).singleElement().satisfies(u -> {
+            assertThat(u.getOutcome()).isEqualTo(ReturnOutcome.RELEASE);
+            assertThat(u.getLocation()).isEqualTo(rack);
+        });
+        assertThat(tills.summary(till).getExpectedCash()).isEqualByComparingTo("0");     // 15,000 - 5,250 - 9,750
+        assertThat(creditNoteService.cancellables(sale)).isEmpty();
+        assertThat(sales.readyPieces(sale)).isEmpty();
+    }
+
+    @Test
+    void piecesOnASheetBeingCutWaitForTheCut() {
+        tills.open(BigDecimal.ZERO);
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 2, List.of(), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));
+        CuttingJob job = sales.pay(new SalePayments.Entered(new BigDecimal("13500"), null, null, null, null, null, null, null)).jobs().get(0);
+        job.setStatus(CuttingJobStatus.IN_PROGRESS);
+
+        CreditNoteDto form = creditNoteService.newCancelForm(sale);
+        form.setReason("Changed their mind");
+        form.getSizes().get(0).setQuantity(1);
+        form.setRefundMethod(PaymentMethod.CASH);
+        assertThatThrownBy(() -> creditNoteService.cancelPieces(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("creditNote.cancel.inCutting");
+                    assertThat(e.getArgs()).containsExactly(0, job.getNumber());
+                });
+        verify(cuttingJobs, never()).takeOffSale(any(), any(), anyInt(), any());
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    /** Rows of (invoice line, pieces) as the credit note line queries give them. */
+    private List<Object[]> piecesPerLine(Collection<UUID> lineIds, boolean cancelledOnly) {
+        Map<UUID, Long> pieces = new LinkedHashMap<>();
+        for (CreditNoteLine l : creditLines) {
+            boolean cancel = creditNotes.stream().anyMatch(c -> c.getId().equals(l.getCreditNoteId()) && c.isCancel());
+            if (lineIds.contains(l.getInvoiceLineId()) && (!cancelledOnly || cancel)) {
+                pieces.merge(l.getInvoiceLineId(), (long) l.getQuantity(), Long::sum);
+            }
+        }
+        return pieces.entrySet().stream().map(e -> new Object[]{e.getKey(), e.getValue()}).toList();
+    }
 
     private static Location location(String code, boolean offcut) {
         Location l = new Location();

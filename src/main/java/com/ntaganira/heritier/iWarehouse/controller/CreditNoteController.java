@@ -36,8 +36,9 @@ import java.util.stream.Collectors;
  * - Date      : 2026. 10. 09.
  * - User      : Hntaganira
  * - Desc      : Returns and credit notes (POS-09): the return form of an invoice (what comes back, where it goes, the
- *               reason and the refund), the list, a credit note with its lines, units, refund, journal and History, and
- *               its 80 mm slip to print.
+ *               reason and the refund), the cancel form of an order (pieces of its sizes given up before they were
+ *               handed over), the list, a credit note with its lines, units, refund, journal and History, and its 80 mm
+ *               slip to print.
  * </pre>
  */
 @Controller
@@ -124,40 +125,80 @@ public class CreditNoteController {
     public String issue(@ModelAttribute("creditNoteDto") CreditNoteDto dto, BindingResult result, Model model, RedirectAttributes redirect) {
         SalesInvoice sale = issued(dto.getInvoiceId());
         try {
-            CreditNote note = creditNoteService.issue(dto);
-            activityLogService.record(PosController.MODULE, "CREATE_CREDIT_NOTE", "Issued credit note " + note.getNumber() + " on "
-                    + sale.getNumber() + ": " + num.money(note.getTotalAmount()) + " RWF"
-                    + (note.isRefunded() ? ", refunded " + num.money(note.getRefundAmount()) + " RWF by " + note.getRefundMethod() : "")
-                    + (note.getBalanceReduced().signum() > 0 ? ", balance due reduced by " + num.money(note.getBalanceReduced()) + " RWF" : "")
-                    + ": " + note.getReason(), ActivityStatus.SUCCESS);
-            String text = messages.get("creditNote.issued", note.getNumber(), num.money(note.getTotalAmount()));
-            if (note.getRefundMethod() == PaymentMethod.CASH) {
-                text = text + ". " + messages.get("creditNote.giveCash", num.money(note.getRefundAmount()));
-            }
-            redirect.addFlashAttribute("flashSuccess", text);
-            return "redirect:/credit-notes/" + note.getId();
+            return issued(creditNoteService.issue(dto), sale, redirect);
         } catch (BusinessException e) {
-            String error = messages.get(e.getMessageKey(), e.getArgs());
-            activityLogService.record(PosController.MODULE, "CREATE_CREDIT_NOTE", "Failed to issue a credit note on " + sale.getNumber()
-                    + ": " + error, ActivityStatus.FAILED);
-            if (e.getField() != null) {
-                result.rejectValue(e.getField(), e.getMessageKey(), e.getArgs(), error);
-            } else {
-                model.addAttribute("flashError", error);
-            }
-            model.addAttribute("formErrors", result.getFieldErrors());
+            rejected(e, sale, result, model);
             return form(model, dto, issued(dto.getInvoiceId()));
         }
+    }
+
+    /** Pieces of an order given up before they are handed over: the sizes, what each can still give up. */
+    @GetMapping("/cancel")
+    @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_RETURN_SALE')")
+    public String cancelForm(@RequestParam UUID invoice, Model model) {
+        SalesInvoice sale = issued(invoice);
+        return cancelForm(model, creditNoteService.newCancelForm(sale), sale);
+    }
+
+    @PostMapping("/cancel")
+    @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_RETURN_SALE')")
+    public String cancel(@ModelAttribute("creditNoteDto") CreditNoteDto dto, BindingResult result, Model model, RedirectAttributes redirect) {
+        SalesInvoice sale = issued(dto.getInvoiceId());
+        try {
+            return issued(creditNoteService.cancelPieces(dto), sale, redirect);
+        } catch (BusinessException e) {
+            rejected(e, sale, result, model);
+            return cancelForm(model, dto, issued(dto.getInvoiceId()));
+        }
+    }
+
+    private String issued(CreditNote note, SalesInvoice sale, RedirectAttributes redirect) {
+        activityLogService.record(PosController.MODULE, "CREATE_CREDIT_NOTE", "Issued credit note " + note.getNumber()
+                + (note.isCancel() ? " (pieces given up)" : "") + " on " + sale.getNumber() + ": " + num.money(note.getTotalAmount()) + " RWF"
+                + (note.isRefunded() ? ", refunded " + num.money(note.getRefundAmount()) + " RWF by " + note.getRefundMethod() : "")
+                + (note.getBalanceReduced().signum() > 0 ? ", balance due reduced by " + num.money(note.getBalanceReduced()) + " RWF" : "")
+                + ": " + note.getReason(), ActivityStatus.SUCCESS);
+        String text = messages.get("creditNote.issued", note.getNumber(), num.money(note.getTotalAmount()));
+        if (note.getRefundMethod() == PaymentMethod.CASH) {
+            text = text + ". " + messages.get("creditNote.giveCash", num.money(note.getRefundAmount()));
+        }
+        redirect.addFlashAttribute("flashSuccess", text);
+        return "redirect:/credit-notes/" + note.getId();
+    }
+
+    private void rejected(BusinessException e, SalesInvoice sale, BindingResult result, Model model) {
+        String error = messages.get(e.getMessageKey(), e.getArgs());
+        activityLogService.record(PosController.MODULE, "CREATE_CREDIT_NOTE", "Failed to issue a credit note on " + sale.getNumber()
+                + ": " + error, ActivityStatus.FAILED);
+        if (e.getField() != null) {
+            result.rejectValue(e.getField(), e.getMessageKey(), e.getArgs(), error);
+        } else {
+            model.addAttribute("flashError", error);
+        }
+        model.addAttribute("formErrors", result.getFieldErrors());
     }
 
     // ---------------------------------------------------------------- helpers
 
     private String form(Model model, CreditNoteDto dto, SalesInvoice sale) {
-        model.addAttribute("creditNoteDto", dto);
-        model.addAttribute("invoice", sale);
         model.addAttribute("returnables", creditNoteService.returnables(sale).stream()
                 .collect(Collectors.toMap(r -> r.unit().getId(), Function.identity())));
         model.addAttribute("places", stockService.storagePlaces(stockService.locationsById()));
+        refundChoices(model, dto, sale);
+        return "credit-notes/form";
+    }
+
+    private String cancelForm(Model model, CreditNoteDto dto, SalesInvoice sale) {
+        model.addAttribute("cancellables", creditNoteService.cancellables(sale).stream()
+                .collect(Collectors.toMap(c -> c.line().getId(), Function.identity())));
+        refundChoices(model, dto, sale);
+        return "credit-notes/cancel";
+    }
+
+    /** The form's invoice and how its customer can be refunded (to their account only if they have one). */
+    private void refundChoices(Model model, CreditNoteDto dto, SalesInvoice sale) {
+        model.addAttribute("creditNoteDto", dto);
+        model.addAttribute("invoice", sale);
         List<PaymentMethod> methods = new ArrayList<>(List.of(PaymentMethod.CASH, PaymentMethod.MOBILE_MONEY, PaymentMethod.CARD,
                 PaymentMethod.BANK_TRANSFER));
         if (sale.getCustomer().getType().isCreditAllowed()) {
@@ -168,7 +209,6 @@ public class CreditNoteController {
         if (!model.containsAttribute("formErrors")) {
             model.addAttribute("formErrors", new BeanPropertyBindingResult(dto, "creditNoteDto").getFieldErrors());
         }
-        return "credit-notes/form";
     }
 
     /** What the view and the slip show: the credit note, its invoice's lines (what each credit line is), its lines and VAT. */

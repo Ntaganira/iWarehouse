@@ -245,6 +245,36 @@ class CuttingJobServiceTest {
         assertThat(sheet.getStatus()).isEqualTo(StockStatus.AVAILABLE);
     }
 
+    @Test
+    void piecesGivenUpComeOffTheSalesDraftJobsAndAnEmptyJobIsCancelled() {   // POS-09
+        UUID invoiceId = UUID.randomUUID();
+        UUID sizeA = UUID.randomUUID();
+        UUID sizeB = UUID.randomUUID();
+        CuttingJob cutting = draftAt02();                                      // being cut: never touched
+        cutting.setStatus(CuttingJobStatus.IN_PROGRESS);
+        cutting.getLines().get(0).setSalesLineId(sizeA);
+        CuttingJob draft = draftAt02();
+        draft.setNumber("CUT-WH-2026-000010");
+        draft.getLines().get(0).setSalesLineId(sizeA);                         // 1 piece of A
+        draft.getLines().get(1).setSalesLineId(sizeB);                         // 2 pieces of B
+        when(repo.findBySalesInvoiceIdOrderByNumberAsc(invoiceId)).thenReturn(List.of(cutting, draft));
+
+        assertThat(service.takeOffSale(invoiceId, sizeB, 1, "Given up")).isEqualTo(1);
+        assertThat(draft.getLines()).extracting(CuttingJobLine::getQuantity).containsExactly(1, 1);
+
+        assertThat(service.takeOffSale(invoiceId, sizeA, 2, "Given up")).isEqualTo(1);   // only the draft's piece
+        assertThat(draft.getLines()).singleElement().satisfies(l -> {
+            assertThat(l.getSalesLineId()).isEqualTo(sizeB);
+            assertThat(l.getLineNo()).isEqualTo(1);
+        });
+        assertThat(cutting.getLines().get(0).getQuantity()).isEqualTo(1);
+
+        assertThat(service.takeOffSale(invoiceId, sizeB, 1, "Given up on CN-WH-2026-000003")).isEqualTo(1);
+        assertThat(draft.getStatus()).isEqualTo(CuttingJobStatus.CANCELLED);
+        assertThat(draft.getCancelReason()).isEqualTo("Given up on CN-WH-2026-000003");
+        assertThat(cutting.getStatus()).isEqualTo(CuttingJobStatus.IN_PROGRESS);
+    }
+
     // ---------------------------------------------------------------- the cut (PRD-03..07, AT-02)
 
     @Test

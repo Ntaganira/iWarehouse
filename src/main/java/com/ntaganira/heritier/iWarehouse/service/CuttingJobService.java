@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -872,6 +873,48 @@ public class CuttingJobService {
         job.setStatus(CuttingJobStatus.CANCELLED);
         job.setCancelReason(reason.trim());
         return job;
+    }
+
+    /**
+     * Takes up to {@code pieces} of a sale's size off the sale's draft cutting jobs (an order's pieces given up, POS-09): the
+     * job line asks for fewer, goes when none are left, and a job left without lines is cancelled with the reason. Jobs being
+     * cut or cut already are not touched. Returns the pieces taken.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public int takeOffSale(UUID salesInvoiceId, UUID salesLineId, int pieces, String reason) {
+        int taken = 0;
+        List<CuttingJob> jobs = new ArrayList<>(repo.findBySalesInvoiceIdOrderByNumberAsc(salesInvoiceId));
+        Collections.reverse(jobs);                                      // the latest ("Cut the rest") first
+        for (CuttingJob found : jobs) {
+            if (taken == pieces || found.getStatus() != CuttingJobStatus.DRAFT) {
+                continue;
+            }
+            repo.lockById(found.getId());
+            CuttingJob job = findDetailed(found.getId());
+            if (job.getStatus() != CuttingJobStatus.DRAFT) {
+                continue;
+            }
+            for (CuttingJobLine line : new ArrayList<>(job.getLines())) {
+                if (taken == pieces || !salesLineId.equals(line.getSalesLineId())) {
+                    continue;
+                }
+                int take = Math.min(pieces - taken, line.getQuantity());
+                taken += take;
+                if (take == line.getQuantity()) {
+                    job.getLines().remove(line);
+                } else {
+                    line.setQuantity(line.getQuantity() - take);
+                }
+            }
+            for (int i = 0; i < job.getLines().size(); i++) {
+                job.getLines().get(i).setLineNo(i + 1);        // uk_cutting_job_lines_no is checked at commit
+            }
+            if (job.getLines().isEmpty()) {
+                job.setStatus(CuttingJobStatus.CANCELLED);
+                job.setCancelReason(reason);
+            }
+        }
+        return taken;
     }
 
     /** A new draft for the pieces a completed job did not cut, linked to it (cut from another source). */

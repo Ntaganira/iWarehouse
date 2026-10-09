@@ -113,6 +113,7 @@ public class InvoiceController {
         model.addAttribute("creditNotes", creditNoteService.ofInvoice(id));
         model.addAttribute("returned", creditNoteService.returnedCounts(id));
         model.addAttribute("canReturn", !creditNoteService.returnables(invoice).isEmpty());
+        model.addAttribute("canCancel", custom && creditNoteService.cancellables(invoice).stream().anyMatch(c -> c.getCancellableNow() > 0));
         model.addAttribute("history", dataChangeService.historyWithChildren("SalesInvoice", id.toString(), "SalesInvoiceLine",
                 "invoice", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

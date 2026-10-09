@@ -47,6 +47,10 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
 
     long countByTillSession_IdAndStatus(UUID tillSessionId, SalesInvoiceStatus status);
 
+    /** The sale a quotation is being rung up into (POS-03), with its till. */
+    @EntityGraph(attributePaths = {"tillSession"})
+    Optional<SalesInvoice> findFirstByQuotationIdAndStatus(UUID quotationId, SalesInvoiceStatus status);
+
     /** Handing over the pieces of an invoice takes this lock first, so a piece is handed over once. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from SalesInvoice i where i.id = :id")

@@ -95,7 +95,7 @@
             </div>
 
             <div class="form-divider"><h3 th:text="#{settings.group.pricing}">Pricing</h3>
-                <p class="hint" th:text="#{settings.group.pricingHint}">Defaults for new price lists</p></div>
+                <p class="hint" th:text="#{settings.group.pricingHint}">Defaults for new price lists and quotations</p></div>
             <div class="form-grid">
                 <div class="form-group">
                     <label for="minChargeableArea" th:text="#{settings.minChargeableArea}">Minimum chargeable area</label>
@@ -106,6 +106,16 @@
                     </div>
                     <span class="field-error" th:if="${#fields.hasErrors('minChargeableArea')}" th:errors="*{minChargeableArea}"></span>
                     <span class="hint" th:text="#{settings.minChargeableAreaHint}">Smaller pieces are charged as this area (MD-06)</span>
+                </div>
+                <div class="form-group">
+                    <label for="quotationValidityDays" th:text="#{settings.quotationValidityDays}">Quotation validity</label>
+                    <div class="input-unit">
+                        <input type="number" id="quotationValidityDays" th:field="*{quotationValidityDays}" step="1" min="1" max="365" required
+                               th:classappend="${#fields.hasErrors('quotationValidityDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('quotationValidityDays')}" th:errors="*{quotationValidityDays}"></span>
+                    <span class="hint" th:text="#{settings.quotationValidityDaysHint}">How long a new quotation's prices hold (POS-03)</span>
                 </div>
             </div>
 

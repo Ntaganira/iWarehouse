@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${quoteDto.id == null} ? #{quote.addTitle} : #{quote.editTitle(${quotation.number})}, ~{::content})}">
+<head><title>Quotation - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${quoteDto.id == null} ? #{quote.addTitle} : #{quote.editTitle(${quotation.number})}">New Quotation</h1>
+            <div class="subtitle" th:text="#{quote.formSubtitle(${@num.m2(discountLimit)})}">Saved as a draft and priced from the customer's list; you give up to 5% off.</div>
+        </div>
+        <a th:href="${quoteDto.id == null} ? @{/quotations} : @{/quotations/{id}(id=${quoteDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${quoteDto.id == null} ? @{/quotations/new} : @{/quotations/{id}/edit(id=${quoteDto.id})}"
+          th:object="${quoteDto}" method="post" class="quote-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="customerId" th:text="#{pos.customer}">Customer</label>
+                        <select id="customerId" th:field="*{customerId}" data-searchable th:classappend="${#fields.hasErrors('customerId')} ? 'is-invalid'">
+                            <option th:each="c : ${customers}" th:value="${c.id}" th:text="${c.name + ' · ' + c.code}">Walk-in customer · WALK-IN</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('customerId')}" th:errors="*{customerId}"></span>
+                        <span class="hint" th:text="#{quote.customerHint}">Their price list prices the quotation</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerName" th:text="#{pos.buyerName}">Name on the invoice</label>
+                        <input type="text" id="buyerName" th:field="*{buyerName}" maxlength="100" th:placeholder="#{pos.buyerNamePh}"
+                               th:classappend="${#fields.hasErrors('buyerName')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('buyerName')}" th:errors="*{buyerName}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerTin" th:text="#{pos.buyerTin}">Buyer's TIN</label>
+                        <input type="text" id="buyerTin" th:field="*{buyerTin}" maxlength="9" inputmode="numeric" class="input-code" th:placeholder="#{pos.buyerTinPh}"
+                               th:classappend="${#fields.hasErrors('buyerTin')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('buyerTin')}" th:errors="*{buyerTin}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="validUntil" th:text="#{quote.validUntil}">Valid until</label>
+                        <input type="date" id="validUntil" th:field="*{validUntil}" required th:classappend="${#fields.hasErrors('validUntil')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('validUntil')}" th:errors="*{validUntil}"></span>
+                        <span class="hint" th:text="#{quote.validUntilHint}">The prices hold until this day</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes" th:text="#{product.notes}">Notes</label>
+                        <input type="text" id="notes" th:field="*{notes}" maxlength="500" th:placeholder="#{quote.notesPh}"
+                               th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{quote.linesTitle}">Glass quoted</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{po.addLine}">Add line</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table quote-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{product.name}">Glass</th>
+                            <th th:text="#{quote.kind}">What</th>
+                            <th class="num" th:text="#{po.width}">Width (mm)</th>
+                            <th class="num" th:text="#{po.height}">Height (mm)</th>
+                            <th class="num" th:text="#{cutting.qty}">Qty</th>
+                            <th class="num">m²</th>
+                            <th th:text="#{pos.processing}">Processing</th>
+                            <th class="num" th:text="#{quote.holes}">Holes</th>
+                            <th th:text="#{cutting.mark}">Mark</th>
+                            <th class="num" th:text="#{quote.discount}">Discount (%)</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body">
+                        <tr class="line-row" th:each="row, st : *{lines}" th:classappend="${row.kind != null and row.kind.name() == 'SHEET'} ? 'is-sheet'">
+                            <td class="line-product">
+                                <input type="hidden" th:field="*{lines[__${st.index}__].id}">
+                                <select th:field="*{lines[__${st.index}__].productId}" th:aria-label="#{product.name}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].productId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{po.chooseProduct}">Choose glass</option>
+                                    <option th:each="p : ${products}" th:value="${p.id}"
+                                            th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].productId')}" th:errors="*{lines[__${st.index}__].productId}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].kind}" data-quote-kind th:aria-label="#{quote.kind}">
+                                    <option th:each="k : ${kinds}" th:value="${k}" th:text="#{${'quote.kind.' + k}}">Size to cut</option>
+                                </select>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.width}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].widthMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].widthMm')}" th:errors="*{lines[__${st.index}__].widthMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.height}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].heightMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].heightMm')}" th:errors="*{lines[__${st.index}__].heightMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].quantity}" min="1" max="999" step="1" inputmode="numeric" th:aria-label="#{cutting.qty}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].quantity')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].quantity')}" th:errors="*{lines[__${st.index}__].quantity}"></span>
+                            </td>
+                            <td class="num line-area">—</td>
+                            <td>
+                                <div class="proc-checks" role="group" th:aria-label="#{pos.processing}">
+                                    <label class="proc-check" th:each="sv : ${services}" th:title="#{${'service.unit.' + sv.chargeUnit}}">
+                                        <input type="checkbox" th:name="|lines[${st.index}].serviceIds|" th:value="${sv.id}"
+                                               th:checked="${row.serviceIds != null and #lists.contains(row.serviceIds, sv.id)}">
+                                        <span th:text="${sv.name}">Edging</span>
+                                    </label>
+                                </div>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].serviceIds')}" th:errors="*{lines[__${st.index}__].serviceIds}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].holes}" min="1" max="50" step="1" inputmode="numeric" th:aria-label="#{pos.holes}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].holes')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].holes')}" th:errors="*{lines[__${st.index}__].holes}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{lines[__${st.index}__].mark}" maxlength="60" th:placeholder="#{cutting.markPh}" th:aria-label="#{cutting.mark}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].mark')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].mark')}" th:errors="*{lines[__${st.index}__].mark}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].discountPercent}" min="0" max="100" step="0.01" inputmode="decimal" th:aria-label="#{quote.discount}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].discountPercent')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].discountPercent')}" th:errors="*{lines[__${st.index}__].discountPercent}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{po.removeLine}" th:aria-label="#{po.removeLine}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="4" th:text="#{po.total}">Total</th>
+                            <th class="num" id="quote-total-pieces">0</th>
+                            <th class="num" id="quote-total-area">0</th>
+                            <th colspan="5"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{quote.linesNote}">A size to cut is cut from a sheet once paid; whole sheets come from stock as they are. Prices come from the customer's list when you save. Empty lines are ignored.</p>
+        </div>
+
+        <!-- A new line ({i} becomes the row number) -->
+        <template class="line-template">
+            <tr class="line-row">
+                <td class="line-product">
+                    <input type="hidden" name="lines[{i}].id" value="">
+                    <select name="lines[{i}].productId" th:aria-label="#{product.name}">
+                        <option value="" th:text="#{po.chooseProduct}">Choose glass</option>
+                        <option th:each="p : ${products}" th:value="${p.id}"
+                                th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                    </select>
+                </td>
+                <td>
+                    <select name="lines[{i}].kind" data-quote-kind th:aria-label="#{quote.kind}">
+                        <option th:each="k : ${kinds}" th:value="${k}" th:text="#{${'quote.kind.' + k}}">Size to cut</option>
+                    </select>
+                </td>
+                <td class="num"><input type="number" name="lines[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.width}"></td>
+                <td class="num"><input type="number" name="lines[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" th:aria-label="#{po.height}"></td>
+                <td class="num"><input type="number" name="lines[{i}].quantity" value="1" min="1" max="999" step="1" inputmode="numeric" th:aria-label="#{cutting.qty}"></td>
+                <td class="num line-area">—</td>
+                <td>
+                    <div class="proc-checks" role="group" th:aria-label="#{pos.processing}">
+                        <label class="proc-check" th:each="sv : ${services}" th:title="#{${'service.unit.' + sv.chargeUnit}}">
+                            <input type="checkbox" name="lines[{i}].serviceIds" th:value="${sv.id}">
+                            <span th:text="${sv.name}">Edging</span>
+                        </label>
+                    </div>
+                </td>
+                <td class="num"><input type="number" name="lines[{i}].holes" min="1" max="50" step="1" inputmode="numeric" th:aria-label="#{pos.holes}"></td>
+                <td><input type="text" name="lines[{i}].mark" maxlength="60" th:placeholder="#{cutting.markPh}" th:aria-label="#{cutting.mark}"></td>
+                <td class="num"><input type="number" name="lines[{i}].discountPercent" min="0" max="100" step="0.01" inputmode="decimal" th:aria-label="#{quote.discount}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{po.removeLine}" th:aria-label="#{po.removeLine}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{po.saveDraft}">Save draft</button>
+            <a th:href="${quoteDto.id == null} ? @{/quotations} : @{/quotations/{id}(id=${quoteDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

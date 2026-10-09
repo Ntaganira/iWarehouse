@@ -1,6 +1,6 @@
 /*
- * iWarehouse - forms with editable rows: purchase order lines (PRC-01), goods receipt crates (PRC-02) and
- * shipment bills (PRC-03).
+ * iWarehouse - forms with editable rows: purchase order lines (PRC-01), goods receipt crates (PRC-02),
+ * shipment bills (PRC-03) and quotation lines (POS-03: whole sheets have no processing, holes or mark).
  * Add and remove rows, keep the row numbers in the field names continuous (lines[0], lines[1]...), drop
  * empty rows before sending, and show live m² and amounts. The server checks everything again; these
  * figures are only a preview (the order total is rounded once, like the server does).
@@ -8,12 +8,13 @@
 (function () {
     'use strict';
 
-    const form = document.querySelector('form.po-form, form.receipt-form, form.shipment-form');
+    const form = document.querySelector('form.po-form, form.receipt-form, form.shipment-form, form.quote-form');
     if (!form) return;
 
     const isOrder = form.classList.contains('po-form');
     const isShipment = form.classList.contains('shipment-form');
-    const prefix = isOrder ? 'lines' : (isShipment ? 'costs' : 'crates');
+    const isQuote = form.classList.contains('quote-form');
+    const prefix = isOrder || isQuote ? 'lines' : (isShipment ? 'costs' : 'crates');
     const body = form.querySelector('tbody.line-body');
     const template = form.querySelector('template.line-template');
     const addButton = form.querySelector('.line-add');
@@ -51,6 +52,11 @@
         if (isOrder) {
             return !field(row, 'productId').value && ['widthMm', 'heightMm', 'quantity', 'pricePerM2']
                 .every(n => !field(row, n).value);
+        }
+        if (isQuote) {
+            // The quantity and the kind start filled, so they do not count
+            return !field(row, 'productId').value && ['widthMm', 'heightMm', 'mark', 'discountPercent']
+                .every(n => !field(row, n).value.trim()) && !row.querySelector('input[type=checkbox]:checked');
         }
         const broken = field(row, 'broken').value;
         return !field(row, 'poLineId').value && !field(row, 'batchNo').value.trim()
@@ -151,11 +157,39 @@
         document.getElementById('receipt-total-area').textContent = fmt(area, 0, 4);
     }
 
+    // ---------------------------------------------------------------- quotation
+
+    // Whole sheets come from stock as they are: no processing, holes or mark (disabled fields are not sent)
+    function onKind(row) {
+        const sheet = row.querySelector('[data-quote-kind]').value === 'SHEET';
+        row.classList.toggle('is-sheet', sheet);
+        row.querySelectorAll('input[type=checkbox]').forEach(c => { if (sheet) c.checked = false; c.disabled = sheet; });
+        ['holes', 'mark'].forEach(n => { const f = field(row, n); if (sheet) f.value = ''; f.disabled = sheet; });
+    }
+
+    function recalcQuote() {
+        let pieces = 0, area = 0;
+        rows().forEach(row => {
+            const w = num(field(row, 'widthMm')), h = num(field(row, 'heightMm')), q = num(field(row, 'quantity'));
+            const cell = row.querySelector('.line-area');
+            if (w && h && q) {
+                const a = sheetArea(w, h) * q;
+                cell.textContent = fmt(a, 0, 4);
+                pieces += q;
+                area += a;
+            } else {
+                cell.textContent = '—';
+            }
+        });
+        document.getElementById('quote-total-pieces').textContent = fmt(pieces, 0, 0);
+        document.getElementById('quote-total-area').textContent = fmt(area, 0, 4);
+    }
+
     // ---------------------------------------------------------------- shared
 
     function recalc() {
         if (isShipment) return; // bills are in several currencies: the shipment page shows them in RWF
-        if (isOrder) recalcOrder(); else recalcReceipt();
+        if (isQuote) recalcQuote(); else if (isOrder) recalcOrder(); else recalcReceipt();
     }
 
     function addRow() {
@@ -173,7 +207,9 @@
 
     body.addEventListener('input', recalc);
     body.addEventListener('change', (e) => {
-        if (!isOrder && !isShipment && e.target.matches('select[name$="].poLineId"]')) {
+        if (isQuote && e.target.matches('[data-quote-kind]')) {
+            onKind(e.target.closest('tr'));
+        } else if (!isOrder && !isShipment && !isQuote && e.target.matches('select[name$="].poLineId"]')) {
             onLineChange(e.target);
         } else {
             recalc();
@@ -198,7 +234,10 @@
         lastSupplierIncoterm = option && option.dataset.incoterm ? option.dataset.incoterm : '';
         supplier.addEventListener('change', onSupplierChange);
     }
-    if (!isOrder && !isShipment) {
+    if (isQuote) {
+        rows().forEach(onKind);
+    }
+    if (!isOrder && !isShipment && !isQuote) {
         body.querySelectorAll('select[name$="].poLineId"]').forEach(select => {
             const option = select.selectedOptions[0];
             if (option && option.dataset.w) {

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{quote.printTitle(${quotation.number})} + ' - ' + #{app.name}">Quotation - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{quote.printTitle(${quotation.number})}">Quotation QUO-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{quote.printHint}">A4. Print it, or choose "Save as PDF" in the print dialog to send it.</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/quotations/{id}(id=${quotation.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- The quotation (POS-03), black on white: it is printed -->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+                <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+                <div th:if="${companyPhone != null or companyEmail != null}"
+                     th:text="${(companyPhone ?: '') + (companyPhone != null and companyEmail != null ? ' · ' : '') + (companyEmail ?: '')}">+250 788 000 000 · sales@example.rw</div>
+                <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="${quotation.draft} ? #{quote.printDraft} : #{quote.printKind}">QUOTATION</div>
+                <div class="mono" th:text="${quotation.number}">QUO-WH-2026-000001</div>
+            </div>
+        </div>
+
+        <div class="print-doc-parties">
+            <div>
+                <div class="print-doc-label" th:text="#{quote.printFor}">For</div>
+                <div class="strong" th:text="${quotation.billTo}">Umucyo Builders Ltd</div>
+                <div th:if="${quotation.buyerTin != null}" th:text="${#messages.msg('posReceipt.buyerTin') + ' ' + quotation.buyerTin}">Buyer's TIN 100123456</div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{quote.date}">Date</span> <span th:text="${#temporals.format(quotation.quoteDate, 'dd/MM/yyyy')}">09/10/2026</span></div>
+                <div><span class="print-doc-label" th:text="#{quote.validUntil}">Valid until</span> <strong th:text="${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')}">23/10/2026</strong></div>
+            </div>
+        </div>
+
+        <div class="print-doc-scroll">
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th th:text="#{invoice.item}">Item</th>
+                    <th class="num" th:text="#{pos.charged}">Charged</th>
+                    <th th:text="#{pos.vat}">VAT</th>
+                    <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="l : ${quotation.lines}">
+                    <td th:text="${l.lineNo}">1</td>
+                    <td>
+                        <th:block th:if="${l.sheet}"><span th:text="#{quote.kind.SHEET}">Whole sheets</span> · <span th:text="${l.product.code + ' ' + l.widthMm + ' × ' + l.heightMm + ' mm'}">CLR-6 3210 × 2250 mm</span></th:block>
+                        <th:block th:if="${l.customPiece}"><span th:text="#{sale.line.custom}">Size to cut</span> · <span th:text="${l.product.code + ' ' + l.widthMm + ' × ' + l.heightMm + ' mm'}">CLR-6 600 × 400 mm</span>
+                            <span th:if="${l.mark != null}" th:text="${'(' + l.mark + ')'}">(kitchen)</span></th:block>
+                        <th:block th:if="${l.serviceLine}"><span th:text="${l.service.name}">Edging</span>
+                            <span th:text="${l.holes != null} ? #{sale.line.serviceHoles(${l.parentLine.lineNo}, ${l.holes})} : #{sale.line.serviceFor(${l.parentLine.lineNo})}">on line 2</span></th:block>
+                    </td>
+                    <td class="num nowrap">
+                        <span th:unless="${l.serviceLine}" th:text="${l.quantity + ' × ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.price)}">2 × 7.2225 m² × 27,000</span>
+                        <span th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit) + ' × ' + @num.money(l.price)}">4 m × 1,500</span>
+                        <div class="print-doc-sub" th:if="${l.discountPercent.signum() > 0}"
+                             th:text="#{posReceipt.discount(${@num.m2(l.discountPercent)}, ${@num.money(l.listPrice)})}">discount 10% (list 27,000)</div>
+                    </td>
+                    <td class="nowrap" th:text="${l.taxCode + ' ' + @num.m2(l.vatRate) + '%'}">B 18%</td>
+                    <td class="num" th:text="${@num.money(l.amount)}">195,008</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr th:each="g : ${totals.groups}">
+                    <td colspan="4" th:text="#{invoice.vatLine(${g.taxCode}, ${@num.m2(g.rate)}, ${@num.money(g.getNet())})}">B 18%: net 165,261.02, VAT</td>
+                    <td class="num" th:text="${@num.money(g.vat)}">29,746.98</td>
+                </tr>
+                <tr class="print-doc-total">
+                    <td colspan="4" th:text="#{pos.total}">Total (RWF)</td>
+                    <td class="num" th:text="${@num.money(quotation.totalAmount)}">412,500</td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+
+        <p class="print-doc-note" th:if="${quotation.notes != null}" th:text="${quotation.notes}">Delivery to site in Kicukiro</p>
+        <p class="print-doc-note" th:text="#{quote.printTerms(${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')})}">Prices in RWF, VAT included as shown, valid until 23/10/2026. Sizes to cut are cut once paid; whole sheets subject to stock.</p>
+    </div>
+</body>
+</html>

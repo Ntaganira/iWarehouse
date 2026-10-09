@@ -70,4 +70,11 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
     @Query("select u.location.id, count(u), coalesce(sum(u.weightKg), 0) from StockUnit u"
             + " where u.status in :statuses and u.location is not null group by u.location.id")
     List<Object[]> loadByLocation(@Param("statuses") Collection<StockStatus> statuses);
+
+    /** Units of a glass of exactly this size, either way round, in a state, by label (a quotation's whole sheets, POS-03). */
+    @EntityGraph(attributePaths = {"product", "location"})
+    @Query("select u from StockUnit u where u.product.id = :productId and u.status = :status"
+            + " and ((u.widthMm = :w and u.heightMm = :h) or (u.widthMm = :h and u.heightMm = :w)) order by u.code")
+    List<StockUnit> findOfSize(@Param("productId") UUID productId, @Param("w") int widthMm, @Param("h") int heightMm,
+                               @Param("status") StockStatus status);
 }

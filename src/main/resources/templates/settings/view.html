@@ -122,6 +122,13 @@
                                 </dt>
                                 <dd><span th:text="*{minChargeableArea}">0.25</span> <span class="unit" th:text="#{settings.unit.m2}">m2</span></dd>
                             </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.quotationValidityDays}">Quotation validity</span>
+                                    <span class="setting-hint" th:text="#{settings.quotationValidityDaysHint}">How long a new quotation's prices hold (POS-03)</span>
+                                </dt>
+                                <dd><span th:text="*{quotationValidityDays}">14</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
+                            </div>
                         </dl>
                     </div>
 

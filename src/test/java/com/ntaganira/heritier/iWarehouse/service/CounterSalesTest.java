@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.dto.CuttingJobDto;
+import com.ntaganira.heritier.iWarehouse.dto.QuotationDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.*;
@@ -26,13 +27,14 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Counter sales (POS-01, POS-04, POS-05, POS-06, POS-10, TAX-01, TAX-04): ringing up units from stock, pricing them from
- * the customer's list, changing a price or giving credit beyond the limits with a manager's approval, paying with split
- * payments, and the till session around it.
+ * Counter sales (POS-01, POS-03..POS-06, POS-10, TAX-01, TAX-04): ringing up units from stock, pricing them from the
+ * customer's list, quotations rung up at their prices, changing a price or giving credit beyond the limits with a manager's
+ * approval, paying with split payments, and the till session around it.
  */
 class CounterSalesTest {
 
@@ -62,6 +64,8 @@ class CounterSalesTest {
     private final List<SaleApproval> approvals = new ArrayList<>();
     private final Map<Long, List<Role>> rolesOf = new HashMap<>();
     private SaleApprovalService approvalService;
+    private final List<Quotation> quotations = new ArrayList<>();
+    private QuotationService quotationService;
     private ProcessingService edging;
     private ProcessingService drilling;
     private ProcessingService polishing;
@@ -135,7 +139,7 @@ class CounterSalesTest {
             List<Object[]> rows = new ArrayList<>();
             for (SalesInvoice i : invoices) {
                 if (i.isDraft()) {
-                    i.getLines().stream().filter(l -> ids.contains(l.getStockUnitId()))
+                    i.getLines().stream().filter(l -> l.getStockUnitId() != null && ids.contains(l.getStockUnitId()))
                             .forEach(l -> rows.add(new Object[]{l.getStockUnitId(), i.getTillSession().getNumber()}));
                 }
             }
@@ -280,10 +284,41 @@ class CounterSalesTest {
         SettingService settings = mock(SettingService.class);
         when(settings.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT)).thenReturn(new BigDecimal("5"));
 
-        sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, currencyRepo, serviceRepo, taxRepo,
-                jobRepo, outputRepo, jobLineRepo, deliveryRepo, approvalRepo, userRepo, tills, cuttingJobs, stockService, priceLists,
-                postings, journals, numbers, settings, CLOCK);
+        // Quotations (POS-03), valid 14 days by default; the units a quotation's whole sheets can take
+        QuotationRepository quotationRepo = mock(QuotationRepository.class);
+        when(quotationRepo.save(any())).thenAnswer(a -> {
+            Quotation q = a.getArgument(0);
+            if (q.getId() == null) {
+                q.setId(UUID.randomUUID());
+                quotations.add(q);
+            }
+            q.getLines().forEach(l -> { if (l.getId() == null) l.setId(UUID.randomUUID()); });
+            return q;
+        });
+        when(quotationRepo.findById(any())).thenAnswer(a -> quotations.stream().filter(q -> q.getId().equals(a.getArgument(0))).findFirst());
+        when(quotationRepo.findDetailedById(any())).thenAnswer(a -> quotations.stream().filter(q -> q.getId().equals(a.getArgument(0))).findFirst());
+        when(quotationRepo.lockById(any())).thenAnswer(a -> quotations.stream().filter(q -> q.getId().equals(a.getArgument(0))).findFirst());
+        when(numbers.next(DocumentType.QUOTATION)).thenAnswer(a -> String.format("QUO-WH-2026-%06d", quotations.size() + 1));
+        when(settings.getInt(SettingKey.QUOTATION_VALIDITY_DAYS)).thenReturn(14);
+        when(invoiceRepo.findFirstByQuotationIdAndStatus(any(), any())).thenAnswer(a -> invoices.stream()
+                .filter(i -> a.getArgument(0).equals(i.getQuotationId()) && i.getStatus() == a.getArgument(1)).findFirst());
+        when(productRepo.findAllById(any())).thenAnswer(a -> {
+            Collection<UUID> ids = a.getArgument(0);
+            return List.of(clear6, exemptGlass, tempered).stream().filter(pr -> ids.contains(pr.getId())).toList();
+        });
+        when(unitRepo.findOfSize(any(), anyInt(), anyInt(), any())).thenAnswer(a -> units.stream()
+                .filter(u -> u.getProduct().getId().equals(a.getArgument(0)) && u.getStatus() == a.getArgument(3)
+                        && ((u.getWidthMm() == (int) a.getArgument(1) && u.getHeightMm() == (int) a.getArgument(2))
+                        || (u.getWidthMm() == (int) a.getArgument(2) && u.getHeightMm() == (int) a.getArgument(1))))
+                .sorted(Comparator.comparing(StockUnit::getCode)).toList());
+
+        LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
+        sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
+                jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, tills, cuttingJobs, stockService, pricing, postings,
+                journals, numbers, settings, CLOCK);
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
+        quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
+                numbers, settings, CLOCK);
     }
 
     @AfterEach
@@ -479,6 +514,138 @@ class CounterSalesTest {
         sales.cancel();
         assertThat(sale.getStatus()).isEqualTo(SalesInvoiceStatus.CANCELLED);
         assertThat(unit.getStatus()).isEqualTo(StockStatus.AVAILABLE);
+    }
+
+    // ---------------------------------------------------------------- quotations (POS-03)
+
+    @Test
+    void aQuotationIsPricedLikeASaleWithinItsAuthorsDiscountLimit() {
+        QuotationDto dto = quote(walkIn, size(clear6, 600, 400, 2, "5", 2, edging, drilling), sheets(clear6, 3210, 2250, 1));
+        assertThat(dto.getValidUntil()).isEqualTo(LocalDate.of(2026, 10, 23));            // 14 days (Settings)
+
+        Quotation q = quotationService.create(dto);
+        assertThat(q.getNumber()).isEqualTo("QUO-WH-2026-000001");
+        assertThat(q.getStatus()).isEqualTo(QuotationStatus.DRAFT);
+        assertThat(q.getQuoteDate()).isEqualTo(LocalDate.of(2026, 10, 9));
+        List<QuotationLine> lines = q.getLines();
+        assertThat(lines).extracting(QuotationLine::getKind).containsExactly(QuoteLineKind.CUSTOM_PIECE, QuoteLineKind.SERVICE,
+                QuoteLineKind.SERVICE, QuoteLineKind.SHEET);
+        assertThat(lines).extracting(QuotationLine::getLineNo).containsExactly(1, 2, 3, 4);
+        QuotationLine piece = lines.get(0);                            // 2 x 0.25 m² (minimum) x 27,000 less 5%
+        assertThat(piece.getListPrice()).isEqualByComparingTo("27000");
+        assertThat(piece.getDiscountPercent()).isEqualByComparingTo("5");
+        assertThat(piece.getPrice()).isEqualByComparingTo("25650");
+        assertThat(piece.getAmount()).isEqualByComparingTo("12825");
+        assertThat(piece.getProcessing()).isEqualTo("DRILL,EDGE");
+        assertThat(lines.get(1).getService()).isEqualTo(drilling);     // 4 holes x 475
+        assertThat(lines.get(1).getAmount()).isEqualByComparingTo("1900");
+        assertThat(lines.get(2).getParentLine()).isSameAs(piece);      // 4 m of edge x 1,425
+        assertThat(lines.get(2).getAmount()).isEqualByComparingTo("5700");
+        assertThat(lines.get(3).getAmount()).isEqualByComparingTo("195008");   // 7.2225 m² x 27,000, no discount
+        assertThat(q.getTotalAmount()).isEqualByComparingTo("215433");
+        assertThat(quotationService.totals(q).gross()).isEqualByComparingTo("215433");
+
+        assertThatThrownBy(() -> quotationService.create(quote(walkIn, size(clear6, 600, 400, 2, "6", null))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("quote.line.discount.overLimit");
+                    assertThat(e.getField()).isEqualTo("lines[0].discountPercent");
+                });
+        QuotationDto.Line edgedSheet = sheets(clear6, 3210, 2250, 1);
+        edgedSheet.getServiceIds().add(edging.getId());
+        assertThatThrownBy(() -> quotationService.create(quote(walkIn, edgedSheet)))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("quote.line.sheetProcessing"));
+        assertThatThrownBy(() -> quotationService.create(quote(walkIn, size(tempered, 600, 400, 1, null, null))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.custom.notCuttable"));
+
+        // Edited while a draft: rows keep their lines, a size loses its drilling; sent, it is fixed
+        QuotationDto edit = quotationService.formOf(q, false);
+        edit.getLines().get(0).getServiceIds().remove(drilling.getId());
+        edit.getLines().get(0).setHoles(null);
+        quotationService.update(q.getId(), edit);
+        assertThat(q.getLines()).hasSize(3);
+        assertThat(q.getLines().get(0)).isSameAs(piece);
+        assertThat(q.getTotalAmount()).isEqualByComparingTo("213533");
+        quotationService.send(q.getId());
+        assertThat(q.getStatus()).isEqualTo(QuotationStatus.SENT);
+        assertThat(q.getSentBy()).isEqualTo("cashier1");
+        assertThatThrownBy(() -> quotationService.update(q.getId(), edit))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("quote.notDraft"));
+        QuotationDto copy = quotationService.formOf(q, true);
+        assertThat(copy.getId()).isNull();
+        assertThat(copy.getLines()).hasSize(2).allSatisfy(r -> assertThat(r.getId()).isNull());
+    }
+
+    @Test
+    void aSentQuotationIsRungUpAtItsPricesAndConvertedWhenPaid() {
+        Quotation q = quotationService.create(quote(builders, size(clear6, 600, 400, 2, "5", null, edging), sheets(clear6, 3210, 2250, 1)));
+        TillSession session = tills.open(BigDecimal.ZERO);
+        assertThatThrownBy(() -> sales.ringUp(q.getId()))                               // not sent yet
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.quote.notSent"));
+        quotationService.send(q.getId());
+        assertThatThrownBy(() -> sales.ringUp(q.getId()))                               // no whole sheet in stock
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.quote.noSheets");
+                    assertThat(e.getArgs()).containsExactly("CLR-6", "3210 x 2250", 1, 0);
+                });
+        unit("U-WH-000041", clear6, 2250, 3210, StockStatus.AVAILABLE, null);            // either way round
+        doAnswer(a -> {                                                                    // the list went up since
+            Product p = a.getArgument(1);
+            return p == clear6 ? Optional.of(new PriceListService.UnitPrice(new BigDecimal("24000"), contractor, false)) : Optional.empty();
+        }).when(priceLists).priceFor(any(), any());
+
+        SalesInvoice sale = sales.ringUp(q.getId());
+        assertThat(sale.getCustomer()).isSameAs(builders);
+        assertThat(sale.getBuyerTin()).isEqualTo("100123456");
+        assertThat(sale.getQuotationId()).isEqualTo(q.getId());
+        List<SalesInvoiceLine> lines = sale.getLines();
+        assertThat(lines).extracting(SalesInvoiceLine::getKind).containsExactly(SaleLineKind.CUSTOM_PIECE, SaleLineKind.SERVICE,
+                SaleLineKind.STOCK_UNIT);
+        SalesInvoiceLine piece = lines.get(0);                          // the quotation's price, today's list kept with the reason
+        assertThat(piece.getPricePerM2()).isEqualByComparingTo(q.getLines().get(0).getPrice());
+        assertThat(piece.getListPrice()).isEqualByComparingTo("24000");
+        assertThat(piece.getPriceReason()).isEqualTo("Quotation QUO-WH-2026-000001");
+        assertThat(lines.get(1).getParentLine()).isSameAs(piece);
+        assertThat(lines.get(2).getUnitCode()).isEqualTo("U-WH-000041");
+        assertThat(sales.totals(sale).gross()).isEqualByComparingTo(q.getTotalAmount());
+        assertThat(quotationService.onTill(q)).contains("TILL-WH-2026-000001");
+        assertThatThrownBy(() -> quotationService.cancel(q.getId(), "changed mind"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("quote.cancel.onTill"));
+        assertThatThrownBy(() -> sales.ringUp(q.getId()))                               // the sale is no longer empty
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.quote.saleNotEmpty"));
+
+        sales.pay(new SalePayments.Entered(sales.totals(sale).gross(), null, null, null, null, null, null, null));
+        assertThat(q.getStatus()).isEqualTo(QuotationStatus.CONVERTED);
+        assertThat(q.getInvoiceId()).isEqualTo(sale.getId());
+        assertThat(q.getConvertedAt()).isNotNull();
+        assertThatThrownBy(() -> sales.ringUp(q.getId()))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.quote.notSent"));
+        assertThat(tills.summary(session).getCashSales()).isEqualByComparingTo(q.getTotalAmount());
+    }
+
+    @Test
+    void anExpiredQuotationIsNotRungUpAndChangingTheCustomerDropsTheQuotation() {
+        Quotation old = quotationService.create(quote(walkIn, size(clear6, 600, 400, 1, null, null)));
+        quotationService.send(old.getId());
+        old.setValidUntil(LocalDate.of(2026, 10, 8));                                    // its prices held until yesterday
+        assertThat(old.isExpiredOn(LocalDate.of(2026, 10, 9))).isTrue();
+        tills.open(BigDecimal.ZERO);
+        assertThatThrownBy(() -> sales.ringUp(old.getId()))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.quote.expired");
+                    assertThat(e.getArgs()).containsExactly("QUO-WH-2026-000001", "08/10/2026");
+                });
+
+        Quotation q = quotationService.create(quote(walkIn, size(clear6, 600, 400, 1, "5", null)));
+        quotationService.send(q.getId());
+        SalesInvoice sale = sales.ringUp(q.getId());
+        sales.setCustomer(builders.getId(), null, null);                                 // priced again on the contractor list
+        assertThat(sale.getQuotationId()).isNull();
+        assertThat(sale.getLines().get(0).isPriceChanged()).isFalse();
+        sales.cancel();
+        assertThat(q.getStatus()).isEqualTo(QuotationStatus.SENT);                      // can be rung up again
+        quotationService.cancel(q.getId(), "Bought elsewhere");
+        assertThat(q.getStatus()).isEqualTo(QuotationStatus.CANCELLED);
+        assertThat(q.getCancelReason()).isEqualTo("Bought elsewhere");
     }
 
     // ---------------------------------------------------------------- price changes and credit (POS-05, POS-06)
@@ -817,6 +984,35 @@ class CounterSalesTest {
         sv.setChargeUnit(unit);
         sv.setEnabled(true);
         return sv;
+    }
+
+    private QuotationDto quote(Customer customer, QuotationDto.Line... rows) {
+        QuotationDto dto = quotationService.newForm();
+        dto.setCustomerId(customer.getId());
+        dto.getLines().clear();
+        dto.getLines().addAll(List.of(rows));
+        return dto;
+    }
+
+    private static QuotationDto.Line size(Product product, int w, int h, int qty, String discount, Integer holes, ProcessingService... services) {
+        QuotationDto.Line row = new QuotationDto.Line();
+        row.setKind(QuoteLineKind.CUSTOM_PIECE);
+        row.setProductId(product.getId());
+        row.setWidthMm(w);
+        row.setHeightMm(h);
+        row.setQuantity(qty);
+        row.setHoles(holes);
+        row.setDiscountPercent(discount == null ? null : new BigDecimal(discount));
+        for (ProcessingService sv : services) {
+            row.getServiceIds().add(sv.getId());
+        }
+        return row;
+    }
+
+    private static QuotationDto.Line sheets(Product product, int w, int h, int qty) {
+        QuotationDto.Line row = size(product, w, h, qty, null, null);
+        row.setKind(QuoteLineKind.SHEET);
+        return row;
     }
 
     private static Role role(String code, String discountLimit) {

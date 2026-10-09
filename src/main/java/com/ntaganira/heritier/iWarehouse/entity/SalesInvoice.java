@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -78,6 +79,10 @@ public class SalesInvoice extends BaseEntity {
 
     @Column(name = "posted_by", length = 50)
     private String postedBy;
+
+    /** The quotation it was rung up from (POS-03), converted when this sale is paid. */
+    @Column(name = "quotation_id")
+    private UUID quotationId;
 
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo")

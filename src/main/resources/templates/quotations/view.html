@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${quotation.number}, ~{::content})}">
+<head><title>Quotation - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${quotation.status.name()}, expired=${quotation.isExpiredOn(today)},
+        canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_QUOTATION'')')},
+        canSell=${#authorization.expression('hasAuthority(''PAGE_POS'') and hasAuthority(''PERM_SELL'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${quotation.number}">QUO-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{quote.subtitleOne(${quotation.billTo}, ${#temporals.format(quotation.quoteDate, 'dd/MM/yyyy')}, ${quotation.createdBy})}">Umucyo Builders Ltd · 09/10/2026 · cashier1</span>
+                &middot; <th:block th:replace="~{quotations/list :: quoteStatus(${quotation}, ${today})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/quotations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/quotations/{id}/print(id=${quotation.id})}" class="btn btn-outline" target="_blank" rel="noopener" th:text="#{quote.print}">Print</a>
+            <a th:href="@{/quotations/new(from=${quotation.id})}" class="btn btn-outline" th:if="${canManage}" th:text="#{quote.copy}">Copy</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
+                    th:if="${canManage and (s == 'DRAFT' or s == 'SENT') and onTill == null}" th:text="#{quote.cancel}">Cancel</button>
+            <a th:href="@{/quotations/{id}/edit(id=${quotation.id})}" class="btn btn-outline" th:if="${canManage and s == 'DRAFT'}" th:text="#{common.edit}">Edit</a>
+            <form th:if="${canManage and s == 'DRAFT'}" th:action="@{/quotations/{id}/send(id=${quotation.id})}" method="post"
+                  class="row-action-form confirm-submit" th:attr="data-confirm=#{quote.sendConfirm(${quotation.number})}">
+                <button type="submit" class="btn btn-primary" th:text="#{quote.send}">Send</button>
+            </form>
+            <form th:if="${canSell and s == 'SENT' and !expired and onTill == null}" th:action="@{/quotations/{id}/ring-up(id=${quotation.id})}" method="post"
+                  class="row-action-form">
+                <button type="submit" class="btn btn-primary" th:text="#{quote.ringUp}">Ring up at the till</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{quote.draftNote}">A draft: edit it as needed, then send it to fix it for the customer.</div>
+    <div class="doc-note" th:if="${s == 'SENT' and !expired}">
+        <strong th:text="#{quote.sentOn(${quotation.sentBy}, ${#temporals.format(quotation.sentAt, 'dd/MM/yyyy HH:mm')})}">Sent by cashier1 on 09/10/2026 10:30</strong>
+        <span th:text="#{quote.validNote(${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')})}">· prices hold until 23/10/2026</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${expired}" th:text="#{quote.expiredNote(${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')})}">Its prices held until 23/10/2026: copy it into a new quotation to price it again.</div>
+    <div class="doc-note is-warning" th:if="${onTill != null}" th:text="#{quote.onTillNote(${onTill})}">Being rung up at till TILL-WH-2026-000016: it becomes the invoice when paid.</div>
+    <div class="doc-note" th:if="${s == 'CONVERTED'}">
+        <strong th:text="#{quote.convertedOn(${#temporals.format(quotation.convertedAt, 'dd/MM/yyyy HH:mm')})}">Invoiced on 09/10/2026 11:00</strong>
+        <a class="mono" th:if="${invoiceNumber != null}" sec:authorize="hasAuthority('PAGE_INVOICES')" th:href="@{/invoices/{id}(id=${quotation.invoiceId})}" th:text="${invoiceNumber}">INV-WH-2026-000011</a>
+        <span class="mono" th:if="${invoiceNumber != null}" sec:authorize="!hasAuthority('PAGE_INVOICES')" th:text="${invoiceNumber}">INV-WH-2026-000011</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{quote.cancelledBy(${quotation.cancelledBy})}">Cancelled by cashier1:</strong>
+        <span th:text="${quotation.cancelReason}">The customer bought elsewhere</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${quotation.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${quotation.customer.name}">Umucyo Builders Ltd</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${quotation.customer.name}">Umucyo Builders Ltd</span>
+                        <div class="cell-sub" th:if="${quotation.customer.priceList != null}" th:text="#{pos.priceList(${quotation.customer.priceList.name})}">Price list: Contractors</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.billTo}">Made out to</label>
+                    <div class="value" th:text="${quotation.billTo}">Umucyo Builders Ltd</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.buyerTin}">Buyer's TIN</label>
+                    <div class="value mono" th:text="${quotation.buyerTin ?: '—'}">100123456</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{quote.validUntil}">Valid until</label>
+                    <div class="value" th:text="${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')}">23/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.total}">Total (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(quotation.totalAmount)}">412,500</div>
+                </div>
+                <div class="item item-full" th:if="${quotation.notes != null}">
+                    <label th:text="#{product.notes}">Notes</label>
+                    <div class="value" th:text="${quotation.notes}">Delivery to site in Kicukiro</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{quote.linesTitle}">Glass quoted</span>
+                <span class="section-count" th:text="${quotation.lines.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{invoice.item}">Item</th>
+                                <th class="num" th:text="#{pos.charged}">Charged</th>
+                                <th th:text="#{pos.vat}">VAT</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${quotation.lines}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td><th:block th:replace="~{quotations/view :: quoteLineWhat(${l})}"></th:block></td>
+                                <td class="num nowrap"><th:block th:replace="~{quotations/view :: quoteLineCharge(${l})}"></th:block></td>
+                                <td class="nowrap" th:text="${l.taxCode + ' ' + @num.m2(l.vatRate) + '%'}">B 18%</td>
+                                <td class="num strong" th:text="${@num.money(l.amount)}">195,008</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(quotation.lines)}">
+                                <td colspan="5"><div class="empty-state"><h3 th:text="#{quote.noLines}">No lines yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:unless="${#lists.isEmpty(quotation.lines)}">
+                            <tr th:each="g : ${totals.groups}">
+                                <th colspan="4" th:text="#{invoice.vatLine(${g.taxCode}, ${@num.m2(g.rate)}, ${@num.money(g.getNet())})}">B 18%: net 165,261.02, VAT</th>
+                                <th class="num" th:text="${@num.money(g.vat)}">29,746.98</th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" th:text="#{pos.total}">Total (RWF)</th>
+                                <th class="num" th:text="${@num.money(quotation.totalAmount)}">412,500</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/quotations/' + quotation.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+    <th:block th:if="${canManage and (s == 'DRAFT' or s == 'SENT') and onTill == null}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{quote.cancelTitle(${quotation.number})},
+                @{/quotations/{id}/cancel(id=${quotation.id})}, #{quote.cancelText}, #{quote.cancel})}"></div>
+    </th:block>
+</div>
+
+<!--/* What a quotation line is: whole sheets, a size to cut with its mark, or processing on a size */-->
+<th:block th:fragment="quoteLineWhat(l)">
+    <th:block th:if="${l.sheet}">
+        <span class="strong" th:text="#{quote.kind.SHEET}">Whole sheets</span>
+        <div class="cell-sub mono nowrap" th:text="${l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm + ' · ×' + l.quantity}">CLR-6 · 3210 × 2250 · ×2</div>
+    </th:block>
+    <th:block th:if="${l.customPiece}">
+        <span class="strong" th:text="#{sale.line.custom}">Size to cut</span>
+        <div class="cell-sub mono nowrap" th:text="${l.product.code + ' · ' + l.widthMm + ' × ' + l.heightMm + ' · ×' + l.quantity}">CLR-6 · 600 × 400 · ×3</div>
+        <div class="cell-sub" th:if="${l.mark != null}" th:text="#{sale.line.mark(${l.mark})}">Mark: kitchen</div>
+    </th:block>
+    <th:block th:if="${l.serviceLine}">
+        <span class="strong" th:text="${l.service.name}">Edging</span>
+        <div class="cell-sub" th:text="${l.holes != null} ? #{sale.line.serviceHoles(${l.parentLine.lineNo}, ${l.holes})} : #{sale.line.serviceFor(${l.parentLine.lineNo})}">on line 2</div>
+    </th:block>
+</th:block>
+
+<!--/* How a quotation line is charged, and its discount on the list price */-->
+<th:block th:fragment="quoteLineCharge(l)">
+    <span th:unless="${l.serviceLine}" th:text="${l.quantity + ' × ' + @num.m2(l.chargeableAreaM2) + ' m² × ' + @num.money(l.price)}">3 × 0.25 m² × 27,000</span>
+    <span th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit) + ' × ' + @num.money(l.price)}">4 m × 1,500</span>
+    <div class="cell-sub" th:text="${l.pricesIncludeVat} ? #{pos.vatIncluded} : #{pos.vatExcluded}">VAT included</div>
+    <div class="cell-sub" th:if="${l.discountPercent.signum() > 0}"
+         th:text="#{pos.priceFromList(${@num.money(l.listPrice)}, ${@num.signedPercent(l.discountPercent.negate())})}">list 27,000 (-10.00%)</div>
+</th:block>
+</body>
+</html>

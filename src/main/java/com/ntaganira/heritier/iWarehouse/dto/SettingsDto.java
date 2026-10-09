@@ -76,6 +76,11 @@ public class SettingsDto {
     @Digits(integer = 2, fraction = 4, message = "{settings.area.digits}")
     private BigDecimal minChargeableArea;
 
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.quotationValidityDays.range}")
+    @Max(value = 365, message = "{settings.quotationValidityDays.range}")
+    private Integer quotationValidityDays;
+
     // --- Approvals (INV-07, POS-06) ---
 
     /** RWF, no decimals. */

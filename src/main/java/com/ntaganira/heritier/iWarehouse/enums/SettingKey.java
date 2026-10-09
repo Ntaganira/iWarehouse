@@ -31,6 +31,8 @@ public enum SettingKey {
 
     /** Default minimum chargeable area per piece (m2) for new price lists (MD-06). */
     MIN_CHARGEABLE_AREA("pricing.min-chargeable-area", "minChargeableArea", "0.25"),
+    /** Days a quotation's prices hold by default (POS-03). */
+    QUOTATION_VALIDITY_DAYS("sales.quotation-validity-days", "quotationValidityDays", "14"),
 
     /** Stock adjustments worth more than this (RWF) need supervisor approval (INV-07). */
     ADJUSTMENT_APPROVAL_LIMIT("approval.adjustment-limit", "adjustmentApprovalLimit", "0"),

@@ -4397,3 +4397,44 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 
 /* Invoice hand-over (POS-02): the pieces ticked and the scan form keep the section's spacing below the cutting jobs */
 .pos-handover, .pos-handover-scan { margin-top: 24px; }
+
+/* Quotations (POS-03): the line form; whole sheets have no processing, holes or mark */
+.quote-line-table .line-product { min-width: 200px; }
+.quote-line-table td:nth-child(2) { min-width: 150px; }
+.quote-line-table td.num:nth-child(3), .quote-line-table td.num:nth-child(4) { width: 100px; }
+.quote-line-table td.num:nth-child(5), .quote-line-table td.num:nth-child(8) { width: 80px; }
+.quote-line-table td.num.line-area { width: 90px; white-space: nowrap; }
+.quote-line-table td:nth-child(9) { min-width: 130px; }
+.quote-line-table td.num:nth-child(10) { width: 100px; }
+.quote-line-table tr.is-sheet .proc-checks { opacity: .45; }
+
+/* An A4 document to print (a quotation): black on white in both themes, its own page size when printed */
+.print-doc { box-sizing: border-box; width: 210mm; max-width: 100%; margin: 0 auto; padding: 14mm; background: #fff; color: #000;
+  border: 1px solid var(--gray-300); font-family: Arial, Helvetica, sans-serif; font-size: 10pt; line-height: 1.45; page: a4doc; }
+.print-doc .mono, .print-doc .strong { color: #000; }
+.print-doc-head { display: flex; justify-content: space-between; gap: 8mm; padding-bottom: 5mm; border-bottom: 2px solid #000; }
+.print-doc-company { font-size: 15pt; font-weight: 700; }
+.print-doc-title { text-align: right; }
+.print-doc-kind { font-size: 16pt; font-weight: 700; letter-spacing: .06em; }
+.print-doc-parties { display: flex; justify-content: space-between; gap: 8mm; margin: 6mm 0; }
+.print-doc-dates { text-align: right; }
+.print-doc-label { color: #555; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; }
+.print-doc-scroll { overflow-x: auto; }
+.print-doc-table { width: 100%; border-collapse: collapse; }
+.print-doc-table th, .print-doc-table td { padding: 2mm 1.5mm; border-bottom: 1px solid #ccc; text-align: left; vertical-align: top; color: #000; background: #fff; }
+.print-doc-table th { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #000; }
+.print-doc-table .num { text-align: right; }
+.print-doc-table tfoot td { border-bottom: 0; padding-top: 1.5mm; padding-bottom: 1.5mm; }
+.print-doc-table tfoot td:first-child { text-align: right; }
+.print-doc-total td { font-size: 12pt; font-weight: 700; border-top: 2px solid #000; }
+.print-doc-sub { font-size: 8.5pt; color: #444; }
+.print-doc-note { margin: 4mm 0 0; font-size: 9pt; }
+@page a4doc { size: A4; margin: 12mm; }
+@media print {
+  .print-doc-page .print-doc { border: 0; padding: 0; width: auto; }
+}
+@media (max-width: 640px) {
+  .print-doc { padding: 6mm; font-size: 9pt; }
+  .print-doc-head, .print-doc-parties { flex-direction: column; gap: 3mm; }
+  .print-doc-title, .print-doc-dates { text-align: left; }
+}

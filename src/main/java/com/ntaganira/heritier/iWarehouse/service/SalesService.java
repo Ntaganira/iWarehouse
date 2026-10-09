@@ -44,7 +44,8 @@ import java.util.stream.Collectors;
  *               later (sold then, their cost posted: SRS 5.3). A line's price can be changed with a reason
  *               (POS-06): within the cashier's discount limit at once, above it once a manager approves; credit
  *               above what the customer has left needs a manager's approval too (POS-05). Requests still pending
- *               stop the payment.
+ *               stop the payment. A sent quotation is rung up at the till at its prices (POS-03) and converted when
+ *               the sale is paid.
  * </pre>
  */
 @Service
@@ -59,19 +60,18 @@ public class SalesService {
     private final StockUnitRepository unitRepo;
     private final ProductRepository productRepo;
     private final CustomerRepository customerRepo;
-    private final CurrencyRepository currencyRepo;
     private final ProcessingServiceRepository serviceRepo;
-    private final TaxCategoryRepository taxRepo;
     private final CuttingJobRepository jobRepo;
     private final CuttingJobOutputRepository outputRepo;
     private final CuttingJobLineRepository jobLineRepo;
     private final SalesDeliveryRepository deliveryRepo;
     private final SaleApprovalRepository approvalRepo;
     private final UserRepository userRepo;
+    private final QuotationRepository quotationRepo;
     private final TillService tillService;
     private final CuttingJobService cuttingJobService;
     private final StockService stockService;
-    private final PriceListService priceListService;
+    private final LinePricing pricing;
     private final PostingService postingService;
     private final JournalService journalService;
     private final DocumentNumberService numbers;
@@ -79,31 +79,29 @@ public class SalesService {
     private final Clock clock;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
-                        ProductRepository productRepo, CustomerRepository customerRepo, CurrencyRepository currencyRepo,
-                        ProcessingServiceRepository serviceRepo, TaxCategoryRepository taxRepo, CuttingJobRepository jobRepo,
-                        CuttingJobOutputRepository outputRepo, CuttingJobLineRepository jobLineRepo,
+                        ProductRepository productRepo, CustomerRepository customerRepo, ProcessingServiceRepository serviceRepo,
+                        CuttingJobRepository jobRepo, CuttingJobOutputRepository outputRepo, CuttingJobLineRepository jobLineRepo,
                         SalesDeliveryRepository deliveryRepo, SaleApprovalRepository approvalRepo, UserRepository userRepo,
-                        TillService tillService, CuttingJobService cuttingJobService, StockService stockService,
-                        PriceListService priceListService, PostingService postingService, JournalService journalService,
+                        QuotationRepository quotationRepo, TillService tillService, CuttingJobService cuttingJobService,
+                        StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
                         DocumentNumberService numbers, SettingService settingService, Clock clock) {
         this.repo = repo;
         this.paymentRepo = paymentRepo;
         this.unitRepo = unitRepo;
         this.productRepo = productRepo;
         this.customerRepo = customerRepo;
-        this.currencyRepo = currencyRepo;
         this.serviceRepo = serviceRepo;
-        this.taxRepo = taxRepo;
         this.jobRepo = jobRepo;
         this.outputRepo = outputRepo;
         this.jobLineRepo = jobLineRepo;
         this.deliveryRepo = deliveryRepo;
         this.approvalRepo = approvalRepo;
         this.userRepo = userRepo;
+        this.quotationRepo = quotationRepo;
         this.tillService = tillService;
         this.cuttingJobService = cuttingJobService;
         this.stockService = stockService;
-        this.priceListService = priceListService;
+        this.pricing = pricing;
         this.postingService = postingService;
         this.journalService = journalService;
         this.numbers = numbers;
@@ -225,18 +223,11 @@ public class SalesService {
         // The units come from another query: their glass (and its tax category) is read again here
         Map<UUID, Product> products = productRepo.findAllById(units.stream().map(u -> u.getProduct().getId()).distinct().toList())
                 .stream().collect(Collectors.toMap(Product::getId, Function.identity()));
-        Map<UUID, Optional<PriceListService.UnitPrice>> byProduct = new HashMap<>();
         Map<UUID, BigDecimal> prices = new HashMap<>();
-        int decimals = baseDecimals();
         for (StockUnit u : units) {
             Product product = products.get(u.getProduct().getId());
-            Optional<PriceListService.UnitPrice> price = byProduct.computeIfAbsent(product.getId(),
-                    id -> priceListService.priceFor(customer, product));
-            price.ifPresent(p -> {
-                BigDecimal area = Pricing.chargeableArea(u.getWidthMm(), u.getHeightMm(), priceListService.minChargeableArea(p.list()));
-                prices.put(u.getId(), Vat.lineAmount(p.pricePerM2(), area, 1, p.list().isPricesIncludeVat(),
-                        product.getTaxCategory().getRate(), decimals));
-            });
+            pricing.glass(customer, product, u.getWidthMm(), u.getHeightMm()).ifPresent(g -> prices.put(u.getId(),
+                    pricing.amount(g.pricePerM2(), g.chargeableArea(), 1, g.pricesIncludeVat(), g.vatRate())));
         }
         return prices;
     }
@@ -323,6 +314,7 @@ public class SalesService {
                 }
             }
             sale.setCustomer(customer);
+            sale.setQuotationId(null);                                   // priced again: no longer at the quotation's prices
             withdrawAll(sale, "The customer changed: the sale was priced again");
             sale.getLines().forEach(l -> {
                 if (l.isServiceLine()) {
@@ -432,6 +424,13 @@ public class SalesService {
         sale.setPostedAt(now);
         sale.setPostedBy(username);
         sale.setStatus(SalesInvoiceStatus.POSTED);
+        if (sale.getQuotationId() != null) {
+            quotationRepo.findById(sale.getQuotationId()).filter(Quotation::isSent).ifPresent(q -> {
+                q.setInvoiceId(sale.getId());
+                q.setConvertedAt(now);
+                q.setStatus(QuotationStatus.CONVERTED);
+            });
+        }
         JournalEntry journal = postingService.sale(sale, payments, before);
         return new Paid(sale, split.change(), journal, createJobs(sale));
     }
@@ -621,9 +620,8 @@ public class SalesService {
     /** What a line would come to at another price. */
     private BigDecimal amountAt(SalesInvoiceLine line, BigDecimal price) {
         return line.isServiceLine()
-                ? Vat.lineAmount(price, line.getServiceQuantity(), 1, line.isPricesIncludeVat(), line.getVatRate(), baseDecimals())
-                : Vat.lineAmount(price, line.getChargeableAreaM2(), line.getQuantity(), line.isPricesIncludeVat(), line.getVatRate(),
-                baseDecimals());
+                ? pricing.amount(price, line.getServiceQuantity(), 1, line.isPricesIncludeVat(), line.getVatRate())
+                : pricing.amount(price, line.getChargeableAreaM2(), line.getQuantity(), line.isPricesIncludeVat(), line.getVatRate());
     }
 
     private SaleApproval newRequest(SalesInvoice sale, SaleApprovalKind kind, String subject, String reason) {
@@ -659,6 +657,123 @@ public class SalesService {
     private static SalesInvoiceLine lineOf(SalesInvoice sale, UUID lineId) {
         return sale.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst()
                 .orElseThrow(() -> new NotFoundException("SalesInvoiceLine", lineId));
+    }
+
+    // ---------------------------------------------------------------- quotations (POS-03)
+
+    /**
+     * Rings a sent quotation up at the cashier's till, into an empty sale: its customer and the name and TIN printed;
+     * whole sheets as units of that glass and size from stock (available, held by nothing, the first labels); sizes to
+     * cut with their processing. Lines are charged the quotation's prices: where one differs from today's list price,
+     * the line keeps the list price with the quotation as its reason (the quotation's author gave the discount within
+     * their limit). The quotation is converted when the sale is paid.
+     */
+    @Transactional
+    public SalesInvoice ringUp(UUID quotationId) {
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cartOrNew(session);
+        if (!sale.getLines().isEmpty()) {
+            throw BusinessException.of("sale.quote.saleNotEmpty");
+        }
+        quotationRepo.lockById(quotationId).orElseThrow(() -> new NotFoundException("Quotation", quotationId));
+        Quotation q = quotationRepo.findDetailedById(quotationId).orElseThrow(() -> new NotFoundException("Quotation", quotationId));
+        if (!q.isSent()) {
+            throw BusinessException.of("sale.quote.notSent", q.getNumber());
+        }
+        if (q.isExpiredOn(today())) {
+            throw BusinessException.of("sale.quote.expired", q.getNumber(), q.getValidUntil().format(QuotationService.DAY));
+        }
+        Optional<SalesInvoice> elsewhere = repo.findFirstByQuotationIdAndStatus(q.getId(), SalesInvoiceStatus.DRAFT)
+                .filter(i -> !i.getId().equals(sale.getId()));
+        if (elsewhere.isPresent()) {
+            throw BusinessException.of("sale.quote.onTill", q.getNumber(), elsewhere.get().getTillSession().getNumber());
+        }
+        Customer customer = q.getCustomer();
+        if (!customer.isEnabled()) {
+            throw BusinessException.of("sale.customer.invalid");
+        }
+        // The units of its whole sheets first, so a shortage changes nothing
+        Map<QuotationLine, List<StockUnit>> sheets = new HashMap<>();
+        Set<UUID> taken = new HashSet<>();
+        for (QuotationLine ql : q.getLines()) {
+            if (!ql.isSheet()) {
+                continue;
+            }
+            List<StockUnit> found = unitRepo.findOfSize(ql.getProduct().getId(), ql.getWidthMm(), ql.getHeightMm(), StockStatus.AVAILABLE);
+            Map<UUID, String> held = found.isEmpty() ? Map.of() : stockService.holds(found.stream().map(StockUnit::getId).toList());
+            List<StockUnit> free = found.stream().filter(u -> !taken.contains(u.getId()) && !held.containsKey(u.getId()))
+                    .limit(ql.getQuantity()).toList();
+            if (free.size() < ql.getQuantity()) {
+                throw BusinessException.of("sale.quote.noSheets", ql.getProduct().getCode(), ql.getWidthMm() + " x " + ql.getHeightMm(),
+                        ql.getQuantity(), free.size());
+            }
+            free.forEach(u -> taken.add(u.getId()));
+            sheets.put(ql, free);
+        }
+        sale.setCustomer(customer);
+        sale.setBuyerName(q.getBuyerName());
+        sale.setBuyerTin(q.getBuyerTin());
+        sale.setQuotationId(q.getId());
+        String reason = "Quotation " + q.getNumber();
+        for (QuotationLine ql : q.getLines()) {
+            if (ql.isSheet()) {
+                for (StockUnit unit : sheets.get(ql)) {
+                    SalesInvoiceLine line = new SalesInvoiceLine();
+                    line.setInvoice(sale);
+                    line.setKind(SaleLineKind.STOCK_UNIT);
+                    line.setStockUnitId(unit.getId());
+                    line.setUnitCode(unit.getCode());
+                    line.setProduct(unit.getProduct());
+                    line.setWidthMm(unit.getWidthMm());
+                    line.setHeightMm(unit.getHeightMm());
+                    line.setQuantity(1);
+                    price(line, customer);
+                    quotedPrice(line, ql.getPrice(), reason);
+                    sale.getLines().add(line);
+                }
+            } else if (ql.isCustomPiece()) {
+                SalesInvoiceLine piece = new SalesInvoiceLine();
+                piece.setInvoice(sale);
+                piece.setKind(SaleLineKind.CUSTOM_PIECE);
+                piece.setProduct(ql.getProduct());
+                piece.setWidthMm(ql.getWidthMm());
+                piece.setHeightMm(ql.getHeightMm());
+                piece.setQuantity(ql.getQuantity());
+                piece.setMark(ql.getMark());
+                piece.setProcessing(ql.getProcessing());
+                price(piece, customer);
+                quotedPrice(piece, ql.getPrice(), reason);
+                sale.getLines().add(piece);
+                for (QuotationLine qs : q.getLines()) {
+                    if (qs.getParentLine() != ql) {
+                        continue;
+                    }
+                    SalesInvoiceLine line = new SalesInvoiceLine();
+                    line.setInvoice(sale);
+                    line.setKind(SaleLineKind.SERVICE);
+                    line.setParentLine(piece);
+                    line.setService(qs.getService());
+                    line.setProduct(ql.getProduct());
+                    line.setWidthMm(ql.getWidthMm());
+                    line.setHeightMm(ql.getHeightMm());
+                    line.setQuantity(ql.getQuantity());
+                    line.setHoles(qs.getHoles());
+                    priceService(line, customer);
+                    quotedPrice(line, qs.getPrice(), reason);
+                    sale.getLines().add(line);
+                }
+            }
+        }
+        renumber(sale);
+        return sale;
+    }
+
+    /** Charges a line the quotation's price; a price other than today's list price keeps the list price and the reason. */
+    private void quotedPrice(SalesInvoiceLine line, BigDecimal quoted, String reason) {
+        BigDecimal list = line.getPrice();
+        if (quoted.compareTo(list) != 0) {
+            setPrice(line, quoted, list, reason);
+        }
     }
 
     // ---------------------------------------------------------------- sizes to cut (POS-02)
@@ -909,18 +1024,15 @@ public class SalesService {
     /** Prices a line for the customer: their list (or the default one), chargeable area, the glass's tax letter (TAX-01). */
     private void price(SalesInvoiceLine line, Customer customer) {
         Product product = line.getProduct();
-        PriceListService.UnitPrice price = priceListService.priceFor(customer, product)
+        LinePricing.Glass g = pricing.glass(customer, product, line.getWidthMm(), line.getHeightMm())
                 .orElseThrow(() -> BusinessException.onField("code", "sale.noPrice", product.getCode()));
-        TaxCategory tax = product.getTaxCategory();
-        BigDecimal area = Pricing.chargeableArea(line.getWidthMm(), line.getHeightMm(), priceListService.minChargeableArea(price.list()));
-        line.setChargeableAreaM2(area);
-        line.setPricePerM2(price.pricePerM2());
-        line.setPriceList(price.list());
-        line.setPricesIncludeVat(price.list().isPricesIncludeVat());
-        line.setTaxCode(tax.getEbmCode());
-        line.setVatRate(tax.getRate());
-        line.setAmount(Vat.lineAmount(price.pricePerM2(), area, line.getQuantity(), price.list().isPricesIncludeVat(), tax.getRate(),
-                baseDecimals()));
+        line.setChargeableAreaM2(g.chargeableArea());
+        line.setPricePerM2(g.pricePerM2());
+        line.setPriceList(g.list());
+        line.setPricesIncludeVat(g.pricesIncludeVat());
+        line.setTaxCode(g.taxCode());
+        line.setVatRate(g.vatRate());
+        line.setAmount(pricing.amount(g.pricePerM2(), g.chargeableArea(), line.getQuantity(), g.pricesIncludeVat(), g.vatRate()));
         line.setListPrice(null);
         line.setPriceReason(null);
     }
@@ -931,20 +1043,17 @@ public class SalesService {
      */
     private void priceService(SalesInvoiceLine line, Customer customer) {
         ProcessingService service = line.getService();
-        PriceListService.ServicePriceFor price = priceListService.servicePriceFor(customer, service)
+        LinePricing.Service s = pricing.service(customer, service, line.getWidthMm(), line.getHeightMm(), line.getQuantity(), line.getHoles())
                 .orElseThrow(() -> BusinessException.onField("serviceIds", "sale.custom.noServicePrice", service.getName()));
-        TaxCategory tax = taxRepo.findByDefaultCategoryTrue().orElseThrow(() -> new IllegalStateException("No default tax category"));
-        BigDecimal quantity = Pricing.serviceQuantity(service.getChargeUnit(), line.getWidthMm(), line.getHeightMm(), line.getQuantity(),
-                line.getHoles());
-        line.setServiceQuantity(quantity);
-        line.setServiceUnitPrice(price.price());
-        line.setPriceList(price.list());
-        line.setPricesIncludeVat(price.list().isPricesIncludeVat());
+        line.setServiceQuantity(s.quantity());
+        line.setServiceUnitPrice(s.unitPrice());
+        line.setPriceList(s.list());
+        line.setPricesIncludeVat(s.pricesIncludeVat());
         line.setChargeableAreaM2(null);
         line.setPricePerM2(null);
-        line.setTaxCode(tax.getEbmCode());
-        line.setVatRate(tax.getRate());
-        line.setAmount(Vat.lineAmount(price.price(), quantity, 1, price.list().isPricesIncludeVat(), tax.getRate(), baseDecimals()));
+        line.setTaxCode(s.taxCode());
+        line.setVatRate(s.vatRate());
+        line.setAmount(pricing.amount(s.unitPrice(), s.quantity(), 1, s.pricesIncludeVat(), s.vatRate()));
         line.setListPrice(null);
         line.setPriceReason(null);
     }
@@ -954,9 +1063,6 @@ public class SalesService {
         return unitRepo.findAllById(ids).stream().collect(Collectors.toMap(StockUnit::getId, Function.identity()));
     }
 
-    private int baseDecimals() {
-        return currencyRepo.findByBaseCurrencyTrue().map(Currency::getDecimals).orElse(0);
-    }
 
     /** Today in Kigali (the invoice date). */
     public LocalDate today() {

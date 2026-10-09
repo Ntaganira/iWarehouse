@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V20.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V21.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-09)
@@ -26,7 +26,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Rack and slot labels; put-away decided (none) | Done (M1) | V15, labels from `/locations/{id}` |
 | Accounting core: chart of accounts, posting engine, journals, trial balance (AT-10 passes) | Done (M2) | V16, `/accounting/journals`, `/accounting/accounts`, `/accounting/trial-balance` |
 | Counter sales, part 1: tills, POS for stock units, VAT, split payment, invoices, receipts (AT-08 passes) | Done (M3, part 1) | V17, `/pos`, `/invoices`, `/till-sessions` |
-| Counter sales, part 2: custom cut sizes (done, V18), credit and discount approvals (done, V19), quotations, orders, returns | **Next** (M3) | V18, V19, `/pos`, `/invoices`, `/sale-approvals` |
+| Counter sales, part 2: custom cut sizes (done, V18), credit and discount approvals (done, V19), quotations (done, V20), deposits, returns | **Next** (M3) | V18–V20, `/pos`, `/invoices`, `/sale-approvals`, `/quotations` |
 | EBM / VSDC fiscal signing | Not started (M4) | — |
 | Customer and supplier accounts, period close, financial statements | Not started (M5) | — |
 | Dashboard, reports, alerts, notifications, files | Not started (M6) | — |
@@ -35,7 +35,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 336, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
+Unit tests: 339, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -58,7 +58,7 @@ Unit tests: 336, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 an
 
 ---
 
-## M3 — Counter sales (part 1 done 2026-10-09: stock sales; custom cuts and approvals done 2026-10-09; quotations, orders, returns next)
+## M3 — Counter sales (part 1 done 2026-10-09: stock sales; custom cuts, approvals and quotations done 2026-10-09; deposits and returns next)
 
 Goal: the cashier sells stock and custom cuts, takes split payments and gives receipts (POS-01..POS-10, TAX-01, TAX-04, SRS 5.3). AT-08.
 
@@ -68,7 +68,8 @@ Goal: the cashier sells stock and custom cuts, takes split payments and gives re
 - [x] Custom cut sizes on the POS (POS-02) (L) — 2026-10-09 (V18): width x height x quantity of a cuttable glass with the customer's mark, priced by chargeable area like a unit; its processing (edging per metre, drilling per hole...) are service lines under the size, priced from the customer's list. Paying issues the invoice and creates one cutting job per glass for it (customer reference = the invoice number; the sizes with their processing and mark; the job links the invoice and each job line its size); nothing leaves stock yet. The pieces cut are RESERVED and cannot be rung up at the counter. The invoice hands over only the pieces its own jobs cut, ticked or scanned: SOLD (SALE movement), COGS at MAC (Dr COGS / Cr Inventory), "Handed over x of y" per size, `sales_deliveries` append-only (DELIVER_SALE: cashier, warehouse supervisor). Deposits come with the orders (POS-08)
 - [x] Sales invoice and receipt (M) — 2026-10-09: paying issues the invoice (INV-WH-2026-000001), sells the units (SOLD, SALE movement), posts the journal (Dr cash / mobile money / bank / the customer's receivable, Cr sales net and VAT output; Dr COGS / Cr Inventory at MAC) and opens the invoice: lines, VAT per letter, payments, journal, History. 80 mm receipt to print (`/invoices/{id}/receipt`). A PDF copy comes with the reports' exports (M6); the EBM signature with M4
 - [x] Credit limits: over the limit needs a manager's approval (POS-05) (M); discounts and price overrides above the role limit need approval with a reason (POS-06) (M) — 2026-10-09 (V19): each role has a discount limit (role form; empty = the Settings value, the owner 100%). The POS changes a line's price (discount or new price, with a reason): within the cashier's limit at once, above it a request APR-WH-2026-000001 waits; credit above what the customer has left is asked from the payment dialog. Requests show on `/sale-approvals` (sidebar count for approvers); another person with APPROVE_SALE (owner) approves or rejects with a reason, never their own. A pending request stops the payment; the POS reloads by itself once it is decided. A request that no longer applies is withdrawn with a note. The invoice and receipt show the list price, the discount, the reason and who approved
-- [ ] Quotations with validity, converted to an order or invoice (POS-03) (M); sales orders with deposits and balance on collection (POS-08) (S); cut pieces RESERVED for the order until collected
+- [x] Quotations with validity, converted to an order or invoice (POS-03) (M) — 2026-10-09 (V20): `/quotations`. A draft (QUO-WH-2026-000001) for a customer with the name and TIN to print, valid for the Settings number of days (14); rows are whole sheets or sizes to cut with processing, holes and the customer's mark, priced from the customer's list on every save (the same `LinePricing` as the POS), with a discount per row within the author's limit. Send fixes it; print it on A4 (or save as PDF from the print dialog); copy it into a new one (an expired one is priced again that way); cancel with a reason. "Ring up at the till" puts a sent, valid quotation into the cashier's empty sale at its prices (whole sheets take units of that size from stock); paying converts it and links the invoice. A deposit makes that sale an order (next item)
+- [ ] Deposits on orders and balance on collection (POS-08) (S): SRS 5.3 issues the invoice when the customer pays in full or a deposit; the balance is paid at collection, before the pieces are handed over. Cut pieces stay RESERVED for the invoice until collected (built with POS-02)
 - [ ] Returns and credit notes against the original invoice, glass back to stock or to cullet (POS-09) (M)
 - [ ] Core sale in 6 clicks or fewer; save, post and print in under 3 s without EBM (NFR-02, NFR-14) (S). Lead: the log shows Hibernate HHH90003004 ("firstResult/maxResults specified with collection fetch; applying in memory") on ordinary page loads since before V18; find the paged query that fetches a collection
 
@@ -230,6 +231,7 @@ Answers change what gets built; record each answer next to the question.
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
 - Counter sales on 2026-10-09 by qa-admin: tills TILL-WH-2026-000001..6 (all closed; -000002 sold U-WH-000061 and U-WH-000011 on INV-WH-2026-000001, 389,408 RWF to "Jean Habimana", TIN 102938475, half cash half mobile money MP-778812, and closed 500 RWF short, "Change given twice"; the others opened and closed for checks without a sale), and their journals
+- Quotation tests on 2026-10-09: QUO-WH-2026-000001 (qa-admin, Mugisha Eric, rung up and paid as INV-WH-2026-000011 with U-WH-000015 and a size cut by CUT-WH-2026-000014, still a draft job; till TILL-WH-2026-000016), -000002 (owner38648, Umucyo, 10% off, rung up, the sale cancelled, then cancelled "Test"), -000003 (a copy of -000001, cancelled). Journals up to JV-WH-2026-000036
 - Approval tests on 2026-10-09 (qa-admin cashier with the ADMIN role's limit set to 5% for the test and put back; owner38648 approving): APR-WH-2026-000001..7 (approved, rejected, withdrawn; 7 is credit), INV-WH-2026-000008 and -000009 (U-WH-000014 and -000017 at 23,760/m², 12% off), INV-WH-2026-000010 (U-WH-000018 and -000019 to Umucyo Builders Ltd, 392,038 RWF on credit: Umucyo owes it; its limit was lowered to 100,000 for the test and put back to 5,000,000), tills TILL-WH-2026-000013..15, journals up to JV-WH-2026-000034
 - Custom cut sales on 2026-10-09 by qa-admin (2 pieces CLR-6 600 x 400 with edging and drilling, 21,500 RWF each, walk-in): INV-WH-2026-000002..7, their jobs CUT-WH-2026-000008 and -000010..13 (pieces U-WH-000062..76 handed over, off-cuts left on the off-cut rack or cut again) and tills TILL-WH-2026-000007..12. Before the hand-over fix, INV-WH-2026-000003 was handed over the pieces of -000002: -000002 shows 0 of 2 handed over and -000003 2 of 2; -000003's job CUT-WH-2026-000009 was cancelled (U-WH-000064 back in stock). Journals up to JV-WH-2026-000029
 - Ledger started on 2026-10-09: opening stock JV-WH-2026-000001 (7,135,242.24 RWF), then ADJ-WH-2026-000006 (U-WH-000060 written off as broken, approved by owner38648) and its journal JV-WH-2026-000002. Account 5190 "Office rent (test)", deactivated. Go-live starts the ledger again from an empty database

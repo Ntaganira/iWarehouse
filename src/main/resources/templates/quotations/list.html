@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{quote.title}, ~{::content})}">
+<head><title>Quotations - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{quote.title}">Quotations</h1>
+            <div class="subtitle" th:text="#{quote.subtitle}">Priced offers with a validity date, rung up at the till when the customer accepts</div>
+        </div>
+        <a href="/quotations/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_QUOTATION')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{quote.add}">New quotation</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{quote.sectionTitle}">Quotations</span>
+                <span class="section-count" th:text="${quotations.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/quotations}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{quote.searchPh}" th:aria-label="#{quote.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st == status}" th:text="#{${'quote.status.' + st}}">Sent</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{quote.number}">Quotation</th>
+                        <th th:text="#{quote.date}">Date</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th th:text="#{quote.validUntil}">Valid until</th>
+                        <th class="num" th:text="#{invoice.total}">Total (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="q : ${quotations.content}">
+                        <td><a class="row-link strong mono" th:href="@{/quotations/{id}(id=${q.id})}" th:text="${q.number}">QUO-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(q.quoteDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                        <td>
+                            <span th:text="${q.billTo}">Umucyo Builders Ltd</span>
+                            <div class="cell-sub mono" th:if="${q.buyerTin != null}" th:text="${q.buyerTin}">100123456</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(q.validUntil, 'dd/MM/yyyy')}">23/10/2026</td>
+                        <td class="num strong" th:text="${@num.money(q.totalAmount)}">412,500</td>
+                        <td><th:block th:replace="~{quotations/list :: quoteStatus(${q}, ${today})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(quotations.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{quote.empty}">No quotations found</h3>
+                                <p th:text="#{quote.emptyHint}">Price sheets and sizes to cut for a customer, print the offer, ring it up when they accept</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${quotations}, '/quotations', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a quotation: a sent one past its date shows as expired. */-->
+<th:block th:fragment="quoteStatus(q, day)" th:switch="${q.isExpiredOn(day) ? 'EXPIRED' : q.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{quote.status.DRAFT}">Draft</span>
+    <span th:case="'SENT'" class="badge badge-info" th:text="#{quote.status.SENT}">Sent</span>
+    <span th:case="'EXPIRED'" class="badge badge-warning" th:text="#{quote.status.EXPIRED}">Expired</span>
+    <span th:case="'CONVERTED'" class="badge badge-success" th:text="#{quote.status.CONVERTED}">Invoiced</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{quote.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

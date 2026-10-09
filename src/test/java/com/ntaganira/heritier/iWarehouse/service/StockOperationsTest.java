@@ -258,6 +258,32 @@ class StockOperationsTest {
     }
 
     @Test
+    void aScannedRackLabelSaysWhereTheUnitsGo() {
+        StockTransfer transfer = transferService.create(transferForm(null, "U-WH-000036\nwh-a-r02"));
+
+        assertThat(transfer.getToLocation()).isEqualTo(rack2);
+        assertThat(transfer.getLines()).extracting(StockTransferLine::getUnitCode).containsExactly("U-WH-000036");
+        assertThat(sheet.getLocation()).isEqualTo(rack2);
+
+        // the same place chosen in the list is fine; another one, or two labels, is a mistake to fix
+        transferService.create(transferForm(rack1, "WH-A-R01 U-WH-000036"));
+        assertThat(sheet.getLocation()).isEqualTo(rack1);
+        assertThatThrownBy(() -> transferService.create(transferForm(offcutRack, "U-WH-000036 WH-A-R02")))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> {
+                    assertThat(((BusinessException) e).getMessageKey()).isEqualTo("transfer.to.scannedOther");
+                    assertThat(((BusinessException) e).getArgs()).containsExactly("WH-A-R02", "WH-A-OC");
+                });
+        assertThatThrownBy(() -> transferService.create(transferForm(null, "WH-A-R02 U-WH-000036 WH-A-OC")))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "transfer.codes.twoPlaces");
+        assertThatThrownBy(() -> transferService.create(transferForm(null, "U-WH-000036")))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "transfer.to.required");
+        assertThatThrownBy(() -> transferService.create(transferForm(null, "WH-A-R02")))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "transfer.codes.required");
+        assertThat(sheet.getLocation()).isEqualTo(rack1);
+    }
+
+    @Test
     void codesAreReadFromAnyScannedOrTypedList() {
         assertThat(StockTransferService.parseCodes(" u-wh-000001\r\nU-WH-000002,U-WH-000001;  U-WH-000003 "))
                 .containsExactly("U-WH-000001", "U-WH-000002", "U-WH-000003");
@@ -445,7 +471,7 @@ class StockOperationsTest {
 
     private static StockTransferDto transferForm(Location to, String codes) {
         StockTransferDto dto = new StockTransferDto();
-        dto.setToLocationId(to.getId());
+        dto.setToLocationId(to == null ? null : to.getId());
         dto.setCodes(codes);
         return dto;
     }

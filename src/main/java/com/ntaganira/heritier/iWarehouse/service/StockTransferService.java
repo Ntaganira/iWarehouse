@@ -137,19 +137,37 @@ public class StockTransferService {
     @Transactional
     public StockTransfer create(StockTransferDto dto) {
         Map<UUID, Location> byId = stockService.locationsById();
-        Location to = stockService.storagePlaces(byId).stream().filter(l -> l.getId().equals(dto.getToLocationId()))
-                .findFirst()
-                .orElseThrow(() -> BusinessException.onField("toLocationId", "transfer.to.invalid"));
+        List<Location> places = stockService.storagePlaces(byId);
+        List<String> scanned = parseCodes(dto.getCodes());
+        Map<String, StockUnit> found = scanned.isEmpty() ? Map.of() : unitRepo.findByCodeIn(scanned).stream()
+                .collect(Collectors.toMap(StockUnit::getCode, Function.identity()));
 
-        List<String> codes = parseCodes(dto.getCodes());
+        // A rack or slot label among the codes (MD-02) says where the units go
+        Map<String, Location> placeByCode = places.stream().collect(Collectors.toMap(Location::getCode, Function.identity()));
+        List<Location> scannedPlaces = scanned.stream().filter(c -> !found.containsKey(c)).map(placeByCode::get)
+                .filter(Objects::nonNull).toList();
+        if (scannedPlaces.size() > 1) {
+            throw BusinessException.onField("codes", "transfer.codes.twoPlaces",
+                    scannedPlaces.stream().map(Location::getCode).collect(Collectors.joining(", ")));
+        }
+        Location chosen = dto.getToLocationId() == null ? null
+                : places.stream().filter(l -> l.getId().equals(dto.getToLocationId())).findFirst()
+                .orElseThrow(() -> BusinessException.onField("toLocationId", "transfer.to.invalid"));
+        Location to = scannedPlaces.isEmpty() ? chosen : scannedPlaces.get(0);
+        if (to == null) {
+            throw BusinessException.onField("toLocationId", "transfer.to.required");
+        }
+        if (chosen != null && !chosen.getId().equals(to.getId())) {
+            throw BusinessException.onField("toLocationId", "transfer.to.scannedOther", to.getCode(), chosen.getCode());
+        }
+
+        List<String> codes = scanned.stream().filter(c -> found.containsKey(c) || !placeByCode.containsKey(c)).toList();
         if (codes.isEmpty()) {
             throw BusinessException.onField("codes", "transfer.codes.required");
         }
         if (codes.size() > MAX_UNITS) {
             throw BusinessException.onField("codes", "transfer.codes.tooMany", MAX_UNITS, codes.size());
         }
-        Map<String, StockUnit> found = unitRepo.findByCodeIn(codes).stream()
-                .collect(Collectors.toMap(StockUnit::getCode, Function.identity()));
         List<String> unknown = codes.stream().filter(c -> !found.containsKey(c)).toList();
         if (!unknown.isEmpty()) {
             throw BusinessException.onField("codes", "transfer.codes.unknown", String.join(", ", unknown));

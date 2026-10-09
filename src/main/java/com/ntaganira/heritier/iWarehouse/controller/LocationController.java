@@ -11,8 +11,12 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
+import com.ntaganira.heritier.iWarehouse.service.Labels;
 import com.ntaganira.heritier.iWarehouse.service.LocationService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,9 +24,13 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * <pre>
@@ -32,8 +40,9 @@ import java.util.UUID;
  * - Date      : 2026. 10. 07.
  * - User      : Hntaganira
  * - Desc      : Locations screens (MD-02, MD-03): the Site &gt; Zone &gt; Rack &gt; Slot tree, a detail page
- *               with sub-locations and History, add (under a parent), edit, activate and deactivate.
- *               PAGE_LOCATIONS + PERM_VIEW_LOCATION; changes PERM_MANAGE_LOCATION.
+ *               with sub-locations and History, add (under a parent), edit, activate and deactivate, and
+ *               rack and slot labels (QR of the code; the first print fixes the code).
+ *               PAGE_LOCATIONS + PERM_VIEW_LOCATION; changes and labels PERM_MANAGE_LOCATION.
  * </pre>
  */
 @Controller
@@ -74,7 +83,68 @@ public class LocationController {
         model.addAttribute("children", Paging.of(locationService.children(id), Paging.pageOf("children", open, page)));
         model.addAttribute("history", dataChangeService.history("Location", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
+        List<Location> labelPlaces = locationService.labelPlaces(id);
+        model.addAttribute("labelCount", labelPlaces.size());
+        model.addAttribute("unlabelledCount", labelPlaces.stream().filter(l -> !l.isLabelled()).count());
         return "locations/view";
+    }
+
+    // ---------------------------------------------------------------- labels (MD-02)
+
+    /** Prints the labels of a place's active racks and slots; the first print fixes each code. */
+    @PostMapping("/{id}/labels")
+    @PreAuthorize("hasAuthority('PAGE_LOCATIONS') and hasAuthority('PERM_MANAGE_LOCATION')")
+    public String printLabels(@PathVariable UUID id, RedirectAttributes redirect) {
+        try {
+            LocationService.LabelRun run = locationService.printLabels(id);
+            activityLogService.record(MODULE, "PRINT_LOCATION_LABELS", "Printed " + run.places().size() + " label(s) of "
+                    + run.location().getCode() + (run.fixed().isEmpty() ? "" : "; codes now fixed: "
+                    + run.fixed().stream().map(Location::getCode).collect(Collectors.joining(", "))), ActivityStatus.SUCCESS);
+            return "redirect:/locations/" + id + "/labels";
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "PRINT_LOCATION_LABELS", "Failed to print the labels of " + codeOf(id) + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+            return "redirect:/locations/" + id;
+        }
+    }
+
+    /** The printable labels (50 x 30 mm) of a place's racks and slots whose label has been printed. */
+    @GetMapping("/{id}/labels")
+    @PreAuthorize("hasAuthority('PAGE_LOCATIONS') and hasAuthority('PERM_MANAGE_LOCATION')")
+    public String labels(@PathVariable UUID id, Model model) {
+        Location location = locationService.findById(id);
+        List<Location> places = locationService.labelledPlaces(id);
+        Map<UUID, String> qr = new HashMap<>();
+        for (Location place : places) {
+            qr.put(place.getId(), Labels.qrSvg(place.getCode()));
+        }
+        model.addAttribute("location", location);
+        model.addAttribute("places", places);
+        model.addAttribute("qr", qr);
+        model.addAttribute("paths", locationService.pathCodes(places));
+        return "locations/labels";
+    }
+
+    /** The same labels as ZPL, for a label printer driven directly. */
+    @GetMapping("/{id}/labels.zpl")
+    @PreAuthorize("hasAuthority('PAGE_LOCATIONS') and hasAuthority('PERM_MANAGE_LOCATION')")
+    public ResponseEntity<byte[]> labelsZpl(@PathVariable UUID id) {
+        Location location = locationService.findById(id);
+        List<Location> places = locationService.labelledPlaces(id);
+        Map<UUID, List<String>> paths = locationService.pathCodes(places);
+        List<Labels.PlaceLabel> labels = places.stream()
+                .map(l -> new Labels.PlaceLabel(l.getCode(),
+                        messages.get(l.isOffcut() ? "location.offcut" : "location.type." + l.getType()),
+                        l.getName(), String.join(" > ", paths.get(l.getId()))))
+                .toList();
+        activityLogService.record(MODULE, "PRINT_LOCATION_LABELS", "Downloaded " + labels.size() + " label(s) of "
+                + location.getCode() + " as ZPL", ActivityStatus.SUCCESS);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + location.getCode() + "-labels.zpl\"")
+                .contentType(new MediaType("text", "plain", StandardCharsets.UTF_8))
+                .body(Labels.placeZpl(labels).getBytes(StandardCharsets.UTF_8));
     }
 
     @GetMapping("/new")
@@ -223,6 +293,8 @@ public class LocationController {
         }
         model.addAttribute("locationDto", dto);
         model.addAttribute("parent", parent);
+        // Once its label is printed the code is fixed (MD-02)
+        model.addAttribute("labelledAt", dto.getId() == null ? null : locationService.findById(dto.getId()).getLabelPrintedAt());
         model.addAttribute("orientations", RackOrientation.values());
         return "locations/form";
     }

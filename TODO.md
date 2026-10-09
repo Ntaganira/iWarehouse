@@ -8,10 +8,10 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V15.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V16.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
-## Where we are (2026-10-08)
+## Where we are (2026-10-09)
 
 | Area | State | Where |
 |---|---|---|
@@ -21,10 +21,10 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Purchasing and receiving: orders, crates, stock units, labels | Done | V10, `/purchase-orders`, `/goods-receipts`, `/stock` |
 | Landed cost and claims (AT-01 passes) | Done | V11, `/shipments` |
 | Cutting jobs, off-cuts, cullet, yield (AT-02 passes) | Done | V12, `/cutting-jobs` |
-| Inventory operations: reservations, transfers, adjustments, valuation, reorder | Done (M1, part 1) | V13, `/stock-transfers`, `/stock-adjustments`, `/stock/summary` |
-| Stock counts by scanning | Done (M1, part 2) | V14, `/stock-counts` |
-| Put-away decision, location labels | **Next** (M1, last items) | — |
-| Accounting: chart of accounts, posting engine, journals | Not started (M2) | — |
+| Inventory operations: reservations, transfers, adjustments, valuation, reorder | Done (M1) | V13, `/stock-transfers`, `/stock-adjustments`, `/stock/summary` |
+| Stock counts by scanning | Done (M1) | V14, `/stock-counts` |
+| Rack and slot labels; put-away decided (none) | Done (M1) | V15, labels from `/locations/{id}` |
+| Accounting: chart of accounts, posting engine, journals | **Next** (M2) | — |
 | Counter sales: POS, quotations, invoices, payments, returns, VAT | Not started (M3) | — |
 | EBM / VSDC fiscal signing | Not started (M4) | — |
 | Customer and supplier accounts, period close, financial statements | Not started (M5) | — |
@@ -34,7 +34,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 285, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
+Unit tests: 293, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -56,22 +56,6 @@ Unit tests: 285, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; 
 - [ ] Staff trained per role (cashier, cutting operator, supervisor, driver, accountant, owner)
 
 ---
-
-## M1 — Inventory operations (counts done 2026-10-09; location labels and the put-away decision next)
-
-Goal: the warehouse can move, correct, reserve, count and value every piece. INV-05, INV-07..INV-10, MD-03.
-
-- [x] Reservation rules in one place (INV-05) (M) — 2026-10-08: `StockAction` says which states allow cut, transfer, adjust, reserve, release, find; units on a pending adjustment are held (`StockService.holds` / `requireNotHeld`), checked by transfers, adjustments, cutting and reservations. Reserve a unit for a customer (with a note) and release it (reason) from its page; pieces cut for a customer now record the customer (V13 `reserved_customer_id`)
-- [x] Transfers between locations (INV-07) (M) — 2026-10-08: `/stock-transfers` (V13). Scan or type the codes, choose the rack or slot; posted when saved (TRF-WH-2026-000001), one TRANSFER movement per unit, where each came from kept on the line. Refused: unknown codes, units being cut, on a vehicle or gone, held units, units already there, full sheets to an off-cut rack, over the rack's piece or kg limit. Rack orientation is not checked: units do not record how they stand (decide with the shop)
-- [x] Adjustments with reason and approval (INV-07) (M) — 2026-10-08: `/stock-adjustments` (V13). Write off (damaged: BROKEN, missing: new status LOST), found again (LOST back to stock at its cost), new unit (a piece nobody recorded, at MAC), correct size (replaced by a new unit at the same cost per m², reservation kept). Up to `ADJUSTMENT_APPROVAL_LIMIT` it posts when saved; above, another person with PERM_APPROVE_ADJUSTMENT (supervisor, owner) approves or rejects with a reason, the requester can withdraw; never self-approved. MAC via `Costing.afterStockChange`. Shortcuts on the unit page: Move, Write off, Correct size, Found again. Also the way to correct a posted receipt (wrong count: write off missing or add new units; wrong size: correct size)
-- [x] Stock valuation and summaries (INV-09) (M) — 2026-10-08: `/stock/summary` by glass, place or state: pieces, m², value = m² x MAC per glass (the value the inventory account will carry); CSV download (opens in Excel). Off-cut age and real Excel/PDF exports go with the reports (M6)
-- [x] Reorder alerts (INV-10) (S) — 2026-10-08: glass whose AVAILABLE m² is below its reorder level, on the summary page. A dashboard card comes with the owner dashboard (M6)
-- [x] Stock counts by scanning (INV-08) (S) — 2026-10-09: `/stock-counts` (V14). Count a rack or slot (cycle count), a zone or the site (full count), every glass or one; while open, the units on its places are held (`StockService.holds`: nothing moves, cuts, reserves or adjusts them) and two open counts never cover the same place. Scan labels where they are found (a scanner sends Enter; a pasted list scans together); live progress: scanned, not scanned yet, to check. Closing records one line per unit: matched, misplaced (moved where found, COUNT movement, racks left over their limit reported), missing (written off as LOST) and lost units found, both on one adjustment approved as any other; units recorded as being cut, on a vehicle, gone, or unknown labels are listed to check. Cancel with a reason
-- [x] A clear message when two people change the same record at once (NFR-06) (S) — 2026-10-08: `StaleDataAdvice` sends the user back to the page they came from with "changed by someone else, reload"
-- [ ] Decide whether a put-away scan is needed (units arrive RECEIVED, then AVAILABLE once racked) (S)
-- [ ] Location labels (QR of the location code) for racks and slots, and a location's code fixed once its label is printed (MD-02) (S)
-
-Done when: a unit can be transferred, written off, found, corrected and counted with its full movement history; the valuation report total equals the stock value used by the MAC.
 
 ## M2 — Accounting core: chart of accounts and posting engine
 
@@ -212,7 +196,9 @@ Answers change what gets built; record each answer next to the question.
 - [ ] One sheet or off-cut per cutting job; bigger orders become several jobs or use "Cut the rest". Confirm
 - [ ] Breakage reasons: handling, cutting error, glass defect, tool or table, other. Confirm the list
 - [ ] Is tempering done in-house or outsourced? Should cullet be sold as scrap, and at what price basis? (SRS 8.3)
-- [ ] Starting product range (18 seeded) and the real warehouse layout and rack limits (seeded: WH, zone WH-A, racks R01, R02, off-cut rack OC) (MD-01, MD-02)
+- [ ] Starting product range (18 seeded) and the real warehouse layout and rack limits (seeded: WH, zone WH-A, racks R01, R02, off-cut rack OC) (MD-01, MD-02). Agree the rack codes before printing their labels: a printed code is fixed
+- [ ] Do crates wait in a receiving area before they are racked? Built: no put-away step, the receipt puts each crate on its rack. If they wait, add a put-away scan (RECEIVED, then AVAILABLE once racked) (INV-02)
+- [ ] French word for a rack: the location screens say "Rack" ("Rack à chutes"), cutting, transfers and adjustments say "râtelier". Pick one
 
 **Purchasing and landed cost**
 - [ ] Do suppliers quote per m² (built), per sheet or per tonne? (PRC-01)
@@ -245,7 +231,9 @@ Answers change what gets built; record each answer next to the question.
 - Cutting jobs CUT-WH-2026-000001 (AT-02 on U-WH-000036 for Umucyo Builders: 3 reserved pieces on WH-A-R04, off-cut U-WH-000059), -000002 (cut that off-cut, with breakage), -000003..5 (cancelled)
 - 60 stock units; MAC on CLR-6, CLR-8, MIR-4
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
-- Stock counts CNT-WH-2026-000001..6: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled
+- Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
+- Labels printed for WH-A-OC, WH-A-R01, WH-A-R02 and WH-A-R04 by qa-admin on 2026-10-09: their codes are fixed (the real racks get their own codes and labels at go-live)
+- Stock counts CNT-WH-2026-000001..7: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled
 - Automated-check user qa-admin (ADMIN role, created 2026-10-08 so scripted browser checks never sign the real admin out: one session per user) — disable before go-live
 - Responsive checks: orders PO-WH-2026-000010 and -000011 and cutting jobs CUT-WH-2026-000006 and -000007, all cancelled ("Responsive check"); U-WH-000055 taken and released twice
 - Disabled test users (cashier*, auditor*, super4032); test owner user owner38648 (password kept out of the repo) — disable before go-live
@@ -283,7 +271,7 @@ Answers change what gets built; record each answer next to the question.
 - [x] Purchase orders in supplier currency (PRC-01) — `/purchase-orders` (V10). Draft → placed → partly received / received; cancel (nothing received) or close short, with a reason; lines priced per m² in the supplier currency, total rounded once
 - [x] Crate receiving: one stock unit per sheet + label print (PRC-02, INV-03) — `/goods-receipts` (V10). Draft receipt with one row per crate; never more than the line waits for; posting fixes the receipt-date rate and creates AVAILABLE units U-WH-000001 on their racks; labels 50 x 30 mm with QR as a print page or ZPL (`/stock/labels`)
 - [x] MAC per m² on the product (PRC-05) — `products.mac_per_m2` (RWF) moves with receipts, landed costs and cuts; products are locked while posting
-- [x] `StockUnit` entity, area and weight computed, status lifecycle (INV-01, INV-02; SRS 6.2) — the 8 SRS states; size, area, weight fixed; only `StockService` changes status, location or cost. RECEIVED is unused until a put-away scan exists
+- [x] `StockUnit` entity, area and weight computed, status lifecycle (INV-01, INV-02; SRS 6.2) — the 8 SRS states; size, area, weight fixed; only `StockService` changes status, location or cost. RECEIVED is unused: no put-away scan (decided in M1)
 - [x] Immutable stock movements for every location/status change (INV-04) — `stock_movements` append-only; RECEIPT and CUTTING_* movements so far
 - [x] Smallest-fit search: "at least 1200 × 800 in 6 mm clear" (INV-06) — on `/stock`, either way round, available pieces only, smallest area first; a scanned label code opens the unit
 
@@ -297,6 +285,18 @@ Answers change what gets built; record each answer next to the question.
 - [x] Recording the cut: source consumed, cut pieces and off-cuts as new units, cullet (PRD-03..PRD-05) — leftovers from the threshold (Settings) become off-cuts on an off-cut rack, smaller ones and the trim are cullet (m² and kg); pieces for a customer RESERVED, for stock AVAILABLE; rack limits checked; labels from the job page; `cutting_job_outputs` append-only
 - [x] Area conservation within 1% and cost flow by area (PRD-06, PRD-07) — the sheet cost is shared by area to the franc cent (`CUTTING` cost entries), cullet and breakage expensed, MAC via `Costing.afterCut`; live area check on the form. AT-02 checked in `CuttingTest`, `CuttingJobServiceTest` and in the browser
 - [x] Breakage with reason; yield report (PRD-08, PRD-09, RPT-03) — breakage while cutting with a reason code and note; "Cut the rest" makes a linked job; `/cutting-jobs/yield` by operator and glass for a period, breakage by reason
+
+### Inventory operations, M1 (2026-10-08..09)
+- [x] Reservation rules in one place (INV-05) (M) — 2026-10-08: `StockAction` says which states allow cut, transfer, adjust, reserve, release, find; units on a pending adjustment are held (`StockService.holds` / `requireNotHeld`), checked by transfers, adjustments, cutting and reservations. Reserve a unit for a customer (with a note) and release it (reason) from its page; pieces cut for a customer now record the customer (V13 `reserved_customer_id`)
+- [x] Transfers between locations (INV-07) (M) — 2026-10-08: `/stock-transfers` (V13). Scan or type the codes, choose the rack or slot; posted when saved (TRF-WH-2026-000001), one TRANSFER movement per unit, where each came from kept on the line. Refused: unknown codes, units being cut, on a vehicle or gone, held units, units already there, full sheets to an off-cut rack, over the rack's piece or kg limit. Rack orientation is not checked: units do not record how they stand (decide with the shop)
+- [x] Adjustments with reason and approval (INV-07) (M) — 2026-10-08: `/stock-adjustments` (V13). Write off (damaged: BROKEN, missing: new status LOST), found again (LOST back to stock at its cost), new unit (a piece nobody recorded, at MAC), correct size (replaced by a new unit at the same cost per m², reservation kept). Up to `ADJUSTMENT_APPROVAL_LIMIT` it posts when saved; above, another person with PERM_APPROVE_ADJUSTMENT (supervisor, owner) approves or rejects with a reason, the requester can withdraw; never self-approved. MAC via `Costing.afterStockChange`. Shortcuts on the unit page: Move, Write off, Correct size, Found again. Also the way to correct a posted receipt (wrong count: write off missing or add new units; wrong size: correct size)
+- [x] Stock valuation and summaries (INV-09) (M) — 2026-10-08: `/stock/summary` by glass, place or state: pieces, m², value = m² x MAC per glass (the value the inventory account will carry); CSV download (opens in Excel). Off-cut age and real Excel/PDF exports go with the reports (M6)
+- [x] Reorder alerts (INV-10) (S) — 2026-10-08: glass whose AVAILABLE m² is below its reorder level, on the summary page. A dashboard card comes with the owner dashboard (M6)
+- [x] Stock counts by scanning (INV-08) (S) — 2026-10-09: `/stock-counts` (V14). Count a rack or slot (cycle count), a zone or the site (full count), every glass or one; while open, the units on its places are held (`StockService.holds`: nothing moves, cuts, reserves or adjusts them) and two open counts never cover the same place. Scan labels where they are found (a scanner sends Enter; a pasted list scans together); live progress: scanned, not scanned yet, to check. Closing records one line per unit: matched, misplaced (moved where found, COUNT movement, racks left over their limit reported), missing (written off as LOST) and lost units found, both on one adjustment approved as any other; units recorded as being cut, on a vehicle, gone, or unknown labels are listed to check. Cancel with a reason
+- [x] A clear message when two people change the same record at once (NFR-06) (S) — 2026-10-08: `StaleDataAdvice` sends the user back to the page they came from with "changed by someone else, reload"
+- [x] Put-away scan: not needed (S) — 2026-10-09: the SRS receiving flow ends with "sheets become Available on their racks", and the receipt already names each crate's rack, so posting puts the sheets there as AVAILABLE. A crate set down elsewhere is moved with a transfer (scan its sheets and the rack's label) or found by a count. RECEIVED stays unused; a put-away step comes back only if the warehouse adds a receiving bay (question below)
+- [x] Rack and slot labels (MD-02) (S) — 2026-10-09: V15. "Print labels" on a rack, slot, zone or site page prints its active racks and slots (50 x 30 mm, QR of the code, type, name, where it is; print page or ZPL, `Labels.placeZpl`). The first print fixes each code (who and when are kept; the edit form shows the code read-only; a database trigger refuses a change), so it asks first; a reprint changes nothing. Scanning a rack or slot label: in a transfer it chooses where the units go; in a count it sets where the next labels were found (a zone or a place outside the count is refused); in the stock search it lists what is on that place
+- Done when: a unit can be transferred, written off, found, corrected and counted with its full movement history; the valuation report total equals the stock value used by the MAC. Met: transfers, adjustments, counts and the valuation report are in place, and every change is a movement on the unit
 
 ### Responsive layout (2026-10-08)
 - [x] Every screen works from 360 px phones to desktops — all 86 reachable pages checked at 360, 390, 768, 1024 and 1280 px, plus the 7 that need a draft (order and job edit, receipt, shipment edit, taking a sheet, recording a cut) at 360 to 1024 px, with their dialogs. Phones and tablets (768 px and less) open the menu as a drawer from a button in the header (it was hidden there before, so most screens could not be reached). On phones (640 px and less) table rows become cards with each value labelled by its column, line forms included; list filters wrap two per row. Line forms keep usable field widths on tablets and scroll in their box. Known limit: a long rack choice ("WH-A-R04 · Rack R04 · 21/30 pcs · 1,234/3,000 kg") is cut short in the closed select on a phone; the phone picker shows it in full

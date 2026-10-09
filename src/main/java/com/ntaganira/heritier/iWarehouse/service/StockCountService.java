@@ -100,7 +100,7 @@ public class StockCountService {
     }
 
     /** What a scan showed: the outcome so far, the unit (none when unknown) and whether it was scanned before. */
-    public record ScanResult(String code, CountOutcome outcome, StockUnit unit, boolean again, int scanned) {
+    public record ScanResult(String code, CountOutcome outcome, StockUnit unit, boolean again, int scanned, Location place) {
     }
 
     /** A closed count and the racks its moves left over their piece or weight limit. */
@@ -259,20 +259,21 @@ public class StockCountService {
 
     /**
      * Records labels found on a rack or slot of the count (a scanner sends one code, a paste several).
-     * A code scanned again on another place moves its scan there; glass other than the count's is refused.
+     * A rack or slot label (MD-02) says where the labels after it were found, so "WH-A-R02, U-WH-000041,
+     * U-WH-000042" counts both units on WH-A-R02. A code scanned again on another place moves its scan
+     * there; glass other than the count's, and places outside the count, are refused.
      */
     @Transactional
     public ScanResult scan(UUID countId, UUID locationId, String codesText) {
         StockCount count = lockOpen(countId);
         Map<UUID, Location> byId = stockService.locationsById();
-        Location place = locationId == null ? null : scanPlaces(count, byId).stream()
+        List<Location> places = scanPlaces(count, byId);
+        Location place = locationId == null ? null : places.stream()
                 .filter(l -> l.getId().equals(locationId)).findFirst().orElse(null);
-        if (place == null) {
-            throw BusinessException.onField("locationId", "count.where.required");
-        }
         List<String> codes = StockTransferService.parseCodes(codesText);
         if (codes.isEmpty()) {
-            throw BusinessException.onField("codes", "count.codes.required");
+            throw place == null ? BusinessException.onField("locationId", "count.where.required")
+                    : BusinessException.onField("codes", "count.codes.required");
         }
         for (String code : codes) {
             if (code.length() > CODE_MAX) {
@@ -281,6 +282,14 @@ public class StockCountService {
         }
         Map<String, StockUnit> units = unitRepo.findByCodeIn(codes).stream()
                 .collect(Collectors.toMap(StockUnit::getCode, Function.identity()));
+        // Codes that are no unit's but a location's are place labels
+        Map<String, Location> placeByCode = places.stream().collect(Collectors.toMap(Location::getCode, Function.identity()));
+        Set<String> locationCodes = byId.values().stream().map(Location::getCode).collect(Collectors.toSet());
+        for (String code : codes) {
+            if (!units.containsKey(code) && locationCodes.contains(code) && !placeByCode.containsKey(code)) {
+                throw BusinessException.onField("codes", "count.placeOutside", code, count.getLocation().getCode());
+            }
+        }
         Product glass = count.getProduct();
         for (String code : codes) {
             StockUnit unit = units.get(code);
@@ -292,7 +301,18 @@ public class StockCountService {
                 .collect(Collectors.toMap(StockCountScan::getCode, Function.identity()));
         LocalDateTime now = LocalDateTime.now(clock);
         boolean again = false;
+        int scanned = 0;
+        String last = null;
         for (String code : codes) {
+            if (!units.containsKey(code) && placeByCode.containsKey(code)) {
+                place = placeByCode.get(code);
+                continue;
+            }
+            if (place == null) {
+                throw BusinessException.onField("locationId", "count.where.required");
+            }
+            scanned++;
+            last = code;
             StockCountScan scan = existing.get(code);
             if (scan != null) {
                 again = true;
@@ -314,10 +334,12 @@ public class StockCountService {
             count.getScans().add(scan);
             existing.put(code, scan);
         }
-        String last = codes.get(codes.size() - 1);
+        if (last == null) {
+            return new ScanResult(null, null, null, false, 0, place); // only a place label: counting there now
+        }
         StockUnit lastUnit = units.get(last);
         return new ScanResult(last, StockCounting.outcomeOf(unit(lastUnit), place.getId()), lastUnit,
-                again && codes.size() == 1, codes.size());
+                again && scanned == 1, scanned, place);
     }
 
     /** Removes a scan made by mistake, while the count is open. */

@@ -38,6 +38,15 @@
                       class="row-action-form confirm-submit" th:attr="data-confirm=#{location.enableConfirm(${location.code})}">
                     <button type="submit" class="btn btn-outline" th:text="#{location.enable}">Activate</button>
                 </form>
+                <!--/* Rack and slot labels (MD-02): the first print fixes the codes, so it asks first */-->
+                <th:block th:if="${labelCount > 0}">
+                    <form th:if="${unlabelledCount > 0}" th:action="@{/locations/{id}/labels(id=${location.id})}" method="post"
+                          class="row-action-form confirm-submit" th:attr="data-confirm=#{location.labelsConfirm(${labelCount}, ${unlabelledCount})}">
+                        <button type="submit" class="btn btn-outline" th:text="#{label.printAll(${labelCount})}">Print 5 labels</button>
+                    </form>
+                    <a th:unless="${unlabelledCount > 0}" th:href="@{/locations/{id}/labels(id=${location.id})}" class="btn btn-outline"
+                       th:text="#{label.printAll(${labelCount})}">Print 5 labels</a>
+                </th:block>
                 <a th:href="@{/locations/{id}/edit(id=${location.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
             </th:block>
         </div>
@@ -76,6 +85,12 @@
                                     th:if="${p.name != null}" th:text="${' · ' + p.name}"> · Zone A</span></a>
                             <span th:if="${#lists.isEmpty(ancestors)}">—</span>
                         </div>
+                    </div>
+                    <div class="item" th:if="${location.labelKind}">
+                        <label th:text="#{location.label}">Label</label>
+                        <div class="value" th:if="${location.labelled}"
+                             th:text="#{location.labelPrinted(${#temporals.format(location.labelPrintedAt, 'dd/MM/yyyy HH:mm')}, ${location.labelPrintedBy})}">Printed 09/10/2026 10:00 by supervisor1: the code is fixed</div>
+                        <div class="value text-muted" th:unless="${location.labelled}" th:text="#{location.labelNone}">Not printed yet</div>
                     </div>
                     <th:block th:if="${location.rack}">
                         <div class="item">

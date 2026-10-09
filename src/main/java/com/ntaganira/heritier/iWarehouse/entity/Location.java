@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -20,7 +21,8 @@ import java.util.UUID;
  * - Desc      : A place stock can be (MD-02): site, zone, rack, slot, or a vehicle's virtual location.
  *               Racks carry the MD-03 limits (kg, pieces, orientation) and may be reserved for off-cuts.
  *               Type and parent are fixed after creation. The parent is kept as an id: the whole tree
- *               is small and is always loaded at once. Deactivated, never deleted.
+ *               is small and is always loaded at once. Deactivated, never deleted. Once a rack's or
+ *               slot's label is printed its code is fixed (V15 trigger): the label carries it.
  * </pre>
  */
 @Entity
@@ -61,7 +63,23 @@ public class Location extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /** First print of its label (racks and slots); the code is fixed from then on. */
+    @Column(name = "label_printed_at")
+    private LocalDateTime labelPrintedAt;
+
+    @Column(name = "label_printed_by", length = 50)
+    private String labelPrintedBy;
+
     public boolean isRack() {
         return type == LocationType.RACK;
+    }
+
+    /** Racks and slots carry a label; sites and zones do not. */
+    public boolean isLabelKind() {
+        return type == LocationType.RACK || type == LocationType.SLOT;
+    }
+
+    public boolean isLabelled() {
+        return labelPrintedAt != null;
     }
 }

@@ -1,7 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +16,7 @@ import java.util.UUID;
  * - Date      : 2026. 10. 08.
  * - User      : Hntaganira
  * - Desc      : Transfer form (INV-07): where the units go and their label codes, scanned or typed one
- *               per line (spaces and commas also separate them).
+ *               per line (spaces and commas also separate them); a scanned rack label can give the place.
  * </pre>
  */
 @Getter
@@ -25,7 +24,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class StockTransferDto {
 
-    @NotNull(message = "{transfer.to.required}")
+    /** Chosen in the list, or given by scanning the rack's label among the codes (checked in the service). */
     private UUID toLocationId;
 
     @NotBlank(message = "{transfer.codes.required}")

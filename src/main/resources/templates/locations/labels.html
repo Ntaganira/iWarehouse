@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{label.pageTitle(${location.code})} + ' - ' + #{app.name}">Labels - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{label.pageTitle(${location.code})}">Labels: WH-A</h1>
+            <p class="text-muted" th:text="#{label.pageHint(${#lists.size(places)})}">6 labels, 50 × 30 mm each. Print on the label printer, one label per page, at 100% (no scaling).</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/locations/{id}(id=${location.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/locations/{id}/labels.zpl(id=${location.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- Rack and slot labels (MD-02): the QR holds the location code, scanned in transfers, counts and the stock search -->
+    <div class="label-sheet">
+        <div class="stock-label place-label" th:each="l : ${places}">
+            <div class="stock-label-qr" th:utext="${qr.get(l.id)}"></div>
+            <div class="stock-label-text">
+                <div class="stock-label-code" th:text="${l.code}">WH-A-R01</div>
+                <div class="place-label-kind" th:with="kind=${l.offcut ? #messages.msg('location.offcut') : #messages.msg('location.type.' + l.type)}"
+                     th:text="${kind + (l.name != null and !#strings.equalsIgnoreCase(l.name, kind) ? ' · ' + l.name : '')}">Rack · Rack 1</div>
+                <div class="place-label-path" th:if="${!paths.get(l.id).isEmpty()}" th:text="${#strings.listJoin(paths.get(l.id), ' › ')}">WH › WH-A</div>
+            </div>
+        </div>
+        <p class="label-empty" th:if="${#lists.isEmpty(places)}" th:text="#{location.labels.noneYet}">No label has been printed for this place yet.</p>
+    </div>
+</body>
+</html>

@@ -99,11 +99,15 @@ public class StockController {
                        @RequestParam(required = false) Integer minHeight,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        // A scanned or typed label code opens the unit.
+        // A scanned or typed label code opens the unit; a rack or slot label lists what is on it (MD-02).
         if (StringUtils.hasText(search)) {
             Optional<StockUnit> scanned = stockService.findByCode(search);
             if (scanned.isPresent()) {
                 return "redirect:/stock/" + scanned.get().getId();
+            }
+            Optional<Location> place = locationService.findByCode(search);
+            if (place.isPresent()) {
+                return "redirect:/stock?location=" + place.get().getId();
             }
         }
         Integer w = positive(minWidth);

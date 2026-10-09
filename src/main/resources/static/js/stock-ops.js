@@ -1,7 +1,8 @@
 /*
  * iWarehouse - stock operations forms (INV-07, INV-08).
  * Stock count: Enter in the scan field scans (scanners send Enter); pasted lists keep their lines.
- * Transfer: counts the label codes scanned or typed (one per line; spaces and commas also separate them).
+ * Transfer: counts the label codes scanned or typed (one per line; spaces and commas also separate them);
+ * a scanned rack or slot label chooses the destination.
  * Adjustment: add and remove change rows (tbody.line-body[data-prefix=lines]) keeping their numbers
  * continuous, and show only the fields a row's kind needs (cells carry data-kinds="WRITE_OFF RESIZE"...);
  * hidden fields are disabled so they are not sent. Empty rows are dropped before sending. The server checks
@@ -15,11 +16,28 @@
     if (transfer) {
         const codes = transfer.querySelector('textarea[name="codes"]');
         const count = document.getElementById('transfer-count');
-        const recount = () => {
-            const list = codes.value.split(/[\s,;]+/).map(c => c.trim().toUpperCase()).filter(Boolean);
-            count.textContent = String(new Set(list).size);
+        const to = transfer.querySelector('select[name="toLocationId"]');
+        const scannedNote = document.getElementById('transfer-to-scanned');
+        const places = new Map(Array.from(to.options).filter(o => o.dataset.code).map(o => [o.dataset.code, o]));
+        const split = text => text.split(/[\s,;]+/).map(c => c.trim().toUpperCase()).filter(Boolean);
+        const recount = () => { count.textContent = String(new Set(split(codes.value)).size); };
+        // A rack or slot label scanned with the units (MD-02) chooses where they go: it leaves the list
+        // and is selected. Only finished codes count: a scanner is still typing the last one.
+        const takePlace = () => {
+            const value = codes.value;
+            const finished = /[\s,;]$/.test(value) ? value : value.replace(/[^\s,;]*$/, '');
+            const code = split(finished).find(c => places.has(c));
+            if (!code) return;
+            to.value = places.get(code).value;
+            const escaped = code.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
+            codes.value = value.replace(new RegExp('(^|[\\s,;])' + escaped + '(?=[\\s,;]|$)', 'gi'), '$1')
+                .replace(/^[\s,;]+/, '').replace(/\n{2,}/g, '\n');
+            scannedNote.textContent = scannedNote.dataset.text.replace('{0}', code);
+            scannedNote.hidden = false;
         };
-        codes.addEventListener('input', recount);
+        codes.addEventListener('input', () => { takePlace(); recount(); });
+        to.addEventListener('change', () => { scannedNote.hidden = true; });
+        takePlace();
         recount();
     }
 

@@ -4342,3 +4342,11 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .scan-row textarea { flex: 1; min-width: 0; }
 /* A badge never breaks over two lines */
 .badge { white-space: nowrap; }
+
+/* Rack and slot labels (MD-02): same 50 x 30 mm label, a larger QR read from further away, the code on two lines at most */
+.place-label .stock-label-qr { width: 20mm; height: 20mm; }
+.place-label .stock-label-code { font-size: 4.2mm; white-space: normal; overflow-wrap: anywhere; }
+.place-label-kind { margin-top: 1mm; font-size: 2.6mm; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.place-label-path { margin-top: .6mm; font-size: 2.3mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* A transfer's destination chosen by scanning the rack's label */
+.hint.transfer-to-scanned { color: var(--success); font-weight: 600; }

@@ -125,6 +125,20 @@ class PurchasingRulesTest {
         assertThat(zpl).doesNotContain("C^01");
     }
 
+    @Test
+    void placeLabelsCarryTheLocationCodeInTheirQrCode() throws Exception {
+        String zpl = Labels.placeZpl(List.of(
+                new Labels.PlaceLabel("WH-A-R01", "Rack", "Rack 1", "WH > WH-A"),
+                new Labels.PlaceLabel("WH-A-R01-S01", "Slot", null, "WH > WH-A > WH-A-R01"),
+                new Labels.PlaceLabel("WH-A-OC", "Off-cut rack", "off-cut rack", "WH > WH-A")));
+        assertThat(zpl.split("\\^XA", -1)).hasSize(4);
+        assertThat(zpl).contains("^FDOff-cut rack^FS").doesNotContain("Off-cut rack - "); // a name repeating the type is left out
+        assertThat(zpl).contains("^PW400").contains("^LL240")
+                .contains("^FDMA,WH-A-R01^FS").contains("^FDMA,WH-A-R01-S01^FS")
+                .contains("^FDRack - Rack 1^FS").contains("^FDSlot^FS").contains("^FDWH > WH-A > WH-A-R01^FS");
+        assertThat(new Decoder().decode(Labels.qrMatrix("WH-A-R01-S01")).getText()).isEqualTo("WH-A-R01-S01");
+    }
+
     private static PurchaseOrderLine line(int w, int h, int qty, String price, int received) {
         PurchaseOrderLine line = new PurchaseOrderLine();
         line.setWidthMm(w);

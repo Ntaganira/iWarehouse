@@ -265,6 +265,31 @@ class StockCountServiceTest {
         assertThat(count.getScans()).extracting(StockCountScan::getCode).containsExactlyInAnyOrder("U-1", "U-2");
     }
 
+    @Test
+    void aRackLabelSaysWhereTheLabelsAfterItWereFound() {
+        unit("U-1", StockStatus.AVAILABLE, rack1, clear6);
+        unit("U-3", StockStatus.AVAILABLE, rack2, clear6);
+        StockCount count = service.start(form(zone, null));
+
+        StockCountService.ScanResult r = service.scan(count.getId(), null, "WH-A-R02\nU-3\nU-1");
+
+        assertThat(r.place()).isEqualTo(rack2);
+        assertThat(r.scanned()).isEqualTo(2);
+        assertThat(count.getScans()).allSatisfy(s -> assertThat(s.getLocationId()).isEqualTo(rack2.getId()));
+
+        StockCountService.ScanResult moved = service.scan(count.getId(), rack2.getId(), "wh-a-r01"); // a label alone: count there now
+        assertThat(moved.scanned()).isZero();
+        assertThat(moved.place()).isEqualTo(rack1);
+        assertThat(count.getScans()).hasSize(2);
+
+        assertThatThrownBy(() -> service.scan(count.getId(), rack1.getId(), "WH-B-R01 U-1"))   // not a place of this count
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.placeOutside");
+        assertThatThrownBy(() -> service.scan(count.getId(), rack1.getId(), "WH-A"))           // a zone is not where glass stands
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.placeOutside");
+        assertThatThrownBy(() -> service.scan(count.getId(), null, "U-1"))                     // no place chosen or scanned
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.where.required");
+    }
+
     // ---------------------------------------------------------------- closing
 
     @Test

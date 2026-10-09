@@ -18,9 +18,9 @@ import java.util.Map;
  * - File      : Labels.java
  * - Date      : 2026. 10. 08.
  * - User      : Hntaganira
- * - Desc      : Stock unit labels (INV-03): a QR code of the unit's label code as inline SVG for the
- *               printable label page, and ZPL for Zebra-type label printers (50 x 30 mm, 203 dpi).
- *               Pure functions, unit-tested.
+ * - Desc      : Stock unit labels (INV-03) and rack and slot labels (MD-02): a QR code of the code as
+ *               inline SVG for the printable label page, and ZPL for Zebra-type label printers
+ *               (50 x 30 mm, 203 dpi). Pure functions, unit-tested.
  * </pre>
  */
 public final class Labels {
@@ -34,6 +34,10 @@ public final class Labels {
 
     /** What one label shows: code (in the QR too), product code, thickness, size and crate. */
     public record Label(String code, String productCode, String thickness, int widthMm, int heightMm, String crate) {
+    }
+
+    /** What a rack or slot label shows: its code (in the QR too, larger), its type and name, and where it is. */
+    public record PlaceLabel(String code, String type, String name, String path) {
     }
 
     /**
@@ -80,6 +84,30 @@ public final class Labels {
                     .append("^FO150,116^A0N,28,24^FD").append(l.widthMm()).append(" x ").append(l.heightMm()).append(" mm^FS\n");
             if (l.crate() != null && !l.crate().isBlank()) {
                 zpl.append("^FO150,154^A0N,22,20^FD").append(field(l.crate())).append("^FS\n");
+            }
+            zpl.append("^XZ\n");
+        }
+        return zpl.toString();
+    }
+
+    /**
+     * One ZPL label per rack or slot: a larger QR on the left (read from further away), the code wrapped on
+     * two lines at most, then type and name, then the place above it.
+     */
+    public static String placeZpl(List<PlaceLabel> labels) {
+        StringBuilder zpl = new StringBuilder();
+        for (PlaceLabel l : labels) {
+            zpl.append("^XA\n")
+                    .append("^CI28\n")
+                    .append("^PW").append(LABEL_WIDTH_DOTS).append('\n')
+                    .append("^LL").append(LABEL_HEIGHT_DOTS).append('\n')
+                    .append("^FO12,24^BQN,2,6^FDMA,").append(field(l.code())).append("^FS\n")
+                    .append("^FO178,26^A0N,42,32^FB214,2,0,L^FD").append(field(l.code())).append("^FS\n");
+            String kind = l.name() == null || l.name().isBlank() || l.name().equalsIgnoreCase(l.type()) ? l.type()
+                    : l.type() + " - " + l.name();
+            zpl.append("^FO178,124^A0N,26,22^FB214,2,0,L^FD").append(field(kind)).append("^FS\n");
+            if (l.path() != null && !l.path().isBlank()) {
+                zpl.append("^FO178,190^A0N,22,20^FB214,1,0,L^FD").append(field(l.path())).append("^FS\n");
             }
             zpl.append("^XZ\n");
         }

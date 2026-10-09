@@ -43,9 +43,10 @@
                     <label for="code" th:text="#{location.code}">Code</label>
                     <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="30" required
                            autocapitalize="characters" spellcheck="false" th:placeholder="#{location.codePh}"
-                           th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                           th:readonly="${labelledAt != null}" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
                     <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
-                    <span class="hint" th:text="#{location.codeHint}">Printed on labels and scanned; unique across all locations</span>
+                    <span class="hint" th:if="${labelledAt == null}" th:text="#{location.codeHint}">Printed on labels and scanned; unique across all locations</span>
+                    <span class="hint" th:if="${labelledAt != null}" th:text="#{location.codeFixedHint(${#temporals.format(labelledAt, 'dd/MM/yyyy')})}">Fixed: printed on its label on 09/10/2026</span>
                 </div>
                 <div class="form-group">
                     <label for="name" th:text="#{location.name}">Name</label>

@@ -189,8 +189,13 @@ public class StockCountController {
         String back = "redirect:/stock-counts/" + id + (locationId == null ? "" : "?at=" + locationId);
         try {
             StockCountService.ScanResult r = countService.scan(id, locationId, codes);
-            Location here = stockService.locationsById().get(locationId);
-            String hereCode = here == null ? "" : here.getCode();
+            // A scanned rack or slot label changes the place being counted: stay on it
+            back = "redirect:/stock-counts/" + id + "?at=" + r.place().getId();
+            String hereCode = r.place().getCode();
+            if (r.scanned() == 0) {
+                redirect.addFlashAttribute("flashSuccess", messages.get("count.scan.place", hereCode));
+                return back;
+            }
             activityLogService.record(MODULE, "UPDATE_STOCK_COUNT", "Scanned " + (r.scanned() == 1 ? r.code() : r.scanned() + " labels")
                     + " at " + hereCode + " on " + numberOf(id) + (r.scanned() == 1 ? " (" + r.outcome() + ")" : ""), ActivityStatus.SUCCESS);
             if (r.scanned() > 1) {

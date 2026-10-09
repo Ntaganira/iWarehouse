@@ -10,6 +10,12 @@ import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,8 +26,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-/** Location tree rules and rack limits (MD-02, MD-03). */
+/** Location tree rules, rack limits and labels (MD-02, MD-03). */
 class LocationServiceTest {
+
+    private static final ZoneId KIGALI = ZoneId.of("Africa/Kigali");
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-09T08:00:00Z"), KIGALI);
 
     private LocationRepository repo;
     private StockUnitRepository unitRepo;
@@ -30,13 +39,16 @@ class LocationServiceTest {
     private Location site;
     private Location zone;
     private Location rack;
+    private final List<Location> all = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         repo = mock(LocationRepository.class);
         when(repo.save(any(Location.class))).thenAnswer(i -> i.getArgument(0));
         unitRepo = mock(StockUnitRepository.class);
-        service = new LocationService(repo, unitRepo);
+        when(repo.findAllByOrderByCodeAsc()).thenAnswer(i -> all.stream()
+                .sorted(Comparator.comparing(Location::getCode)).toList());
+        service = new LocationService(repo, unitRepo, CLOCK);
         site = location("WH", LocationType.SITE, null);
         zone = location("WH-A", LocationType.ZONE, site);
         rack = location("WH-A-R01", LocationType.RACK, zone);
@@ -163,6 +175,7 @@ class LocationServiceTest {
             l.setOrientation(RackOrientation.VERTICAL);
         }
         when(repo.findById(l.getId())).thenReturn(Optional.of(l));
+        all.add(l);
         return l;
     }
 
@@ -180,5 +193,74 @@ class LocationServiceTest {
             assertThat(e.getMessageKey()).isEqualTo("location.disable.stock");
             assertThat(e.getArgs()).containsExactly("WH-A-R01", 3L);
         });
+    }
+
+    // ---------------------------------------------------------------- labels (MD-02)
+
+    @Test
+    void printingLabelsCoversTheActiveRacksAndSlotsUnderThePlace() {
+        Location slot = location("WH-A-R01-S01", LocationType.SLOT, rack);
+        Location oldRack = location("WH-A-R09", LocationType.RACK, zone);
+        oldRack.setEnabled(false);
+        location("WH-A-R09-S01", LocationType.SLOT, oldRack).setEnabled(false);
+
+        LocationService.LabelRun run = service.printLabels(zone.getId());
+
+        assertThat(run.places()).extracting(Location::getCode).containsExactly("WH-A-R01", "WH-A-R01-S01");
+        assertThat(run.fixed()).containsExactly(rack, slot);
+        assertThat(rack.getLabelPrintedAt()).isEqualTo(LocalDateTime.of(2026, 10, 9, 10, 0));
+        assertThat(rack.getLabelPrintedBy()).isEqualTo("system");
+        assertThat(zone.isLabelled()).isFalse(); // zones and sites carry no label
+        assertThat(service.labelledPlaces(site.getId())).containsExactly(rack, slot);
+    }
+
+    @Test
+    void aReprintKeepsTheFirstPrint() {
+        LocalDateTime first = LocalDateTime.of(2026, 10, 1, 9, 0);
+        rack.setLabelPrintedAt(first);
+        rack.setLabelPrintedBy("supervisor1");
+
+        LocationService.LabelRun run = service.printLabels(rack.getId());
+
+        assertThat(run.places()).containsExactly(rack);
+        assertThat(run.fixed()).isEmpty();
+        assertThat(rack.getLabelPrintedAt()).isEqualTo(first);
+        assertThat(rack.getLabelPrintedBy()).isEqualTo("supervisor1");
+    }
+
+    @Test
+    void aPlaceWithoutRacksHasNoLabels() {
+        Location depot = location("DEPOT", LocationType.SITE, null);
+
+        assertThatThrownBy(() -> service.printLabels(depot.getId())).isInstanceOfSatisfying(BusinessException.class, e -> {
+            assertThat(e.getMessageKey()).isEqualTo("location.labels.none");
+            assertThat(e.getArgs()).containsExactly("DEPOT");
+        });
+        assertThat(service.labelPlaces(depot.getId())).isEmpty();
+    }
+
+    @Test
+    void aPrintedLabelFixesTheCode() {
+        rack.setLabelPrintedAt(LocalDateTime.of(2026, 10, 1, 9, 0));
+        LocationDto renamed = dto(zone, "WH-A-R11");
+
+        assertThatThrownBy(() -> service.update(rack.getId(), renamed)).isInstanceOfSatisfying(BusinessException.class, e -> {
+            assertThat(e.getField()).isEqualTo("code");
+            assertThat(e.getMessageKey()).isEqualTo("location.code.fixed");
+        });
+        assertThat(rack.getCode()).isEqualTo("WH-A-R01");
+
+        LocationDto sameCode = dto(zone, "WH-A-R01");
+        sameCode.setName("Rack one");
+        sameCode.setMaxPieces(40);
+        assertThat(service.update(rack.getId(), sameCode).getName()).isEqualTo("Rack one"); // the rest stays editable
+    }
+
+    @Test
+    void aScannedPlaceCodeIsFoundWhateverItsCase() {
+        when(repo.findByCode("WH-A-R01")).thenReturn(Optional.of(rack));
+
+        assertThat(service.findByCode(" wh-a-r01 ")).contains(rack);
+        assertThat(service.findByCode("  ")).isEmpty();
     }
 }

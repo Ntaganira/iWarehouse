@@ -26,7 +26,8 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
             "crateBatch.goodsReceipt.purchaseOrder", "crateBatch.goodsReceipt.purchaseOrder.supplier"})
     Optional<StockUnit> findDetailedById(UUID id);
 
-    Optional<StockUnit> findByCodeIgnoreCase(String code);
+    /** A unit by its label code, exactly as stored (upper case): the unique index finds it (NFR-02). */
+    Optional<StockUnit> findByCode(String code);
 
     @EntityGraph(attributePaths = {"product", "location", "crateBatch"})
     List<StockUnit> findByCrateBatch_GoodsReceipt_IdOrderByCode(UUID receiptId);

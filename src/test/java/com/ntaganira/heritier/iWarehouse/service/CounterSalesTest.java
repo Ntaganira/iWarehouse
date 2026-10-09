@@ -129,8 +129,8 @@ class CounterSalesTest {
         when(customerRepo.findById(walkIn.getId())).thenReturn(Optional.of(walkIn));
         when(customerRepo.findById(builders.getId())).thenReturn(Optional.of(builders));
         when(productRepo.lockAllById(any())).thenReturn(List.of(clear6, exemptGlass));
-        when(unitRepo.findByCodeIgnoreCase(any())).thenAnswer(a -> units.stream()
-                .filter(u -> u.getCode().equalsIgnoreCase(a.getArgument(0))).findFirst());
+        when(unitRepo.findByCode(any())).thenAnswer(a -> units.stream()
+                .filter(u -> u.getCode().equals(a.getArgument(0))).findFirst());
         when(unitRepo.findById(any())).thenAnswer(a -> units.stream().filter(u -> u.getId().equals(a.getArgument(0))).findFirst());
         when(unitRepo.findAllById(any())).thenAnswer(a -> {
             Collection<UUID> ids = a.getArgument(0);
@@ -161,7 +161,7 @@ class CounterSalesTest {
             }
             return i;
         });
-        when(invoiceRepo.findFirstByTillSession_IdAndStatus(any(), eq(SalesInvoiceStatus.DRAFT))).thenAnswer(a -> invoices.stream()
+        when(invoiceRepo.findDraftOfTill(any())).thenAnswer(a -> invoices.stream()
                 .filter(i -> i.isDraft() && i.getTillSession().getId().equals(a.getArgument(0))).findFirst());
         when(paymentRepo.save(any())).thenAnswer(a -> {
             payments.add(a.getArgument(0));

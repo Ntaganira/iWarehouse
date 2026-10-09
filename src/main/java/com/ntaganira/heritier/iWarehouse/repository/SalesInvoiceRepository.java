@@ -37,10 +37,15 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
             "lines.service", "lines.parentLine"})
     Optional<SalesInvoice> findDetailedById(UUID id);
 
-    /** The sale a till is ringing up, if any. */
+    /**
+     * The sale a till is ringing up, if any: one per till (uk_sales_invoices_draft), so no limit is needed. A limit with the
+     * lines fetched would page in memory (HHH90003004) on every POS action.
+     */
     @EntityGraph(attributePaths = {"customer", "customer.priceList", "tillSession", "lines", "lines.product", "lines.priceList",
             "lines.service", "lines.parentLine"})
-    Optional<SalesInvoice> findFirstByTillSession_IdAndStatus(UUID tillSessionId, SalesInvoiceStatus status);
+    @Query("select i from SalesInvoice i where i.tillSession.id = :tillSessionId"
+            + " and i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.DRAFT")
+    Optional<SalesInvoice> findDraftOfTill(@Param("tillSessionId") UUID tillSessionId);
 
     @EntityGraph(attributePaths = {"customer"})
     List<SalesInvoice> findByTillSession_IdAndStatusOrderByPostedAtAsc(UUID tillSessionId, SalesInvoiceStatus status);

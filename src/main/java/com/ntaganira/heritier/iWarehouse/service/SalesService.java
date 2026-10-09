@@ -156,7 +156,7 @@ public class SalesService {
 
     /** The sale the till is ringing up, if any. */
     public Optional<SalesInvoice> cart(TillSession session) {
-        return repo.findFirstByTillSession_IdAndStatus(session.getId(), SalesInvoiceStatus.DRAFT);
+        return repo.findDraftOfTill(session.getId());
     }
 
     /** An invoice's number, for a link to it (a cutting job cut for a sale). */

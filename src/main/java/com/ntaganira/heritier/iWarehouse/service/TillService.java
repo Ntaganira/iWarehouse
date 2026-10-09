@@ -165,7 +165,7 @@ public class TillService {
         if (counted == null || counted.signum() < 0 || counted.stripTrailingZeros().scale() > 2) {
             throw BusinessException.onField("countedCash", "till.counted.invalid");
         }
-        Optional<SalesInvoice> draft = invoiceRepo.findFirstByTillSession_IdAndStatus(sessionId, SalesInvoiceStatus.DRAFT);
+        Optional<SalesInvoice> draft = invoiceRepo.findDraftOfTill(sessionId);
         if (draft.isPresent()) {
             if (!draft.get().getLines().isEmpty()) {
                 throw BusinessException.of("till.close.saleOpen", draft.get().getLines().size());

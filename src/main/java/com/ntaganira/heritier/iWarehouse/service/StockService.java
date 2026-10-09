@@ -182,7 +182,8 @@ public class StockService {
 
     /** A unit by its label code, e.g. scanned into the search box. */
     public Optional<StockUnit> findByCode(String code) {
-        return StringUtils.hasText(code) ? unitRepo.findByCodeIgnoreCase(code.trim()) : Optional.empty();
+        // Label codes are stored upper case: an exact match uses the unique index, as a scan at the counter needs
+        return StringUtils.hasText(code) ? unitRepo.findByCode(code.trim().toUpperCase(Locale.ROOT)) : Optional.empty();
     }
 
     /** A unit with its product, location and where it came from (crate, receipt, order, supplier). */

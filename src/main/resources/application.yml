@@ -20,6 +20,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # A paged or limited query that fetches a collection is refused instead of paging in memory (NFR-02)
+        query.fail_on_pagination_over_collection_fetch: true
   flyway:
     enabled: true
   thymeleaf:

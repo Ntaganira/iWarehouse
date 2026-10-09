@@ -143,7 +143,8 @@ class StockOperationsTest {
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
         stockService = new StockService(unitRepo, movementRepo, costEntryRepo, lineRepo, mock(StockCountRepository.class), locationRepo, numbers, clock);
         transferService = new StockTransferService(transferRepo, unitRepo, stockService, numbers, clock);
-        adjustmentService = new StockAdjustmentService(adjustmentRepo, unitRepo, productRepo, stockService, numbers, settings, clock);
+        adjustmentService = new StockAdjustmentService(adjustmentRepo, unitRepo, productRepo, stockService, mock(PostingService.class), numbers,
+                settings, clock);
         signIn(7L, "supervisor1");
     }
 

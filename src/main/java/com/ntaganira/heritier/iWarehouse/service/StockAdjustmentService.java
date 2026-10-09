@@ -50,17 +50,19 @@ public class StockAdjustmentService {
     private final StockUnitRepository unitRepo;
     private final ProductRepository productRepo;
     private final StockService stockService;
+    private final PostingService postingService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
     private final Clock clock;
 
     public StockAdjustmentService(StockAdjustmentRepository repo, StockUnitRepository unitRepo, ProductRepository productRepo,
-                                  StockService stockService, DocumentNumberService numbers, SettingService settingService,
-                                  Clock clock) {
+                                  StockService stockService, PostingService postingService, DocumentNumberService numbers,
+                                  SettingService settingService, Clock clock) {
         this.repo = repo;
         this.unitRepo = unitRepo;
         this.productRepo = productRepo;
         this.stockService = stockService;
+        this.postingService = postingService;
         this.numbers = numbers;
         this.settingService = settingService;
         this.clock = clock;
@@ -410,6 +412,7 @@ public class StockAdjustmentService {
         for (UUID productId : productIds) {
             heldBefore.put(productId, stockService.heldArea(productId));
         }
+        PostingService.StockValues valueBefore = postingService.stockValues(products.values());
         stockService.requireNotHeld(units.values(), adjustment.getNumber());
         checkRacks(adjustment, units);
 
@@ -477,6 +480,7 @@ public class StockAdjustmentService {
         totals(adjustment);
         adjustment.setStatus(AdjustmentStatus.POSTED);
         adjustment.setPostedAt(LocalDateTime.now(clock));
+        postingService.adjustment(adjustment, valueBefore);
     }
 
     private static BigDecimal weight(BigDecimal area, Product product, BigDecimal density) {

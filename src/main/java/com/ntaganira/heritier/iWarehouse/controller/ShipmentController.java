@@ -10,6 +10,7 @@ import com.ntaganira.heritier.iWarehouse.entity.ShipmentCost;
 import com.ntaganira.heritier.iWarehouse.enums.*;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.service.JournalService;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.ShipmentService;
@@ -52,6 +53,7 @@ public class ShipmentController {
     private static final int REASON_MAX = 255;
 
     private final ShipmentService shipmentService;
+    private final JournalService journalService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final SpringValidatorAdapter validator;
@@ -59,9 +61,10 @@ public class ShipmentController {
     private final NumberFormats num;
 
     public ShipmentController(ShipmentService shipmentService, DataChangeService dataChangeService,
-                              ActivityLogService activityLogService, Validator validator, Messages messages,
-                              NumberFormats num) {
+                              JournalService journalService, ActivityLogService activityLogService, Validator validator,
+                              Messages messages, NumberFormats num) {
         this.shipmentService = shipmentService;
+        this.journalService = journalService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.validator = new SpringValidatorAdapter(validator);
@@ -92,6 +95,9 @@ public class ShipmentController {
         ShipmentService.CostSheet sheet = shipmentService.costSheet(id);
         model.addAttribute("sheet", sheet);
         model.addAttribute("shipment", sheet.shipment());
+        model.addAttribute("claimSettlements", ClaimSettlement.values());
+        model.addAttribute("journals", journalService.forSource(id, JournalSource.SHIPMENT, JournalSource.CLAIM_OPENED,
+                JournalSource.CLAIM_SETTLED, JournalSource.CLAIM_REJECTED));
         model.addAttribute("base", shipmentService.baseCurrency());
         model.addAttribute("today", shipmentService.today());
         model.addAttribute("history", dataChangeService.historyWithChildren("Shipment", id.toString(),
@@ -276,12 +282,14 @@ public class ShipmentController {
     @PostMapping("/{id}/claim/settle")
     @PreAuthorize("hasAuthority('PAGE_SHIPMENTS') and hasAuthority('PERM_MANAGE_SHIPMENT')")
     public String settleClaim(@PathVariable UUID id, @RequestParam(required = false) BigDecimal received,
+                              @RequestParam(required = false) ClaimSettlement receivedInto,
                               @RequestParam(required = false) String note, RedirectAttributes redirect) {
         try {
-            Shipment shipment = shipmentService.settleClaim(id, received, note);
+            Shipment shipment = shipmentService.settleClaim(id, received, receivedInto, note);
             activityLogService.record(MODULE, "SETTLE_SHIPMENT_CLAIM", "Settled the claim on " + shipment.getNumber()
                     + ": " + rwf(shipment.getClaimSettledAmount()) + " RWF received of " + rwf(shipment.getClaimAmount())
-                    + " claimed" + (shipment.getClaimNote() == null ? "" : " (" + shipment.getClaimNote() + ")"),
+                    + " claimed" + (shipment.getClaimReceivedInto() == null ? "" : ", into " + shipment.getClaimReceivedInto())
+                    + (shipment.getClaimNote() == null ? "" : " (" + shipment.getClaimNote() + ")"),
                     ActivityStatus.SUCCESS);
             redirect.addFlashAttribute("flashSuccess", messages.get("shipment.claim.settledMsg", shipment.getNumber()));
         } catch (BusinessException e) {

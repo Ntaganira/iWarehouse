@@ -61,6 +61,7 @@ public class GoodsReceiptService {
     private final PurchaseOrderRepository orderRepo;
     private final ProductRepository productRepo;
     private final StockService stockService;
+    private final PostingService postingService;
     private final ExchangeRateService rateService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
@@ -68,13 +69,14 @@ public class GoodsReceiptService {
 
     public GoodsReceiptService(GoodsReceiptRepository repo, CrateBatchRepository crateRepo,
                                PurchaseOrderRepository orderRepo, ProductRepository productRepo,
-                               StockService stockService, ExchangeRateService rateService,
+                               StockService stockService, PostingService postingService, ExchangeRateService rateService,
                                DocumentNumberService numbers, SettingService settingService, Clock clock) {
         this.repo = repo;
         this.crateRepo = crateRepo;
         this.orderRepo = orderRepo;
         this.productRepo = productRepo;
         this.stockService = stockService;
+        this.postingService = postingService;
         this.rateService = rateService;
         this.numbers = numbers;
         this.settingService = settingService;
@@ -285,7 +287,8 @@ public class GoodsReceiptService {
         receipt.setRateDate(rate.rateDate());
         receipt.setRateSource(rate.source());
 
-        // Stock held before this receipt, for the moving average.
+        // Stock held before this receipt, for the moving average, and its value for the journal (ACC-04).
+        PostingService.StockValues valueBefore = postingService.stockValues(products.values());
         Map<UUID, BigDecimal> heldBefore = new HashMap<>();
         for (UUID productId : products.keySet()) {
             heldBefore.put(productId, stockService.heldArea(productId));
@@ -317,6 +320,7 @@ public class GoodsReceiptService {
         receipt.setStatus(GoodsReceiptStatus.POSTED);
         receipt.setPostedAt(LocalDateTime.now(clock));
         receipt.setPostedBy(AppUserPrincipal.currentUsername());
+        postingService.goodsReceipt(receipt, valueBefore);
         return new PostResult(receipt, units, rate);
     }
 

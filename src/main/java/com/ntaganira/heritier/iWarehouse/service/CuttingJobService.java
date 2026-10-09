@@ -59,6 +59,7 @@ public class CuttingJobService {
     private final ProcessingServiceRepository serviceRepo;
     private final StockUnitRepository unitRepo;
     private final StockService stockService;
+    private final PostingService postingService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
     private final Clock clock;
@@ -66,7 +67,8 @@ public class CuttingJobService {
     public CuttingJobService(CuttingJobRepository repo, CuttingJobLineRepository lineRepo, CuttingJobOutputRepository outputRepo,
                              ProductRepository productRepo, CustomerRepository customerRepo,
                              ProcessingServiceRepository serviceRepo, StockUnitRepository unitRepo, StockService stockService,
-                             DocumentNumberService numbers, SettingService settingService, Clock clock) {
+                             PostingService postingService, DocumentNumberService numbers, SettingService settingService,
+                             Clock clock) {
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.outputRepo = outputRepo;
@@ -75,6 +77,7 @@ public class CuttingJobService {
         this.serviceRepo = serviceRepo;
         this.unitRepo = unitRepo;
         this.stockService = stockService;
+        this.postingService = postingService;
         this.numbers = numbers;
         this.settingService = settingService;
         this.clock = clock;
@@ -580,6 +583,7 @@ public class CuttingJobService {
             throw BusinessException.of("cutting.source.notInCutting", source.getCode());
         }
         BigDecimal heldBefore = stockService.heldArea(product.getId());
+        PostingService.StockValues valueBefore = postingService.stockValues(List.of(product));
         Threshold threshold = threshold();
         BigDecimal weightPerM2 = GlassProducts.weightPerM2(product.getThicknessMm(),
                 settingService.getDecimal(SettingKey.GLASS_DENSITY));
@@ -682,6 +686,7 @@ public class CuttingJobService {
         BigDecimal stockedArea = balance.pieces().add(balance.offcuts());
         product.setMacPerM2(Costing.afterCut(heldBefore, product.getMacPerM2(), stockedArea.subtract(source.getAreaM2()),
                 spoilage.negate()));
+        postingService.cut(job, spoilage, valueBefore);
         return new CutResult(job, pieces, offcuts, balance, spoilage);
     }
 

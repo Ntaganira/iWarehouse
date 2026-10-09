@@ -137,6 +137,7 @@
                         <label th:text="#{product.notes}">Notes</label>
                         <div class="value" th:text="${job.notes ?: '—'}">—</div>
                     </div>
+                    <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
                 </div>
                 <div class="table-container">
                     <table>

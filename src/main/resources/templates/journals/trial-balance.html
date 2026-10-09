@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{tb.title}, ~{::content})}">
+<head><title>Trial Balance - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{tb.title}">Trial Balance</h1>
+            <div class="subtitle" th:text="#{tb.subtitle}">Each account's balance as at a day: the debits equal the credits when the books balance</div>
+        </div>
+        <a href="/accounting/journals" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="#{journal.title}">Journals</a>
+    </div>
+
+    <!--/* The ledger starts with the opening stock journal (once) */-->
+    <div class="doc-note is-warning" th:if="${opening == null}">
+        <span th:text="${check != null} ? #{tb.notStartedValue(${@num.money(check.valuation)})} : #{tb.notStarted}">The ledger has not started.</span>
+        <form th:action="@{/accounting/opening-stock}" method="post" class="row-action-form confirm-submit" sec:authorize="hasAuthority('PERM_POST_OPENING_BALANCES')"
+              th:attr="data-confirm=#{tb.openingConfirm}">
+            <button type="submit" class="btn btn-primary btn-sm" th:text="#{tb.openingPost}">Post the opening stock</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <!--/* The day, then the button: the bar wraps between the two groups */-->
+        <form th:action="@{/accounting/trial-balance}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{tb.asOf}">As at</span>
+                    <input type="date" name="asOf" class="toolbar-filter" th:value="${#temporals.format(asOf, 'yyyy-MM-dd')}"
+                           th:max="${#temporals.format(today, 'yyyy-MM-dd')}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:classappend="${tb.balanced} ? '' : 'is-danger'">
+        <strong th:text="${tb.balanced} ? #{tb.balanced(${#temporals.format(asOf, 'dd/MM/yyyy')})} : #{tb.unbalanced(${@num.money(tb.difference)})}">The books balance as at 09/10/2026.</strong>
+    </div>
+
+    <!--/* AT-10: the inventory account equals the stock valuation, glass by glass */-->
+    <div class="section" th:if="${check != null}">
+        <div class="section-header">
+            <h2 th:text="#{tb.check.title}">Inventory account and stock valuation</h2>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{tb.check.ledger}">Inventory account</label>
+                    <div class="value strong" th:text="${@num.money(check.ledger)}">6,161,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{tb.check.valuation}">Stock valuation</label>
+                    <div class="value strong" th:text="${@num.money(check.valuation)}">6,161,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{tb.check.difference}">Difference</label>
+                    <div class="value strong" th:text="${@num.money(check.difference)}">0</div>
+                </div>
+            </div>
+            <p class="form-note" th:if="${check.matching}" th:text="#{tb.check.matching}">The inventory account equals the stock valuation for every glass.</p>
+            <th:block th:unless="${check.matching}">
+                <div class="doc-note is-warning" th:text="#{tb.check.differ(${check.differences.size()})}">2 glasses differ: before the opening stock, every glass in stock does.</div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{product.name}">Glass</th>
+                                <th class="num" th:text="#{tb.check.ledger}">Inventory account</th>
+                                <th class="num" th:text="#{tb.check.valuation}">Stock valuation</th>
+                                <th class="num" th:text="#{tb.check.difference}">Difference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${differences.content}">
+                                <td>
+                                    <span class="mono" th:if="${d.product != null}" th:text="${d.product.code}">CLR-6</span>
+                                    <span class="text-muted" th:if="${d.product == null}" th:text="#{tb.check.noGlass}">No glass</span>
+                                </td>
+                                <td class="num" th:text="${@num.money(d.ledger)}">0</td>
+                                <td class="num" th:text="${@num.money(d.valuation)}">1,234,000</td>
+                                <td class="num" th:text="${@num.money(d.difference)}">-1,234,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pagerParam(${differences}, '/accounting/trial-balance', ${diffQuery}, 'dpage')}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{tb.accounts}">Accounts</span>
+                <span class="section-count" th:text="${tb.rows.size()}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{account.code}">Code</th>
+                        <th th:text="#{account.name}">Account</th>
+                        <th th:text="#{account.type}">Type</th>
+                        <th class="num" th:text="#{journal.debit}">Debit</th>
+                        <th class="num" th:text="#{journal.credit}">Credit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td>
+                            <a class="row-link mono strong" th:href="@{/accounting/accounts/{id}(id=${r.account.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTS')" th:text="${r.account.code}">1200</a>
+                            <span class="mono strong" sec:authorize="!hasAuthority('PAGE_ACCOUNTS')" th:text="${r.account.code}">1200</span>
+                        </td>
+                        <td th:text="${r.account.name}">Inventory - Glass</td>
+                        <td th:text="#{${'account.type.' + r.account.type}}">Asset</td>
+                        <td class="num" th:text="${r.debit.signum() > 0} ? ${@num.money(r.debit)} : ''">6,161,000</td>
+                        <td class="num" th:text="${r.credit.signum() > 0} ? ${@num.money(r.credit)} : ''"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(tb.rows)}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{tb.empty}">Nothing posted yet</h3>
+                                <p th:text="#{tb.emptyHint}">The trial balance fills as receipts, import bills, cuts and adjustments post their journals</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${!#lists.isEmpty(tb.rows)}">
+                    <tr>
+                        <th colspan="3" th:text="#{journal.totals}">Total</th>
+                        <th class="num" th:text="${@num.money(tb.debit)}">6,161,000</th>
+                        <th class="num" th:text="${@num.money(tb.credit)}">6,161,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/accounting/trial-balance', ${tbQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

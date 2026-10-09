@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${account.code + ' ' + account.name}, ~{::content})}">
+<head><title>Account - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1>
+                <span class="mono" th:text="${account.code}">1200</span>
+                <span class="page-title-name" th:text="${account.name}">Inventory - Glass</span>
+            </h1>
+            <div class="subtitle">
+                <span th:text="#{${'account.type.' + account.type}}">Asset</span>
+                <span class="badge badge-success" th:if="${account.enabled}" th:text="#{common.active}">Active</span>
+                <span class="badge badge-secondary" th:unless="${account.enabled}" th:text="#{common.inactive}">Inactive</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/accounts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_ACCOUNTS')">
+                <form th:if="${account.enabled and !account.system}" th:action="@{/accounting/accounts/{id}/disable(id=${account.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{account.disableConfirm(${account.code})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{account.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${account.enabled}" th:action="@{/accounting/accounts/{id}/enable(id=${account.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{account.enableConfirm(${account.code})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{account.enable}">Activate</button>
+                </form>
+                <a th:href="@{/accounting/accounts/{id}/edit(id=${account.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-ledger" th:classappend="${tab == 'ledger'} ? 'active'">
+                <span th:text="#{account.ledger}">Ledger</span>
+                <span class="section-count" th:text="${ledger.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+
+        <div class="section-body">
+            <div class="tab-content" id="tab-ledger" th:classappend="${tab == 'ledger'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{account.balance}">Balance (RWF)</label>
+                        <div class="value strong" th:text="${@num.money(balance)}">6,161,000</div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{journal.date}">Date</th>
+                                <th th:text="#{journal.number}">Journal</th>
+                                <th th:text="#{journal.source}">Event</th>
+                                <th th:text="#{journal.about}">About</th>
+                                <th class="num" th:text="#{journal.debit}">Debit</th>
+                                <th class="num" th:text="#{journal.credit}">Credit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${ledger.content}">
+                                <td class="nowrap" th:text="${#temporals.format(l.entry.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                                <td><a class="mono" th:href="@{/accounting/journals/{id}(id=${l.entry.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="${l.entry.number}">JV-WH-2026-000001</a></td>
+                                <td><th:block th:replace="~{journals/list :: source(${l.entry})}"></th:block></td>
+                                <td>
+                                    <span class="mono" th:if="${l.product != null}" th:text="${l.product.code}">CLR-6</span>
+                                    <span th:if="${l.supplier != null}" th:text="${l.supplier.name}">Shandong Glass</span>
+                                    <div class="cell-sub mono" th:if="${l.memo != null}" th:text="${l.memo}">BL-778</div>
+                                    <span class="text-muted" th:if="${l.product == null and l.supplier == null and l.memo == null}">—</span>
+                                </td>
+                                <td class="num" th:text="${l.debit.signum() > 0} ? ${@num.money(l.debit)} : ''">941,966.40</td>
+                                <td class="num" th:text="${l.credit.signum() > 0} ? ${@num.money(l.credit)} : ''"></td>
+                            </tr>
+                            <tr th:if="${ledger.totalElements == 0}">
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{account.noLines}">Nothing posted to this account yet</h3>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${ledger}, ${'/accounting/accounts/' + account.id}, 'tab=ledger')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{account.code}">Code</label>
+                        <div class="value mono" th:text="${account.code}">1200</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{account.name}">Account</label>
+                        <div class="value" th:text="${account.name}">Inventory - Glass</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{account.type}">Type</label>
+                        <div class="value" th:text="#{${'account.type.' + account.type}}">Asset</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{account.postingRole}">Posting role</label>
+                        <div class="value" th:text="${account.system} ? #{${'account.key.' + account.systemKey}} : '—'">Glass in stock</div>
+                    </div>
+                    <div class="item item-full">
+                        <label th:text="#{account.description}">Description</label>
+                        <div class="value" th:text="${account.description ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(account.createdAt, 'dd/MM/yyyy HH:mm') + (account.createdBy != null ? ' · ' + account.createdBy : '')}">09/10/2026 08:00 · system</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${account.version > 0} ? ${#temporals.format(account.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + account.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+                <p class="form-note" th:if="${account.system}" th:text="#{account.systemNote}">The posting rules use this account: it can be renamed and renumbered, but it keeps its type and stays active.</p>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/accounting/accounts/' + account.id}, 'tab=history')}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Account/{id}(id=${account.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

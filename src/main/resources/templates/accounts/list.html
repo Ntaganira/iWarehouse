@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{account.title}, ~{::content})}">
+<head><title>Chart of Accounts - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{account.title}">Chart of Accounts</h1>
+            <div class="subtitle" th:text="#{account.subtitle}">The accounts the journals post to, with their balances in RWF</div>
+        </div>
+        <a href="/accounting/accounts/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_ACCOUNTS')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{account.add}">Add account</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{account.sectionTitle}">Accounts</span>
+                <span class="section-count" th:text="${accounts.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/accounting/accounts}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{account.searchPh}" th:aria-label="#{account.searchPh}">
+                </div>
+                <select name="type" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{account.type}">
+                    <option value="" th:selected="${type == null or type == ''}" th:text="#{account.allTypes}">All types</option>
+                    <option th:each="t : ${types}" th:value="${t}" th:selected="${t.name() == type}" th:text="#{${'account.type.' + t}}">Asset</option>
+                </select>
+                <select name="inactive" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="false" th:selected="${!inactive}" th:text="#{account.activeOnly}">Active accounts</option>
+                    <option value="true" th:selected="${inactive}" th:text="#{account.withInactive}">With inactive ones</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{account.code}">Code</th>
+                        <th th:text="#{account.name}">Account</th>
+                        <th th:text="#{account.type}">Type</th>
+                        <th class="num" th:text="#{account.balance}">Balance (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${accounts.content}" th:with="n=${net.get(a.id)}" th:classappend="${!a.enabled} ? 'row-inactive'">
+                        <td><a class="row-link mono strong" th:href="@{/accounting/accounts/{id}(id=${a.id})}" th:text="${a.code}">1200</a></td>
+                        <td>
+                            <span th:text="${a.name}">Inventory - Glass</span>
+                            <div class="cell-sub" th:if="${a.system}" th:text="#{account.systemShort}">Used by the posting rules</div>
+                        </td>
+                        <td th:text="#{${'account.type.' + a.type}}">Asset</td>
+                        <td class="num" th:text="${n == null} ? '—' : ${@num.money(a.type.debitNormal ? n : n.negate())}">6,161,000</td>
+                        <td>
+                            <span class="badge badge-success" th:if="${a.enabled}" th:text="#{common.active}">Active</span>
+                            <span class="badge badge-secondary" th:unless="${a.enabled}" th:text="#{common.inactive}">Inactive</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(accounts.content)}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{account.empty}">No accounts found</h3>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${accounts}, '/accounting/accounts', ${paginationQuery})}"></th:block>
+        <p class="form-note" th:text="#{account.balanceNote}">Balances are on each account's usual side: debit for assets and expenses, credit for liabilities, equity and revenue. A negative balance sits on the other side.</p>
+    </div>
+</div>
+</body>
+</html>

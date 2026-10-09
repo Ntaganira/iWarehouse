@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{journal.title}, ~{::content})}">
+<head><title>Journals - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{journal.title}">Journals</h1>
+            <div class="subtitle" th:text="#{journal.subtitle}">Every business event posts a balanced journal in RWF; posted journals never change</div>
+        </div>
+        <a href="/accounting/trial-balance" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" th:text="#{tb.title}">Trial Balance</a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${opening == null}">
+        <span th:text="#{journal.notStarted}">The ledger has not started: the inventory account is brought to the stock value by the opening stock journal.</span>
+        <a href="/accounting/trial-balance" sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" th:text="#{journal.startHere}">Start it from the trial balance</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{journal.sectionTitle}">Posted journals</span>
+                <span class="section-count" th:text="${journals.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/accounting/journals}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{journal.searchPh}" th:aria-label="#{journal.searchPh}">
+                </div>
+                <select name="source" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{journal.source}">
+                    <option value="" th:selected="${source == null or source == ''}" th:text="#{journal.allSources}">All events</option>
+                    <option th:each="s : ${sources}" th:value="${s}" th:selected="${s.name() == source}" th:text="#{${'journal.source.' + s}}">Goods receipt</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{journal.number}">Journal</th>
+                        <th th:text="#{journal.date}">Date</th>
+                        <th th:text="#{journal.source}">Event</th>
+                        <th class="num" th:text="#{journal.total}">Amount (RWF)</th>
+                        <th th:text="#{journal.postedBy}">Posted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="j : ${journals.content}">
+                        <td><a class="row-link strong mono" th:href="@{/accounting/journals/{id}(id=${j.id})}" th:text="${j.number}">JV-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(j.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                        <td><th:block th:replace="~{journals/list :: source(${j})}"></th:block></td>
+                        <td class="num" th:text="${@num.money(j.total)}">941,966.40</td>
+                        <td class="nowrap">
+                            <span th:text="${j.username}">accountant1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(j.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:00</div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(journals.content)}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{journal.empty}">No journals found</h3>
+                                <p th:text="#{journal.emptyHint}">Receipts, import bills, cuts, adjustments and claims post their journals here</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${journals}, '/accounting/journals', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* The event a journal records and its document: "Goods receipt GRN-WH-2026-000005" */-->
+<th:block th:fragment="source(j)">
+    <span th:text="#{${'journal.source.' + j.sourceType}}">Goods receipt</span>
+    <a class="mono" th:if="${j.sourceLink != null}" th:href="${j.sourceLink}" th:text="${j.sourceNumber}">GRN-WH-2026-000005</a>
+</th:block>
+
+<!--/* Journals of a document, as links: "JV-WH-2026-000003, JV-WH-2026-000007" */-->
+<th:block th:fragment="journalLinks(journals)"><th:block th:each="j, st : ${journals}"><a class="mono" th:href="@{/accounting/journals/{id}(id=${j.id})}"
+        th:text="${j.number}">JV-WH-2026-000001</a><span th:unless="${st.last}">, </span></th:block></th:block>
+
+<!--/* "Journal" item of a document's details, for those who see the accounts (ACC-04) */-->
+<th:block th:fragment="journalItem(journals)">
+    <div class="item" sec:authorize="hasAuthority('PAGE_ACCOUNTING') and hasAuthority('PERM_VIEW_ACCOUNTING')" th:if="${!#lists.isEmpty(journals)}">
+        <label th:text="#{journal.postedIn}">Journal</label>
+        <div class="value"><th:block th:replace="~{journals/list :: journalLinks(${journals})}"></th:block></div>
+    </div>
+</th:block>
+</body>
+</html>

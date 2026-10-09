@@ -132,6 +132,7 @@
                         <label th:text="#{product.notes}">Notes</label>
                         <div class="value" th:text="${shipment.notes ?: '—'}">—</div>
                     </div>
+                    <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
                 </div>
 
                 <div class="table-container">
@@ -365,6 +366,10 @@
                                 <label th:text="#{shipment.claimReceived(${base.code})}">Received (RWF)</label>
                                 <div class="value strong" th:text="${@num.money(shipment.claimSettledAmount)}">450,000</div>
                             </div>
+                            <div class="item" th:if="${shipment.claimReceivedInto != null}">
+                                <label th:text="#{shipment.claimReceivedInto}">Received as</label>
+                                <div class="value" th:text="#{${'shipment.claimInto.' + shipment.claimReceivedInto}}">Bank transfer</div>
+                            </div>
                             <div class="item" th:if="${shipment.claimNote != null}">
                                 <label th:text="${claim == 'REJECTED'} ? #{shipment.claimWhyRejected} : #{shipment.claimNote}">Note</label>
                                 <div class="value" th:text="${shipment.claimNote}">Credit note CN-12</div>
@@ -448,6 +453,14 @@
                             <input type="number" id="settle-amount" name="received" min="0" step="0.01" required inputmode="decimal"
                                    th:value="${@num.plain(shipment.claimAmount)}">
                             <span class="hint" th:text="#{shipment.claimReceivedHint}">Paid or credited by the supplier or insurer</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="settle-into" th:text="#{shipment.claimReceivedInto}">Received as</label>
+                            <select id="settle-into" name="receivedInto">
+                                <option th:each="r : ${claimSettlements}" th:value="${r}"
+                                        th:text="#{${'shipment.claimInto.' + r}}">Bank transfer</option>
+                            </select>
+                            <span class="hint" th:text="#{shipment.claimReceivedIntoHint}">Decides the account the journal debits</span>
                         </div>
                         <div class="form-group">
                             <label for="settle-note" th:text="#{shipment.claimNote}">Note</label>

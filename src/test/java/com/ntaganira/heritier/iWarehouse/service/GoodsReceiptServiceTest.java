@@ -79,7 +79,7 @@ class GoodsReceiptServiceTest {
 
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
         service = new GoodsReceiptService(repo, mock(CrateBatchRepository.class), orderRepo, productRepo, stockService,
-                rateService, mock(DocumentNumberService.class), settings, clock);
+                mock(PostingService.class), rateService, mock(DocumentNumberService.class), settings, clock);
     }
 
     // ---------------------------------------------------------------- checks

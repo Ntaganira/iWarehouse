@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${journal.number}, ~{::content})}">
+<head><title>Journal - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${journal.number}">JV-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{${'journal.source.' + journal.sourceType}}">Goods receipt</span>
+                <span class="mono" th:if="${journal.sourceNumber != null}" th:text="${journal.sourceNumber}">GRN-WH-2026-000005</span>
+                <span th:text="${'· ' + #temporals.format(journal.entryDate, 'dd/MM/yyyy')}">· 09/10/2026</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/journals" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${journal.sourceLink != null}" th:href="${journal.sourceLink}" class="btn btn-outline"
+               th:text="#{journal.openSource(${journal.sourceNumber})}">Open GRN-WH-2026-000005</a>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${!#lists.isEmpty(sameSource)}">
+        <span th:text="#{journal.sameSource(${journal.sourceNumber})}">Other journals of GRN-WH-2026-000005:</span>
+        <th:block th:replace="~{journals/list :: journalLinks(${sameSource})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{journal.date}">Date</label>
+                    <div class="value" th:text="${#temporals.format(journal.entryDate, 'dd/MM/yyyy')}">09/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{journal.source}">Event</label>
+                    <div class="value"><th:block th:replace="~{journals/list :: source(${journal})}"></th:block></div>
+                </div>
+                <div class="item">
+                    <label th:text="#{journal.postedBy}">Posted</label>
+                    <div class="value" th:text="${#temporals.format(journal.postedAt, 'dd/MM/yyyy HH:mm') + ' · ' + journal.username}">09/10/2026 10:00 · accountant1</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{journal.total}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(journal.total)}">941,966.40</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{journal.lines}">Lines</span>
+                <span class="section-count" th:text="${lines.size()}">3</span>
+            </h2>
+        </div>
+        <div class="section-body">
+            <div class="table-container">
+                <table class="journal-lines">
+                    <thead>
+                        <tr>
+                            <th class="num">#</th>
+                            <th th:text="#{journal.account}">Account</th>
+                            <th th:text="#{journal.about}">About</th>
+                            <th class="num" th:text="#{journal.debit}">Debit</th>
+                            <th class="num" th:text="#{journal.credit}">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="l : ${lines}">
+                            <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                            <td>
+                                <a th:href="@{/accounting/accounts/{id}(id=${l.account.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTS')">
+                                    <span class="mono" th:text="${l.account.code}">1200</span> <span th:text="${l.account.name}">Inventory - Glass</span>
+                                </a>
+                                <span sec:authorize="!hasAuthority('PAGE_ACCOUNTS')"><span class="mono" th:text="${l.account.code}">1200</span> <span th:text="${l.account.name}">Inventory - Glass</span></span>
+                            </td>
+                            <td>
+                                <span class="mono" th:if="${l.product != null}" th:text="${l.product.code}">CLR-6</span>
+                                <span th:if="${l.supplier != null}" th:text="${l.supplier.name}">Shandong Glass</span>
+                                <div class="cell-sub mono" th:if="${l.memo != null}" th:text="${l.memo}">BL-778</div>
+                                <div class="cell-sub" th:if="${l.currencyCode != null}"
+                                     th:text="#{journal.fx(${@num.money(l.fxAmount)}, ${l.currencyCode}, ${@num.rate(l.rate)})}">682.53 USD at 1,449.123456</div>
+                                <span class="text-muted" th:if="${l.product == null and l.supplier == null and l.memo == null and l.currencyCode == null}">—</span>
+                            </td>
+                            <td class="num" th:text="${l.debit.signum() > 0} ? ${@num.money(l.debit)} : ''">941,966.40</td>
+                            <td class="num" th:text="${l.credit.signum() > 0} ? ${@num.money(l.credit)} : ''"></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th></th>
+                            <th colspan="2" th:text="#{journal.totals}">Total</th>
+                            <th class="num" th:text="${@num.money(debits)}">989,064.72</th>
+                            <th class="num" th:text="${@num.money(credits)}">989,064.72</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{journal.appendOnly}">A posted journal never changes: a mistake is corrected by a new journal from the document that caused it.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

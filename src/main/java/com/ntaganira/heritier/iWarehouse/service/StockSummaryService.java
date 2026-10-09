@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +56,18 @@ public class StockSummaryService {
         Map<UUID, Location> locations = stockService.locationsById();
         List<StockSummary.Row> rows = StockSummary.group(facts, groupBy, byId, locations);
         return new View(groupBy, rows, StockSummary.total(rows), StockSummary.reorder(all, products));
+    }
+
+    /** The stock value of each glass as the summary shows it (m² held x MAC, rounded per glass): what AT-10 checks. */
+    public Map<UUID, BigDecimal> valueByProduct() {
+        Map<UUID, Product> byId = productRepo.findAll().stream().collect(Collectors.toMap(Product::getId, Function.identity()));
+        Map<UUID, BigDecimal> values = new LinkedHashMap<>();
+        for (StockSummary.Row row : StockSummary.group(facts(), StockSummary.GroupBy.PRODUCT, byId, Map.of())) {
+            if (row.product() != null) {
+                values.put(row.product().getId(), row.value());
+            }
+        }
+        return values;
     }
 
     /** Products below their reorder level (dashboard, INV-10). */

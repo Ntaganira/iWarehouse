@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
 import com.ntaganira.heritier.iWarehouse.enums.AllocationMethod;
+import com.ntaganira.heritier.iWarehouse.enums.ClaimSettlement;
 import com.ntaganira.heritier.iWarehouse.enums.ClaimStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ShipmentCostStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ShipmentStatus;
@@ -88,6 +89,11 @@ public class Shipment extends BaseEntity {
     /** RWF received. */
     @Column(name = "claim_settled_amount", precision = 18, scale = 2)
     private BigDecimal claimSettledAmount;
+
+    /** How the money of a settled claim came in: the account the journal debits. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "claim_received_into", length = 20)
+    private ClaimSettlement claimReceivedInto;
 
     /** Settlement note, or why the claim was rejected. */
     @Column(name = "claim_note", length = 255)

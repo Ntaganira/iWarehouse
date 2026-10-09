@@ -43,6 +43,10 @@
         <strong th:text="#{adjustment.postedOn(${#temporals.format(adjustment.postedAt, 'dd/MM/yyyy HH:mm')})}">Posted on 2026-10-08 16:21</strong>
         <span th:if="${adjustment.decidedBy != null}" th:text="#{adjustment.approvedBy(${adjustment.decidedBy})}">approved by owner</span>
         <span th:if="${adjustment.decisionNote != null}" th:text="${'· ' + adjustment.decisionNote}">· ok</span>
+        <th:block sec:authorize="hasAuthority('PAGE_ACCOUNTING') and hasAuthority('PERM_VIEW_ACCOUNTING')" th:if="${!#lists.isEmpty(journals)}">
+            · <span th:text="#{journal.postedIn}">Journal</span>
+            <th:block th:replace="~{journals/list :: journalLinks(${journals})}"></th:block>
+        </th:block>
     </div>
 
     <div class="section">

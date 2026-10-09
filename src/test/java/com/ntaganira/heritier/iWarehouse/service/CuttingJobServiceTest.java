@@ -99,7 +99,7 @@ class CuttingJobServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
         StockService stockService = new StockService(unitRepo, movementRepo, costEntryRepo, adjustmentLineRepo, mock(StockCountRepository.class), locationRepo, numbers, clock);
         service = new CuttingJobService(repo, mock(CuttingJobLineRepository.class), outputRepo, productRepo, customerRepo,
-                serviceRepo, unitRepo, stockService, numbers, settings, clock);
+                serviceRepo, unitRepo, stockService, mock(PostingService.class), numbers, settings, clock);
     }
 
     // ---------------------------------------------------------------- drafts (PRD-01)

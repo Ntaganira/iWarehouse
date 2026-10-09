@@ -58,6 +58,7 @@ public class ShipmentService {
     private final SupplierRepository supplierRepo;
     private final CurrencyRepository currencyRepo;
     private final StockService stockService;
+    private final PostingService postingService;
     private final ExchangeRateService rateService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
@@ -66,7 +67,8 @@ public class ShipmentService {
     public ShipmentService(ShipmentRepository repo, ShipmentReceiptRepository linkRepo, ShipmentCostRepository costRepo,
                            ShipmentAllocationRepository allocationRepo, GoodsReceiptRepository receiptRepo,
                            CrateBatchRepository crateRepo, ProductRepository productRepo, SupplierRepository supplierRepo,
-                           CurrencyRepository currencyRepo, StockService stockService, ExchangeRateService rateService,
+                           CurrencyRepository currencyRepo, StockService stockService, PostingService postingService,
+                           ExchangeRateService rateService,
                            DocumentNumberService numbers, SettingService settingService, Clock clock) {
         this.repo = repo;
         this.linkRepo = linkRepo;
@@ -78,6 +80,7 @@ public class ShipmentService {
         this.supplierRepo = supplierRepo;
         this.currencyRepo = currencyRepo;
         this.stockService = stockService;
+        this.postingService = postingService;
         this.rateService = rateService;
         this.numbers = numbers;
         this.settingService = settingService;
@@ -462,10 +465,12 @@ public class ShipmentService {
                         .distinct().toList()).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
 
+        PostingService.StockValues valueBefore = postingService.stockValues(products.values());
         int postingNo = shipment.getPostings() + 1;
         LocalDateTime now = LocalDateTime.now(clock);
         String username = AppUserPrincipal.currentUsername();
         List<BigDecimal> base = new ArrayList<>();
+        List<ShipmentCost> bills = new ArrayList<>();
         int lines = 0;
         for (ShipmentCost cost : shipment.getCosts()) {
             if (cost.getStatus() != ShipmentCostStatus.DRAFT) {
@@ -480,6 +485,7 @@ public class ShipmentService {
             cost.setPostedAt(now);
             cost.setPostedBy(username);
             base.add(rate.toBase(cost.getAmount()));
+            bills.add(cost);
             lines++;
         }
         BigDecimal total = LandedCost.postingTotal(base, baseDecimals());
@@ -549,6 +555,7 @@ public class ShipmentService {
             }
             product.setMacPerM2(mac);
         }
+        postingService.shipmentPosting(shipment, postingNo, bills, base, total, expensed, broken, valueBefore);
         return new PostResult(shipment, postingNo, lines, total, toStock, expensed, broken, units);
     }
 
@@ -635,15 +642,19 @@ public class ShipmentService {
         shipment.setClaimRef(cleanRef);
         shipment.setClaimDate(date);
         shipment.setClaimAmount(amount.setScale(2, RoundingMode.UNNECESSARY));
+        postingService.claimOpened(shipment);
         return shipment;
     }
 
-    /** The claim was paid or credited: the amount received. */
+    /** The claim was paid or credited: the amount received and how it came in (the account the journal debits). */
     @Transactional
-    public Shipment settleClaim(UUID id, BigDecimal received, String note) {
+    public Shipment settleClaim(UUID id, BigDecimal received, ClaimSettlement receivedInto, String note) {
         Shipment shipment = requireOpenClaim(id);
         if (received == null || received.signum() < 0 || received.stripTrailingZeros().scale() > 2) {
             throw BusinessException.of("shipment.claim.settled.invalid");
+        }
+        if (received.signum() > 0 && receivedInto == null) {
+            throw BusinessException.of("shipment.claim.receivedInto.required");
         }
         String cleanNote = PartyRules.clean(note);
         if (cleanNote != null && cleanNote.length() > 255) {
@@ -651,7 +662,9 @@ public class ShipmentService {
         }
         shipment.setClaimStatus(ClaimStatus.SETTLED);
         shipment.setClaimSettledAmount(received.setScale(2, RoundingMode.UNNECESSARY));
+        shipment.setClaimReceivedInto(received.signum() > 0 ? receivedInto : null);
         shipment.setClaimNote(cleanNote);
+        postingService.claimSettled(shipment);
         return shipment;
     }
 
@@ -661,6 +674,7 @@ public class ShipmentService {
         Shipment shipment = requireOpenClaim(id);
         shipment.setClaimStatus(ClaimStatus.REJECTED);
         shipment.setClaimNote(reason.trim());
+        postingService.claimRejected(shipment);
         return shipment;
     }
 

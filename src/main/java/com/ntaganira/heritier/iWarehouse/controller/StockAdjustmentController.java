@@ -12,6 +12,7 @@ import com.ntaganira.heritier.iWarehouse.enums.*;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import com.ntaganira.heritier.iWarehouse.service.JournalService;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.StockAdjustmentService;
@@ -53,6 +54,7 @@ public class StockAdjustmentController {
     private static final int REASON_MAX = 255;
 
     private final StockAdjustmentService adjustmentService;
+    private final JournalService journalService;
     private final StockService stockService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
@@ -61,10 +63,12 @@ public class StockAdjustmentController {
     private final NumberFormats num;
 
     public StockAdjustmentController(StockAdjustmentService adjustmentService, StockService stockService,
-                                     DataChangeService dataChangeService, ActivityLogService activityLogService,
-                                     Validator validator, Messages messages, NumberFormats num) {
+                                     DataChangeService dataChangeService, JournalService journalService,
+                                     ActivityLogService activityLogService, Validator validator, Messages messages,
+                                     NumberFormats num) {
         this.adjustmentService = adjustmentService;
         this.stockService = stockService;
+        this.journalService = journalService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.validator = new SpringValidatorAdapter(validator);
@@ -92,6 +96,7 @@ public class StockAdjustmentController {
                        @RequestParam(defaultValue = "0") int page, Model model) {
         StockAdjustment adjustment = adjustmentService.findDetailed(id);
         model.addAttribute("adjustment", adjustment);
+        model.addAttribute("journals", journalService.forSource(id, JournalSource.ADJUSTMENT));
         model.addAttribute("units", adjustmentService.unitsOf(adjustment));
         model.addAttribute("limit", adjustmentService.approvalLimit());
         model.addAttribute("mine", isMine(adjustment));

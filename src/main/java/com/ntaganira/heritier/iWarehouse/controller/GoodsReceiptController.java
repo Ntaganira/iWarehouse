@@ -7,10 +7,12 @@ import com.ntaganira.heritier.iWarehouse.dto.GoodsReceiptDto;
 import com.ntaganira.heritier.iWarehouse.entity.CrateBatch;
 import com.ntaganira.heritier.iWarehouse.entity.GoodsReceipt;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrder;
+import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.GoodsReceiptStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.service.JournalService;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.GoodsReceiptService;
@@ -52,6 +54,7 @@ public class GoodsReceiptController {
     private static final int REASON_MAX = 255;
 
     private final GoodsReceiptService receiptService;
+    private final JournalService journalService;
     private final PurchaseOrderService orderService;
     private final StockService stockService;
     private final ShipmentService shipmentService;
@@ -62,11 +65,12 @@ public class GoodsReceiptController {
 
     public GoodsReceiptController(GoodsReceiptService receiptService, PurchaseOrderService orderService,
                                   StockService stockService, ShipmentService shipmentService,
-                                  DataChangeService dataChangeService,
+                                  DataChangeService dataChangeService, JournalService journalService,
                                   ActivityLogService activityLogService, Validator validator, Messages messages) {
         this.receiptService = receiptService;
         this.orderService = orderService;
         this.stockService = stockService;
+        this.journalService = journalService;
         this.shipmentService = shipmentService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
@@ -97,6 +101,7 @@ public class GoodsReceiptController {
         GoodsReceipt receipt = receiptService.findDetailed(id);
         String open = List.of("crates", "units", "history").contains(tab) ? tab : "crates";
         model.addAttribute("receipt", receipt);
+        model.addAttribute("journals", journalService.forSource(id, JournalSource.GOODS_RECEIPT));
         model.addAttribute("units", Paging.of(receipt.getStatus() == GoodsReceiptStatus.POSTED ? stockService.unitsOfReceipt(id) : List.of(),
                 Paging.pageOf("units", open, page)));
         // The shipment it came in and the landed cost per m² posted to its crates (PRC-05).

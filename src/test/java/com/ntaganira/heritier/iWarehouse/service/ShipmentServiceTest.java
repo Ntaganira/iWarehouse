@@ -80,7 +80,7 @@ class ShipmentServiceTest {
         StockService stockService = new StockService(unitRepo, mock(StockMovementRepository.class), costEntryRepo, mock(StockAdjustmentLineRepository.class), mock(StockCountRepository.class),
                 mock(LocationRepository.class), mock(DocumentNumberService.class), clock);
         service = new ShipmentService(repo, linkRepo, mock(ShipmentCostRepository.class), allocationRepo, receiptRepo,
-                crateRepo, productRepo, supplierRepo, currencyRepo, stockService, rateService,
+                crateRepo, productRepo, supplierRepo, currencyRepo, stockService, mock(PostingService.class), rateService,
                 mock(DocumentNumberService.class), settings, clock);
 
         // One posted receipt: crate A (CLR-6, 3 good + 1 broken), crate B (CLR-8, 2 good)
@@ -297,7 +297,7 @@ class ShipmentServiceTest {
         assertThatThrownBy(() -> service.openClaim(shipment.getId(), "Insurer", null, TODAY, BigDecimal.TEN))
                 .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("shipment.claim.exists"));
 
-        service.settleClaim(shipment.getId(), new BigDecimal("80000"), "Credit note CN-12");
+        service.settleClaim(shipment.getId(), new BigDecimal("80000"), ClaimSettlement.PAYABLE, "Credit note CN-12");
         assertThat(shipment.getClaimStatus()).isEqualTo(ClaimStatus.SETTLED);
         assertThat(shipment.getClaimSettledAmount()).isEqualByComparingTo("80000");
         assertThatThrownBy(() -> service.rejectClaim(shipment.getId(), "late"))

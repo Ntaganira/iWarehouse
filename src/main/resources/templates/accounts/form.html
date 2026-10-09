@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${accountDto.id == null} ? #{account.addTitle} : #{account.editTitle}, ~{::content})}">
+<head><title>Account - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${accountDto.id == null} ? #{account.addTitle} : #{account.editTitle}">Add Account</h1>
+            <div class="subtitle" th:text="#{account.formSubtitle}">Code, name and type of an account of the chart</div>
+        </div>
+        <a th:href="${accountDto.id == null} ? @{/accounting/accounts} : @{/accounting/accounts/{id}(id=${accountDto.id}, tab='details')}"
+           class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${accountDto.id == null} ? @{/accounting/accounts/new} : @{/accounting/accounts/{id}/edit(id=${accountDto.id})}"
+              th:object="${accountDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{account.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" class="input-code" maxlength="10" required autocapitalize="characters"
+                           spellcheck="false" th:placeholder="#{account.codePh}" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                    <span class="hint" th:text="#{account.codeHint}">Digits first, unique: 1xxx assets, 2xxx liabilities, 3xxx equity, 4xxx revenue, 5xxx expenses</span>
+                </div>
+                <div class="form-group">
+                    <label for="type" th:text="#{account.type}">Type</label>
+                    <select id="type" th:field="*{type}" th:disabled="${typeFixed}" th:classappend="${#fields.hasErrors('type')} ? 'is-invalid'">
+                        <option value="" th:text="#{account.chooseType}">Choose a type</option>
+                        <option th:each="t : ${types}" th:value="${t}" th:text="#{${'account.type.' + t}}">Asset</option>
+                    </select>
+                    <input type="hidden" th:if="${typeFixed}" name="type" th:value="*{type}">
+                    <span class="field-error" th:if="${#fields.hasErrors('type')}" th:errors="*{type}"></span>
+                    <span class="hint" th:text="${typeFixed} ? #{account.typeFixedHint} : #{account.typeHint}">Fixed once journals post to it</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="name" th:text="#{account.name}">Account</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="80" required th:placeholder="#{account.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description" th:text="#{account.description}">Description</label>
+                    <input type="text" id="description" th:field="*{description}" maxlength="255" th:placeholder="#{account.descriptionPh}"
+                           th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                </div>
+            </div>
+            <p class="form-note" th:if="${account != null and account.system}" th:text="#{account.systemNote}">The posting rules use this account: it can be renamed and renumbered, but it keeps its type and stays active.</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{account.save}">Save Account</button>
+                <a th:href="${accountDto.id == null} ? @{/accounting/accounts} : @{/accounting/accounts/{id}(id=${accountDto.id}, tab='details')}"
+                   class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

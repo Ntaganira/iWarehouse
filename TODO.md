@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V16.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V17.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-09)
@@ -24,8 +24,8 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Inventory operations: reservations, transfers, adjustments, valuation, reorder | Done (M1) | V13, `/stock-transfers`, `/stock-adjustments`, `/stock/summary` |
 | Stock counts by scanning | Done (M1) | V14, `/stock-counts` |
 | Rack and slot labels; put-away decided (none) | Done (M1) | V15, labels from `/locations/{id}` |
-| Accounting: chart of accounts, posting engine, journals | **Next** (M2) | — |
-| Counter sales: POS, quotations, invoices, payments, returns, VAT | Not started (M3) | — |
+| Accounting core: chart of accounts, posting engine, journals, trial balance (AT-10 passes) | Done (M2) | V16, `/accounting/journals`, `/accounting/accounts`, `/accounting/trial-balance` |
+| Counter sales: POS, quotations, invoices, payments, returns, VAT | **Next** (M3) | — |
 | EBM / VSDC fiscal signing | Not started (M4) | — |
 | Customer and supplier accounts, period close, financial statements | Not started (M5) | — |
 | Dashboard, reports, alerts, notifications, files | Not started (M6) | — |
@@ -34,7 +34,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 293, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; AT-03 to AT-10 wait for their milestones.
+Unit tests: 309, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02 and AT-10 (for the events built so far) pass; AT-03 to AT-09 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -56,21 +56,6 @@ Unit tests: 293, all passing. Acceptance tests (SRS 8.1): AT-01 and AT-02 pass; 
 - [ ] Staff trained per role (cashier, cutting operator, supervisor, driver, accountant, owner)
 
 ---
-
-## M2 — Accounting core: chart of accounts and posting engine
-
-Goal: every business event posts a balanced journal in the same transaction (ACC-01, ACC-03, ACC-04, NFR-05). Must come before sales, so sales post from day one.
-
-- [ ] Chart of accounts with a default glass-business template (ACC-03) (M): Inventory – Glass, Goods Received Not Invoiced, Accounts Payable (per currency), Accounts Receivable, Cash on Hand, Main Cash Vault, Bank, Mobile Money, Customer Deposits, Claims Receivable, Driver Float (per driver), Driver Shortage Receivable, Sales Revenue, Sales Returns, VAT Output, VAT Input, Cost of Goods Sold, Glass Spoilage Expense, Inventory Adjustment Expense, Cash Over/Short, FX Gain/Loss
-- [ ] Journal entries and lines (M): JV numbers, date, period, source document, status; lines in RWF with the original currency and rate (ACC-01); append-only, debits = credits enforced in the database; corrections by reversal only
-- [ ] `PostingService` with one rule per event of the posting matrix (SRS 4.9.1), called inside each module's transaction (M). Events that exist today:
-  - [ ] Crate received: Dr Inventory / Cr Goods Received Not Invoiced, from the receipt cost
-  - [ ] Shipment posting: import charges Dr Inventory (part that reached stock, `shipment_allocations.stock_amount`) / Cr Accounts Payable (bill with a supplier) or Cash; the expensed part to Cost of Goods Sold; the broken part to Claims Receivable while the claim is open, the shortfall of a settled or rejected claim to Glass Spoilage
-  - [ ] Cut: cullet and breakage Dr Glass Spoilage / Cr Inventory (`cutting_jobs.cullet_cost` + `broken_cost`)
-  - [ ] Adjustments (M1): loss Dr Inventory Adjustment Expense or Glass Spoilage / Cr Inventory; gain the reverse
-- [ ] Journal viewer and trial balance (ACC-11, first part) (M), enough to check AT-10
-- [ ] Test: every journal balances, and the Inventory account equals the stock valuation report (AT-10) (M)
-- [ ] Go-live start: an opening-balances journal from the valuation at go-live; earlier dev events are not back-posted (S)
 
 ## M3 — Counter sales
 
@@ -209,6 +194,13 @@ Answers change what gets built; record each answer next to the question.
 - [ ] A bill posted after a sheet was cut is expensed for that sheet (built). Should it go to its pieces and off-cuts still in stock instead? (PRC-05, PRD-07)
 - [ ] Which currencies does the business buy in (seeded active: USD, EUR, CNY)? Is any sale ever invoiced in a foreign currency? (ACC-02)
 
+**Accounting**
+- [ ] The chart of accounts (V16) is a template in English: confirm the numbering and names with the accountant, and whether they should read in French (ACC-03)
+- [ ] Import bills entered without a supplier (duty, port charges) wait in Accrued Import Charges until their payment is recorded (M5). Are they paid in cash at the border, by bank, by the clearing agent? (SRS 4.9.1: "Accounts Payable / Cash")
+- [ ] Import VAT paid at customs is recoverable (VAT Input), not a cost of the glass: keep it out of the shipment bills. Confirm how it is paid and declared (TAX-05)
+- [ ] Import costs reaching glass already sold or cut go to Cost of Goods Sold (built). Agree
+- [ ] Sheets broken on arrival are expensed to Glass Spoilage at receipt; a claim brings back what it recovers (built). Agree
+
 **Sales and money**
 - [ ] Approvals of stock adjustments: built as the supervisor or the owner, never the person who asked; limit 0 so every adjustment needs approval. Confirm who approves and the limit (INV-07, ADM-04)
 - [ ] Real selling prices: RETAIL holds test prices only (CLR-6 27,000, LAM-6.38 41,000.50, edging 1,500, drilling 500), plus a test CONTRACTOR list (MD-06)
@@ -232,6 +224,7 @@ Answers change what gets built; record each answer next to the question.
 - 60 stock units; MAC on CLR-6, CLR-8, MIR-4
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
+- Ledger started on 2026-10-09: opening stock JV-WH-2026-000001 (7,135,242.24 RWF), then ADJ-WH-2026-000006 (U-WH-000060 written off as broken, approved by owner38648) and its journal JV-WH-2026-000002. Account 5190 "Office rent (test)", deactivated. Go-live starts the ledger again from an empty database
 - Labels printed for WH-A-OC, WH-A-R01, WH-A-R02 and WH-A-R04 by qa-admin on 2026-10-09: their codes are fixed (the real racks get their own codes and labels at go-live)
 - Stock counts CNT-WH-2026-000001..7: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled
 - Automated-check user qa-admin (ADMIN role, created 2026-10-08 so scripted browser checks never sign the real admin out: one session per user) — disable before go-live
@@ -297,6 +290,19 @@ Answers change what gets built; record each answer next to the question.
 - [x] Put-away scan: not needed (S) — 2026-10-09: the SRS receiving flow ends with "sheets become Available on their racks", and the receipt already names each crate's rack, so posting puts the sheets there as AVAILABLE. A crate set down elsewhere is moved with a transfer (scan its sheets and the rack's label) or found by a count. RECEIVED stays unused; a put-away step comes back only if the warehouse adds a receiving bay (question below)
 - [x] Rack and slot labels (MD-02) (S) — 2026-10-09: V15. "Print labels" on a rack, slot, zone or site page prints its active racks and slots (50 x 30 mm, QR of the code, type, name, where it is; print page or ZPL, `Labels.placeZpl`). The first print fixes each code (who and when are kept; the edit form shows the code read-only; a database trigger refuses a change), so it asks first; a reprint changes nothing. Scanning a rack or slot label: in a transfer it chooses where the units go; in a count it sets where the next labels were found (a zone or a place outside the count is refused); in the stock search it lists what is on that place
 - Done when: a unit can be transferred, written off, found, corrected and counted with its full movement history; the valuation report total equals the stock value used by the MAC. Met: transfers, adjustments, counts and the valuation report are in place, and every change is a movement on the unit
+
+### Accounting core, M2 (2026-10-09)
+- [x] Chart of accounts with the glass-business template (ACC-03) (M) — `/accounting/accounts` (V16). 26 accounts: the SRS list (cash, vault, bank, mobile money, driver float, receivables, claims, driver shortages, VAT input, Inventory - Glass, payables, GRNI, customer deposits, VAT output, capital, retained earnings, sales, sales returns, COGS, spoilage, adjustments, cash over/short, FX) plus Accrued Import Charges, Opening Balance Equity and Inventory Revaluation. The posting rules find their accounts by system key (`AccountKey`), so the accountant renames and renumbers freely; those accounts keep their type and stay active; a type is fixed once journals post to it. Each account's ledger and History. One Accounts Payable account: each line keeps its currency, amount and rate, the per-supplier and per-currency balances come with the subledger (M5). Driver floats per driver come with the drivers (M7)
+- [x] Journal entries and lines (ACC-01) (M) — JV-WH-2026-000001, date, event, document, total; lines in RWF with the foreign currency, amount and rate where the document had one, the glass on stock lines, the supplier on payable lines. Append-only (triggers), and a journal that does not balance (or has fewer than two lines) is refused by the database at commit. `reverses_id` is ready for reversing journals (manual journals, M5). Accounting periods and their close are M5 (ACC-10)
+- [x] `PostingService`, one rule per event of the posting matrix, inside the event's transaction (ACC-04) (M). Stock lines are the change of each glass's value (m² held x MAC, rounded per glass, as the valuation computes it), so the inventory account equals the valuation; the event's own amounts go to the other accounts and the moving-average rounding to Inventory Revaluation:
+  - [x] Crate received: Dr Inventory, Dr Glass Spoilage (sheets broken on arrival, at purchase cost) / Cr GRNI, every sheet the supplier will invoice, with its USD amount and rate
+  - [x] Import bills posted on a shipment: Dr Inventory (glass in stock), COGS (glass already gone), Glass Spoilage (the broken sheets' part) / Cr Accounts Payable (bill with a supplier) or Accrued Import Charges (bill without); credit notes the other way. The bills' RWF total is rounded once and split back over them exactly
+  - [x] Claims (PRC-06): sent Dr Claims Receivable / Cr Glass Spoilage; settled Dr Bank, Cash, Mobile Money or Accounts Payable (asked on the settle form) and Glass Spoilage for the shortfall / Cr Claims Receivable; rejected Dr Glass Spoilage / Cr Claims Receivable. A claim sent before the ledger started posts nothing when decided
+  - [x] Cut: Dr Glass Spoilage (cullet and breakage at the sheet's cost) / Cr Inventory
+  - [x] Adjustments: damaged glass to Glass Spoilage; missing, found, added and resized glass to Inventory Adjustment Expense (a gain credits it) / Inventory
+- [x] Journals and trial balance (ACC-11, first part) (M) — `/accounting/journals` (list by event, search; a journal with its lines, its document and the document's other journals), `/accounting/trial-balance` (as at a day, paged, totals); each posted document links its journals (receipt, shipment, cutting job, adjustment)
+- [x] AT-10 (M) — `PostingServiceTest` runs a full test day (opening, a crate with a broken sheet, USD and RWF import bills, a cut, write-offs and a unit found, a claim sent and settled): every journal balances, the books balance and the inventory account equals m² x MAC after each event. The trial balance shows the inventory account against the stock valuation, glass by glass. Checked in the browser on the dev data (opening 7,135,242.24, then a write-off approved by the owner)
+- [x] Go-live start (S) — "Post the opening stock" on the trial balance (PERM_POST_OPENING_BALANCES, accountant): brings the inventory account of each glass to its stock value of that moment (Dr Inventory / Cr Opening Balance Equity), once; earlier events are not back-posted. Other opening balances (receivables, payables, cash) come with the go-live data (M10)
 
 ### Responsive layout (2026-10-08)
 - [x] Every screen works from 360 px phones to desktops — all 86 reachable pages checked at 360, 390, 768, 1024 and 1280 px, plus the 7 that need a draft (order and job edit, receipt, shipment edit, taking a sheet, recording a cut) at 360 to 1024 px, with their dialogs. Phones and tablets (768 px and less) open the menu as a drawer from a button in the header (it was hidden there before, so most screens could not be reached). On phones (640 px and less) table rows become cards with each value labelled by its column, line forms included; list filters wrap two per row. Line forms keep usable field widths on tablets and scroll in their box. Known limit: a long rack choice ("WH-A-R04 · Rack R04 · 21/30 pcs · 1,234/3,000 kg") is cut short in the closed select on a phone; the phone picker shows it in full

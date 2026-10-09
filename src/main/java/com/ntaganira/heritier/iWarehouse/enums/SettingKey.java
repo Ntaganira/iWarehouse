@@ -34,6 +34,9 @@ public enum SettingKey {
     /** Days a quotation's prices hold by default (POS-03). */
     QUOTATION_VALIDITY_DAYS("sales.quotation-validity-days", "quotationValidityDays", "14"),
 
+    /** The smallest deposit on an order, % of its total (POS-08); the glass taken at once is paid in full. */
+    DEPOSIT_MIN_PERCENT("sales.deposit-min-percent", "depositMinPercent", "50"),
+
     /** Stock adjustments worth more than this (RWF) need supervisor approval (INV-07). */
     ADJUSTMENT_APPROVAL_LIMIT("approval.adjustment-limit", "adjustmentApprovalLimit", "0"),
     /** Discounts and price overrides above this percentage need manager approval (POS-06). */

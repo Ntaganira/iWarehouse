@@ -112,6 +112,39 @@ class SalesRulesTest {
                 .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.pay.amountInvalid"));
     }
 
+    @Test
+    void aDepositPaysPartAndLeavesTheBalance() {   // POS-08
+        BigDecimal total = new BigDecimal("195008");
+        BigDecimal minimum = new BigDecimal("97504");
+        SalePayments.Split split = SalePayments.split(total, entered("60000", "40000", "MP-5", null, null, null, null, null), minimum);
+
+        assertThat(split.amountOf(PaymentMethod.CASH)).isEqualByComparingTo("60000");   // all the cash handed over is kept
+        assertThat(split.change()).isEqualByComparingTo("0");
+        assertThat(split.balance()).isEqualByComparingTo("95008");
+
+        // Enough to pay it all: a full payment with change, nothing left
+        SalePayments.Split all = SalePayments.split(total, entered("200000", null, null, null, null, null, null, null), minimum);
+        assertThat(all.balance()).isEqualByComparingTo("0");
+        assertThat(all.change()).isEqualByComparingTo("4992");
+        assertThat(SalePayments.split(total, entered("200000", null, null, null, null, null, null, null)).balance()).isEqualByComparingTo("0");
+
+        assertThatThrownBy(() -> SalePayments.split(total, entered("90000", null, null, null, null, null, null, null), minimum))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getField()).isEqualTo("cash");
+                    assertThat(e.getMessageKey()).isEqualTo("sale.pay.deposit.short");
+                    assertThat(e.getArgs()).containsExactly(minimum, new BigDecimal("7504"));
+                });
+    }
+
+    @Test
+    void theSmallestDepositCoversTheShareAndTheGlassTakenNow() {   // POS-08
+        assertThat(SalePayments.depositMinimum(new BigDecimal("195008"), new BigDecimal("50"), BigDecimal.ZERO)).isEqualByComparingTo("97504");
+        assertThat(SalePayments.depositMinimum(new BigDecimal("100001"), new BigDecimal("50"), BigDecimal.ZERO)).isEqualByComparingTo("50001");   // rounded up
+        assertThat(SalePayments.depositMinimum(new BigDecimal("100000"), new BigDecimal("30"), new BigDecimal("45000"))).isEqualByComparingTo("45000");
+        assertThat(SalePayments.depositMinimum(new BigDecimal("100000"), BigDecimal.ZERO, BigDecimal.ZERO)).isEqualByComparingTo("1");
+        assertThat(SalePayments.depositMinimum(new BigDecimal("100000"), new BigDecimal("100"), BigDecimal.ZERO)).isEqualByComparingTo("100000");
+    }
+
     private static SalePayments.Entered entered(String cash, String momo, String momoRef, String card, String cardRef, String bank,
                                                 String bankRef, String credit) {
         return new SalePayments.Entered(amount(cash), amount(momo), momoRef, amount(card), cardRef, amount(bank), bankRef, amount(credit));

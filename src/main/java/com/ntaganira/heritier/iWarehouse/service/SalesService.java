@@ -45,7 +45,8 @@ import java.util.stream.Collectors;
  *               (POS-06): within the cashier's discount limit at once, above it once a manager approves; credit
  *               above what the customer has left needs a manager's approval too (POS-05). Requests still pending
  *               stop the payment. A sent quotation is rung up at the till at its prices (POS-03) and converted when
- *               the sale is paid.
+ *               the sale is paid. An order with sizes to cut may be paid by a deposit (POS-08): the invoice is issued
+ *               with a balance due, paid at collection in the till of whoever takes it, before any piece is handed over.
  * </pre>
  */
 @Service
@@ -126,6 +127,14 @@ public class SalesService {
                              Integer holes, String mark) {
     }
 
+    /** An order's balance paid (POS-08): the invoice, the amount paid, the change and the journal. */
+    public record BalancePaid(SalesInvoice invoice, BigDecimal paid, BigDecimal change, JournalEntry journal) {
+    }
+
+    /** A balance paid in a till: the payment and its invoice's number. */
+    public record BalanceTaken(SalesPayment payment, String invoiceNumber) {
+    }
+
     /** Pieces handed over: the units sold and the journal of their cost. */
     public record Delivered(SalesInvoice invoice, List<StockUnit> units, JournalEntry journal) {
     }
@@ -168,10 +177,13 @@ public class SalesService {
         return Vat.totals(invoice.getLines().stream().map(l -> new Vat.Line(l.getTaxCode(), l.getVatRate(), l.getAmount())).toList());
     }
 
-    /** Issued invoices, newest first. */
-    public Page<SalesInvoice> findPage(String search, int page, int size) {
+    /** Issued invoices, newest first; only those with a balance due (POS-08) if asked. */
+    public Page<SalesInvoice> findPage(String search, boolean balanceDue, int page, int size) {
         Specification<SalesInvoice> spec = (root, query, cb) -> {
             Predicate p = cb.equal(root.get("status"), SalesInvoiceStatus.POSTED);
+            if (balanceDue) {
+                p = cb.and(p, cb.greaterThan(root.get("balanceDue"), BigDecimal.ZERO));
+            }
             if (StringUtils.hasText(search)) {
                 String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
                 p = cb.and(p, cb.or(
@@ -189,6 +201,27 @@ public class SalesService {
     /** The issued invoices of a till session, in the order they were paid. */
     public List<SalesInvoice> invoicesOf(TillSession session) {
         return repo.findByTillSession_IdAndStatusOrderByPostedAtAsc(session.getId(), SalesInvoiceStatus.POSTED);
+    }
+
+    /** Balances of orders paid in a till session (POS-08), in the order they were taken. */
+    public List<BalanceTaken> balancesTaken(TillSession session) {
+        List<SalesPayment> payments = paymentRepo.findByTillSessionIdAndBalancePaymentTrueOrderByCreatedAtAscLineNoAsc(session.getId());
+        Map<UUID, String> numbers = repo.findAllById(payments.stream().map(SalesPayment::getInvoiceId).distinct().toList()).stream()
+                .collect(Collectors.toMap(SalesInvoice::getId, SalesInvoice::getNumber));
+        return payments.stream().map(p -> new BalanceTaken(p, numbers.get(p.getInvoiceId()))).toList();
+    }
+
+    /**
+     * The smallest deposit the sale takes as an order (POS-08): the Settings percentage of its total, and the glass from
+     * stock in full (it leaves at once). Null when it has no size to cut: then it is paid in full.
+     */
+    public BigDecimal depositMinimum(SalesInvoice sale) {
+        if (sale == null || sale.getLines().stream().noneMatch(SalesInvoiceLine::isCustomPiece)) {
+            return null;
+        }
+        BigDecimal takenNow = sale.getLines().stream().filter(SalesInvoiceLine::isStockUnit).map(SalesInvoiceLine::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return SalePayments.depositMinimum(totals(sale).gross(), settingService.getDecimal(SettingKey.DEPOSIT_MIN_PERCENT), takenNow);
     }
 
     /** A sale's approval requests (POS-05, POS-06), oldest first. */
@@ -347,6 +380,16 @@ public class SalesService {
      */
     @Transactional
     public Paid pay(SalePayments.Entered entered) {
+        return pay(entered, false);
+    }
+
+    /**
+     * Takes the payment, or a deposit on an order (POS-08): a sale with sizes to cut, for a customer known by name, may be
+     * paid in part (at least its deposit minimum); the invoice is issued for its whole amount with the rest as its
+     * balance due.
+     */
+    @Transactional
+    public Paid pay(SalePayments.Entered entered, boolean deposit) {
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
         if (sale.getLines().isEmpty()) {
@@ -376,7 +419,18 @@ public class SalesService {
             throw BusinessException.of("sale.pay.pending", pending);
         }
         Vat.Totals totals = totals(sale);
-        SalePayments.Split split = SalePayments.split(totals.gross(), entered);
+        BigDecimal minimum = null;
+        if (deposit) {
+            minimum = depositMinimum(sale);
+            if (minimum == null) {
+                throw BusinessException.of("sale.pay.deposit.noSizes");
+            }
+            // The order is collected later: the counter must know whose it is
+            if (sale.getCustomer().isDefaultCustomer() && sale.getBuyerName() == null) {
+                throw BusinessException.of("sale.pay.deposit.noName");
+            }
+        }
+        SalePayments.Split split = SalePayments.split(totals.gross(), entered, minimum);
         BigDecimal credit = split.amountOf(PaymentMethod.CREDIT);
         if (credit.signum() > 0) {
             Credit c = credit(sale.getCustomer());
@@ -409,12 +463,15 @@ public class SalesService {
             payment.setMethod(part.method());
             payment.setAmount(part.amount());
             payment.setReference(part.reference());
+            payment.setTillSessionId(session.getId());
+            payment.setCashTendered(part.method() == PaymentMethod.CASH ? split.cashTendered() : null);
             payment.setCreatedAt(now);
             payment.setUsername(username);
             payments.add(paymentRepo.save(payment));
         }
         // Status and the fields its check needs, together, after the queries
         sale.setNumber(number);
+        sale.setBalanceDue(split.balance());
         sale.setInvoiceDate(now.toLocalDate());
         sale.setNetAmount(totals.net());
         sale.setVatAmount(totals.vat());
@@ -469,6 +526,49 @@ public class SalesService {
             jobs.add(job);
         }
         return jobs;
+    }
+
+    /**
+     * Takes the balance of an order (POS-08) in the signed-in cashier's till, in full, split over cash, mobile money, card
+     * and bank transfer (it is already on the customer's account: no credit). Locks the till, then the invoice.
+     */
+    @Transactional
+    public BalancePaid payBalance(UUID invoiceId, SalePayments.Entered entered) {
+        TillSession session = tillService.lockCurrent();
+        repo.lockById(invoiceId).orElseThrow(() -> new NotFoundException("SalesInvoice", invoiceId));
+        SalesInvoice invoice = findDetailed(invoiceId);
+        if (invoice.getStatus() != SalesInvoiceStatus.POSTED) {
+            throw new NotFoundException("SalesInvoice", invoiceId);
+        }
+        if (!invoice.hasBalanceDue()) {
+            throw BusinessException.of("sale.balance.none", invoice.getNumber());
+        }
+        if (entered.credit() != null && entered.credit().signum() > 0) {
+            throw BusinessException.onField("credit", "sale.balance.noCredit");
+        }
+        BigDecimal due = invoice.getBalanceDue();
+        SalePayments.Split split = SalePayments.split(due, entered);
+        int no = paymentRepo.findByInvoiceIdOrderByLineNo(invoice.getId()).stream().mapToInt(SalesPayment::getLineNo).max().orElse(0) + 1;
+        LocalDateTime now = LocalDateTime.now(clock);
+        String username = AppUserPrincipal.currentUsername();
+        List<SalesPayment> payments = new ArrayList<>();
+        for (SalePayments.Part part : split.parts()) {
+            SalesPayment payment = new SalesPayment();
+            payment.setInvoiceId(invoice.getId());
+            payment.setLineNo(no++);
+            payment.setMethod(part.method());
+            payment.setAmount(part.amount());
+            payment.setReference(part.reference());
+            payment.setTillSessionId(session.getId());
+            payment.setBalancePayment(true);
+            payment.setCashTendered(part.method() == PaymentMethod.CASH ? split.cashTendered() : null);
+            payment.setCreatedAt(now);
+            payment.setUsername(username);
+            payments.add(paymentRepo.save(payment));
+        }
+        invoice.setBalanceDue(BigDecimal.ZERO.setScale(2));
+        JournalEntry journal = postingService.saleBalance(invoice, payments);
+        return new BalancePaid(invoice, due, split.change(), journal);
     }
 
     // ---------------------------------------------------------------- price changes and credit (POS-05, POS-06)
@@ -903,6 +1003,10 @@ public class SalesService {
         invoice = findDetailed(invoiceId);
         if (invoice.getStatus() != SalesInvoiceStatus.POSTED) {
             throw BusinessException.of("sale.deliver.notIssued");
+        }
+        // An order paid by a deposit is collected once its balance is paid (POS-08)
+        if (invoice.hasBalanceDue()) {
+            throw BusinessException.of("sale.deliver.balanceDue", invoice.getNumber(), invoice.getBalanceDue());
         }
         Map<UUID, StockUnit> chosen = new LinkedHashMap<>();
         if (unitIds != null && !unitIds.isEmpty()) {

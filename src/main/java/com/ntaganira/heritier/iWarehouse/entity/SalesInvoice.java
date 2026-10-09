@@ -24,7 +24,8 @@ import java.util.UUID;
  * - Desc      : A counter sale (POS-01, POS-04): a draft of its till session while it is rung up (one per
  *               till; its units held), then the invoice once paid, with its number, the buyer's name and
  *               TIN (TAX-04) and its totals in RWF. A posted invoice never changes: corrections are credit
- *               notes (POS-09). Its payments are SalesPayment rows written when it is paid.
+ *               notes (POS-09). Its payments are SalesPayment rows written when it is paid. An order paid by a
+ *               deposit (POS-08) is issued with a balance due, paid at collection before its pieces are handed over.
  * </pre>
  */
 @Entity
@@ -74,6 +75,10 @@ public class SalesInvoice extends BaseEntity {
     @Column(name = "change_given", precision = 18, scale = 2)
     private BigDecimal changeGiven;
 
+    /** What the customer still owes once issued (POS-08): the balance of a deposit, 0 once paid in full. */
+    @Column(name = "balance_due", precision = 18, scale = 2)
+    private BigDecimal balanceDue;
+
     @Column(name = "posted_at")
     private LocalDateTime postedAt;
 
@@ -90,6 +95,16 @@ public class SalesInvoice extends BaseEntity {
 
     public boolean isDraft() {
         return status == SalesInvoiceStatus.DRAFT;
+    }
+
+    /** An issued invoice with a balance still to pay (POS-08). */
+    public boolean hasBalanceDue() {
+        return balanceDue != null && balanceDue.signum() > 0;
+    }
+
+    /** What was paid so far: the total less the balance due. */
+    public BigDecimal getAmountPaid() {
+        return totalAmount == null ? null : totalAmount.subtract(balanceDue == null ? BigDecimal.ZERO : balanceDue);
     }
 
     /** The name the invoice is made out to: the buyer's, or the customer's. */

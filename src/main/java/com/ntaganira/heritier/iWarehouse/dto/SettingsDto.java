@@ -81,6 +81,12 @@ public class SettingsDto {
     @Max(value = 365, message = "{settings.quotationValidityDays.range}")
     private Integer quotationValidityDays;
 
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.depositMinPercent.range}")
+    @DecimalMax(value = "100", message = "{settings.depositMinPercent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal depositMinPercent;
+
     // --- Approvals (INV-07, POS-06) ---
 
     /** RWF, no decimals. */

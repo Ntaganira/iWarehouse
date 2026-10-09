@@ -108,6 +108,7 @@ public class PosController {
                 .filter(a -> a.getStatus() != SaleApprovalStatus.WITHDRAWN).orElse(null));
         model.addAttribute("approvalState", approvalState(approvals));
         model.addAttribute("discountLimit", salesService.discountLimit());
+        model.addAttribute("depositMinimum", salesService.depositMinimum(sale));
         model.addAttribute("customers", salesService.customers());
         List<Product> products = productRepo.findByEnabledTrueOrderByCodeAsc();
         model.addAttribute("products", products);
@@ -389,24 +390,32 @@ public class PosController {
                       @RequestParam(required = false) String mobileMoneyRef, @RequestParam(required = false) BigDecimal card,
                       @RequestParam(required = false) String cardRef, @RequestParam(required = false) BigDecimal bankTransfer,
                       @RequestParam(required = false) String bankRef, @RequestParam(required = false) BigDecimal credit,
-                      RedirectAttributes redirect) {
+                      @RequestParam(defaultValue = "false") boolean deposit, RedirectAttributes redirect) {
         SalePayments.Entered entered = new SalePayments.Entered(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, credit);
         try {
-            SalesService.Paid paid = salesService.pay(entered);
+            SalesService.Paid paid = salesService.pay(entered, deposit);
             SalesInvoice invoice = paid.invoice();
             activityLogService.record(MODULE, "CREATE_SALES_INVOICE", "Issued " + invoice.getNumber() + " to " + invoice.getBillTo()
-                    + ": " + num.money(invoice.getTotalAmount()) + " RWF" + (paid.journal() == null ? "" : ", journal " + paid.journal().getNumber())
+                    + ": " + num.money(invoice.getTotalAmount()) + " RWF"
+                    + (invoice.hasBalanceDue() ? ", deposit " + num.money(invoice.getAmountPaid()) + " RWF, balance due "
+                    + num.money(invoice.getBalanceDue()) + " RWF" : "")
+                    + (paid.journal() == null ? "" : ", journal " + paid.journal().getNumber())
                     + (paid.jobs().isEmpty() ? "" : ", cutting jobs " + paid.jobs().stream().map(CuttingJob::getNumber).toList()),
                     ActivityStatus.SUCCESS);
             String jobs = paid.jobs().stream().map(CuttingJob::getNumber).reduce((a, b) -> a + ", " + b).orElse(null);
-            String paidText = paid.change().signum() > 0
-                    ? messages.get("sale.paidChange", invoice.getNumber(), num.money(paid.change()))
+            String paidText = invoice.hasBalanceDue()
+                    ? messages.get("sale.paidDeposit", invoice.getNumber(), num.money(invoice.getAmountPaid()), num.money(invoice.getBalanceDue()))
                     : messages.get("sale.paid", invoice.getNumber());
+            if (paid.change().signum() > 0) {
+                paidText = paidText + ". " + messages.get("sale.giveChange", num.money(paid.change()));
+            }
             redirect.addFlashAttribute("flashSuccess", jobs == null ? paidText : paidText + ". " + messages.get("sale.jobsCreated", jobs));
             return "redirect:/invoices/" + invoice.getId();
         } catch (BusinessException e) {
             fail(redirect, "CREATE_SALES_INVOICE", "Failed to take the payment of a sale", e);
-            redirect.addFlashAttribute("payForm", payForm(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, credit));
+            Map<String, String> form = payForm(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, credit);
+            form.put("deposit", String.valueOf(deposit));
+            redirect.addFlashAttribute("payForm", form);
             redirect.addFlashAttribute("payField", e.getField());
             // Credit above what the customer has left: the dialog offers to ask a manager (POS-05)
             redirect.addFlashAttribute("creditOver", e.getMessageKey().startsWith("sale.pay.credit.over"));
@@ -430,7 +439,7 @@ public class PosController {
         return "?" + back;
     }
 
-    private static Map<String, String> payForm(BigDecimal cash, BigDecimal mobileMoney, String mobileMoneyRef, BigDecimal card,
+    static Map<String, String> payForm(BigDecimal cash, BigDecimal mobileMoney, String mobileMoneyRef, BigDecimal card,
                                                String cardRef, BigDecimal bankTransfer, String bankRef, BigDecimal credit) {
         Map<String, String> form = new HashMap<>();
         form.put("cash", plain(cash));

@@ -117,6 +117,16 @@
                     <span class="field-error" th:if="${#fields.hasErrors('quotationValidityDays')}" th:errors="*{quotationValidityDays}"></span>
                     <span class="hint" th:text="#{settings.quotationValidityDaysHint}">How long a new quotation's prices hold (POS-03)</span>
                 </div>
+                <div class="form-group">
+                    <label for="depositMinPercent" th:text="#{settings.depositMinPercent}">Smallest deposit</label>
+                    <div class="input-unit">
+                        <input type="number" id="depositMinPercent" th:field="*{depositMinPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('depositMinPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('depositMinPercent')}" th:errors="*{depositMinPercent}"></span>
+                    <span class="hint" th:text="#{settings.depositMinPercentHint}">Of an order's total, paid when it is ordered (POS-08)</span>
+                </div>
             </div>
 
             <div class="form-divider"><h3 th:text="#{settings.group.approvals}">Approval limits</h3>

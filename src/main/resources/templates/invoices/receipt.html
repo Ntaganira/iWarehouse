@@ -70,6 +70,20 @@
         </div>
         <div class="receipt-row" th:if="${invoice.cashTendered != null}"><span th:text="#{posReceipt.tendered}">Cash handed over</span><span th:text="${@num.money(invoice.cashTendered)}">200,000</span></div>
         <div class="receipt-row" th:if="${invoice.changeGiven != null and invoice.changeGiven.signum() > 0}"><span th:text="#{posReceipt.change}">Change</span><span th:text="${@num.money(invoice.changeGiven)}">4,992</span></div>
+        <th:block th:unless="${#lists.isEmpty(balancePayments)}">
+            <div class="receipt-rule"></div>
+            <div class="receipt-row" th:text="#{posReceipt.balancePaid(${#temporals.format(balancePayments[0].createdAt, 'dd/MM/yyyy HH:mm')})}">Balance paid 12/10/2026 09:00</div>
+            <th:block th:each="p : ${balancePayments}">
+                <div class="receipt-row">
+                    <span th:text="#{${'payment.method.' + p.method}} + ${p.reference != null ? ' ' + p.reference : ''}">Cash</span>
+                    <span th:text="${@num.money(p.amount)}">97,504</span>
+                </div>
+                <div class="receipt-row" th:if="${p.cashTendered != null}"><span th:text="#{posReceipt.tendered}">Cash handed over</span><span th:text="${@num.money(p.cashTendered)}">100,000</span></div>
+                <div class="receipt-row" th:if="${p.change != null and p.change.signum() > 0}"><span th:text="#{posReceipt.change}">Change</span><span th:text="${@num.money(p.change)}">2,496</span></div>
+            </th:block>
+        </th:block>
+        <div class="receipt-row receipt-total" th:if="${invoice.hasBalanceDue()}"><span th:text="#{posReceipt.balanceDue}">BALANCE DUE</span><span th:text="${@num.money(invoice.balanceDue)}">97,504</span></div>
+        <div class="receipt-foot" th:if="${invoice.hasBalanceDue()}" th:text="#{posReceipt.balanceNote}">Paid when the pieces are collected</div>
         <div class="receipt-rule"></div>
         <div class="receipt-foot" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
         <div class="receipt-foot" th:text="#{posReceipt.thanks}">Thank you</div>

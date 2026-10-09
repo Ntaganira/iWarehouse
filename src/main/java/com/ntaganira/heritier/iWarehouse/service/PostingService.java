@@ -217,8 +217,9 @@ public class PostingService {
 
     /**
      * A sale paid (SRS 4.9.1): Dr each payment's account (cash in the till, mobile money, bank for card and
-     * transfer, the customer's receivable for credit) / Cr Sales Revenue (net) and VAT Output; and the glass at
-     * MAC: Dr Cost of Goods Sold / Cr Inventory, the change of each glass's value.
+     * transfer, the customer's receivable for credit) and, for an order paid by a deposit (POS-08), the customer's
+     * receivable for the balance due / Cr Sales Revenue (net) and VAT Output; and the glass at MAC: Dr Cost of Goods
+     * Sold / Cr Inventory, the change of each glass's value.
      */
     public JournalEntry sale(SalesInvoice invoice, List<SalesPayment> payments, StockValues before) {
         Customer customer = invoice.getCustomer();
@@ -227,6 +228,9 @@ public class PostingService {
         for (SalesPayment p : payments) {
             UUID customerId = p.getMethod() == PaymentMethod.CREDIT ? customer.getId() : null;
             journal.add(p.getMethod().account(), p.getAmount(), null, null, customerId, p.getReference(), null);
+        }
+        if (invoice.hasBalanceDue()) {
+            journal.add(AccountKey.RECEIVABLE, invoice.getBalanceDue(), null, null, customer.getId(), "Balance due on collection", null);
         }
         journal.credit(AccountKey.SALES, invoice.getNetAmount())
                 .credit(AccountKey.VAT_OUTPUT, invoice.getVatAmount());
@@ -254,6 +258,22 @@ public class PostingService {
             cost = cost.add(e.getValue().subtract(after.getOrDefault(e.getKey(), BigDecimal.ZERO)));
         }
         journal.debit(AccountKey.COGS, cost);
+        return journalService.post(journal);
+    }
+
+    /**
+     * The balance of an order paid (POS-08): Dr each payment's account / Cr the customer's receivable, which the sale
+     * debited with the balance.
+     */
+    public JournalEntry saleBalance(SalesInvoice invoice, List<SalesPayment> payments) {
+        Journal journal = Journal.of(JournalSource.SALES_BALANCE, invoice.getId(), invoice.getNumber(), today(),
+                "Balance of sale " + invoice.getNumber() + " paid by " + invoice.getBillTo());
+        BigDecimal paid = BigDecimal.ZERO;
+        for (SalesPayment p : payments) {
+            journal.add(p.getMethod().account(), p.getAmount(), null, null, null, p.getReference(), null);
+            paid = paid.add(p.getAmount());
+        }
+        journal.add(AccountKey.RECEIVABLE, paid.negate(), null, null, invoice.getCustomer().getId(), null, null);
         return journalService.post(journal);
     }
 

@@ -4438,3 +4438,6 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
   .print-doc-head, .print-doc-parties { flex-direction: column; gap: 3mm; }
   .print-doc-title, .print-doc-dates { text-align: left; }
 }
+
+/* A dialog's opening sentence keeps the same space above its first field in every dialog */
+.modal-body > p.text-muted:first-child { margin-bottom: 16px; }

@@ -23,6 +23,10 @@
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" name="search" th:value="${search}" th:placeholder="#{invoice.searchPh}" th:aria-label="#{invoice.searchPh}">
                 </div>
+                <select name="show" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{invoice.show}">
+                    <option value="" th:text="#{invoice.show.all}">All invoices</option>
+                    <option value="due" th:selected="${show == 'due'}" th:text="#{invoice.show.due}">With a balance due</option>
+                </select>
             </form>
         </div>
         <th:block th:replace="~{invoices/list :: invoiceTable(${invoices.content})}"></th:block>
@@ -77,7 +81,10 @@
                     <span th:text="${i.billTo}">Jean Habimana</span>
                     <div class="cell-sub mono" th:if="${i.buyerTin != null}" th:text="#{invoice.tinShort(${i.buyerTin})}">TIN 102938475</div>
                 </td>
-                <td class="num" th:text="${@num.money(i.totalAmount)}">195,008</td>
+                <td class="num">
+                    <span th:text="${@num.money(i.totalAmount)}">195,008</span>
+                    <div class="cell-sub" th:if="${i.hasBalanceDue()}" th:text="#{invoice.dueShort(${@num.money(i.balanceDue)})}">97,504 due</div>
+                </td>
                 <td th:text="${i.postedBy}">cashier1</td>
             </tr>
             <tr th:if="${#lists.isEmpty(rows)}">

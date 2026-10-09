@@ -129,6 +129,13 @@
                                 </dt>
                                 <dd><span th:text="*{quotationValidityDays}">14</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
                             </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.depositMinPercent}">Smallest deposit</span>
+                                    <span class="setting-hint" th:text="#{settings.depositMinPercentHint}">Of an order's total, paid when it is ordered (POS-08)</span>
+                                </dt>
+                                <dd><span th:text="*{depositMinPercent}">50</span> <span class="unit">%</span></dd>
+                            </div>
                         </dl>
                     </div>
 

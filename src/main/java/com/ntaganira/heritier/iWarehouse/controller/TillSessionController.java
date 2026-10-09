@@ -60,11 +60,13 @@ public class TillSessionController {
     @PreAuthorize("hasAuthority('PAGE_TILL_SESSIONS') and hasAuthority('PERM_VIEW_TILL_SESSION')")
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "invoices") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
-        String open = List.of("invoices", "history").contains(tab) ? tab : "invoices";
+        String open = List.of("invoices", "balances", "history").contains(tab) ? tab : "invoices";
         TillSession session = tillService.findById(id);
         model.addAttribute("till", session);
         model.addAttribute("summary", tillService.summary(session));
         model.addAttribute("invoices", Paging.of(salesService.invoicesOf(session), Paging.pageOf("invoices", open, page)));
+        // Balances of orders paid in this till (POS-08): their cash is in its drawer
+        model.addAttribute("balances", Paging.of(salesService.balancesTaken(session), Paging.pageOf("balances", open, page)));
         model.addAttribute("journals", journalService.forSource(id, JournalSource.TILL_OPENED, JournalSource.TILL_CLOSED));
         model.addAttribute("history", dataChangeService.history("TillSession", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

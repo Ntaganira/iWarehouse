@@ -1,10 +1,12 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.SaleApproval;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoiceLine;
+import com.ntaganira.heritier.iWarehouse.entity.SalesPayment;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
@@ -19,6 +21,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,24 +50,29 @@ public class InvoiceController {
     private final SettingService settingService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
+    private final NumberFormats num;
 
     public InvoiceController(SalesService salesService, JournalService journalService, DataChangeService dataChangeService,
                              SettingService settingService, ActivityLogService activityLogService,
-                             Messages messages) {
+                             Messages messages, NumberFormats num) {
         this.salesService = salesService;
         this.journalService = journalService;
         this.dataChangeService = dataChangeService;
         this.settingService = settingService;
         this.activityLogService = activityLogService;
         this.messages = messages;
+        this.num = num;
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')")
-    public String list(@RequestParam(required = false) String search, @RequestParam(defaultValue = "0") int page, Model model) {
-        model.addAttribute("invoices", salesService.findPage(search, Paging.page(page), Paging.SIZE));
+    public String list(@RequestParam(required = false) String search, @RequestParam(required = false) String show,
+                       @RequestParam(defaultValue = "0") int page, Model model) {
+        boolean due = "due".equals(show);
+        model.addAttribute("invoices", salesService.findPage(search, due, Paging.page(page), Paging.SIZE));
         model.addAttribute("search", search);
-        model.addAttribute("paginationQuery", QueryString.of("search", search));
+        model.addAttribute("show", due ? "due" : null);
+        model.addAttribute("paginationQuery", QueryString.of("search", search, "show", due ? "due" : null));
         return "invoices/list";
     }
 
@@ -76,8 +84,14 @@ public class InvoiceController {
         SalesInvoice invoice = issued(id);
         model.addAttribute("invoice", invoice);
         model.addAttribute("totals", salesService.totals(invoice));
-        model.addAttribute("payments", salesService.payments(id));
-        model.addAttribute("journals", journalService.forSource(id, JournalSource.SALES_INVOICE, JournalSource.SALES_DELIVERY));
+        List<SalesPayment> payments = salesService.payments(id);
+        model.addAttribute("payments", payments);
+        // An order paid by a deposit (POS-08): what was paid when it was issued, and the balance
+        model.addAttribute("deposit", invoice.hasBalanceDue() || payments.stream().anyMatch(SalesPayment::isBalancePayment));
+        model.addAttribute("depositPaid", payments.stream().filter(p -> !p.isBalancePayment()).map(SalesPayment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        model.addAttribute("journals", journalService.forSource(id, JournalSource.SALES_INVOICE, JournalSource.SALES_DELIVERY,
+                JournalSource.SALES_BALANCE));
         // Sizes to cut (POS-02): their cutting jobs, what is handed over, the pieces ready to hand over
         boolean custom = invoice.getLines().stream().anyMatch(SalesInvoiceLine::isCustomPiece);
         model.addAttribute("custom", custom);
@@ -105,7 +119,9 @@ public class InvoiceController {
         SalesInvoice invoice = issued(id);
         model.addAttribute("invoice", invoice);
         model.addAttribute("totals", salesService.totals(invoice));
-        model.addAttribute("payments", salesService.payments(id));
+        List<SalesPayment> payments = salesService.payments(id);
+        model.addAttribute("payments", payments.stream().filter(p -> !p.isBalancePayment()).toList());
+        model.addAttribute("balancePayments", payments.stream().filter(SalesPayment::isBalancePayment).toList());
         model.addAttribute("companyName", settingService.get(SettingKey.COMPANY_NAME));
         model.addAttribute("companyTin", settingService.get(SettingKey.COMPANY_TIN));
         model.addAttribute("companyAddress", settingService.get(SettingKey.COMPANY_ADDRESS));
@@ -113,6 +129,35 @@ public class InvoiceController {
         activityLogService.record(PosController.MODULE, "PRINT_RECEIPT", "Opened the receipt of " + invoice.getNumber() + " for printing",
                 ActivityStatus.SUCCESS);
         return "invoices/receipt";
+    }
+
+    /** Takes the balance of an order paid by a deposit (POS-08), in the signed-in cashier's till. */
+    @PostMapping("/{id}/balance")
+    @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_SELL')")
+    public String payBalance(@PathVariable UUID id, @RequestParam(required = false) BigDecimal cash,
+                             @RequestParam(required = false) BigDecimal mobileMoney, @RequestParam(required = false) String mobileMoneyRef,
+                             @RequestParam(required = false) BigDecimal card, @RequestParam(required = false) String cardRef,
+                             @RequestParam(required = false) BigDecimal bankTransfer, @RequestParam(required = false) String bankRef,
+                             RedirectAttributes redirect) {
+        SalePayments.Entered entered = new SalePayments.Entered(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, null);
+        try {
+            SalesService.BalancePaid b = salesService.payBalance(id, entered);
+            activityLogService.record(PosController.MODULE, "PAY_SALE_BALANCE", "Took the balance of " + b.invoice().getNumber() + ": "
+                    + num.money(b.paid()) + " RWF" + (b.journal() == null ? "" : ", journal " + b.journal().getNumber()), ActivityStatus.SUCCESS);
+            String text = messages.get("sale.balancePaid", b.invoice().getNumber(), num.money(b.paid()));
+            if (b.change().signum() > 0) {
+                text = text + ". " + messages.get("sale.giveChange", num.money(b.change()));
+            }
+            redirect.addFlashAttribute("flashSuccess", text);
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(PosController.MODULE, "PAY_SALE_BALANCE", "Failed to take the balance of invoice " + id + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+            redirect.addFlashAttribute("payForm", PosController.payForm(cash, mobileMoney, mobileMoneyRef, card, cardRef, bankTransfer, bankRef, null));
+            redirect.addFlashAttribute("payField", e.getField());
+        }
+        return "redirect:/invoices/" + id;
     }
 
     /** Hands over pieces of the invoice's sizes (SRS 5.3 step 5): ticked or scanned. */

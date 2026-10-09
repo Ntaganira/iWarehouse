@@ -24,9 +24,10 @@ public interface SalesPaymentRepository extends Repository<SalesPayment, UUID> {
 
     List<SalesPayment> findByInvoiceIdOrderByLineNo(UUID invoiceId);
 
-    /** Rows of (method, amount) taken by a till session's issued invoices. */
-    @Query("select p.method, coalesce(sum(p.amount), 0) from SalesPayment p where p.invoiceId in"
-            + " (select i.id from SalesInvoice i where i.tillSession.id = :sessionId"
-            + " and i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED) group by p.method")
+    /** Rows of (method, amount) a till session took: its sales and the balances paid in it (POS-08). */
+    @Query("select p.method, coalesce(sum(p.amount), 0) from SalesPayment p where p.tillSessionId = :sessionId group by p.method")
     List<Object[]> totalsOfSession(@Param("sessionId") UUID sessionId);
+
+    /** Balances of orders paid in a till session, in the order they were taken. */
+    List<SalesPayment> findByTillSessionIdAndBalancePaymentTrueOrderByCreatedAtAscLineNoAsc(UUID tillSessionId);
 }

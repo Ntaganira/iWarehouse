@@ -41,6 +41,10 @@
                 <span th:text="#{till.invoices}">Invoices</span>
                 <span class="section-count" th:text="${invoices.totalElements}">0</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-balances" th:classappend="${tab == 'balances'} ? 'active'">
+                <span th:text="#{till.balances}">Balances taken</span>
+                <span class="section-count" th:text="${balances.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -48,6 +52,39 @@
             <div class="tab-content" id="tab-invoices" th:classappend="${tab == 'invoices'} ? 'active'">
                 <th:block th:replace="~{invoices/list :: invoiceTable(${invoices.content})}"></th:block>
                 <th:block th:replace="~{layout/pagination :: pager(${invoices}, ${'/till-sessions/' + till.id}, 'tab=invoices')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-balances" th:classappend="${tab == 'balances'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{invoice.number}">Invoice</th>
+                                <th th:text="#{invoice.handedOverOn}">When</th>
+                                <th th:text="#{invoice.method}">Method</th>
+                                <th th:text="#{pos.pay.reference}">Reference</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="b : ${balances.content}">
+                                <td><a class="mono" th:href="@{/invoices/{id}(id=${b.payment.invoiceId})}" th:text="${b.invoiceNumber}">INV-WH-2026-000012</a></td>
+                                <td class="nowrap" th:text="${#temporals.format(b.payment.createdAt, 'dd/MM/yyyy HH:mm')}">12/10/2026 09:00</td>
+                                <td th:text="#{${'payment.method.' + b.payment.method}}">Cash</td>
+                                <td class="mono" th:text="${b.payment.reference ?: '—'}">MP-55</td>
+                                <td class="num" th:text="${@num.money(b.payment.amount)}">97,504</td>
+                            </tr>
+                            <tr th:if="${balances.totalElements == 0}">
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{till.noBalances}">No balance taken</h3>
+                                        <p th:text="#{till.noBalancesHint}">Balances of orders paid by a deposit and taken in this till appear here</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${balances}, ${'/till-sessions/' + till.id}, 'tab=balances')}"></th:block>
             </div>
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>

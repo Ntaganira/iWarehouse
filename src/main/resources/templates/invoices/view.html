@@ -17,6 +17,11 @@
     </div>
 
     <div class="doc-note is-warning" th:text="#{invoice.ebmPending}">Not signed by EBM yet: fiscal signing comes with the EBM connection (M4).</div>
+    <div class="doc-note is-warning" th:if="${invoice.hasBalanceDue()}">
+        <span th:text="#{invoice.balanceNote(${@num.money(invoice.balanceDue)})}">Balance due on collection: 97,504 RWF. The pieces are handed over once it is paid.</span>
+        <button type="button" class="btn btn-primary btn-sm" data-modal-open="balance-modal" sec:authorize="hasAuthority('PERM_SELL')"
+                th:text="#{invoice.takeBalance}">Take the balance</button>
+    </div>
 
     <div class="section">
         <div class="section-body">
@@ -47,6 +52,16 @@
                     <label th:text="#{invoice.total}">Total (RWF)</label>
                     <div class="value strong" th:text="${@num.money(invoice.totalAmount)}">195,008</div>
                 </div>
+                <th:block th:if="${deposit}">
+                    <div class="item">
+                        <label th:text="#{invoice.depositPaid}">Deposit (RWF)</label>
+                        <div class="value" th:text="${@num.money(depositPaid)}">97,504</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{invoice.balanceDue}">Balance due (RWF)</label>
+                        <div class="value strong" th:text="${invoice.hasBalanceDue()} ? ${@num.money(invoice.balanceDue)} : #{invoice.balancePaidShort}">97,504</div>
+                    </div>
+                </th:block>
                 <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
             </div>
         </div>
@@ -72,8 +87,9 @@
                 </div>
             </div>
 
+            <p class="form-note" th:if="${invoice.hasBalanceDue() and toHandOver > 0}" th:text="#{invoice.balanceFirst}">Take the balance first: the pieces are handed over once the order is paid.</p>
             <form th:action="@{/invoices/{id}/deliver(id=${invoice.id})}" method="post" class="pos-handover" novalidate
-                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${!#lists.isEmpty(ready)}">
+                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${!#lists.isEmpty(ready) and !invoice.hasBalanceDue()}">
                 <div class="table-container">
                     <table>
                         <thead>
@@ -99,7 +115,7 @@
                 </div>
             </form>
             <form th:action="@{/invoices/{id}/deliver(id=${invoice.id})}" method="post" class="pos-handover-scan" novalidate
-                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${toHandOver > 0}">
+                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${toHandOver > 0 and !invoice.hasBalanceDue()}">
                 <div class="form-group">
                     <label for="handover-codes" th:text="#{invoice.handOverScan}">Or scan the pieces handed over</label>
                     <div class="scan-row">
@@ -109,7 +125,7 @@
                     </div>
                 </div>
             </form>
-            <p class="form-note" th:if="${toHandOver > 0 and #lists.isEmpty(ready)}" th:text="#{invoice.nothingReady}">No piece is ready yet: the cutting jobs reserve them for the customer as they are cut.</p>
+            <p class="form-note" th:if="${toHandOver > 0 and #lists.isEmpty(ready) and !invoice.hasBalanceDue()}" th:text="#{invoice.nothingReady}">No piece is ready yet: the cutting jobs reserve them for the customer as they are cut.</p>
             <p class="form-note" th:if="${toHandOver == 0}" th:text="#{invoice.allHandedOver}">Every piece of this invoice has been handed over.</p>
 
             <th:block th:unless="${#lists.isEmpty(deliveries)}">
@@ -208,7 +224,16 @@
                         </thead>
                         <tbody>
                             <tr th:each="p : ${payments}">
-                                <td th:text="#{${'payment.method.' + p.method}}">Cash</td>
+                                <td>
+                                    <span th:text="#{${'payment.method.' + p.method}}">Cash</span>
+                                    <div class="cell-sub" th:if="${p.balancePayment}"
+                                         th:text="#{invoice.balancePaidOn(${#temporals.format(p.createdAt, 'dd/MM/yyyy HH:mm')}, ${p.username})}">Balance, 12/10/2026 09:00 by cashier1</div>
+                                    <!--/* What was handed over for this cash payment (invoices paid before V21 kept it on the invoice) */-->
+                                    <th:block th:with="tendered=${p.cashTendered != null ? p.cashTendered : (!p.balancePayment and p.method.name() == 'CASH' ? invoice.cashTendered : null)}">
+                                        <div class="cell-sub" th:if="${tendered != null}"
+                                             th:text="#{invoice.cashLine(${@num.money(tendered)}, ${@num.money(tendered.subtract(p.amount))})}">Cash handed over 100,000 RWF, change 2,496 RWF.</div>
+                                    </th:block>
+                                </td>
                                 <td class="mono" th:text="${p.reference ?: '—'}">MP-55</td>
                                 <td class="num" th:text="${@num.money(p.amount)}">97,504</td>
                             </tr>
@@ -218,8 +243,6 @@
                         </tbody>
                     </table>
                 </div>
-                <p class="form-note" th:if="${invoice.cashTendered != null}"
-                   th:text="#{invoice.cashLine(${@num.money(invoice.cashTendered)}, ${@num.money(invoice.changeGiven)})}">Cash handed over 100,000 RWF, change 2,496 RWF.</p>
             </div>
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
@@ -227,7 +250,69 @@
             </div>
         </div>
     </div>
+    <!-- The balance of an order (POS-08), taken in the cashier's till -->
+    <div class="modal-overlay" id="balance-modal" th:if="${invoice.hasBalanceDue()}" sec:authorize="hasAuthority('PERM_SELL')"
+         th:classappend="${payForm != null} ? 'open'" th:attr="data-total=${invoice.balanceDue}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="balance-modal-title">
+            <div class="modal-header">
+                <h3 id="balance-modal-title" th:text="#{invoice.balanceTitle(${@num.money(invoice.balanceDue)})}">Balance of 97,504 RWF</h3>
+                <button type="button" class="modal-close" data-modal-close="balance-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/invoices/{id}/balance(id=${invoice.id})}" method="post" class="pos-pay" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{invoice.balanceText(${invoice.billTo})}">Paid into your till. Jean Habimana collects the pieces once it is paid.</p>
+                    <div class="pay-grid">
+                        <div class="form-group">
+                            <label for="bal-cash" th:text="#{pos.pay.cash}">Cash received</label>
+                            <input type="number" id="bal-cash" name="cash" min="0" step="any" inputmode="decimal" data-pay="cash"
+                                   th:value="${payForm != null ? payForm.get('cash') : ''}" th:classappend="${payField == 'cash'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group"></div>
+                        <div class="form-group">
+                            <label for="bal-momo" th:text="#{pos.pay.mobileMoney}">Mobile money</label>
+                            <input type="number" id="bal-momo" name="mobileMoney" min="0" step="any" inputmode="decimal" data-pay="other"
+                                   th:value="${payForm != null ? payForm.get('mobileMoney') : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="bal-momo-ref" th:text="#{pos.pay.reference}">Reference</label>
+                            <input type="text" id="bal-momo-ref" name="mobileMoneyRef" maxlength="60" class="input-code"
+                                   th:value="${payForm != null ? payForm.get('mobileMoneyRef') : ''}" th:classappend="${payField == 'mobileMoneyRef'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group">
+                            <label for="bal-card" th:text="#{pos.pay.card}">Card</label>
+                            <input type="number" id="bal-card" name="card" min="0" step="any" inputmode="decimal" data-pay="other"
+                                   th:value="${payForm != null ? payForm.get('card') : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="bal-card-ref" th:text="#{pos.pay.reference}">Reference</label>
+                            <input type="text" id="bal-card-ref" name="cardRef" maxlength="60" class="input-code"
+                                   th:value="${payForm != null ? payForm.get('cardRef') : ''}" th:classappend="${payField == 'cardRef'} ? 'is-invalid'">
+                        </div>
+                        <div class="form-group">
+                            <label for="bal-bank" th:text="#{pos.pay.bankTransfer}">Bank transfer</label>
+                            <input type="number" id="bal-bank" name="bankTransfer" min="0" step="any" inputmode="decimal" data-pay="other"
+                                   th:value="${payForm != null ? payForm.get('bankTransfer') : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="bal-bank-ref" th:text="#{pos.pay.reference}">Reference</label>
+                            <input type="text" id="bal-bank-ref" name="bankRef" maxlength="60" class="input-code"
+                                   th:value="${payForm != null ? payForm.get('bankRef') : ''}" th:classappend="${payField == 'bankRef'} ? 'is-invalid'">
+                        </div>
+                    </div>
+                    <div class="pay-status" aria-live="polite" th:attr="data-due-label=#{pos.pay.due}, data-change-label=#{pos.pay.change}, data-done-label=#{pos.pay.done}">
+                        <span class="pay-status-label" th:text="#{pos.pay.due}">Still to pay</span>
+                        <span class="pay-status-amount" th:text="${@num.money(invoice.balanceDue)}">97,504</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="balance-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{pos.pay.confirm}">Take the payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script defer src="/js/stock-ops.js"></script>
+    <script defer src="/js/pos.js" th:if="${invoice.hasBalanceDue()}"></script>
 </div>
 </body>
 </html>

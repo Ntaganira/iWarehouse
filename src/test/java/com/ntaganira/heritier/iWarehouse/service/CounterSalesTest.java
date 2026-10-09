@@ -96,6 +96,7 @@ class CounterSalesTest {
         retail = priceList("RETAIL", true);
         contractor = priceList("CONTRACTOR", false);
         walkIn = customer("WALK-IN", CustomerType.WALK_IN, "0", null, null);
+        walkIn.setDefaultCustomer(true);
         builders = customer("Umucyo Builders", CustomerType.CONTRACTOR, "500000", contractor, "100123456");
 
         tillRepo = mock(TillSessionRepository.class);
@@ -161,9 +162,12 @@ class CounterSalesTest {
         });
         when(paymentRepo.totalsOfSession(any())).thenAnswer(a -> {
             Map<PaymentMethod, BigDecimal> sums = new EnumMap<>(PaymentMethod.class);
-            payments.forEach(p -> sums.merge(p.getMethod(), p.getAmount(), BigDecimal::add));
+            payments.stream().filter(p -> p.getTillSessionId() == null || p.getTillSessionId().equals(a.getArgument(0)))
+                    .forEach(p -> sums.merge(p.getMethod(), p.getAmount(), BigDecimal::add));
             return sums.entrySet().stream().map(e -> new Object[]{e.getKey(), e.getValue()}).toList();
         });
+        when(paymentRepo.findByInvoiceIdOrderByLineNo(any())).thenAnswer(a -> payments.stream()
+                .filter(p -> a.getArgument(0).equals(p.getInvoiceId())).sorted(Comparator.comparingInt(SalesPayment::getLineNo)).toList());
         when(tillRepo.save(any())).thenAnswer(a -> {
             TillSession t = a.getArgument(0);
             t.setId(UUID.randomUUID());
@@ -283,6 +287,7 @@ class CounterSalesTest {
         rolesOf.put(9L, List.of(role("OWNER", "100")));
         SettingService settings = mock(SettingService.class);
         when(settings.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT)).thenReturn(new BigDecimal("5"));
+        when(settings.getDecimal(SettingKey.DEPOSIT_MIN_PERCENT)).thenReturn(new BigDecimal("50"));
 
         // Quotations (POS-03), valid 14 days by default; the units a quotation's whole sheets can take
         QuotationRepository quotationRepo = mock(QuotationRepository.class);
@@ -972,6 +977,103 @@ class CounterSalesTest {
             assertThat(e.getMessageKey()).isEqualTo("sale.unit.cutForSale");
             assertThat(e.getArgs()).containsExactly("U-WH-000073", "INV-WH-2026-000001");
         });
+    }
+
+    // ---------------------------------------------------------------- deposits (POS-08)
+
+    @Test
+    void anOrderPaidByADepositHasItsBalanceTakenInAnyTillBeforeItsPiecesLeave() {
+        tills.open(BigDecimal.ZERO);
+        TillSession saleTill = till;
+        SalesInvoice sale = sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 2, List.of(), null, null));
+        sale.getLines().forEach(l -> l.setId(UUID.randomUUID()));                      // 2 x 0.25 m² x 27,000 = 13,500
+        assertThat(sales.depositMinimum(sale)).isEqualByComparingTo("6750");             // 50%
+        SalePayments.Entered sevenThousand = new SalePayments.Entered(new BigDecimal("7000"), null, null, null, null, null, null, null);
+
+        // The default walk-in customer gives a name: the order is collected under it
+        assertThatThrownBy(() -> sales.pay(sevenThousand, true))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.pay.deposit.noName"));
+        sales.setCustomer(walkIn.getId(), "Jean Habimana", null);
+        assertThatThrownBy(() -> sales.pay(new SalePayments.Entered(new BigDecimal("5000"), null, null, null, null, null, null, null), true))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.pay.deposit.short");
+                    assertThat(e.getArgs()).containsExactly(new BigDecimal("6750"), new BigDecimal("1750"));
+                });
+
+        SalesService.Paid paid = sales.pay(sevenThousand, true);
+
+        assertThat(sale.getStatus()).isEqualTo(SalesInvoiceStatus.POSTED);
+        assertThat(sale.getTotalAmount()).isEqualByComparingTo("13500");
+        assertThat(sale.getBalanceDue()).isEqualByComparingTo("6500");
+        assertThat(paid.change()).isEqualByComparingTo("0");
+        assertThat(paid.jobs()).hasSize(1);                                             // cut now, collected later
+        assertThat(payments).singleElement().satisfies(p -> {
+            assertThat(p.getAmount()).isEqualByComparingTo("7000");
+            assertThat(p.getTillSessionId()).isEqualTo(saleTill.getId());
+            assertThat(p.getCashTendered()).isEqualByComparingTo("7000");
+            assertThat(p.isBalancePayment()).isFalse();
+        });
+        verify(postings).sale(eq(sale), any(), any());
+
+        StockUnit piece = cut(paid.jobs().get(0).getLines().get(0), CuttingOutputKind.PIECE,
+                unit("U-WH-000081", clear6, 600, 400, StockStatus.RESERVED, walkIn));
+        assertThatThrownBy(() -> sales.deliver(sale.getId(), List.of(piece.getId()), null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("sale.deliver.balanceDue");
+                    assertThat(e.getArgs()).containsExactly("INV-WH-2026-000001", new BigDecimal("6500.00"));
+                });
+
+        // Collected the next day at another cashier's till: the balance is that till's cash
+        signIn(6L, "cashier2");
+        tills.open(BigDecimal.ZERO);
+        assertThat(till.getId()).isNotEqualTo(saleTill.getId());
+        assertThatThrownBy(() -> sales.payBalance(sale.getId(), new SalePayments.Entered(null, null, null, null, null, null, null, new BigDecimal("6500"))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.balance.noCredit"));
+
+        SalesService.BalancePaid balance = sales.payBalance(sale.getId(),
+                new SalePayments.Entered(new BigDecimal("10000"), null, null, null, null, null, null, null));
+
+        assertThat(balance.paid()).isEqualByComparingTo("6500");
+        assertThat(balance.change()).isEqualByComparingTo("3500");
+        assertThat(sale.hasBalanceDue()).isFalse();
+        assertThat(payments.get(1)).satisfies(p -> {
+            assertThat(p.getLineNo()).isEqualTo(2);
+            assertThat(p.getAmount()).isEqualByComparingTo("6500");
+            assertThat(p.getTillSessionId()).isEqualTo(till.getId());
+            assertThat(p.getCashTendered()).isEqualByComparingTo("10000");
+            assertThat(p.getChange()).isEqualByComparingTo("3500");
+            assertThat(p.isBalancePayment()).isTrue();
+        });
+        assertThat(tills.summary(till).getCashSales()).isEqualByComparingTo("6500");
+        verify(postings).saleBalance(eq(sale), any());
+        assertThatThrownBy(() -> sales.payBalance(sale.getId(), sevenThousand))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.balance.none"));
+
+        sales.deliver(sale.getId(), List.of(piece.getId()), null);
+        assertThat(piece.getStatus()).isEqualTo(StockStatus.SOLD);
+    }
+
+    @Test
+    void onlyAnOrderTakesADepositAndTheGlassTakenAtOnceIsPaidInFull() {
+        tills.open(BigDecimal.ZERO);
+        StockUnit sheet = unit("U-WH-000020", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        SalesInvoice sale = sales.addUnit("U-WH-000020", null);                        // 195,008
+        SalePayments.Entered deposit = new SalePayments.Entered(new BigDecimal("150000"), null, null, null, null, null, null, null);
+        assertThat(sales.depositMinimum(sale)).isNull();
+        assertThatThrownBy(() -> sales.pay(deposit, true))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.pay.deposit.noSizes"));
+
+        sales.addCustom(new SalesService.CustomSize(clear6.getId(), 600, 400, 2, List.of(), null, null));   // + 13,500
+        sales.setCustomer(builders.getId(), null, null);                               // a named customer: no buyer name needed
+        BigDecimal total = sales.totals(sale).gross();
+        assertThat(sales.depositMinimum(sale)).isEqualByComparingTo(sale.getLines().get(0).getAmount());   // the sheet in full
+        assertThatThrownBy(() -> sales.pay(new SalePayments.Entered(BigDecimal.ONE, null, null, null, null, null, null, null), true))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.pay.deposit.short"));
+
+        sales.pay(new SalePayments.Entered(sale.getLines().get(0).getAmount(), null, null, null, null, null, null, null), true);
+
+        assertThat(sheet.getStatus()).isEqualTo(StockStatus.SOLD);                     // the sheet leaves, paid
+        assertThat(sale.getBalanceDue()).isEqualByComparingTo(total.subtract(sale.getLines().get(0).getAmount()));
     }
 
     // ---------------------------------------------------------------- helpers

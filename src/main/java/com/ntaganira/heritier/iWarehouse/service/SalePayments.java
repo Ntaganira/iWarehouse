@@ -5,6 +5,7 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,9 @@ import java.util.List;
  * - Desc      : Splitting a sale's total over the ways it is paid (POS-04). Mobile money, card, bank transfer
  *               and customer credit settle what they say (with a reference where one is needed) and never more
  *               than the total; cash settles the rest: what the customer hands over must cover it, and the
- *               difference is the change. Pure, unit-tested; the customer's credit limit is checked by the caller.
+ *               difference is the change. An order may be paid by a deposit (POS-08): at least the minimum, the
+ *               rest is the balance due on collection. Pure, unit-tested; the customer's credit limit is checked
+ *               by the caller.
  * </pre>
  */
 public final class SalePayments {
@@ -35,8 +38,11 @@ public final class SalePayments {
     public record Part(PaymentMethod method, BigDecimal amount, String reference) {
     }
 
-    /** The parts (cash first, as kept: handed over less change), the cash handed over and the change. */
-    public record Split(List<Part> parts, BigDecimal cashTendered, BigDecimal change) {
+    /**
+     * The parts (cash first, as kept: handed over less change), the cash handed over, the change and the balance left
+     * to pay (zero unless a deposit).
+     */
+    public record Split(List<Part> parts, BigDecimal cashTendered, BigDecimal change, BigDecimal balance) {
 
         public BigDecimal amountOf(PaymentMethod method) {
             return parts.stream().filter(p -> p.method() == method).map(Part::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -44,6 +50,14 @@ public final class SalePayments {
     }
 
     public static Split split(BigDecimal total, Entered e) {
+        return split(total, e, null);
+    }
+
+    /**
+     * Splits a payment. With a deposit minimum (POS-08) the customer may pay less than the total, at least that
+     * minimum: the cash handed over is all kept up to the total, and what is left is the balance.
+     */
+    public static Split split(BigDecimal total, Entered e, BigDecimal depositMinimum) {
         BigDecimal cash = amount(e.cash(), "cash");
         List<Part> others = new ArrayList<>();
         other(others, PaymentMethod.MOBILE_MONEY, amount(e.mobileMoney(), "mobileMoney"), e.mobileMoneyRef(), "mobileMoneyRef");
@@ -55,16 +69,35 @@ public final class SalePayments {
         if (paidOtherwise.compareTo(total) > 0) {
             throw BusinessException.of("sale.pay.tooMuch", paidOtherwise, total);
         }
-        BigDecimal cashDue = total.subtract(paidOtherwise);
-        if (cash.compareTo(cashDue) < 0) {
-            throw BusinessException.onField("cash", "sale.pay.short", cashDue.subtract(cash));
+        BigDecimal rest = total.subtract(paidOtherwise);
+        BigDecimal cashKept;
+        if (depositMinimum == null) {
+            if (cash.compareTo(rest) < 0) {
+                throw BusinessException.onField("cash", "sale.pay.short", rest.subtract(cash));
+            }
+            cashKept = rest;
+        } else {
+            cashKept = cash.min(rest);
+            BigDecimal paid = paidOtherwise.add(cashKept);
+            if (paid.compareTo(depositMinimum) < 0) {
+                throw BusinessException.onField("cash", "sale.pay.deposit.short", depositMinimum, depositMinimum.subtract(paid));
+            }
         }
         List<Part> parts = new ArrayList<>();
-        if (cashDue.signum() > 0) {
-            parts.add(new Part(PaymentMethod.CASH, cashDue, null));
+        if (cashKept.signum() > 0) {
+            parts.add(new Part(PaymentMethod.CASH, cashKept, null));
         }
         parts.addAll(others);
-        return new Split(parts, cash.signum() > 0 ? cash : null, cash.subtract(cashDue));
+        return new Split(parts, cash.signum() > 0 ? cash : null, cash.subtract(cashKept), rest.subtract(cashKept));
+    }
+
+    /**
+     * The smallest deposit on an order (POS-08): the percentage of the total (whole RWF, rounded up), and never less
+     * than the glass taken from stock at once (it leaves paid) nor than 1 RWF; at most the total.
+     */
+    public static BigDecimal depositMinimum(BigDecimal total, BigDecimal percent, BigDecimal takenNow) {
+        BigDecimal share = total.multiply(percent).divide(new BigDecimal("100"), 0, RoundingMode.CEILING);
+        return share.max(takenNow).max(BigDecimal.ONE).min(total);
     }
 
     private static void other(List<Part> parts, PaymentMethod method, BigDecimal amount, String reference, String refField) {

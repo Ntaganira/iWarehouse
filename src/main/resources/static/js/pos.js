@@ -1,54 +1,72 @@
 /*
- * iWarehouse - counter POS payment (POS-04), price changes and approvals (POS-05, POS-06).
- * Opening the payment dialog with nothing entered puts the whole total in cash (one tap for a cash sale);
- * as amounts are typed it shows what is still to pay, or the change to give back. A line's price dialog
- * turns a discount into a price and back, and says whether a manager must approve it. While requests wait,
- * the page asks every few seconds where they stand and reloads once one is decided. The server checks
- * everything again.
+ * iWarehouse - counter POS payment (POS-04), price changes and approvals (POS-05, POS-06), deposits (POS-08).
+ * Opening a payment dialog (a sale, or an order's balance) with nothing entered puts the whole amount in cash
+ * (one tap for a cash sale); as amounts are typed it shows what is still to pay, or the change to give back.
+ * With "a deposit" ticked, the cash is the deposit: it shows what the deposit still lacks, then the balance
+ * left for collection. A line's price dialog turns a discount into a price and back, and says whether a
+ * manager must approve it. While requests wait, the page asks every few seconds where they stand and reloads
+ * once one is decided. The server checks everything again.
  */
 (function () {
     'use strict';
 
-    const modal = document.getElementById('pay-modal');
-    if (!modal) return;
-
-    const total = parseFloat(modal.dataset.total) || 0;
-    const inputs = Array.from(modal.querySelectorAll('input[data-pay]'));
-    const cash = modal.querySelector('input[data-pay="cash"]');
-    const status = modal.querySelector('.pay-status');
-    const label = status.querySelector('.pay-status-label');
-    const amount = status.querySelector('.pay-status-amount');
     const format = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     const value = (input) => Math.max(parseFloat(input.value) || 0, 0);
+    const round2 = (n) => Math.round(n * 100) / 100;
 
-    function update() {
-        const paidCash = value(cash);
-        const paidOther = inputs.filter(i => i !== cash).reduce((sum, i) => sum + value(i), 0);
-        const left = Math.round((total - paidOther - paidCash) * 100) / 100;
-        status.classList.remove('is-change', 'is-done', 'is-due');
-        if (left > 0) {
-            label.textContent = status.dataset.dueLabel;
-            amount.textContent = format(left);
-            status.classList.add('is-due');
-        } else if (left < 0 && paidCash > 0 && paidOther <= total) {
-            label.textContent = status.dataset.changeLabel;
-            amount.textContent = format(-left);
-            status.classList.add('is-change');
-        } else {
-            label.textContent = status.dataset.doneLabel;
-            amount.textContent = left === 0 ? '' : format(left);
-            status.classList.add(left === 0 ? 'is-done' : 'is-due');
+    document.querySelectorAll('.modal-overlay[data-total]').forEach(modal => {
+        if (!modal.querySelector('form.pos-pay')) return;
+        const total = parseFloat(modal.dataset.total) || 0;
+        const depositMin = parseFloat(modal.dataset.depositMin) || 0;
+        const inputs = Array.from(modal.querySelectorAll('input[data-pay]'));
+        const cash = modal.querySelector('input[data-pay="cash"]');
+        const deposit = modal.querySelector('input[data-pay-deposit]');
+        const status = modal.querySelector('.pay-status');
+        const label = status.querySelector('.pay-status-label');
+        const amount = status.querySelector('.pay-status-amount');
+
+        function show(text, sum, state) {
+            status.classList.remove('is-change', 'is-done', 'is-due');
+            label.textContent = text;
+            amount.textContent = sum;
+            status.classList.add(state);
         }
-    }
 
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('[data-modal-open="pay-modal"]')) return;
-        if (inputs.every(i => !i.value)) cash.value = String(total);
+        function update() {
+            const paidCash = value(cash);
+            const paidOther = inputs.filter(i => i !== cash).reduce((sum, i) => sum + value(i), 0);
+            const left = round2(total - paidOther - paidCash);
+            if (left > 0 && deposit && deposit.checked) {
+                const short = round2(depositMin - paidOther - paidCash);
+                if (short > 0) show(status.dataset.depositDueLabel, format(short), 'is-due');
+                else show(status.dataset.balanceLabel, format(left), 'is-done');
+            } else if (left > 0) {
+                show(status.dataset.dueLabel, format(left), 'is-due');
+            } else if (left < 0 && paidCash > 0 && paidOther <= total) {
+                show(status.dataset.changeLabel, format(-left), 'is-change');
+            } else {
+                show(status.dataset.doneLabel, left === 0 ? '' : format(left), left === 0 ? 'is-done' : 'is-due');
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest(`[data-modal-open="${modal.id}"]`)) return;
+            if (inputs.every(i => !i.value)) cash.value = String(deposit && deposit.checked ? depositMin : total);
+            update();
+            setTimeout(() => { cash.focus(); cash.select(); }, 50);
+        });
+        // Ticking "a deposit" on a dialog still at the full cash amount offers the smallest deposit instead
+        if (deposit) {
+            deposit.addEventListener('change', () => {
+                const others = inputs.filter(i => i !== cash).every(i => !i.value);
+                if (others && deposit.checked && value(cash) === total) cash.value = String(depositMin);
+                else if (others && !deposit.checked && value(cash) === depositMin) cash.value = String(total);
+                update();
+            });
+        }
+        modal.addEventListener('input', update);
         update();
-        setTimeout(() => { cash.focus(); cash.select(); }, 50);
     });
-    modal.addEventListener('input', update);
-    update();
 })();
 
 (function () {

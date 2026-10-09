@@ -282,7 +282,8 @@
 
     <!-- Payment, split over the ways the customer pays (POS-04) -->
     <th:block th:unless="${empty}">
-        <div class="modal-overlay" id="pay-modal" th:classappend="${payForm != null} ? 'open'" th:attr="data-total=${totals.gross}">
+        <div class="modal-overlay" id="pay-modal" th:classappend="${payForm != null} ? 'open'"
+             th:attr="data-total=${totals.gross}, data-deposit-min=${depositMinimum}">
             <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-modal-title">
                 <div class="modal-header">
                     <h3 id="pay-modal-title" th:text="#{pos.payTitle(${@num.money(totals.gross)})}">Pay 195,008 RWF</h3>
@@ -341,8 +342,17 @@
                                        th:value="${payForm != null ? payForm.get('creditReason') : ''}" th:classappend="${payField == 'creditReason'} ? 'is-invalid'">
                                 <span class="hint" th:text="#{pos.creditAskHint}">Credit above what the customer has left needs a manager's approval: ask, then take the payment once approved.</span>
                             </div>
+                            <div class="form-group full-width" th:if="${depositMinimum != null}">
+                                <label class="checkbox-item">
+                                    <input type="checkbox" class="checkbox" name="deposit" value="true" data-pay-deposit
+                                           th:checked="${payForm != null and payForm.get('deposit') == 'true'}">
+                                    <span th:text="#{pos.deposit}">A deposit: the balance is paid when the pieces are collected</span>
+                                </label>
+                                <span class="hint" th:text="#{pos.depositHint(${@num.money(depositMinimum)})}">At least 97,504 RWF now, the glass from stock in full</span>
+                            </div>
                         </div>
-                        <div class="pay-status" aria-live="polite" th:attr="data-due-label=#{pos.pay.due}, data-change-label=#{pos.pay.change}, data-done-label=#{pos.pay.done}">
+                        <div class="pay-status" aria-live="polite" th:attr="data-due-label=#{pos.pay.due}, data-change-label=#{pos.pay.change},
+                             data-done-label=#{pos.pay.done}, data-deposit-due-label=#{pos.pay.depositDue}, data-balance-label=#{pos.pay.balance}">
                             <span class="pay-status-label" th:text="#{pos.pay.due}">Still to pay</span>
                             <span class="pay-status-amount" th:text="${@num.money(totals.gross)}">195,008</span>
                         </div>

@@ -315,13 +315,42 @@ class PostingServiceTest {
         assertThat(line(last(), AccountKey.RECEIVABLE).customerId()).isEqualTo(builders.getId());
         assertInventoryEqualsValuation();
 
+        // An order of sizes to cut paid by a deposit (POS-08): the whole sale is revenue, the balance a receivable
+        SalesInvoice order = new SalesInvoice();
+        order.setId(UUID.randomUUID());
+        order.setNumber("INV-WH-2026-000003");
+        order.setCustomer(walkIn);
+        order.setBuyerName("Jean Habimana");
+        order.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        order.setNetAmount(new BigDecimal("11440.68"));
+        order.setVatAmount(new BigDecimal("2059.32"));
+        order.setTotalAmount(new BigDecimal("13500.00"));
+        order.setBalanceDue(new BigDecimal("6500.00"));
+        postings.sale(order, List.of(salePayment(PaymentMethod.CASH, "7000", null)), postings.stockValues(List.of(clear6)));
+        Journal deposit = last();
+        assertThat(line(deposit, AccountKey.CASH).debit()).isEqualByComparingTo("7000");
+        assertThat(line(deposit, AccountKey.RECEIVABLE).debit()).isEqualByComparingTo("6500");
+        assertThat(line(deposit, AccountKey.RECEIVABLE).customerId()).isEqualTo(walkIn.getId());
+        assertThat(line(deposit, AccountKey.SALES).credit()).isEqualByComparingTo("11440.68");
+        assertThat(deposit.debits()).isEqualByComparingTo(deposit.credits());
+
+        // Its balance paid at collection: Dr Cash / Cr the customer's receivable, which is then clear
+        postings.saleBalance(order, List.of(salePayment(PaymentMethod.CASH, "6500", null)));
+        Journal balance = last();
+        assertThat(balance.source()).isEqualTo(JournalSource.SALES_BALANCE);
+        assertThat(line(balance, AccountKey.CASH).debit()).isEqualByComparingTo("6500");
+        assertThat(line(balance, AccountKey.RECEIVABLE).credit()).isEqualByComparingTo("6500");
+        assertThat(lines(AccountKey.RECEIVABLE).stream().filter(l -> walkIn.getId().equals(l.customerId()))
+                .map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("0");
+        assertInventoryEqualsValuation();
+
         // The till closes 1,000 short: the vault gets what was counted, the shortage goes to Cash Over/Short
         till.setClosedAt(LocalDate.of(2026, 10, 9).atTime(18, 0));
-        till.setExpectedCash(new BigDecimal("117504.00"));
-        till.setCountedCash(new BigDecimal("116504.00"));
+        till.setExpectedCash(new BigDecimal("131004.00"));                              // float + 97,504 + 7,000 + 6,500
+        till.setCountedCash(new BigDecimal("130004.00"));
         postings.tillClosed(till);
         assertThat(balance(AccountKey.CASH)).isEqualByComparingTo("0");
-        assertThat(balance(AccountKey.CASH_VAULT)).isEqualByComparingTo("96504");      // 116,504 back less the 20,000 float
+        assertThat(balance(AccountKey.CASH_VAULT)).isEqualByComparingTo("110004");     // 130,004 back less the 20,000 float
         assertThat(balance(AccountKey.CASH_OVER_SHORT)).isEqualByComparingTo("1000");
         BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);

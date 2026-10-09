@@ -26,7 +26,8 @@ public enum JournalSource {
     SALES_INVOICE("/invoices/"),
     TILL_OPENED("/till-sessions/"),
     TILL_CLOSED("/till-sessions/"),
-    SALES_DELIVERY("/invoices/");
+    SALES_DELIVERY("/invoices/"),
+    SALES_BALANCE("/invoices/");
 
     private final String path;
 

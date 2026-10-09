@@ -185,7 +185,8 @@
                                 <td>
                                     <th:block th:replace="~{journals/list :: source(${r.line.entry})}"></th:block>
                                     <div class="cell-sub" th:if="${r.line.memo != null}" th:text="${r.line.memo}">INV-778 · GRN-WH-2026-000001</div>
-                                    <div class="cell-sub" th:if="${r.foreign}" th:text="${r.line.credit.signum() > 0} ? ${@num.amount(r.line.fxAmount.abs(), 2) + ' ' + r.line.currencyCode + ' × ' + @num.rate(r.line.rate)} : ${@num.amount(r.line.fxAmount.abs(), 2) + ' ' + r.line.currencyCode}">4,500.00 USD × 1,333.33</div>
+                                    <div class="cell-sub" th:if="${r.foreign and r.line.fxAmount.signum() == 0}" th:text="#{journal.fxRevalued(${r.line.currencyCode}, ${@num.rate(r.line.rate)})}">USD revalued at 1,455.00</div>
+                                    <div class="cell-sub" th:if="${r.foreign and r.line.fxAmount.signum() != 0}" th:text="${r.line.credit.signum() > 0} ? ${@num.amount(r.line.fxAmount.abs(), 2) + ' ' + r.line.currencyCode + ' × ' + @num.rate(r.line.rate)} : ${@num.amount(r.line.fxAmount.abs(), 2) + ' ' + r.line.currencyCode}">4,500.00 USD × 1,333.33</div>
                                 </td>
                                 <td>
                                     <a class="mono" th:href="@{/accounting/journals/{id}(id=${r.line.entry.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="${r.line.entry.number}">JV-WH-2026-000035</a>

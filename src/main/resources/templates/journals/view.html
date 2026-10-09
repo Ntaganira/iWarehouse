@@ -24,6 +24,14 @@
         <span th:text="#{journal.sameSource(${journal.sourceNumber})}">Other journals of GRN-WH-2026-000005:</span>
         <th:block th:replace="~{journals/list :: journalLinks(${sameSource})}"></th:block>
     </div>
+    <div class="doc-note" th:if="${reverses != null}">
+        <span th:text="#{journal.reverses}">Reverses</span>
+        <a class="mono" th:href="@{/accounting/journals/{id}(id=${reverses.id})}" th:text="${reverses.number}">JV-WH-2026-000070</a>
+    </div>
+    <div class="doc-note" th:if="${!#lists.isEmpty(reversedBy)}">
+        <span th:text="#{journal.reversedBy}">Reversed by</span>
+        <th:block th:replace="~{journals/list :: journalLinks(${reversedBy})}"></th:block>
+    </div>
 
     <div class="section">
         <div class="section-body">
@@ -80,8 +88,10 @@
                                 <span class="mono" th:if="${l.product != null}" th:text="${l.product.code}">CLR-6</span>
                                 <span th:if="${l.supplier != null}" th:text="${l.supplier.name}">Shandong Glass</span>
                                 <div class="cell-sub mono" th:if="${l.memo != null}" th:text="${l.memo}">BL-778</div>
-                                <div class="cell-sub" th:if="${l.currencyCode != null}"
+                                <div class="cell-sub" th:if="${l.currencyCode != null and l.fxAmount.signum() != 0}"
                                      th:text="#{journal.fx(${@num.money(l.fxAmount)}, ${l.currencyCode}, ${@num.rate(l.rate)})}">682.53 USD at 1,449.123456</div>
+                                <div class="cell-sub" th:if="${l.currencyCode != null and l.fxAmount.signum() == 0}"
+                                     th:text="#{journal.fxRevalued(${l.currencyCode}, ${@num.rate(l.rate)})}">USD revalued at 1,455.00</div>
                                 <span class="text-muted" th:if="${l.product == null and l.supplier == null and l.memo == null and l.currencyCode == null}">—</span>
                             </td>
                             <td class="num" th:text="${l.debit.signum() > 0} ? ${@num.money(l.debit)} : ''">941,966.40</td>

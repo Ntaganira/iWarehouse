@@ -173,6 +173,36 @@ class SupplierAccountServiceTest {
         verify(rates, never()).rateFor(any(), any());
     }
 
+    @Test
+    void aMonthEndRevaluationAndItsReversalLeaveWhatIsOwedAsBooked() {   // ACC-08
+        payable.add(apLine("2026-09-05", "USD", "3000", "1300", "3900000"));          // due 05/10: 4 days late on 09/10
+        payable.add(revaluationLine("2026-09-30", "0", "60000"));                      // revalued at 1,320: 60,000 more
+        payable.add(revaluationLine("2026-10-01", "60000", "0"));                      // reversed the next day
+
+        Payables.Open usd = service.open(shandong).get("USD");
+        assertThat(usd.getAmount()).isEqualByComparingTo("3000");
+        assertThat(usd.getBase()).isEqualByComparingTo("3900000");                     // as booked: realised when paid
+        SupplierAccountService.Account account = service.account(shandong);
+        assertThat(account.statement()).hasSize(3);                                    // the statement shows both journals
+        assertThat(account.balance()).isEqualByComparingTo("3900000");
+        assertThat(account.ageing().get(Ageing.Bucket.DAYS_1_30)).isEqualByComparingTo("3900000");   // the reversal settles nothing
+        assertThat(account.ageing().get(Ageing.Bucket.NOT_DUE)).isEqualByComparingTo("0");
+    }
+
+    private static JournalLine revaluationLine(String date, String debit, String credit) {
+        JournalEntry entry = new JournalEntry();
+        entry.setEntryDate(LocalDate.parse(date));
+        entry.setSourceType(JournalSource.FX_REVALUATION);
+        JournalLine line = new JournalLine();
+        line.setEntry(entry);
+        line.setDebit(new BigDecimal(debit));
+        line.setCredit(new BigDecimal(credit));
+        line.setCurrencyCode("USD");
+        line.setFxAmount(BigDecimal.ZERO);
+        line.setRate(new BigDecimal("1320"));
+        return line;
+    }
+
     private static SupplierAccountService.InvoiceForm form(String ref, String amount, List<UUID> receipts) {
         return new SupplierAccountService.InvoiceForm(ref, LocalDate.of(2026, 10, 9), new BigDecimal(amount), receipts, null);
     }

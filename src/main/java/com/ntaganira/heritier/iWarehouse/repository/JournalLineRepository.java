@@ -84,6 +84,17 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
     List<JournalLine> findOfSources(@Param("accountId") UUID accountId, @Param("type") JournalSource type,
                                     @Param("sourceIds") Collection<UUID> sourceIds);
 
+    /**
+     * Rows of (account id, supplier id, currency, owed in it, owed in RWF) of the foreign-currency lines on some accounts
+     * dated up to a day (ACC-08): owed is credits less debits; a line's foreign amount counts on its side.
+     */
+    @Query("select l.account.id, s.id, l.currencyCode,"
+            + " sum(case when l.credit > 0 then abs(l.fxAmount) else -abs(l.fxAmount) end), sum(l.credit) - sum(l.debit)"
+            + " from JournalLine l left join l.supplier s"
+            + " where l.account.id in :accountIds and l.currencyCode is not null and l.entry.entryDate <= :asOf"
+            + " group by l.account.id, s.id, l.currencyCode")
+    List<Object[]> foreignBalances(@Param("accountIds") Collection<UUID> accountIds, @Param("asOf") LocalDate asOf);
+
     /** Rows of (product id, debits less credits) of an account: the inventory account per glass (AT-10). */
     @Query("select l.product.id, coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"
             + " where l.account.id = :accountId group by l.product.id")

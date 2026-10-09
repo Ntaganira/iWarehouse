@@ -68,8 +68,10 @@ class PostingServiceTest {
             assertThat(j.isBalanced()).as("journal for %s balances", j.sourceNumber()).isTrue();
             posted.add(j);
             JournalEntry e = new JournalEntry();
+            e.setId(UUID.randomUUID());
             e.setNumber(String.format("JV-WH-2026-%06d", posted.size()));
             e.setSourceType(j.source());
+            e.setEntryDate(j.date());
             return e;
         });
         when(journals.inventoryByProduct()).thenAnswer(a -> {
@@ -523,7 +525,60 @@ class PostingServiceTest {
         assertThat(last().lines()).noneMatch(l -> l.account() == AccountKey.FX_GAIN_LOSS);
     }
 
+    @Test
+    void aMonthEndRevaluationMovesForeignBalancesToUnrealisedFxAndIsReversedTheNextDay() {   // ACC-08
+        FxRevaluation revaluation = new FxRevaluation();
+        revaluation.setId(UUID.randomUUID());
+        revaluation.setNumber("FXR-WH-2026-000001");
+        revaluation.setPeriodEnd(LocalDate.of(2026, 9, 30));
+        // At 30/09: the USD payable and GRNI fell in RWF (gains), the EUR import bill rose (a loss)
+        List<FxRevaluationLine> lines = List.of(
+                revalued(AccountKey.PAYABLE, shandong, "USD", "1320", "5000.00"),
+                revalued(AccountKey.GRNI, shandong, "USD", "1320", "129123.46"),
+                revalued(AccountKey.IMPORT_ACCRUAL, null, "EUR", "1600", "-20000.00"));
+
+        List<JournalEntry> entries = postings.fxRevaluation(revaluation, lines);
+
+        assertThat(entries).hasSize(2);
+        Journal revaluing = posted.get(posted.size() - 2);
+        Journal reversal = last();
+        assertThat(revaluing.source()).isEqualTo(JournalSource.FX_REVALUATION);
+        assertThat(revaluing.date()).isEqualTo(LocalDate.of(2026, 9, 30));
+        assertThat(line(revaluing, AccountKey.PAYABLE).debit()).isEqualByComparingTo("5000");          // owed less in RWF
+        assertThat(line(revaluing, AccountKey.PAYABLE).supplierId()).isEqualTo(shandong.getId());
+        assertThat(line(revaluing, AccountKey.PAYABLE).fx())                                            // only the RWF moves
+                .isEqualTo(new Journal.Fx("USD", new BigDecimal("0.00"), new BigDecimal("1320")));
+        assertThat(line(revaluing, AccountKey.GRNI).debit()).isEqualByComparingTo("129123.46");
+        assertThat(line(revaluing, AccountKey.IMPORT_ACCRUAL).credit()).isEqualByComparingTo("20000");
+        assertThat(line(revaluing, AccountKey.IMPORT_ACCRUAL).supplierId()).isNull();
+        assertThat(line(revaluing, AccountKey.FX_UNREALISED).credit()).isEqualByComparingTo("114123.46"); // a net gain
+        assertThat(revaluing.lines()).noneMatch(l -> l.account() == AccountKey.FX_GAIN_LOSS);           // realised only when paid
+
+        // The next day every line goes back: the items keep the RWF they were booked at
+        assertThat(reversal.date()).isEqualTo(LocalDate.of(2026, 10, 1));
+        assertThat(reversal.source()).isEqualTo(JournalSource.FX_REVALUATION);
+        assertThat(reversal.sourceId()).isEqualTo(revaluation.getId());
+        assertThat(reversal.reversesId()).isEqualTo(entries.get(0).getId());
+        assertThat(line(reversal, AccountKey.PAYABLE).credit()).isEqualByComparingTo("5000");
+        assertThat(line(reversal, AccountKey.PAYABLE).fx()).isEqualTo(line(revaluing, AccountKey.PAYABLE).fx());
+        for (AccountKey key : List.of(AccountKey.PAYABLE, AccountKey.GRNI, AccountKey.IMPORT_ACCRUAL, AccountKey.FX_UNREALISED)) {
+            assertThat(balance(key)).as("%s after the reversal", key).isEqualByComparingTo("0");
+        }
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static FxRevaluationLine revalued(AccountKey key, Supplier supplier, String currency, String rate, String gainLoss) {
+        Account account = new Account();
+        account.setSystemKey(key);
+        FxRevaluationLine line = new FxRevaluationLine();
+        line.setAccount(account);
+        line.setSupplier(supplier);
+        line.setCurrencyCode(currency);
+        line.setRate(new BigDecimal(rate));
+        line.setGainLoss(new BigDecimal(gainLoss));
+        return line;
+    }
 
     private static SalesPayment salePayment(PaymentMethod method, String amount, String reference) {
         SalesPayment p = new SalesPayment();

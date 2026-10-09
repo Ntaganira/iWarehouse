@@ -39,5 +39,6 @@ public enum AccountKey {
     STOCK_ADJUSTMENT,
     STOCK_REVALUATION,
     CASH_OVER_SHORT,
-    FX_GAIN_LOSS
+    FX_GAIN_LOSS,
+    FX_UNREALISED
 }

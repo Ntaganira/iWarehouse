@@ -34,6 +34,8 @@ public enum DocumentType {
     SUPPLIER_INVOICE("SINV"),
     /** A payment to a supplier (ACC-09): SPAY-WH-2026-000001. */
     SUPPLIER_PAYMENT("SPAY"),
+    /** Open foreign balances revalued at a month's end (ACC-08): FXR-WH-2026-000001. */
+    FX_REVALUATION("FXR"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

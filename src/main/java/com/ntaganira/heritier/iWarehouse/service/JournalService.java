@@ -102,6 +102,7 @@ public class JournalService {
         entry.setSourceNumber(journal.sourceNumber());
         entry.setDescription(journal.description());
         entry.setTotal(journal.debits());
+        entry.setReversesId(journal.reversesId());
         entry.setPostedAt(LocalDateTime.now(clock));
         entry.setUserId(user.map(AppUserPrincipal::getId).orElse(null));
         entry.setUsername(user.map(AppUserPrincipal::getUsername).orElse("system"));
@@ -167,6 +168,11 @@ public class JournalService {
     /** The journals posted for a document (a shipment: each posting and its claim), oldest first. */
     public List<JournalEntry> forSource(UUID sourceId, JournalSource... types) {
         return entryRepo.findBySourceTypeInAndSourceIdOrderByPostedAtAscNumberAsc(List.of(types), sourceId);
+    }
+
+    /** The journals that reverse this one. */
+    public List<JournalEntry> reversalsOf(UUID entryId) {
+        return entryRepo.findByReversesIdOrderByNumber(entryId);
     }
 
     public boolean hasJournal(JournalSource type, UUID sourceId) {

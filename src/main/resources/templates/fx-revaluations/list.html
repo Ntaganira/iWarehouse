@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{fxRevaluation.title}, ~{::content})}">
+<head><title>FX revaluations - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{fxRevaluation.title}">FX revaluations</h1>
+            <div class="subtitle" th:text="#{fxRevaluation.subtitle}">What is owed in foreign currencies, revalued at each month's last rate and reversed the next day</div>
+        </div>
+        <a href="/accounting/fx-revaluations/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_REVALUE_FX')" th:text="#{fxRevaluation.new}">Revalue a month</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{fxRevaluation.sectionTitle}">Months revalued</span>
+                <span class="section-count" th:text="${revaluations.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{fxRevaluation.number}">Revaluation</th>
+                        <th th:text="#{fxRevaluation.month}">Month</th>
+                        <th th:text="#{fxRevaluation.periodEnd}">Revalued on</th>
+                        <th th:text="#{fxRevaluation.postedBy}">Posted</th>
+                        <th class="num" th:text="#{fxRevaluation.gainLoss}">Unrealised gain or loss (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${revaluations.content}">
+                        <td><a class="row-link strong mono" th:href="@{/accounting/fx-revaluations/{id}(id=${r.id})}" th:text="${r.number}">FXR-WH-2026-000001</a></td>
+                        <td th:text="${#temporals.format(r.periodEnd, 'MMMM yyyy')}">September 2026</td>
+                        <td class="nowrap" th:text="${#temporals.format(r.periodEnd, 'dd/MM/yyyy')}">30/09/2026</td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(r.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${r.postedBy}">accountant</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(r.gainLoss)}">-1,263.80</td>
+                    </tr>
+                    <tr th:if="${revaluations.totalElements == 0}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{fxRevaluation.empty}">No month revalued yet</h3>
+                                <p th:text="#{fxRevaluation.emptyHint}">At each month end, revalue what is owed in foreign currencies at that day's rate</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${revaluations}, '/accounting/fx-revaluations', '')}"></th:block>
+    </div>
+</div>
+</body>
+</html>

@@ -23,7 +23,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -90,9 +92,20 @@ public class AccountingController {
         model.addAttribute("lines", lines);
         model.addAttribute("debits", lines.stream().map(JournalLine::getDebit).reduce(BigDecimal.ZERO, BigDecimal::add));
         model.addAttribute("credits", lines.stream().map(JournalLine::getCredit).reduce(BigDecimal.ZERO, BigDecimal::add));
+        // A reversing journal and the one it reverses name each other (a revaluation reversed the next day)
+        JournalEntry reverses = journal.getReversesId() == null ? null : journalService.findById(journal.getReversesId());
+        List<JournalEntry> reversedBy = journalService.reversalsOf(id);
+        Set<UUID> linked = new HashSet<>();
+        linked.add(id);
+        if (reverses != null) {
+            linked.add(reverses.getId());
+        }
+        reversedBy.forEach(j -> linked.add(j.getId()));
+        model.addAttribute("reverses", reverses);
+        model.addAttribute("reversedBy", reversedBy);
         model.addAttribute("sameSource", journal.getSourceId() == null ? List.of()
                 : journalService.forSource(journal.getSourceId(), JournalSource.values()).stream()
-                .filter(j -> !j.getId().equals(id)).toList());
+                .filter(j -> !linked.contains(j.getId())).toList());
         return "journals/view";
     }
 

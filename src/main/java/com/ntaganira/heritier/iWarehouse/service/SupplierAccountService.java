@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.GoodsReceiptStatus;
+import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
@@ -368,11 +369,14 @@ public class SupplierAccountService {
 
     // ---------------------------------------------------------------- helpers
 
-    /** The payable lines as owed (credit) or settled (debit), in their currency and in RWF. */
+    /**
+     * The payable lines as owed (credit) or settled (debit), in their currency and in RWF. A month-end revaluation is left
+     * out: it is reversed the next day, so its items keep the RWF they were booked at (ACC-08).
+     */
     private List<Payables.Line> payableLines(List<JournalLine> lines) {
         String base = baseCurrency();
         List<Payables.Line> result = new ArrayList<>();
-        for (JournalLine l : lines) {
+        for (JournalLine l : items(lines)) {
             BigDecimal rwf = l.getCredit().subtract(l.getDebit());
             boolean foreign = l.getCurrencyCode() != null && l.getFxAmount() != null;
             BigDecimal amount = foreign ? l.getFxAmount().abs().multiply(BigDecimal.valueOf(rwf.signum())) : rwf;
@@ -383,8 +387,13 @@ public class SupplierAccountService {
 
     /** The RWF ageing at the supplier's terms: what is owed (credits) is the charge, payments (debits) settle it. */
     private Ageing.Result ageing(List<JournalLine> lines, Supplier supplier) {
-        return Ageing.of(lines.stream().map(l -> new Ageing.Entry(l.getEntry().getEntryDate(), l.getCredit(), l.getDebit())).toList(),
+        return Ageing.of(items(lines).stream().map(l -> new Ageing.Entry(l.getEntry().getEntryDate(), l.getCredit(), l.getDebit())).toList(),
                 supplier.getPaymentTermsDays(), today());
+    }
+
+    /** The lines of invoices, bills and payments: a revaluation and its reversal (the next day) add up to nothing. */
+    private static List<JournalLine> items(List<JournalLine> lines) {
+        return lines.stream().filter(l -> l.getEntry().getSourceType() != JournalSource.FX_REVALUATION).toList();
     }
 
     private String baseCurrency() {

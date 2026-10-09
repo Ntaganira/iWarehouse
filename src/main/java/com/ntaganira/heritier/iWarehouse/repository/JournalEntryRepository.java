@@ -6,8 +6,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -37,4 +39,11 @@ public interface JournalEntryRepository extends Repository<JournalEntry, UUID>, 
     boolean existsBySourceTypeAndSourceId(JournalSource type, UUID sourceId);
 
     Optional<JournalEntry> findFirstBySourceType(JournalSource type);
+
+    /** The journals that reverse this one. */
+    List<JournalEntry> findByReversesIdOrderByNumber(UUID reversesId);
+
+    /** The date of the first journal (the ledger's first month), null before any. */
+    @Query("select min(e.entryDate) from JournalEntry e")
+    LocalDate firstEntryDate();
 }

@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,6 +44,7 @@ import java.util.stream.Stream;
 public class PostingService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(Journal.SCALE);
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final JournalService journalService;
     private final StockService stockService;
@@ -352,6 +354,30 @@ public class PostingService {
                         fx(payment.getCurrencyCode(), payment.getAmount(), payment.getRate()))
                 .balanceOn(AccountKey.FX_GAIN_LOSS);
         return journalService.post(journal);
+    }
+
+    /**
+     * A month's open foreign balances revalued (ACC-08, unrealised FX), dated its last day: each balance's account moves by
+     * its gain (Dr, what is owed falls) or loss (Cr), with its supplier and currency (no foreign amount: only the RWF changes)
+     * / Unrealised FX Gain/Loss the total. Reversed the next day by a second journal, so every item keeps the RWF it was
+     * booked at and is realised when paid. Returns the journal and its reversal (none when nothing moved).
+     */
+    public List<JournalEntry> fxRevaluation(FxRevaluation revaluation, List<FxRevaluationLine> lines) {
+        LocalDate date = revaluation.getPeriodEnd();
+        Journal journal = Journal.of(JournalSource.FX_REVALUATION, revaluation.getId(), revaluation.getNumber(), date,
+                "Foreign balances revalued at the rates of " + date.format(DAY));
+        for (FxRevaluationLine line : lines) {
+            journal.add(line.getAccount().getSystemKey(), line.getGainLoss(), null,
+                    line.getSupplier() == null ? null : line.getSupplier().getId(), null,
+                    new Journal.Fx(line.getCurrencyCode(), ZERO, line.getRate()));
+        }
+        JournalEntry entry = journalService.post(journal.balanceOn(AccountKey.FX_UNREALISED));
+        if (entry == null) {
+            return List.of();
+        }
+        JournalEntry reversal = journalService.post(journal.reversal(date.plusDays(1),
+                "Revaluation " + revaluation.getNumber() + " of " + date.format(DAY) + " reversed").reverses(entry.getId()));
+        return List.of(entry, reversal);
     }
 
     /** A till opened: its float leaves the main cash vault for the till (Dr Cash on Hand / Cr Main Cash Vault). */

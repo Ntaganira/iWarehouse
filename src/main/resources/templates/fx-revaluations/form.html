@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{fxRevaluation.addTitle}, ~{::content})}">
+<head><title>Revalue a month - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{fxRevaluation.addTitle}">Revalue a month</h1>
+            <div class="subtitle" th:text="#{fxRevaluation.addSubtitle}">What is owed in foreign currencies at a month's end, at that day's rate</div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/fx-revaluations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section" th:if="${month == null}">
+        <div class="section-body">
+            <div class="empty-state">
+                <h3 th:text="#{fxRevaluation.noMonth}">No month to revalue</h3>
+                <p th:text="#{fxRevaluation.noMonthHint(${#temporals.format(nextMonth, 'dd/MM/yyyy')})}">Every month up to the last one ended is revalued. This month can be revalued from 01/11/2026.</p>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${month != null}">
+        <div class="section">
+            <form th:action="@{/accounting/fx-revaluations/new}" method="get" class="table-toolbar report-filters">
+                <div class="filter-group">
+                    <label class="filter-field">
+                        <span th:text="#{fxRevaluation.month}">Month</span>
+                        <select name="month" class="toolbar-filter" onchange="this.form.submit()">
+                            <option th:each="m : ${months}" th:value="${m}" th:selected="${m == month}"
+                                    th:text="${#temporals.format(m.atEndOfMonth(), 'MMMM yyyy')}">September 2026</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn btn-outline btn-sm" th:text="#{fxRevaluation.show}">Show</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="doc-note is-danger" th:if="${!#lists.isEmpty(missingRates)}">
+            <span th:text="#{fxRevaluation.ratesMissing}">Record these rates under Currencies &amp; Rates, then come back:</span>
+            <th:block th:each="m : ${missingRates}"><br><span th:text="${m}">There is no BNR rate for USD on or before 2026-09-30.</span></th:block>
+            <br><a href="/currencies" sec:authorize="hasAuthority('PAGE_CURRENCIES')" th:text="#{nav.currencies}">Currencies &amp; Rates</a>
+        </div>
+
+        <div class="section">
+            <div class="section-body">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{fxRevaluation.periodEnd}">Revalued on</label>
+                        <div class="value" th:text="${#temporals.format(preview.periodEnd, 'dd/MM/yyyy')}">30/09/2026</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{fxRevaluation.reversedOn}">Reversed on</label>
+                        <div class="value" th:text="${#temporals.format(preview.periodEnd.plusDays(1), 'dd/MM/yyyy')}">01/10/2026</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{fxRevaluation.gainLoss}">Unrealised gain or loss (RWF)</label>
+                        <div class="value strong" th:text="${preview.gainLoss.signum() == 0} ? '—' : (${preview.gainLoss.signum() > 0} ? #{fxRevaluation.gain(${@num.money(preview.gainLoss)})} : #{fxRevaluation.loss(${@num.money(preview.gainLoss.negate())})})">Loss of 1,263.80</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{fxRevaluation.balances}">Open foreign balances</span>
+                    <span class="section-count" th:text="${preview.rows.size()}">0</span>
+                </h2>
+            </div>
+            <div class="section-body">
+                <th:block th:replace="~{fx-revaluations/view :: rowsTable(${preview.rows}, true)}"></th:block>
+                <p class="form-note" th:unless="${#lists.isEmpty(preview.rows)}"
+                   th:text="#{fxRevaluation.note(${#temporals.format(preview.periodEnd, 'dd/MM/yyyy')}, ${#temporals.format(preview.periodEnd.plusDays(1), 'dd/MM/yyyy')})}">Each line moves its account by the difference...</p>
+            </div>
+        </div>
+
+        <form th:action="@{/accounting/fx-revaluations/new}" method="post" class="form-actions sticky-actions confirm-submit"
+              th:attr="data-confirm=#{fxRevaluation.confirm(${#temporals.format(preview.periodEnd, 'MMMM yyyy')})}">
+            <input type="hidden" name="month" th:value="${month}">
+            <a href="/accounting/fx-revaluations" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            <button type="submit" class="btn btn-primary" th:disabled="${!preview.ready}" th:text="#{fxRevaluation.post}">Post the revaluation</button>
+        </form>
+    </th:block>
+</div>
+</body>
+</html>

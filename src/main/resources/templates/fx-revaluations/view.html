@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${revaluation.number}, ~{::content})}">
+<head><title>FX revaluation - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${revaluation.number}">FXR-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{fxRevaluation.subtitleOne(${#temporals.format(revaluation.periodEnd, 'MMMM yyyy')}, ${#temporals.format(revaluation.postedAt, 'dd/MM/yyyy HH:mm')}, ${revaluation.postedBy})}">September 2026 · 09/10/2026 10:30 · accountant</div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/fx-revaluations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{fxRevaluation.periodEnd}">Revalued on</label>
+                    <div class="value" th:text="${#temporals.format(revaluation.periodEnd, 'dd/MM/yyyy')}">30/09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{fxRevaluation.reversedOn}">Reversed on</label>
+                    <div class="value" th:text="${#temporals.format(revaluation.periodEnd.plusDays(1), 'dd/MM/yyyy')}">01/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{fxRevaluation.gainLoss}">Unrealised gain or loss (RWF)</label>
+                    <div class="value strong" th:text="${revaluation.gainLoss.signum() == 0} ? '—' : (${revaluation.gainLoss.signum() > 0} ? #{fxRevaluation.gain(${@num.money(revaluation.gainLoss)})} : #{fxRevaluation.loss(${@num.money(revaluation.gainLoss.negate())})})">Loss of 1,263.80</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{fxRevaluation.lines}">What was revalued</span>
+                <span class="section-count" th:text="${lines.size()}">0</span>
+            </h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{fx-revaluations/view :: rowsTable(${lines}, false)}"></th:block>
+            <p class="form-note" th:text="#{fxRevaluation.note(${#temporals.format(revaluation.periodEnd, 'dd/MM/yyyy')}, ${#temporals.format(revaluation.periodEnd.plusDays(1), 'dd/MM/yyyy')})}">Each line moves its account by the difference...</p>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/accounting/fx-revaluations/' + revaluation.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+
+<!--/*
+  The open foreign balances of a month (a preview's rows or a revaluation's lines, named alike): account, supplier, what is
+  owed in the currency and in RWF as booked, the rate and, at it, the RWF and the gain or loss. A preview row without a rate
+  shows "No rate". A document's own lines with their totals: shown whole.
+*/-->
+<th:block th:fragment="rowsTable(rows, preview)">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th th:text="#{fxRevaluation.account}">Account</th>
+                    <th class="num" th:text="#{fxRevaluation.owed}">Owed</th>
+                    <th class="num" th:text="#{fxRevaluation.booked}">Booked (RWF)</th>
+                    <th class="num" th:text="#{fxRevaluation.revalued}">At the rate (RWF)</th>
+                    <th class="num" th:text="#{fxRevaluation.difference}">Gain or loss (RWF)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r : ${rows}">
+                    <td>
+                        <a th:href="@{/accounting/accounts/{id}(id=${r.account.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTS')">
+                            <span class="mono" th:text="${r.account.code}">2010</span> <span th:text="${r.account.name}">Accounts Payable</span>
+                        </a>
+                        <span sec:authorize="!hasAuthority('PAGE_ACCOUNTS')"><span class="mono" th:text="${r.account.code}">2010</span> <span th:text="${r.account.name}">Accounts Payable</span></span>
+                        <div class="cell-sub" th:if="${r.supplier != null}">
+                            <a th:href="@{/suppliers/{id}(id=${r.supplier.id}, tab='account')}" sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:text="${r.supplier.name}">Shandong Float Glass Co.</a>
+                            <span sec:authorize="!hasAuthority('PAGE_SUPPLIERS')" th:text="${r.supplier.name}">Shandong Float Glass Co.</span>
+                        </div>
+                        <div class="cell-sub" th:if="${r.supplier == null}" th:text="#{fxRevaluation.noSupplier}">Bills without a supplier</div>
+                    </td>
+                    <td class="num nowrap" th:text="${@num.amount(r.fxOwed, 2) + ' ' + r.currencyCode}">62.84 USD</td>
+                    <td class="num" th:text="${@num.money(r.baseOwed)}">91,740.20</td>
+                    <td class="num">
+                        <th:block th:if="${r.rate != null}">
+                            <span th:text="${@num.money(r.revaluedOwed)}">91,432.20</span>
+                            <div class="cell-sub" th:text="#{fxRevaluation.rateSub(${@num.rate(r.rate)}, ${#temporals.format(r.rateDate, 'dd/MM/yyyy')}, ${r.rateSource})}">at 1,455.00 of 30/09/2026 (BNR)</div>
+                        </th:block>
+                        <span class="badge badge-danger" th:if="${r.rate == null}" th:text="#{fxRevaluation.rateMissing}">No rate</span>
+                    </td>
+                    <td class="num strong" th:text="${r.gainLoss == null or r.gainLoss.signum() == 0} ? '—' : ${@num.money(r.gainLoss)}">308.00</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(rows)}">
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <h3 th:text="#{fxRevaluation.nothingOpen(${#temporals.format(preview ? month.atEndOfMonth() : null, 'dd/MM/yyyy')})}">Nothing is owed in a foreign currency on 30/09/2026</h3>
+                            <p th:text="#{fxRevaluation.nothingOpenHint}">Supplier invoices, goods received not invoiced and import bills in a foreign currency appear here while they are open.</p>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot th:unless="${#lists.isEmpty(rows)}" th:with="rated=${rows.?[gainLoss != null]}">
+                <tr>
+                    <th colspan="2" th:text="#{fxRevaluation.total}">Total</th>
+                    <th class="num" th:text="${@num.money(#aggregates.sum(rows.![baseOwed]))}">91,740.20</th>
+                    <th class="num" th:text="${#lists.size(rated) == #lists.size(rows)} ? ${@num.money(#aggregates.sum(rows.![revaluedOwed]))} : '—'">91,432.20</th>
+                    <th class="num" th:text="${#lists.isEmpty(rated)} ? '—' : ${@num.money(#aggregates.sum(rated.![gainLoss]))}">308.00</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</th:block>
+</body>
+</html>

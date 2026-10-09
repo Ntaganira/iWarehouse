@@ -52,6 +52,7 @@ public final class Journal {
     private final Map<Key, BigDecimal> merged = new LinkedHashMap<>();
     private final List<Line> fxLines = new ArrayList<>();
     private final List<Object> order = new ArrayList<>();
+    private UUID reverses;
 
     private Journal(JournalSource source, UUID sourceId, String sourceNumber, LocalDate date, String description) {
         this.source = Objects.requireNonNull(source);
@@ -117,6 +118,28 @@ public final class Journal {
             add(AccountKey.INVENTORY, change, productId, null, null, null);
         }
         return this;
+    }
+
+    /**
+     * The journal that undoes this one on another day: every line the other way, with the same event and document (a
+     * month-end revaluation reversed the next day). Name the journal it reverses with {@link #reverses(UUID)}.
+     */
+    public Journal reversal(LocalDate date, String description) {
+        Journal reversal = new Journal(source, sourceId, sourceNumber, date, description);
+        for (Line l : lines()) {
+            reversal.add(l.account(), l.signed().negate(), l.productId(), l.supplierId(), l.customerId(), l.memo(), l.fx());
+        }
+        return reversal;
+    }
+
+    /** The posted journal this one reverses. */
+    public Journal reverses(UUID entryId) {
+        this.reverses = entryId;
+        return this;
+    }
+
+    public UUID reversesId() {
+        return reverses;
     }
 
     /** Puts what keeps the journal from balancing on one account (rounding of the moving average, revaluation). */

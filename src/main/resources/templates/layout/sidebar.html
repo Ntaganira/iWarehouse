@@ -149,6 +149,9 @@
         <a sec:authorize="hasAuthority('PAGE_PAYABLES')" th:classappend="${#strings.startsWith(requestURI, '/accounting/payables')} ? 'active' : ''" href="/accounting/payables">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 8 14"></polyline></svg></span> <span th:text="#{nav.payables}">Payables</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_FX_REVALUATIONS')" th:classappend="${#strings.startsWith(requestURI, '/accounting/fx-revaluations')} ? 'active' : ''" href="/accounting/fx-revaluations">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg></span> <span th:text="#{nav.fxRevaluations}">FX Revaluations</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" th:classappend="${#strings.startsWith(requestURI, '/accounting/trial-balance')} ? 'active' : ''" href="/accounting/trial-balance">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="3" x2="12" y2="21"></line><path d="M5 7h14"></path><path d="M5 7l-3 7a3 3 0 0 0 6 0z"></path><path d="M19 7l-3 7a3 3 0 0 0 6 0z"></path><line x1="8" y1="21" x2="16" y2="21"></line></svg></span> <span th:text="#{nav.trialBalance}">Trial Balance</span>
         </a>

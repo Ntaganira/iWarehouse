@@ -9,7 +9,10 @@
             <h1 th:text="#{cutting.yield.title}">Cutting yield</h1>
             <div class="subtitle" th:text="#{cutting.yield.subtitle}">Pieces and off-cuts as a share of the glass cut; cullet and breakage by operator, product and reason</div>
         </div>
-        <a href="/cutting-jobs" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PRODUCTION') and hasAuthority('PERM_VIEW_CUTTING_JOB')" th:text="#{cutting.title}">Cutting Jobs</a>
+        <div class="btn-group">
+            <a href="/cutting-jobs" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PRODUCTION') and hasAuthority('PERM_VIEW_CUTTING_JOB')" th:text="#{cutting.title}">Cutting Jobs</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/cutting-jobs/yield/export(from=${from}, to=${to}, product=${product}, operator=${operator})})}"></th:block>
+        </div>
     </div>
 
     <div class="section">

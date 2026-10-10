@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head><title>Documents</title></head>
+<body>
+<!--/*
+  The documents kept on a record (SRS 3.1): keep a PDF or a photo, open one, remove one with a reason.
+    <th:block th:replace="~{fragments/attachments :: documents('SHIPMENT', ${shipment.id}, ${documents}, '/shipments/' + ${shipment.id})}"></th:block>
+  docs: a Page of Attachment (AttachmentService.page); base: the record's page, for the pager (?tab=documents&page=n).
+*/-->
+<th:block th:fragment="documents(owner, ownerId, docs, base)">
+    <form sec:authorize="hasAuthority('PERM_ATTACH_DOCUMENT')" th:action="@{/attachments}" method="post" enctype="multipart/form-data"
+          class="attach-form">
+        <input type="hidden" name="owner" th:value="${owner}">
+        <input type="hidden" name="ownerId" th:value="${ownerId}">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="attach-file" th:text="#{attachment.file}">File</label>
+                <input type="file" id="attach-file" name="file" accept="application/pdf,image/jpeg,image/png,image/webp" required>
+                <span class="hint" th:text="#{attachment.fileHint}">A PDF or a photo (JPEG, PNG, WebP), at most 5 MB</span>
+            </div>
+            <div class="form-group">
+                <label for="attach-note" th:text="#{attachment.note}">Note</label>
+                <input type="text" id="attach-note" name="note" maxlength="255" th:placeholder="#{attachment.notePlaceholder}">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{attachment.add}">Keep the document</button>
+        </div>
+    </form>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th th:text="#{attachment.name}">Document</th>
+                    <th class="num" th:text="#{attachment.size}">Size</th>
+                    <th th:text="#{attachment.keptBy}">Kept by</th>
+                    <th sec:authorize="hasAuthority('PERM_ATTACH_DOCUMENT')"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="d : ${docs.content}">
+                    <td>
+                        <div class="doc-file">
+                            <a th:href="@{/attachments/{id}(id=${d.id})}" target="_blank" rel="noopener" class="doc-thumb-link" th:aria-label="${d.fileName}">
+                                <img th:if="${d.image}" class="doc-thumb" th:src="@{/attachments/{id}(id=${d.id})}" alt="" loading="lazy">
+                                <span th:unless="${d.image}" class="doc-thumb doc-thumb-pdf" th:text="#{export.pdf}">PDF</span>
+                            </a>
+                            <div>
+                                <a th:href="@{/attachments/{id}(id=${d.id})}" target="_blank" rel="noopener" th:text="${d.fileName}">delivery-note.pdf</a>
+                                <div class="cell-sub" th:if="${d.note != null}" th:text="${d.note}">Signed by the driver</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="num" th:text="${d.sizeLabel}">245 KB</td>
+                    <td>
+                        <span th:text="${d.createdBy}">qa-admin</span>
+                        <div class="cell-sub" th:text="${#temporals.format(d.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:30</div>
+                    </td>
+                    <td class="actions" sec:authorize="hasAuthority('PERM_ATTACH_DOCUMENT')">
+                        <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'remove-doc-' + d.id}" th:text="#{attachment.remove}">Remove</button>
+                    </td>
+                </tr>
+                <tr th:if="${docs.totalElements == 0}">
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <h3 th:text="#{attachment.empty}">No documents yet</h3>
+                            <p th:text="#{attachment.emptyHint}">Keep the supplier's papers, customs documents and photos of breakage here</p>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <th:block th:replace="~{layout/pagination :: pager(${docs}, ${base}, 'tab=documents')}"></th:block>
+    <th:block th:each="d : ${docs.content}" sec:authorize="hasAuthority('PERM_ATTACH_DOCUMENT')">
+        <div th:replace="~{fragments/reason-modal :: reasonModal(${'remove-doc-' + d.id}, #{attachment.removeTitle(${d.fileName})},
+                          @{/attachments/{id}/remove(id=${d.id})}, #{attachment.removeText}, #{attachment.remove})}"></div>
+    </th:block>
+</th:block>
+</body>
+</html>

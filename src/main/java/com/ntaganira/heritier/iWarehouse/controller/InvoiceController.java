@@ -1,5 +1,8 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
+import com.ntaganira.heritier.iWarehouse.service.PdfService;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
@@ -52,11 +55,16 @@ public class InvoiceController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
+    private final ReportFiles reportFiles;
+    private final PdfService pdfService;
 
     public InvoiceController(SalesService salesService, CreditNoteService creditNoteService, JournalService journalService,
                              DataChangeService dataChangeService,
                              SettingService settingService, ActivityLogService activityLogService,
-                             Messages messages, NumberFormats num) {
+                             Messages messages, NumberFormats num,
+                             ReportFiles reportFiles, PdfService pdfService) {
+        this.reportFiles = reportFiles;
+        this.pdfService = pdfService;
         this.salesService = salesService;
         this.creditNoteService = creditNoteService;
         this.journalService = journalService;
@@ -137,6 +145,22 @@ public class InvoiceController {
         activityLogService.record(PosController.MODULE, "PRINT_RECEIPT", "Opened the receipt of " + invoice.getNumber() + " for printing",
                 ActivityStatus.SUCCESS);
         return "invoices/receipt";
+    }
+
+    /** An A4 copy of the invoice as PDF (RPT-07): to send to the customer or keep with the accounts. */
+    @GetMapping("/{id}/pdf")
+    @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')")
+    public ResponseEntity<byte[]> pdf(@PathVariable UUID id) {
+        SalesInvoice invoice = issued(id);
+        List<SalesPayment> payments = salesService.payments(id);
+        Map<String, Object> model = reportFiles.letterhead();
+        model.put("invoice", invoice);
+        model.put("totals", salesService.totals(invoice));
+        model.put("payments", payments);
+        model.put("creditNotes", creditNoteService.ofInvoice(id));
+        byte[] body = pdfService.render("invoices/pdf", model);
+        activityLogService.record(PosController.MODULE, "EXPORT_INVOICE", "Downloaded " + invoice.getNumber() + " as PDF", ActivityStatus.SUCCESS);
+        return ReportFiles.file(invoice.getNumber() + ".pdf", MediaType.APPLICATION_PDF, body);
     }
 
     /** Takes the balance of an order paid by a deposit (POS-08), in the signed-in cashier's till. */

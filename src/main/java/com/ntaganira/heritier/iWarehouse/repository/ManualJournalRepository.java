@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,4 +31,7 @@ public interface ManualJournalRepository extends JpaRepository<ManualJournal, UU
     Optional<ManualJournal> lockById(@Param("id") UUID id);
 
     long countByStatus(ManualJournalStatus status);
+
+    /** Manual journals of a status dated on or before a day (those waiting stop the month's close). */
+    long countByStatusAndEntryDateLessThanEqual(ManualJournalStatus status, LocalDate day);
 }

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{slowMoving.title}, ~{::content})}">
+<head><title>Slow-moving stock - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${report.total}, seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{slowMoving.title}">Slow-moving stock</h1>
+            <div class="subtitle" th:text="#{slowMoving.subtitle(${days}, ${#temporals.format(today, 'dd/MM/yyyy')})}">Glass held longer than 90 days on 10/10/2026, and what it sold in those days</div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock" class="btn btn-outline" th:text="#{nav.stock}">Inventory</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/stock/slow-moving/export(days=${days}, product=${product})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{stock/tabs :: tabs('slow')}"></th:block>
+        <!--/* How long, then the glass with the button: the bar wraps between the two groups */-->
+        <form th:action="@{/stock/slow-moving}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{slowMoving.days}">Held longer than (days)</span>
+                    <input type="number" name="days" class="toolbar-filter" min="1" max="730" step="1" th:value="${days}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="product" class="toolbar-filter" th:aria-label="#{product.name}">
+                    <option value="" th:text="#{cutting.yield.allProducts}">All glass</option>
+                    <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}" th:text="${p.code}">CLR-6</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{slowMoving.kpi.pieces(${days})}">Held over 90 days</div>
+                <div class="kpi-value" th:text="${t.oldPieces}">12</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.oldAreaM2)})}">30.24 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card" th:if="${seeCost}">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{slowMoving.kpi.value}">Their value</div>
+                <div class="kpi-value" th:with="v=${@num.money(t.oldValue)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">816,480</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${report.sharePercent != null} ? #{slowMoving.kpi.share(${report.sharePercent})} : #{summary.valueHint}">13.2 % of the stock value</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{slowMoving.kpi.unsold}">Glass not sold</div>
+                <div class="kpi-value" th:text="${#lists.size(report.rows.?[unsold])}">3</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{slowMoving.kpi.unsoldHint(${days})}">no sale in 90 days</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{slowMoving.byGlass}">By glass</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{summary.group.PRODUCT}">Glass</th>
+                        <th class="num" th:text="#{slowMoving.held}">Held (m²)</th>
+                        <th class="num" th:text="#{slowMoving.oldArea}">Over the days (m²)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{slowMoving.oldValue}">Their value (RWF)</th>
+                        <th class="num" th:text="#{slowMoving.sold(${days})}">Sold in 90 days (m²)</th>
+                        <th th:text="#{slowMoving.lastSold}">Last sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rowPage.content}">
+                        <td>
+                            <a th:href="@{/stock(product=${r.product.id})}"><th:block th:replace="~{products/list :: productName(${r.product})}"></th:block></a>
+                            <div class="cell-sub mono" th:text="${r.product.code}">CLR-6</div>
+                        </td>
+                        <td class="num">
+                            <span th:text="${@num.m2(r.areaM2)}">40.32</span>
+                            <div class="cell-sub" th:text="#{offcutAgeing.pieces(${r.pieces})}">16 pieces</div>
+                        </td>
+                        <td class="num strong">
+                            <span th:text="${@num.m2(r.oldAreaM2)}">30.24</span>
+                            <div class="cell-sub" th:text="#{offcutAgeing.pieces(${r.oldPieces})}">12 pieces</div>
+                        </td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(r.oldValue)}">816,480</td>
+                        <td class="num" th:text="${r.unsold} ? '—' : ${@num.m2(r.soldM2)}">5.04</td>
+                        <td>
+                            <span th:if="${r.lastSold != null}" th:text="${#temporals.format(r.lastSold, 'dd/MM/yyyy')}">09/10/2026</span>
+                            <span th:if="${r.lastSold == null}" class="badge badge-danger" th:text="#{slowMoving.neverSold}">Never sold</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${rowPage.totalElements == 0}">
+                        <td th:attr="colspan=${seeCost} ? 6 : 5">
+                            <div class="empty-state">
+                                <h3 th:text="#{slowMoving.empty(${days})}">No glass held longer than 90 days</h3>
+                                <p th:text="#{slowMoving.emptyHint}">Try fewer days to see what is starting to wait</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rowPage.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${@num.m2(t.areaM2)}">40.32</th>
+                        <th class="num" th:text="${@num.m2(t.oldAreaM2)}">30.24</th>
+                        <th class="num" th:if="${seeCost}" th:text="${@num.money(t.oldValue)}">816,480</th>
+                        <th class="num" th:text="${@num.m2(t.soldM2)}">5.04</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/slow-moving', ${query + '&upage=' + unitPage.number}, 'page')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{slowMoving.units}">Units held longer, oldest first</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><th:block th:replace="~{stock/tabs :: unitHead(${seeCost})}"></th:block></thead>
+                <tbody>
+                    <tr th:each="u : ${unitPage.content}">
+                        <th:block th:replace="~{stock/tabs :: unitRow(${u}, ${today}, ${seeCost})}"></th:block>
+                    </tr>
+                    <tr th:if="${unitPage.totalElements == 0}">
+                        <td th:attr="colspan=${seeCost} ? 8 : 7"><div class="empty-state"><p th:text="#{slowMoving.empty(${days})}">No glass held longer than 90 days</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${unitPage}, '/stock/slow-moving', ${query + '&page=' + rowPage.number}, 'upage')}"></th:block>
+        <p class="form-note" th:text="#{slowMoving.note(${defaultDays})}">A unit's age counts from its receipt (sheets) or its cut (pieces and off-cuts). The days default to 90 (Settings); sales count the m² of glass sold.</p>
+    </div>
+</div>
+</body>
+</html>

@@ -27,4 +27,9 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Query("select count(u) from User u join u.roles r"
             + " where r.code = :code and r.enabled = true and u.enabled = true and u.id <> :excludeId")
     long countEnabledWithRoleExcept(@Param("code") String code, @Param("excludeId") Long excludeId);
+
+    /** Enabled users holding a permission through an enabled role: who an alert goes to (RPT-06). */
+    @Query("select distinct u from User u join u.roles r join r.permissions p"
+            + " where u.enabled = true and r.enabled = true and p.enabled = true and p.code = :code")
+    List<User> findActiveHolding(@Param("code") String code);
 }

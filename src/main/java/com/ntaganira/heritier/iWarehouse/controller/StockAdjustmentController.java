@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
@@ -53,6 +55,7 @@ public class StockAdjustmentController {
     static final String MODULE = "Stock Adjustments";
     private static final int REASON_MAX = 255;
 
+    private final AttachmentService attachmentService;
     private final StockAdjustmentService adjustmentService;
     private final JournalService journalService;
     private final StockService stockService;
@@ -65,7 +68,9 @@ public class StockAdjustmentController {
     public StockAdjustmentController(StockAdjustmentService adjustmentService, StockService stockService,
                                      DataChangeService dataChangeService, JournalService journalService,
                                      ActivityLogService activityLogService, Validator validator, Messages messages,
-                                     NumberFormats num) {
+                                     NumberFormats num,
+            AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
         this.adjustmentService = adjustmentService;
         this.stockService = stockService;
         this.journalService = journalService;
@@ -100,9 +105,11 @@ public class StockAdjustmentController {
         model.addAttribute("units", adjustmentService.unitsOf(adjustment));
         model.addAttribute("limit", adjustmentService.approvalLimit());
         model.addAttribute("mine", isMine(adjustment));
+        String open = List.of("documents", "history").contains(tab) ? tab : "lines";
         model.addAttribute("history", dataChangeService.historyWithChildren("StockAdjustment", id.toString(),
-                List.of("StockAdjustmentLine"), "adjustment", Paging.page(page), Paging.SIZE));
-        model.addAttribute("tab", "history".equals(tab) ? tab : "lines");
+                List.of("StockAdjustmentLine"), "adjustment", Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.STOCK_ADJUSTMENT, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "stock-adjustments/view";
     }
 

@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.dto.StockAdjustmentDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.*;
@@ -53,11 +54,13 @@ public class StockAdjustmentService {
     private final PostingService postingService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
+    private final Notifier notifier;
     private final Clock clock;
 
     public StockAdjustmentService(StockAdjustmentRepository repo, StockUnitRepository unitRepo, ProductRepository productRepo,
                                   StockService stockService, PostingService postingService, DocumentNumberService numbers,
-                                  SettingService settingService, Clock clock) {
+                                  SettingService settingService, Notifier notifier, Clock clock) {
+        this.notifier = notifier;
         this.repo = repo;
         this.unitRepo = unitRepo;
         this.productRepo = productRepo;
@@ -197,6 +200,10 @@ public class StockAdjustmentService {
         repo.save(adjustment);
         if (adjustment.getValueMoved().compareTo(approvalLimit()) <= 0) {
             post(adjustment);
+        } else {
+            notifier.holders("APPROVE_STOCK_ADJUSTMENT", adjustment.getRequestedById(), NotificationKind.APPROVAL, "notify.adjustment.waiting",
+                    "notify.adjustment.waitingText", "/stock-adjustments/" + adjustment.getId(), adjustment.getNumber(), adjustment.getRequestedBy(),
+                    adjustment.getReason());
         }
         return adjustment;
     }
@@ -340,6 +347,8 @@ public class StockAdjustmentService {
         }
         decide(adjustment, AdjustmentStatus.PENDING_APPROVAL, PartyRules.clean(note));
         post(adjustment);
+        notifier.user(adjustment.getRequestedById(), NotificationKind.DECISION, "notify.adjustment.approved", "notify.decidedBy",
+                "/stock-adjustments/" + adjustment.getId(), adjustment.getNumber(), adjustment.getDecidedBy());
         return adjustment;
     }
 
@@ -353,6 +362,8 @@ public class StockAdjustmentService {
             throw BusinessException.of("adjustment.ownReject", adjustment.getNumber());
         }
         decide(adjustment, AdjustmentStatus.REJECTED, reason.trim());
+        notifier.user(adjustment.getRequestedById(), NotificationKind.DECISION, "notify.adjustment.rejected", "notify.rejectedBy",
+                "/stock-adjustments/" + adjustment.getId(), adjustment.getNumber(), adjustment.getDecidedBy(), adjustment.getDecisionNote());
         return adjustment;
     }
 

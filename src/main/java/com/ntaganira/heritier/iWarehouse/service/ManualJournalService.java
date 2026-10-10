@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.dto.ManualJournalDto;
 import com.ntaganira.heritier.iWarehouse.entity.Account;
 import com.ntaganira.heritier.iWarehouse.entity.JournalEntry;
@@ -62,16 +63,21 @@ public class ManualJournalService {
     private final JournalEntryRepository entryRepo;
     private final JournalService journalService;
     private final DocumentNumberService numbers;
+    private final PeriodLock periods;
+    private final Notifier notifier;
     private final Clock clock;
 
     public ManualJournalService(ManualJournalRepository repo, ManualJournalLineRepository lineRepo, AccountRepository accountRepo,
-                                JournalEntryRepository entryRepo, JournalService journalService, DocumentNumberService numbers, Clock clock) {
+                                JournalEntryRepository entryRepo, JournalService journalService, DocumentNumberService numbers,
+                                PeriodLock periods, Notifier notifier, Clock clock) {
+        this.notifier = notifier;
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.accountRepo = accountRepo;
         this.entryRepo = entryRepo;
         this.journalService = journalService;
         this.numbers = numbers;
+        this.periods = periods;
         this.clock = clock;
     }
 
@@ -162,6 +168,12 @@ public class ManualJournalService {
         return LocalDate.now(clock);
     }
 
+    /** The first day a journal may be dated on: the day after the latest closed month (null when no month is closed). */
+    public LocalDate openFrom() {
+        LocalDate through = periods.closedThrough();
+        return through == null ? null : through.plusDays(1);
+    }
+
     // ---------------------------------------------------------------- asking
 
     /** Asks for a manual journal: checked, numbered and saved waiting for approval. Blank rows are dropped by the caller. */
@@ -170,6 +182,7 @@ public class ManualJournalService {
         if (dto.getEntryDate().isAfter(today())) {
             throw BusinessException.onField("entryDate", "manualJournal.date.future");
         }
+        periods.requireOpen(dto.getEntryDate(), "entryDate");
         List<ManualJournalDto.Line> rows = dto.getLines();
         if (rows.size() < 2) {
             throw BusinessException.of("manualJournal.lines.required");
@@ -215,6 +228,9 @@ public class ManualJournalService {
             line.setMemo(PartyRules.clean(rows.get(i).getMemo()));
             lineRepo.save(line);
         }
+        notifier.holders("APPROVE_MANUAL_JOURNAL", journal.getRequestedById(), NotificationKind.APPROVAL, "notify.manualJournal.waiting",
+                "notify.manualJournal.waitingText", "/accounting/manual-journals/" + journal.getId(), journal.getNumber(), journal.getRequestedBy(),
+                journal.getDescription());
         return journal;
     }
 
@@ -237,6 +253,8 @@ public class ManualJournalService {
                 journal.getEntryDate(), journal.getDescription(), lines);
         decide(journal, ManualJournalStatus.POSTED, PartyRules.clean(note));
         journal.setJournalId(entry.getId());
+        notifier.user(journal.getRequestedById(), NotificationKind.DECISION, "notify.manualJournal.approved", "notify.decidedBy",
+                "/accounting/manual-journals/" + journal.getId(), journal.getNumber(), journal.getDecidedBy());
         return journal;
     }
 
@@ -249,6 +267,8 @@ public class ManualJournalService {
             throw BusinessException.of("manualJournal.ownReject", journal.getNumber());
         }
         decide(journal, ManualJournalStatus.REJECTED, reason.trim());
+        notifier.user(journal.getRequestedById(), NotificationKind.DECISION, "notify.manualJournal.rejected", "notify.rejectedBy",
+                "/accounting/manual-journals/" + journal.getId(), journal.getNumber(), journal.getDecidedBy(), journal.getDecisionNote());
         return journal;
     }
 
@@ -283,6 +303,7 @@ public class ManualJournalService {
         if (day.isBefore(journal.getEntryDate())) {
             throw BusinessException.of("manualJournal.reversal.early", journal.getEntryDate().format(DAY));
         }
+        periods.requireOpen(day);
         JournalEntry original = journalService.findById(journal.getJournalId());
         JournalEntry reversal = journalService.reverse(original, day, "Reversal of " + journal.getNumber() + ": " + reason.trim());
         journal.setStatus(ManualJournalStatus.REVERSED);

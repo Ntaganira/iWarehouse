@@ -19,7 +19,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="entryDate" th:text="#{manualJournal.date}">Date</label>
-                        <input type="date" id="entryDate" th:field="*{entryDate}" required th:max="${today}"
+                        <input type="date" id="entryDate" th:field="*{entryDate}" required th:max="${today}" th:min="${openFrom}"
                                th:classappend="${#fields.hasErrors('entryDate')} ? 'is-invalid'">
                         <span class="field-error" th:if="${#fields.hasErrors('entryDate')}" th:errors="*{entryDate}"></span>
                         <span class="hint" th:text="#{manualJournal.dateHint}">The day it is booked on: today or before (a month-end accrual on the month's last day)</span>

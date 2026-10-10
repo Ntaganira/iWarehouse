@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.dto.CuttingJobDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
@@ -78,6 +79,7 @@ public class SalesService {
     private final JournalService journalService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
+    private final Notifier notifier;
     private final Clock clock;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
@@ -87,7 +89,8 @@ public class SalesService {
                         QuotationRepository quotationRepo, CreditNoteLineRepository creditLineRepo, TillService tillService,
                         CuttingJobService cuttingJobService,
                         StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
-                        DocumentNumberService numbers, SettingService settingService, Clock clock) {
+                        DocumentNumberService numbers, SettingService settingService, Notifier notifier, Clock clock) {
+        this.notifier = notifier;
         this.repo = repo;
         this.paymentRepo = paymentRepo;
         this.unitRepo = unitRepo;
@@ -624,7 +627,7 @@ public class SalesService {
         request.setLimitPercent(limit);
         request.setAmountBefore(line.getAmount());
         request.setAmountAfter(amountAt(line, newPrice));
-        return new PriceChange(line, list, newPrice, discount, approvalRepo.save(request));
+        return new PriceChange(line, list, newPrice, discount, waiting(approvalRepo.save(request)));
     }
 
     /**
@@ -671,7 +674,7 @@ public class SalesService {
         request.setCreditLimit(c.limit());
         request.setOwed(c.owed());
         request.setCreditAmount(amount.setScale(2, RoundingMode.HALF_UP));
-        return approvalRepo.save(request);
+        return waiting(approvalRepo.save(request));
     }
 
     /** The cashier takes back a request of the till's sale that is still pending, with a reason. */
@@ -725,6 +728,14 @@ public class SalesService {
         return line.isServiceLine()
                 ? pricing.amount(price, line.getServiceQuantity(), 1, line.isPricesIncludeVat(), line.getVatRate())
                 : pricing.amount(price, line.getChargeableAreaM2(), line.getQuantity(), line.isPricesIncludeVat(), line.getVatRate());
+    }
+
+    /** Tells the approvers a counter request waits (RPT-06): the POS asks every 8 s, the approver is told once. */
+    private SaleApproval waiting(SaleApproval request) {
+        notifier.holders("APPROVE_SALE", request.getRequestedById(), NotificationKind.APPROVAL, "notify.saleApproval.waiting",
+                "notify.saleApproval.waitingText", "/sale-approvals/" + request.getId(), request.getNumber(), request.getRequestedBy(),
+                request.getSubject());
+        return request;
     }
 
     private SaleApproval newRequest(SalesInvoice sale, SaleApprovalKind kind, String subject, String reason) {

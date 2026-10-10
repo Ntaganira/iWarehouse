@@ -55,6 +55,11 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
             + " where u.status in :statuses group by u.product.id, u.location.id, u.status")
     List<Object[]> summarize(@Param("statuses") Collection<StockStatus> statuses);
 
+    /** Units held as (id, code, product id, kind, width, height, m², location id, status, created at), for the stock reports (RPT-02). */
+    @Query("select u.id, u.code, u.product.id, u.kind, u.widthMm, u.heightMm, u.areaM2, l.id, u.status, u.createdAt"
+            + " from StockUnit u left join u.location l where u.status in :statuses")
+    List<Object[]> held(@Param("statuses") Collection<StockStatus> statuses);
+
     /** Units cut from a unit (PRD-03), by code. */
     @EntityGraph(attributePaths = {"product", "location", "crateBatch"})
     List<StockUnit> findByParentUnitIdOrderByCode(UUID parentUnitId);

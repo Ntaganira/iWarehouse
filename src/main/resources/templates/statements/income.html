@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{fin.income.title}, ~{::content})}">
+<head><title>Income statement - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{fin.income.title}">Income statement</h1>
+            <div class="subtitle" th:text="#{fin.income.subtitle(${#temporals.format(from, 'dd/MM/yyyy')}, ${#temporals.format(to, 'dd/MM/yyyy')})}">Revenue and expenses from 01/10/2026 to 09/10/2026</div>
+        </div>
+        <div class="btn-group">
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/income-statement/export(from=${from}, to=${to})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{statements/tabs :: tabs('income')}"></th:block>
+        <!--/* The period, then the button: the bar wraps between the two groups */-->
+        <form th:action="@{/accounting/income-statement}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{fin.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${from}" th:max="${today}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{fin.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${to}" th:max="${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{fin.totalRevenue}">Total revenue</label>
+                    <div class="value strong" th:text="${@num.money(income.totalRevenue)}">1,250,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{fin.grossProfit}">Gross profit</label>
+                    <div class="value strong" th:text="${@num.money(income.grossProfit)}">420,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="${income.netProfit.signum() < 0} ? #{fin.netLoss} : #{fin.netProfit}">Net profit</label>
+                    <div class="value strong" th:classappend="${income.netProfit.signum() < 0} ? 'text-danger'" th:text="${@num.money(income.netProfit)}">310,000</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="table-container">
+                <table class="statement-table" data-cards="off">
+                    <thead>
+                        <tr>
+                            <th th:text="#{fin.account}">Account</th>
+                            <th class="num" th:text="#{fin.amount}">Amount (RWF)</th>
+                        </tr>
+                    </thead>
+                    <tbody th:if="${!income.empty}">
+                        <tr class="statement-section"><th colspan="2" th:text="#{fin.revenue}">Revenue</th></tr>
+                        <tr th:each="l : ${income.revenue}">
+                            <td><th:block th:replace="~{statements/tabs :: account(${l.account}, ${from}, ${to})}"></th:block></td>
+                            <td class="num" th:text="${@num.money(l.amount)}">1,250,000</td>
+                        </tr>
+                        <tr class="statement-total"><td th:text="#{fin.totalRevenue}">Total revenue</td><td class="num" th:text="${@num.money(income.totalRevenue)}">1,250,000</td></tr>
+
+                        <tr class="statement-section"><th colspan="2" th:text="#{fin.costOfSales}">Cost of goods sold</th></tr>
+                        <tr th:each="l : ${income.costOfSales}">
+                            <td><th:block th:replace="~{statements/tabs :: account(${l.account}, ${from}, ${to})}"></th:block></td>
+                            <td class="num" th:text="${@num.money(l.amount)}">830,000</td>
+                        </tr>
+                        <tr class="statement-total"><td th:text="#{fin.grossProfit}">Gross profit</td><td class="num" th:text="${@num.money(income.grossProfit)}">420,000</td></tr>
+
+                        <tr class="statement-section"><th colspan="2" th:text="#{fin.expenses}">Expenses</th></tr>
+                        <tr th:each="l : ${income.expenses}">
+                            <td><th:block th:replace="~{statements/tabs :: account(${l.account}, ${from}, ${to})}"></th:block></td>
+                            <td class="num" th:text="${@num.money(l.amount)}">110,000</td>
+                        </tr>
+                        <tr class="statement-total"><td th:text="#{fin.totalExpenses}">Total expenses</td><td class="num" th:text="${@num.money(income.totalExpenses)}">110,000</td></tr>
+
+                        <tr class="statement-result">
+                            <td th:text="${income.netProfit.signum() < 0} ? #{fin.netLoss} : #{fin.netProfit}">Net profit</td>
+                            <td class="num" th:text="${@num.money(income.netProfit)}">310,000</td>
+                        </tr>
+                    </tbody>
+                    <tbody th:if="${income.empty}">
+                        <tr>
+                            <td colspan="2">
+                                <div class="empty-state">
+                                    <h3 th:text="#{fin.income.empty}">Nothing earned or spent in this period</h3>
+                                    <p th:text="#{fin.income.emptyHint}">Sales, the cost of the glass sold and expenses appear here as they post</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{fin.income.note}">Revenue less returns; the cost of goods sold at moving average cost; expenses include spoilage, stock adjustments and exchange differences. Each account opens its general ledger.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

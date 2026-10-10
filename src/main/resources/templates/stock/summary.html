@@ -11,8 +11,12 @@
         </div>
         <div class="btn-group">
             <a href="/stock" class="btn btn-outline" th:text="#{nav.stock}">Inventory</a>
-            <a th:href="@{'/stock/summary.csv?' + ${csvQuery}}" class="btn btn-outline" th:text="#{summary.csv}">Download CSV</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/stock/summary/export(group=${group}, product=${product})})}"></th:block>
         </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{stock/tabs :: tabs('summary')}"></th:block>
     </div>
 
     <div class="kpi-grid doc-kpis">
@@ -77,7 +81,7 @@
                 </tbody>
             </table>
         </div>
-        <th:block th:replace="~{layout/pagination :: pagerParam(${reorderPage}, '/stock/summary', ${csvQuery + '&page=' + rowPage.number}, 'rpage')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reorderPage}, '/stock/summary', ${query + '&page=' + rowPage.number}, 'rpage')}"></th:block>
     </div>
 
     <div class="section">
@@ -114,6 +118,10 @@
                                 </a>
                                 <div class="cell-sub mono" th:if="${r.product != null}" th:text="${r.product.code}">CLR-6</div>
                             </th:block>
+                            <th:block th:case="'PRODUCT_LOCATION'">
+                                <a class="mono" th:if="${r.product != null}" th:href="@{/stock(product=${r.product.id}, location=${r.location?.id})}" th:text="${r.product.code}">CLR-6</a>
+                                <div class="cell-sub mono" th:if="${r.location != null}" th:text="${r.location.code}">WH-A-R01</div>
+                            </th:block>
                             <th:block th:case="'LOCATION'">
                                 <a class="mono" th:if="${r.location != null}" th:href="@{/stock(location=${r.location.id})}" th:text="${r.location.code}">WH-A-R01</a>
                                 <span class="cell-sub" th:if="${r.location != null}" th:text="${r.location.name}">Rack 1</span>
@@ -140,7 +148,7 @@
                 </tfoot>
             </table>
         </div>
-        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/summary', ${csvQuery + '&rpage=' + reorderPage.number}, 'page')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/summary', ${query + '&rpage=' + reorderPage.number}, 'page')}"></th:block>
         <p class="form-note" th:text="#{summary.note}">Units in stock: received, available, reserved, being cut and on vehicles. Value is each glass's m² times its moving average cost, the value the accounts carry.</p>
     </div>
 </div>

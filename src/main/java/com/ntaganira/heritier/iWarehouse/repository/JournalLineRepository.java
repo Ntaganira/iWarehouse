@@ -46,6 +46,23 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " where l.entry.entryDate <= :asOf group by l.account.id")
     List<Object[]> balancesAsOf(@Param("asOf") LocalDate asOf);
 
+    /** Rows of (account id, debits, credits) of the journals dated between two days, both included (ACC-11). */
+    @Query("select l.account.id, coalesce(sum(l.debit), 0), coalesce(sum(l.credit), 0) from JournalLine l"
+            + " where l.entry.entryDate between :from and :to group by l.account.id")
+    List<Object[]> movements(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** An account's lines dated between two days, in the order they were posted (its general ledger, ACC-11). */
+    @EntityGraph(attributePaths = {"entry", "product", "supplier", "customer"})
+    @Query("select l from JournalLine l where l.account.id = :accountId and l.entry.entryDate between :from and :to"
+            + " order by l.entry.entryDate, l.entry.postedAt, l.entry.number, l.lineNo")
+    List<JournalLine> findAccountLines(@Param("accountId") UUID accountId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** An account's lines dated up to a day, in the order they were posted (what a reconciliation may clear, ACC-12). */
+    @EntityGraph(attributePaths = {"entry"})
+    @Query("select l from JournalLine l where l.account.id = :accountId and l.entry.entryDate <= :to"
+            + " order by l.entry.entryDate, l.entry.postedAt, l.entry.number, l.lineNo")
+    List<JournalLine> findAccountLinesUpTo(@Param("accountId") UUID accountId, @Param("to") LocalDate to);
+
     /** Rows of (account id, debits, credits) of all journals. */
     @Query("select l.account.id, coalesce(sum(l.debit), 0), coalesce(sum(l.credit), 0) from JournalLine l group by l.account.id")
     List<Object[]> balances();
@@ -99,4 +116,16 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
     @Query("select l.product.id, coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"
             + " where l.account.id = :accountId group by l.product.id")
     List<Object[]> balanceByProduct(@Param("accountId") UUID accountId);
+
+    /**
+     * Cost of Goods Sold and Inventory posted for documents, as (source, source id, account key, product id, debits less credits),
+     * from journals dated on or after a day: what each sale, hand-over and credit note cost, and the stock value of each glass
+     * it moved (RPT-05).
+     */
+    @Query("select e.sourceType, e.sourceId, a.systemKey, p.id, sum(l.debit) - sum(l.credit) from JournalLine l join l.entry e join l.account a"
+            + " left join l.product p where a.systemKey in (com.ntaganira.heritier.iWarehouse.enums.AccountKey.COGS,"
+            + " com.ntaganira.heritier.iWarehouse.enums.AccountKey.INVENTORY)"
+            + " and e.sourceType in :sources and e.entryDate >= :since group by e.sourceType, e.sourceId, a.systemKey, p.id")
+    List<Object[]> costOfSales(@Param("sources") Collection<com.ntaganira.heritier.iWarehouse.enums.JournalSource> sources,
+                               @Param("since") java.time.LocalDate since);
 }

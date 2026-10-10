@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Financial statements</title></head>
+<body>
+<!--/* The financial statements' tabs (ACC-11), as links: the open one is {active} (income, balance, ledger) */-->
+<th:block th:fragment="tabs(active)">
+    <nav class="tabs report-tabs" th:aria-label="#{nav.financialStatements}">
+        <a class="tab" th:classappend="${active == 'income'} ? 'active'" href="/accounting/income-statement" th:text="#{fin.income.title}">Income statement</a>
+        <a class="tab" th:classappend="${active == 'balance'} ? 'active'" href="/accounting/balance-sheet" th:text="#{fin.balance.title}">Balance sheet</a>
+        <a class="tab" th:classappend="${active == 'ledger'} ? 'active'" href="/accounting/general-ledger" th:text="#{fin.ledger.title}">General ledger</a>
+    </nav>
+</th:block>
+
+<!--/* A balance as debits less credits: "12,500 Dr", "300 Cr" or "—" */-->
+<th:block th:fragment="drcr(x)"><th:block th:text="${x.signum() == 0} ? '—' : ${@num.money(x.abs()) + ' ' + (x.signum() < 0 ? #messages.msg('fin.cr') : #messages.msg('fin.dr'))}">12,500 Dr</th:block></th:block>
+
+<!--/* An account on a statement, linked to its general ledger over the period */-->
+<th:block th:fragment="account(a, from, to)">
+    <a th:href="@{/accounting/general-ledger(account=${a.id}, from=${from}, to=${to})}"><span class="mono" th:text="${a.code}">4010</span> <span th:text="${a.name}">Sales Revenue</span></a>
+</th:block>
+</body>
+</html>

@@ -167,7 +167,7 @@ class AccountingServicesTest {
             when(lineRepo.save(any())).thenAnswer(a -> a.getArgument(0));
             when(numbers.next(DocumentType.JOURNAL)).thenReturn("JV-WH-2026-000001");
             service = new JournalService(entryRepo, lineRepo, accountRepo, productRepo, mock(SupplierRepository.class),
-                    mock(CustomerRepository.class), summary, numbers, CLOCK);
+                    mock(CustomerRepository.class), summary, numbers, mock(PeriodLock.class), CLOCK);
         }
     }
 

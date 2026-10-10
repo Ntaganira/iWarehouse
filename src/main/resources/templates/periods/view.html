@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${#temporals.format(period.periodEnd, 'MMMM yyyy')}, ~{::content})}">
+<head><title>Period - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${#temporals.format(period.periodEnd, 'MMMM yyyy')}">September 2026</h1>
+            <div class="subtitle">
+                <span th:text="#{period.closedByOn(${period.closedBy}, ${#temporals.format(period.closedAt, 'dd/MM/yyyy HH:mm')})}">Closed by accountant on 09/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{periods/list :: periodStatus(${period.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/periods" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/accounting/trial-balance(asOf=${period.periodEnd})}" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')"
+               th:text="#{nav.trialBalance}">Trial Balance</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reopen-modal"
+                    th:if="${canReopen}" sec:authorize="hasAuthority('PERM_REOPEN_PERIOD')" th:text="#{period.reopen}">Reopen</button>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${period.closed}" th:text="#{period.closedNote(${#temporals.format(period.periodEnd, 'dd/MM/yyyy')})}">Nothing can be posted on or before 30/09/2026.</div>
+    <div class="doc-note is-danger" th:if="${!period.closed}">
+        <strong th:text="#{period.reopenedBy(${period.reopenedBy}, ${#temporals.format(period.reopenedAt, 'dd/MM/yyyy HH:mm')})}">Reopened by owner on 10/10/2026 09:00:</strong>
+        <span th:text="${period.reopenReason}">Supplier invoice found late</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{period.lastDay}">Last day</label>
+                    <div class="value" th:text="${#temporals.format(period.periodEnd, 'dd/MM/yyyy')}">30/09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{period.closedBy}">Closed</label>
+                    <div class="value" th:text="${#temporals.format(period.closedAt, 'dd/MM/yyyy HH:mm') + ' · ' + period.closedBy}">09/10/2026 10:30 · accountant</div>
+                </div>
+                <div class="item" th:if="${period.reopenedAt != null}">
+                    <label th:text="#{period.reopened}">Reopened</label>
+                    <div class="value">
+                        <span th:text="${#temporals.format(period.reopenedAt, 'dd/MM/yyyy HH:mm') + ' · ' + period.reopenedBy}">10/10/2026 09:00 · owner</span>
+                        <div class="cell-sub" th:text="${period.reopenReason}">Supplier invoice found late</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/accounting/periods/' + period.id}, '')}"></th:block>
+        </div>
+    </div>
+
+    <th:block th:if="${canReopen}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reopen-modal', #{period.reopenTitle(${#temporals.format(period.periodEnd, 'MMMM yyyy')})},
+                @{/accounting/periods/{id}/reopen(id=${period.id})}, #{period.reopenText}, #{period.reopen})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

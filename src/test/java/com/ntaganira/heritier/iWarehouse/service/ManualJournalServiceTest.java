@@ -95,7 +95,8 @@ class ManualJournalServiceTest {
         when(journals.reverse(any(), any(), any())).thenAnswer(a -> entry(a.getArgument(1)));
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.MANUAL_JOURNAL)).thenReturn("MJ-WH-2026-000001");
-        service = new ManualJournalService(repo, lineRepo, accountRepo, mock(JournalEntryRepository.class), journals, numbers, CLOCK);
+        service = new ManualJournalService(repo, lineRepo, accountRepo, mock(JournalEntryRepository.class), journals, numbers,
+                mock(PeriodLock.class), mock(Notifier.class), CLOCK);
     }
 
     @AfterEach

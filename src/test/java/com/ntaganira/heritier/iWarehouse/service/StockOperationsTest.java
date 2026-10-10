@@ -144,7 +144,7 @@ class StockOperationsTest {
         stockService = new StockService(unitRepo, movementRepo, costEntryRepo, lineRepo, mock(StockCountRepository.class), mock(SalesInvoiceLineRepository.class), locationRepo, numbers, clock);
         transferService = new StockTransferService(transferRepo, unitRepo, stockService, numbers, clock);
         adjustmentService = new StockAdjustmentService(adjustmentRepo, unitRepo, productRepo, stockService, mock(PostingService.class), numbers,
-                settings, clock);
+                settings, mock(Notifier.class), clock);
         signIn(7L, "supervisor1");
     }
 

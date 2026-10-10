@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Stock reports</title></head>
+<body>
+<!--/* The stock reports' tabs (INV-09, RPT-02), as links: the open one is {active} (summary, offcuts, slow) */-->
+<th:block th:fragment="tabs(active)">
+    <nav class="tabs report-tabs" th:aria-label="#{stockReports.title}">
+        <a class="tab" th:classappend="${active == 'summary'} ? 'active'" href="/stock/summary" th:text="#{summary.title}">Stock summary</a>
+        <a class="tab" th:classappend="${active == 'offcuts'} ? 'active'" href="/stock/offcut-ageing" th:text="#{offcutAgeing.title}">Off-cut ageing</a>
+        <a class="tab" th:classappend="${active == 'slow'} ? 'active'" href="/stock/slow-moving" th:text="#{slowMoving.title}">Slow-moving stock</a>
+    </nav>
+</th:block>
+
+<!--/* A unit held, as a row of the off-cut and slow-moving lists */-->
+<th:block th:fragment="unitRow(u, today, seeCost)">
+    <td><a class="row-link mono" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000059</a></td>
+    <td class="mono" th:text="${u.product.code}">CLR-6</td>
+    <td class="num" th:text="${u.widthMm + ' × ' + u.heightMm}">1200 × 800</td>
+    <td class="num" th:text="${@num.m2(u.areaM2)}">0.96</td>
+    <td><span class="mono" th:if="${u.location != null}" th:text="${u.location.code}">WH-A-OC</span></td>
+    <td th:text="${#temporals.format(u.since, 'dd/MM/yyyy')}">01/07/2026</td>
+    <td class="num strong" th:text="${u.days(today)}">101</td>
+    <td class="num" th:if="${seeCost}" th:text="${@num.money(u.value)}">25,920</td>
+</th:block>
+
+<!--/* The header of those lists */-->
+<th:block th:fragment="unitHead(seeCost)">
+    <tr>
+        <th th:text="#{stock.code}">Label</th>
+        <th th:text="#{summary.group.PRODUCT}">Glass</th>
+        <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+        <th class="num" th:text="#{summary.area}">m²</th>
+        <th th:text="#{summary.group.LOCATION}">Place</th>
+        <th th:text="#{offcutAgeing.since}">Held since</th>
+        <th class="num" th:text="#{offcutAgeing.days}">Days held</th>
+        <th class="num" th:if="${seeCost}" th:text="#{summary.value}">Value at MAC (RWF)</th>
+    </tr>
+</th:block>
+</body>
+</html>

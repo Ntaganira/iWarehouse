@@ -16,7 +16,8 @@ import java.util.*;
  * - Date      : 2026. 10. 08.
  * - User      : Hntaganira
  * - Desc      : Stock in pieces, m² and value at MAC, by product, location or status (INV-09), and the
- *               products below their reorder level (INV-10), without the database. The value of a row is
+ *               products below their reorder level (INV-10), without the database. By glass and place (RPT-02): each
+ *               glass on each place. The value of a row is
  *               the m² of each product times its MAC, rounded once per row: m² held x MAC is the stock
  *               value the MAC is kept for, so it matches the inventory account (AT-10).
  * </pre>
@@ -26,7 +27,7 @@ public final class StockSummary {
     private StockSummary() {
     }
 
-    public enum GroupBy { PRODUCT, LOCATION, STATUS }
+    public enum GroupBy { PRODUCT, LOCATION, PRODUCT_LOCATION, STATUS }
 
     /** Units of one product, on one location, in one state. */
     public record Fact(UUID productId, UUID locationId, StockStatus status, long pieces, BigDecimal areaM2) {
@@ -54,6 +55,7 @@ public final class StockSummary {
             String key = switch (by) {
                 case PRODUCT -> String.valueOf(f.productId());
                 case LOCATION -> String.valueOf(f.locationId());
+                case PRODUCT_LOCATION -> f.productId() + "/" + f.locationId();
                 case STATUS -> f.status().name();
             };
             first.putIfAbsent(key, f);
@@ -67,14 +69,16 @@ public final class StockSummary {
         for (String key : pieces.keySet()) {
             Fact f = first.get(key);
             rows.add(new Row(key,
-                    by == GroupBy.PRODUCT ? products.get(f.productId()) : null,
-                    by == GroupBy.LOCATION ? locations.get(f.locationId()) : null,
+                    by == GroupBy.PRODUCT || by == GroupBy.PRODUCT_LOCATION ? products.get(f.productId()) : null,
+                    by == GroupBy.LOCATION || by == GroupBy.PRODUCT_LOCATION ? locations.get(f.locationId()) : null,
                     by == GroupBy.STATUS ? f.status() : null,
                     pieces.get(key)[0], areas.get(key), money(values.get(key))));
         }
         Comparator<Row> order = switch (by) {
             case PRODUCT -> Comparator.comparing(r -> r.product() == null ? "" : r.product().getCode());
             case LOCATION -> Comparator.comparing(r -> r.location() == null ? "" : r.location().getCode());
+            case PRODUCT_LOCATION -> Comparator.comparing((Row r) -> r.product() == null ? "" : r.product().getCode())
+                    .thenComparing(r -> r.location() == null ? "" : r.location().getCode());
             case STATUS -> Comparator.comparing(r -> r.status().ordinal());
         };
         rows.sort(order);

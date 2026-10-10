@@ -61,10 +61,10 @@
         <a sec:authorize="hasAuthority('PAGE_DASHBOARD')" th:classappend="${requestURI == '/' or requestURI == '/dashboard'} ? 'active' : ''" href="/dashboard">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg></span> <span th:text="#{nav.dashboard}">Dashboard</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_STOCK')" th:classappend="${#strings.startsWith(requestURI, '/stock') and !#strings.startsWith(requestURI, '/stock-') and !#strings.startsWith(requestURI, '/stock/summary')} ? 'active' : ''" href="/stock">
+        <a sec:authorize="hasAuthority('PAGE_STOCK')" th:classappend="${#strings.startsWith(requestURI, '/stock') and !#strings.startsWith(requestURI, '/stock-') and !#strings.startsWith(requestURI, '/stock/summary') and !#strings.startsWith(requestURI, '/stock/offcut-ageing') and !#strings.startsWith(requestURI, '/stock/slow-moving')} ? 'active' : ''" href="/stock">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.stock}">Inventory</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')" th:classappend="${#strings.startsWith(requestURI, '/stock/summary')} ? 'active' : ''" href="/stock/summary">
+        <a sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')" th:classappend="${#strings.startsWith(requestURI, '/stock/summary') or #strings.startsWith(requestURI, '/stock/offcut-ageing') or #strings.startsWith(requestURI, '/stock/slow-moving')} ? 'active' : ''" href="/stock/summary">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg></span> <span th:text="#{nav.stockSummary}">Stock Summary</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_STOCK_TRANSFERS')" th:classappend="${#strings.startsWith(requestURI, '/stock-transfers')} ? 'active' : ''" href="/stock-transfers">
@@ -137,6 +137,9 @@
         <a sec:authorize="hasAuthority('PAGE_PRICE_LISTS')" th:classappend="${#strings.startsWith(requestURI, '/price-lists')} ? 'active' : ''" href="/price-lists">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span> <span th:text="#{nav.priceLists}">Price Lists</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_SALES_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports/sales')} ? 'active' : ''" href="/reports/sales">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></span> <span th:text="#{nav.salesReports}">Sales Reports</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:classappend="${requestURI == '/accounting' or #strings.startsWith(requestURI, '/accounting/journals')} ? 'active' : ''" href="/accounting/journals">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span> <span th:text="#{nav.journals}">Journals</span>
         </a>
@@ -158,13 +161,28 @@
         <a sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" th:classappend="${#strings.startsWith(requestURI, '/accounting/trial-balance')} ? 'active' : ''" href="/accounting/trial-balance">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="3" x2="12" y2="21"></line><path d="M5 7h14"></path><path d="M5 7l-3 7a3 3 0 0 0 6 0z"></path><path d="M19 7l-3 7a3 3 0 0 0 6 0z"></path><line x1="8" y1="21" x2="16" y2="21"></line></svg></span> <span th:text="#{nav.trialBalance}">Trial Balance</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_FINANCIAL_STATEMENTS')" th:classappend="${#strings.startsWith(requestURI, '/accounting/income-statement') or #strings.startsWith(requestURI, '/accounting/balance-sheet') or #strings.startsWith(requestURI, '/accounting/general-ledger')} ? 'active' : ''" href="/accounting/income-statement">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="17" x2="8" y2="13"></line><line x1="12" y1="17" x2="12" y2="11"></line><line x1="16" y1="17" x2="16" y2="15"></line></svg></span> <span th:text="#{nav.financialStatements}">Financial Statements</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_VAT_REPORT')" th:classappend="${#strings.startsWith(requestURI, '/accounting/vat-report')} ? 'active' : ''" href="/accounting/vat-report">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg></span> <span th:text="#{nav.vatReport}">VAT Report</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_RECONCILIATIONS')" th:classappend="${#strings.startsWith(requestURI, '/accounting/reconciliations')} ? 'active' : ''" href="/accounting/reconciliations">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span> <span th:text="#{nav.reconciliations}">Reconciliations</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_PERIODS')" th:classappend="${#strings.startsWith(requestURI, '/accounting/periods')} ? 'active' : ''" href="/accounting/periods">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span> <span th:text="#{nav.periods}">Period Close</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_CURRENCIES')" th:classappend="${#strings.startsWith(requestURI, '/currencies')} ? 'active' : ''" href="/currencies">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></span> <span th:text="#{nav.currencies}">Currencies &amp; Rates</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports')} ? 'active' : ''" href="/reports">
+        <div class="menu-label" style="margin-top:16px;" th:text="#{menu.other}">Other</div>
+        <a sec:authorize="hasAuthority('PAGE_NOTIFICATIONS')" th:classappend="${#strings.startsWith(requestURI, '/notifications')} ? 'active' : ''" href="/notifications">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span> <span th:text="#{nav.notifications}">Notifications</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_REPORTS')" th:classappend="${requestURI == '/reports'} ? 'active' : ''" href="/reports">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> <span th:text="#{nav.reports}">Reports</span>
         </a>
-        <div class="menu-label" style="margin-top:16px;" th:text="#{menu.other}">Other</div>
         <a sec:authorize="hasAuthority('PAGE_MY_ACTIVITY')" th:classappend="${requestURI == '/activity/me'} ? 'active' : ''" href="/activity/me">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span> <span th:text="#{nav.myActivity}">My Activity</span>
         </a>
@@ -272,6 +290,33 @@
             </div>
         </div>
         <div class="header-right">
+            <!-- Notifications bell (RPT-06): unread count and the latest five; opening one marks it read -->
+            <div class="notif-dropdown" sec:authorize="hasAuthority('PAGE_NOTIFICATIONS')" th:with="bell=${@notificationService.bell()}">
+                <button type="button" class="notif-btn" id="notif-btn" th:aria-label="#{notification.title}" th:title="#{notification.title}">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="notif-badge" th:if="${bell.unread > 0}" th:text="${bell.unread > 99 ? '99+' : bell.unread}">3</span>
+                </button>
+                <div class="notif-panel" id="notif-panel">
+                    <div class="notif-panel-header">
+                        <span th:text="#{notification.title}">Notifications</span>
+                        <form th:if="${bell.unread > 0}" th:action="@{/notifications/read-all}" method="post">
+                            <button type="submit" th:text="#{notification.markAll}">Mark all read</button>
+                        </form>
+                    </div>
+                    <div class="notif-panel-list">
+                        <form class="notif-item-form" th:each="n : ${bell.latest}" th:action="@{/notifications/{id}/open(id=${n.id})}" method="post">
+                            <button type="submit" class="notif-item">
+                                <span class="notif-item-title" th:text="${n.title}">Low stock: CLR-4</span>
+                                <span class="notif-item-msg" th:if="${n.message != null}" th:text="${n.message}">2 m² available, reorder level 20 m²</span>
+                                <span class="notif-item-time" th:text="${#temporals.format(n.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:30</span>
+                                <span class="notif-item-dot" th:if="${!n.read}"></span>
+                            </button>
+                        </form>
+                        <div class="notif-item-empty" th:if="${#lists.isEmpty(bell.latest)}" th:text="#{notification.empty}">No notifications yet</div>
+                    </div>
+                    <a class="notif-panel-footer" href="/notifications" th:text="#{dash.viewAll}">View all</a>
+                </div>
+            </div>
             <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Dark Mode">
                 <svg class="icon-moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>

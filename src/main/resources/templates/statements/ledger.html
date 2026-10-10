@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{fin.ledger.title}, ~{::content})}">
+<head><title>General ledger - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{fin.ledger.title}">General ledger</h1>
+            <div class="subtitle" th:text="${ledger != null} ? ${ledger.row.account.code + ' ' + ledger.row.account.name + ' · '} + #{fin.periodShort(${#temporals.format(from, 'dd/MM/yyyy')}, ${#temporals.format(to, 'dd/MM/yyyy')})}
+                 : #{fin.ledger.subtitle(${#temporals.format(from, 'dd/MM/yyyy')}, ${#temporals.format(to, 'dd/MM/yyyy')})}">Each account's opening balance, debits, credits and closing balance from 01/10/2026 to 09/10/2026</div>
+        </div>
+        <div class="btn-group">
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/general-ledger/export(from=${from}, to=${to}, account=${account})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{statements/tabs :: tabs('ledger')}"></th:block>
+        <!--/* The period, then the account with the button */-->
+        <form th:action="@{/accounting/general-ledger}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{fin.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${from}" th:max="${today}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{fin.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${to}" th:max="${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="account" class="toolbar-filter" th:aria-label="#{fin.account}">
+                    <option value="" th:text="#{fin.allAccounts}">All accounts</option>
+                    <option th:each="a : ${accounts}" th:value="${a.id}" th:selected="${a.id == account}" th:text="${a.code + ' · ' + a.name}">1030 · Bank</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <!--/* Every account: opening, debits, credits, closing */-->
+    <div class="section" th:if="${ledger == null}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{fin.accounts}">Accounts</span>
+                <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{fin.account}">Account</th>
+                        <th class="num" th:text="#{fin.opening}">Opening</th>
+                        <th class="num" th:text="#{fin.debits}">Debits</th>
+                        <th class="num" th:text="#{fin.credits}">Credits</th>
+                        <th class="num" th:text="#{fin.closing}">Closing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td><th:block th:replace="~{statements/tabs :: account(${r.account}, ${from}, ${to})}"></th:block></td>
+                        <td class="num nowrap"><th:block th:replace="~{statements/tabs :: drcr(${r.opening})}"></th:block></td>
+                        <td class="num" th:text="${r.debits.signum() == 0} ? '—' : ${@num.money(r.debits)}">100,000</td>
+                        <td class="num" th:text="${r.credits.signum() == 0} ? '—' : ${@num.money(r.credits)}">—</td>
+                        <td class="num nowrap strong"><th:block th:replace="~{statements/tabs :: drcr(${r.closing})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${rows.totalElements == 0}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{tb.empty}">Nothing posted yet</h3>
+                                <p th:text="#{fin.ledger.emptyHint}">Accounts with a balance or lines in the period appear here</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th colspan="2" th:text="#{fin.total}">Total</th>
+                        <th class="num" th:text="${@num.money(debits)}">100,000</th>
+                        <th class="num" th:text="${@num.money(credits)}">100,000</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/accounting/general-ledger', ${query})}"></th:block>
+    </div>
+
+    <!--/* One account: its lines with the balance after each */-->
+    <th:block th:if="${ledger != null}">
+        <div class="section">
+            <div class="section-body">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{fin.opening}">Opening</label>
+                        <div class="value"><th:block th:replace="~{statements/tabs :: drcr(${ledger.row.opening})}"></th:block></div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{fin.debits}">Debits</label>
+                        <div class="value" th:text="${@num.money(ledger.row.debits)}">100,000</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{fin.credits}">Credits</label>
+                        <div class="value" th:text="${@num.money(ledger.row.credits)}">0</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{fin.closing}">Closing</label>
+                        <div class="value strong"><th:block th:replace="~{statements/tabs :: drcr(${ledger.row.closing})}"></th:block></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{fin.lines}">Lines</span>
+                    <span class="section-count" th:text="${lines.totalElements}">0</span>
+                </h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{fin.date}">Date</th>
+                            <th th:text="#{fin.journal}">Journal</th>
+                            <th th:text="#{fin.event}">Event</th>
+                            <th th:text="#{fin.about}">About</th>
+                            <th class="num" th:text="#{fin.debit}">Debit</th>
+                            <th class="num" th:text="#{fin.credit}">Credit</th>
+                            <th class="num" th:text="#{fin.balance}">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="l : ${lines.content}" th:with="line=${l.line}">
+                            <td class="nowrap" th:text="${#temporals.format(line.entry.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                            <td>
+                                <a class="mono" th:href="@{/accounting/journals/{id}(id=${line.entry.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="${line.entry.number}">JV-WH-2026-000074</a>
+                                <span class="mono" sec:authorize="!hasAuthority('PAGE_ACCOUNTING')" th:text="${line.entry.number}">JV-WH-2026-000074</span>
+                            </td>
+                            <td><th:block th:replace="~{journals/list :: source(${line.entry})}"></th:block></td>
+                            <td>
+                                <span class="mono" th:if="${line.product != null}" th:text="${line.product.code}">CLR-6</span>
+                                <span th:if="${line.supplier != null}" th:text="${line.supplier.name}">Shandong</span>
+                                <span th:if="${line.customer != null}" th:text="${line.customer.name}">Umucyo</span>
+                                <div class="cell-sub" th:if="${line.memo != null}" th:text="${line.memo}">Deposit slip</div>
+                                <span class="text-muted" th:if="${line.product == null and line.supplier == null and line.customer == null and line.memo == null}">—</span>
+                            </td>
+                            <td class="num" th:text="${line.debit.signum() > 0} ? ${@num.money(line.debit)} : ''">100,000</td>
+                            <td class="num" th:text="${line.credit.signum() > 0} ? ${@num.money(line.credit)} : ''"></td>
+                            <td class="num nowrap strong"><th:block th:replace="~{statements/tabs :: drcr(${l.balance})}"></th:block></td>
+                        </tr>
+                        <tr th:if="${lines.totalElements == 0}">
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <h3 th:text="#{fin.ledger.noLines}">No line in this period</h3>
+                                    <p th:text="#{fin.ledger.noLinesHint}">The account keeps its opening balance</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <th:block th:replace="~{layout/pagination :: pager(${lines}, '/accounting/general-ledger', ${query})}"></th:block>
+        </div>
+    </th:block>
+</div>
+</body>
+</html>

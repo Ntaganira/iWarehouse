@@ -16,7 +16,245 @@
         </div>
     </div>
 
-    <!-- KPI cards: audit figures for now; warehouse KPIs (stock, receipts, deliveries) join with their modules (RPT-01) -->
+    <!-- The owner's figures (RPT-01): today's sales and margin, stock value, cash, what waits -->
+    <th:block th:if="${biz != null}" th:with="seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon green">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{dash.biz.sales}">Sales today (VAT excl.)</div>
+                    <div class="kpi-value" th:with="v=${@num.money(biz.salesToday)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">330,509</div>
+                    <th:block th:if="${biz.salesTrend.percent() != null}"><th:block th:replace="~{dashboard :: trend(${biz.salesTrend}, false)}"></th:block></th:block>
+                    <div class="kpi-trend flat" th:if="${biz.salesTrend.percent() == null}"><span class="vs" th:text="#{dash.biz.invoices(${biz.invoicesToday})}">3 invoices</span></div>
+                </div>
+            </div>
+            <div class="kpi-card" th:if="${seeCost}">
+                <div class="kpi-icon" th:classappend="${biz.day.margin.signum() < 0} ? 'red' : 'blue'">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{dash.biz.margin}">Gross margin today</div>
+                    <div class="kpi-value" th:with="v=${@num.money(biz.day.margin)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">130,789</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="${biz.day.marginPercent != null} ? #{salesReport.kpi.marginPercent(${biz.day.marginPercent})} : #{dash.biz.noSales}">39.6 % of net sales</span></div>
+                </div>
+            </div>
+            <div class="kpi-card" th:if="${seeCost}">
+                <div class="kpi-icon purple">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{dash.biz.stock}">Stock value</div>
+                    <div class="kpi-value" th:with="v=${@num.money(biz.stock.value)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">6,161,000</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="#{dash.biz.stockSub(${@num.m2(biz.stock.areaM2)}, ${biz.stock.pieces})}">274.06 m² in 60 pieces</span></div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon orange">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{dash.biz.cash}">Cash position</div>
+                    <div class="kpi-value" th:with="v=${@num.money(biz.cashTotal)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">1,245,300</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="#{dash.biz.cashSub}">tills, vault, bank and mobile money</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <!-- Net sales of the last 7 or 30 days -->
+            <div class="section dash-chart">
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        </span>
+                        <div>
+                            <h2 th:text="#{dash.biz.chart}">Net sales</h2>
+                            <div class="card-sub" id="sales-chart-sub" th:data-sub7="#{dash.biz.chartSub(7)}" th:data-sub30="#{dash.biz.chartSub(30)}"
+                                 th:text="#{dash.biz.chartSub(7)}">Last 7 days, VAT excluded</div>
+                        </div>
+                    </div>
+                    <div class="segmented" role="group" th:aria-label="#{dash.biz.chart}">
+                        <button type="button" class="active" data-sales-range="7" aria-pressed="true" th:text="#{dash.chart.days7}">7 Days</button>
+                        <button type="button" data-sales-range="30" aria-pressed="false" th:text="#{dash.chart.days30}">30 Days</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sales-chart" role="img" th:aria-label="#{dash.biz.chart}"></canvas>
+                </div>
+            </div>
+
+            <!-- Today's sales by channel and salesperson -->
+            <div class="section">
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                        </span>
+                        <h2 th:text="#{dash.biz.today}">Today's sales</h2>
+                    </div>
+                    <a sec:authorize="hasAuthority('PAGE_SALES_REPORTS')" th:href="@{/reports/sales(from=${biz.today}, to=${biz.today}, group='INVOICE')}" class="link-more" th:text="#{dash.viewAll}">View all</a>
+                </div>
+                <div class="table-container card-table">
+                    <table class="table-compact" data-cards="off">
+                        <thead>
+                            <tr>
+                                <th th:text="#{dash.biz.channel}">Channel</th>
+                                <th class="num" th:text="#{salesReport.invoices}">Invoices</th>
+                                <th class="num" th:text="#{dash.biz.total}">Total (VAT incl.)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${biz.channels}">
+                                <td th:text="#{${'dash.channel.' + c.channel}}">Counter</td>
+                                <td class="num" th:text="${c.invoices}">3</td>
+                                <td class="num strong" th:text="${@num.money(c.total)}">390,000</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(biz.channels)}">
+                                <td colspan="3"><div class="dash-empty" th:text="#{dash.biz.noSales}">No sales yet today</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-container card-table" th:if="${!#lists.isEmpty(biz.bySalesperson)}">
+                    <table class="table-compact" data-cards="off">
+                        <thead>
+                            <tr>
+                                <th th:text="#{salesReport.salesperson}">Salesperson</th>
+                                <th class="num" th:text="#{salesReport.invoices}">Invoices</th>
+                                <th class="num" th:text="#{salesReport.net}">Net sales (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${biz.bySalesperson}">
+                                <td th:text="${r.label}">QA Admin</td>
+                                <td class="num" th:text="${r.invoices}">3</td>
+                                <td class="num" th:text="${@num.money(r.net)}">330,509</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-grid">
+            <!-- Money held, from the ledger -->
+            <div class="section">
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon orange">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+                        </span>
+                        <h2 th:text="#{dash.biz.cash}">Cash position</h2>
+                    </div>
+                    <a sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" href="/accounting/trial-balance" class="link-more" th:text="#{tb.title}">Trial balance</a>
+                </div>
+                <div class="table-container card-table">
+                    <table class="table-compact" data-cards="off">
+                        <thead>
+                            <tr>
+                                <th th:text="#{fin.account}">Account</th>
+                                <th class="num" th:text="#{fin.balance}">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${biz.cash}">
+                                <td><span class="mono" th:text="${c.account.code}">1010</span> <span th:text="${c.account.name}">Till cash</span></td>
+                                <td class="num" th:classappend="${c.balance.signum() < 0} ? 'text-danger'" th:text="${@num.money(c.balance)}">125,000</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(biz.cash)}">
+                                <td colspan="2"><div class="dash-empty" th:text="#{dash.biz.noLedger}">The ledger has not started yet</div></td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:if="${!#lists.isEmpty(biz.cash)}">
+                            <tr>
+                                <th th:text="#{fin.total}">Total</th>
+                                <th class="num" th:text="${@num.money(biz.cashTotal)}">1,245,300</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- What needs the owner -->
+            <div class="section">
+                <div class="card-head">
+                    <div class="card-title">
+                        <span class="card-icon orange">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        </span>
+                        <h2 th:text="#{dash.biz.attention}">Needs attention</h2>
+                    </div>
+                </div>
+                <div class="table-container card-table">
+                    <table class="table-compact" data-cards="off">
+                        <thead>
+                            <tr>
+                                <th th:text="#{dash.biz.what}">What</th>
+                                <th class="num" th:text="#{dash.biz.figure}">Figure</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_RECEIVABLES')" href="/accounting/receivables" th:text="#{dash.biz.receivable}">Owed by customers</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_RECEIVABLES')" th:text="#{dash.biz.receivable}">Owed by customers</span>
+                                    <div class="cell-sub" th:text="#{dash.biz.overdue(${@num.money(biz.overdue)}, ${biz.customersOwing})}">46,019 overdue · 2 customers</div>
+                                </td>
+                                <td class="num strong" th:text="${@num.money(biz.receivable)}">438,057</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_PAYABLES')" href="/accounting/payables" th:text="#{dash.biz.payable}">Owed to suppliers</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_PAYABLES')" th:text="#{dash.biz.payable}">Owed to suppliers</span>
+                                    <div class="cell-sub" th:text="#{dash.biz.suppliers(${biz.suppliersOwed})}">1 supplier</div>
+                                </td>
+                                <td class="num strong" th:text="${@num.money(biz.payable)}">46,180</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')" href="/stock/summary" th:text="#{summary.reorderKpi}">Below reorder level</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_STOCK_SUMMARY')" th:text="#{summary.reorderKpi}">Below reorder level</span>
+                                    <div class="cell-sub" th:if="${!#lists.isEmpty(biz.reorder)}" th:text="${#strings.listJoin(biz.reorder.![product.code], ', ')}">CLR-4, MIR-6</div>
+                                </td>
+                                <td class="num" th:classappend="${!#lists.isEmpty(biz.reorder)} ? 'strong text-danger'" th:text="${biz.reorder.size()}">2</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span th:text="#{dash.biz.waiting}">Waiting for approval</span>
+                                    <div class="cell-sub">
+                                        <a sec:authorize="hasAuthority('PAGE_SALE_APPROVALS')" href="/sale-approvals" th:text="#{dash.biz.saleApprovals(${biz.saleApprovals})}">0 at the counter</a>
+                                        <span sec:authorize="hasAuthority('PAGE_STOCK_ADJUSTMENTS')"> · <a href="/stock-adjustments" th:text="#{dash.biz.adjustments(${biz.adjustments})}">0 stock adjustments</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_MANUAL_JOURNALS')"> · <a href="/accounting/manual-journals" th:text="#{dash.biz.manualJournals(${biz.manualJournals})}">0 manual journals</a></span>
+                                    </div>
+                                </td>
+                                <td class="num" th:classappend="${biz.waiting > 0} ? 'strong'" th:text="${biz.waiting}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" href="/till-sessions" th:text="#{dash.biz.openTills}">Tills open</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{dash.biz.openTills}">Tills open</span>
+                                </td>
+                                <td class="num" th:text="${biz.openTills}">1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script th:inline="javascript">
+            window.salesChartData = {
+                days: /*[[${biz.chartDays}]]*/ [],
+                net: /*[[${biz.chartNet}]]*/ [],
+                label: /*[[#{dash.biz.chart}]]*/ 'Net sales'
+            };
+        </script>
+        <script defer src="/js/dashboard-sales.js"></script>
+    </th:block>
+
+    <!-- Activity: today's actions and changes against the same time yesterday -->
     <div class="kpi-grid">
         <div class="kpi-card">
             <div class="kpi-icon blue">

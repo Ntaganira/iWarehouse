@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import com.ntaganira.heritier.iWarehouse.service.BusinessDashboardService;
 import com.ntaganira.heritier.iWarehouse.service.DashboardService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -8,14 +9,19 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-/** Dashboard. Business KPIs (sales by channel, stock value, float...) are added module by module (RPT-01). */
+/**
+ * Dashboard. Everyone sees their latest actions; the owner's figures (sales, margin, stock value, cash, what waits: RPT-01)
+ * need PERM_VIEW_BUSINESS_DASHBOARD, the stock value PERM_VIEW_STOCK_COST too.
+ */
 @Controller
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final BusinessDashboardService businessService;
 
-    public DashboardController(DashboardService dashboardService) {
+    public DashboardController(DashboardService dashboardService, BusinessDashboardService businessService) {
         this.dashboardService = dashboardService;
+        this.businessService = businessService;
     }
 
     @GetMapping({"/", "/dashboard"})
@@ -30,6 +36,9 @@ public class DashboardController {
         model.addAttribute("dash", dashboardService.load(userId, allActivity, showChanges));
         model.addAttribute("allActivity", allActivity);
         model.addAttribute("showChanges", showChanges);
+        if (has(auth, "PERM_VIEW_BUSINESS_DASHBOARD")) {
+            model.addAttribute("biz", businessService.load());
+        }
         return "dashboard";
     }
 

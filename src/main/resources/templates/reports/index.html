@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{reports.title}, ~{::content})}">
+<head><title>Reports - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{reports.title}">Reports</h1>
+            <div class="subtitle" th:text="#{reports.subtitle}">Every report you may open, each exported to Excel or PDF</div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PAGE_SALES_REPORTS')">
+        <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.sales}">Sales</h2></div></div>
+        <div class="quick-grid">
+            <a th:replace="~{reports/index :: tile('/reports/sales', 'green', #{salesReport.title}, 'sales')}">Sales reports</a>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_STOCK_SUMMARY', 'PAGE_CUTTING_YIELD')">
+        <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.stock}">Stock and production</h2></div></div>
+        <div class="quick-grid">
+            <th:block sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')">
+                <a th:replace="~{reports/index :: tile('/stock/summary', 'blue', #{summary.title}, 'stock')}">Stock summary</a>
+                <a th:replace="~{reports/index :: tile('/stock/offcut-ageing', 'blue', #{offcutAgeing.title}, 'clock')}">Off-cut ageing</a>
+                <a th:replace="~{reports/index :: tile('/stock/slow-moving', 'orange', #{slowMoving.title}, 'clock')}">Slow-moving stock</a>
+            </th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_CUTTING_YIELD')"><a th:replace="~{reports/index :: tile('/cutting-jobs/yield', 'green', #{cutting.yield.title}, 'cut')}">Cutting yield</a></th:block>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_RECEIVABLES', 'PAGE_PAYABLES', 'PAGE_TRIAL_BALANCE', 'PAGE_FINANCIAL_STATEMENTS', 'PAGE_VAT_REPORT')">
+        <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.accounting}">Accounting</h2></div></div>
+        <div class="quick-grid">
+            <th:block sec:authorize="hasAuthority('PAGE_RECEIVABLES')"><a th:replace="~{reports/index :: tile('/accounting/receivables', 'purple', #{receivables.title}, 'clock')}">Receivables</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_PAYABLES')"><a th:replace="~{reports/index :: tile('/accounting/payables', 'purple', #{payables.title}, 'clock')}">Payables</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')"><a th:replace="~{reports/index :: tile('/accounting/trial-balance', 'neutral', #{tb.title}, 'chart')}">Trial balance</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_FINANCIAL_STATEMENTS')">
+                <a th:replace="~{reports/index :: tile('/accounting/income-statement', 'neutral', #{fin.income.title}, 'chart')}">Income statement</a>
+                <a th:replace="~{reports/index :: tile('/accounting/balance-sheet', 'neutral', #{fin.balance.title}, 'chart')}">Balance sheet</a>
+                <a th:replace="~{reports/index :: tile('/accounting/general-ledger', 'neutral', #{fin.ledger.title}, 'chart')}">General ledger</a>
+            </th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_VAT_REPORT')"><a th:replace="~{reports/index :: tile('/accounting/vat-report', 'neutral', #{vatReport.title}, 'chart')}">VAT report</a></th:block>
+        </div>
+    </div>
+    <p class="form-note" th:text="#{reports.note}">Each report opens with this month up to today; its Excel and PDF buttons export what it shows.</p>
+</div>
+
+<!--/* A report's tile: its link, colour, name and icon (sales, stock, clock, cut, chart) */-->
+<a th:fragment="tile(href, colour, label, icon)" th:href="${href}" class="quick-tile" th:classappend="${colour}">
+    <span class="qt-icon" th:switch="${icon}">
+        <svg th:case="'sales'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+        <svg th:case="'stock'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <svg th:case="'clock'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <svg th:case="'cut'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+        <svg th:case="*" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+    </span>
+    <span class="qt-label" th:text="${label}">Report</span>
+    <svg class="qt-chevron" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="9 18 15 12 9 6"></polyline></svg>
+</a>
+</body>
+</html>

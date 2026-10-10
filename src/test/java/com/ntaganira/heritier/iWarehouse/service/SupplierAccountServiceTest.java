@@ -96,7 +96,7 @@ class SupplierAccountServiceTest {
         when(numbers.next(DocumentType.SUPPLIER_INVOICE)).thenReturn("SINV-WH-2026-000001");
         when(numbers.next(DocumentType.SUPPLIER_PAYMENT)).thenReturn("SPAY-WH-2026-000001");
         service = new SupplierAccountService(invoiceRepo, lineRepo, paymentRepo, supplierRepo, receiptRepo, currencyRepo, journals, rates,
-                postings, numbers, CLOCK);
+                postings, numbers, mock(PeriodLock.class), CLOCK);
     }
 
     @AfterEach

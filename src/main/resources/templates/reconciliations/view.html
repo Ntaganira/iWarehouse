@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${rec.number}, ~{::content})}">
+<head><title>Reconciliation - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${rec.number}">REC-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{reconciliation.subtitleOne(${rec.account.code + ' ' + rec.account.name}, ${#temporals.format(rec.statementDate, 'dd/MM/yyyy')})}">1030 Bank · statement of 30/09/2026</span>
+                &middot; <th:block th:replace="~{reconciliations/list :: recStatus(${rec.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/reconciliations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
+                    th:if="${canCancel}" sec:authorize="hasAuthority('PERM_RECONCILE_ACCOUNT')" th:text="#{reconciliation.cancel}">Cancel</button>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${rec.reconciled}" th:text="#{reconciliation.reconciledNote(${rec.reconciledBy}, ${#temporals.format(rec.reconciledAt, 'dd/MM/yyyy HH:mm')})}">Reconciled by accountant on 09/10/2026 10:30.</div>
+    <div class="doc-note is-danger" th:if="${!rec.reconciled}">
+        <strong th:text="#{reconciliation.cancelledBy(${rec.cancelledBy}, ${#temporals.format(rec.cancelledAt, 'dd/MM/yyyy HH:mm')})}">Cancelled by accountant on 10/10/2026 09:00:</strong>
+        <span th:text="${rec.cancelReason}">Wrong statement</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{reconciliation.statementBalance}">Statement balance (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(rec.statementBalance)}">1,350,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{reconciliation.previousBalance}">Previous statement (RWF)</label>
+                    <div class="value" th:text="${@num.money(rec.previousBalance)}">1,250,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{reconciliation.cleared}">Cleared (RWF)</label>
+                    <div class="value" th:text="${@num.money(rec.clearedAmount)}">100,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{reconciliation.bookBalance}">Ledger balance on that day (RWF)</label>
+                    <div class="value" th:text="${@num.money(rec.bookBalance)}">1,330,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{reconciliation.outstandingDeposits}">Money in not on the statement (RWF)</label>
+                    <div class="value" th:text="${@num.money(rec.outstandingDeposits)}">0</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{reconciliation.outstandingPayments}">Money out not on the statement (RWF)</label>
+                    <div class="value" th:text="${@num.money(rec.outstandingPayments)}">20,000</div>
+                </div>
+                <div class="item item-full" th:if="${rec.notes != null}">
+                    <label th:text="#{customerAccount.notes}">Notes</label>
+                    <div class="value" th:text="${rec.notes}">—</div>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{reconciliation.identity}">The ledger balance, less the money in not on the statement, plus the money out not on it, is the statement balance.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{reconciliation.clearedLines}">Lines cleared</span>
+                <span class="section-count" th:text="${lines.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{fin.date}">Date</th>
+                        <th th:text="#{fin.journal}">Journal</th>
+                        <th th:text="#{fin.description}">Description</th>
+                        <th class="num" th:text="#{reconciliation.deposit}">Money in (RWF)</th>
+                        <th class="num" th:text="#{reconciliation.payment}">Money out (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${lines.content}" th:with="j=${l.journalLine}">
+                        <td class="nowrap" th:text="${#temporals.format(j.entry.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                        <td>
+                            <a class="mono" th:href="@{/accounting/journals/{id}(id=${j.entry.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="${j.entry.number}">JV-WH-2026-000074</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_ACCOUNTING')" th:text="${j.entry.number}">JV-WH-2026-000074</span>
+                        </td>
+                        <td>
+                            <span th:text="${j.entry.description}">Cash taken to the bank</span>
+                            <div class="cell-sub mono" th:if="${j.memo != null}" th:text="${j.memo}">Deposit slip</div>
+                        </td>
+                        <td class="num" th:text="${l.debit.signum() > 0} ? ${@num.money(l.debit)} : ''">100,000</td>
+                        <td class="num" th:text="${l.credit.signum() > 0} ? ${@num.money(l.credit)} : ''"></td>
+                    </tr>
+                    <tr th:if="${lines.totalElements == 0}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{reconciliation.noneCleared}">No line cleared</h3>
+                                <p th:text="#{reconciliation.noneClearedHint}">The statement balance equalled the previous one</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${lines}, ${'/accounting/reconciliations/' + rec.id}, ${linesQuery})}"></th:block>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pagerParam(${history}, ${'/accounting/reconciliations/' + rec.id}, ${historyQuery}, 'hpage')}"></th:block>
+        </div>
+    </div>
+
+    <th:block th:if="${canCancel}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{reconciliation.cancelTitle(${rec.number})},
+                @{/accounting/reconciliations/{id}/cancel(id=${rec.id})}, #{reconciliation.cancelText}, #{reconciliation.cancel})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

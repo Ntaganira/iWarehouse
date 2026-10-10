@@ -92,6 +92,16 @@
                     <span class="field-error" th:if="${#fields.hasErrors('glassDensity')}" th:errors="*{glassDensity}"></span>
                     <span class="hint" th:text="#{settings.glassDensityHint}">Weight = area x thickness x density</span>
                 </div>
+                <div class="form-group">
+                    <label for="slowMovingDays" th:text="#{settings.slowMovingDays}">Slow-moving after</label>
+                    <div class="input-unit">
+                        <input type="number" id="slowMovingDays" th:field="*{slowMovingDays}" step="1" min="7" max="730" required
+                               th:classappend="${#fields.hasErrors('slowMovingDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('slowMovingDays')}" th:errors="*{slowMovingDays}"></span>
+                    <span class="hint" th:text="#{settings.slowMovingDaysHint}">Glass held longer shows on the slow-moving report (RPT-02)</span>
+                </div>
             </div>
 
             <div class="form-divider"><h3 th:text="#{settings.group.pricing}">Pricing</h3>
@@ -175,6 +185,20 @@
                     </div>
                     <span class="field-error" th:if="${#fields.hasErrors('maxRateAgeDays')}" th:errors="*{maxRateAgeDays}"></span>
                     <span class="hint" th:text="#{settings.maxRateAgeDaysHint}">Older rates are refused, so a missed update is noticed</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.alerts}">Alerts</h3>
+                <p class="hint" th:text="#{settings.group.alertsHint}">Who is told when something needs attention (RPT-06)</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="alertEmail" th:text="#{settings.alertEmail}">Email alerts</label>
+                    <select id="alertEmail" th:field="*{alertEmail}" required th:classappend="${#fields.hasErrors('alertEmail')} ? 'is-invalid'">
+                        <option value="false" th:text="#{settings.alertEmail.off}">In the app only</option>
+                        <option value="true" th:text="#{settings.alertEmail.on}">In the app and by email</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('alertEmail')}" th:errors="*{alertEmail}"></span>
+                    <span class="hint" th:text="#{settings.alertEmailHint}">Emails need the mail account set on the server (MAIL_USERNAME)</span>
                 </div>
             </div>
 

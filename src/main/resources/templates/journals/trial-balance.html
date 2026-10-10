@@ -9,7 +9,10 @@
             <h1 th:text="#{tb.title}">Trial Balance</h1>
             <div class="subtitle" th:text="#{tb.subtitle}">Each account's balance as at a day: the debits equal the credits when the books balance</div>
         </div>
-        <a href="/accounting/journals" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="#{journal.title}">Journals</a>
+        <div class="btn-group">
+            <a href="/accounting/journals" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="#{journal.title}">Journals</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/trial-balance/export(asOf=${asOf})})}"></th:block>
+        </div>
     </div>
 
     <!--/* The ledger starts with the opening stock journal (once) */-->

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{offcutAgeing.title}, ~{::content})}">
+<head><title>Off-cut ageing - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${report.total}, seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{offcutAgeing.title}">Off-cut ageing</h1>
+            <div class="subtitle" th:text="#{offcutAgeing.subtitle(${#temporals.format(today, 'dd/MM/yyyy')})}">Off-cuts held on 10/10/2026, by how long they have waited for a cut</div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock" class="btn btn-outline" th:text="#{nav.stock}">Inventory</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/stock/offcut-ageing/export(product=${product})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{stock/tabs :: tabs('offcuts')}"></th:block>
+        <form th:action="@{/stock/offcut-ageing}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <select name="product" class="toolbar-filter" th:aria-label="#{product.name}">
+                    <option value="" th:text="#{cutting.yield.allProducts}">All glass</option>
+                    <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}" th:text="${p.code}">CLR-6</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{offcutAgeing.kpi.held}">Off-cuts held</div>
+                <div class="kpi-value" th:text="${t.pieces}">14</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.areaM2)})}">4.82 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{offcutAgeing.kpi.fresh}">Up to 30 days</div>
+                <div class="kpi-value" th:text="${t.get(bands[0]).pieces}">9</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.get(bands[0]).areaM2)})}">3.10 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${t.get(bands[3]).empty} ? 'green' : 'orange'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{offcutAgeing.kpi.old}">Over 180 days</div>
+                <div class="kpi-value" th:text="${t.get(bands[3]).pieces}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.get(bands[3]).areaM2)})}">0.80 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card" th:if="${seeCost}">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{summary.value}">Value at MAC (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(t.value)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">130,140</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{summary.valueHint}">m² x average cost</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{offcutAgeing.byGlass}">By glass and age</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{summary.group.PRODUCT}">Glass</th>
+                        <th class="num" th:each="b : ${bands}" th:text="#{${'ageing.band.' + b}}">0-30 days</th>
+                        <th class="num" th:text="#{summary.area}">m²</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{summary.value}">Value at MAC (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rowPage.content}">
+                        <td>
+                            <a th:href="@{/stock(product=${r.product.id}, kind='OFFCUT')}"><th:block th:replace="~{products/list :: productName(${r.product})}"></th:block></a>
+                            <div class="cell-sub mono" th:text="${r.product.code}">CLR-6</div>
+                        </td>
+                        <td class="num" th:each="b : ${bands}">
+                            <th:block th:if="${r.get(b).empty}">—</th:block>
+                            <th:block th:unless="${r.get(b).empty}">
+                                <span th:text="${@num.m2(r.get(b).areaM2)}">1.20</span>
+                                <div class="cell-sub" th:text="#{offcutAgeing.pieces(${r.get(b).pieces})}">3 pieces</div>
+                            </th:block>
+                        </td>
+                        <td class="num strong" th:text="${@num.m2(r.areaM2)}">2.40</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(r.value)}">64,800</td>
+                    </tr>
+                    <tr th:if="${rowPage.totalElements == 0}">
+                        <td th:attr="colspan=${seeCost} ? 7 : 6">
+                            <div class="empty-state">
+                                <h3 th:text="#{offcutAgeing.empty}">No off-cuts held</h3>
+                                <p th:text="#{offcutAgeing.emptyHint}">Leftovers big enough to reuse appear here when a cut is recorded</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rowPage.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:each="b : ${bands}" th:text="${t.get(b).empty} ? '—' : ${@num.m2(t.get(b).areaM2)}">1.20</th>
+                        <th class="num" th:text="${@num.m2(t.areaM2)}">4.82</th>
+                        <th class="num" th:if="${seeCost}" th:text="${@num.money(t.value)}">130,140</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/offcut-ageing', ${query + '&upage=' + unitPage.number}, 'page')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{offcutAgeing.units}">Off-cuts, oldest first</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><th:block th:replace="~{stock/tabs :: unitHead(${seeCost})}"></th:block></thead>
+                <tbody>
+                    <tr th:each="u : ${unitPage.content}">
+                        <th:block th:replace="~{stock/tabs :: unitRow(${u}, ${today}, ${seeCost})}"></th:block>
+                    </tr>
+                    <tr th:if="${unitPage.totalElements == 0}">
+                        <td th:attr="colspan=${seeCost} ? 8 : 7"><div class="empty-state"><p th:text="#{offcutAgeing.empty}">No off-cuts held</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${unitPage}, '/stock/offcut-ageing', ${query + '&page=' + rowPage.number}, 'upage')}"></th:block>
+        <p class="form-note" th:text="#{offcutAgeing.note}">An off-cut's age is counted from the cut that made it. Use the oldest first when a size fits.</p>
+    </div>
+</div>
+</body>
+</html>

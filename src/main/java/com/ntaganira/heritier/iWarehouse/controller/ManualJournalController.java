@@ -214,6 +214,7 @@ public class ManualJournalController {
         model.addAttribute("accountTypes", AccountType.values());
         model.addAttribute("controlled", journalService.controlledAccounts());
         model.addAttribute("today", journalService.today());
+        model.addAttribute("openFrom", journalService.openFrom());
         return "manual-journals/form";
     }
 

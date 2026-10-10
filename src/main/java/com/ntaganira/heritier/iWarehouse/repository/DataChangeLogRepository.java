@@ -41,13 +41,16 @@ public interface DataChangeLogRepository extends Repository<DataChangeLog, Long>
 
     /**
      * History of a record and of its child records (e.g. a purchase order and its lines), newest first.
-     * Children of each type are found by the parent id in their snapshot, so deleted children are included.
+     * Children of each type are found by the parent id in their snapshot, so deleted children are included; the documents
+     * kept on the record (Attachment, by ownerId) are children of every record.
      */
     @Query(value = "select * from data_change_logs d where (d.entity_type = :type and d.entity_id = :id)"
             + " or (d.entity_type in (:childTypes) and (d.after_data ->> :parentField = :id or d.before_data ->> :parentField = :id))"
+            + " or (d.entity_type = 'Attachment' and (d.after_data ->> 'ownerId' = :id or d.before_data ->> 'ownerId' = :id))"
             + " order by d.server_time desc, d.id desc",
             countQuery = "select count(*) from data_change_logs d where (d.entity_type = :type and d.entity_id = :id)"
-                    + " or (d.entity_type in (:childTypes) and (d.after_data ->> :parentField = :id or d.before_data ->> :parentField = :id))",
+                    + " or (d.entity_type in (:childTypes) and (d.after_data ->> :parentField = :id or d.before_data ->> :parentField = :id))"
+                    + " or (d.entity_type = 'Attachment' and (d.after_data ->> 'ownerId' = :id or d.before_data ->> 'ownerId' = :id))",
             nativeQuery = true)
     Page<DataChangeLog> findWithChildren(@Param("type") String type, @Param("id") String id,
                                          @Param("childTypes") Collection<String> childTypes, @Param("parentField") String parentField,

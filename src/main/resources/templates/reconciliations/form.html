@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{reconciliation.new}, ~{::content})}">
+<head><title>Reconcile a statement - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{reconciliation.new}">Reconcile a statement</h1>
+            <div class="subtitle" th:text="#{reconciliation.formSubtitle}">Enter the statement's date and closing balance, then tick the lines it shows</div>
+        </div>
+        <a href="/accounting/reconciliations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <!--/* The statement: account and date, then its closing balance with the button */-->
+    <div class="section">
+        <form th:action="@{/accounting/reconciliations/new}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{reconciliation.account}">Account</span>
+                    <select name="account" class="toolbar-filter">
+                        <option th:each="a : ${accounts}" th:value="${a.id}" th:selected="${a.id == account}" th:text="${a.code + ' · ' + a.name}">1030 · Bank</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{reconciliation.statementDate}">Statement date</span>
+                    <input type="date" name="date" class="toolbar-filter" th:value="${date}" th:max="${today}" th:classappend="${errorField == 'statementDate'} ? 'is-invalid'">
+                </label>
+            </div>
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{reconciliation.statementBalance}">Statement balance (RWF)</span>
+                    <input type="number" name="balance" class="toolbar-filter" step="0.01" inputmode="decimal" th:value="${balance}" required
+                           th:classappend="${errorField == 'statementBalance'} ? 'is-invalid'">
+                </label>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{reconciliation.showLines}">Show the lines</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${errorText != null}" th:text="${errorText}">The statement date must be after 30/09/2026, the previous statement's.</div>
+    <div class="doc-note" th:if="${draft == null and errorText == null}">
+        <span th:if="${previous != null}" th:text="#{reconciliation.previousNote(${previous.number}, ${#temporals.format(previous.statementDate, 'dd/MM/yyyy')}, ${@num.money(previous.statementBalance)})}">The previous statement, REC-WH-2026-000001, ended on 30/09/2026 at 1,250,000 RWF.</span>
+        <span th:if="${previous == null}" th:text="#{reconciliation.firstNote}">This account has no reconciled statement yet: the first one starts from 0.</span>
+    </div>
+
+    <form th:if="${draft != null}" th:action="@{/accounting/reconciliations/new}" method="post" class="reconcile-form">
+        <input type="hidden" name="account" th:value="${draft.account.id}">
+        <input type="hidden" name="date" th:value="${draft.statementDate}">
+        <input type="hidden" name="balance" th:value="${draft.statementBalance}">
+
+        <div class="section">
+            <div class="section-body">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{reconciliation.previousBalance}">Previous statement (RWF)</label>
+                        <div class="value">
+                            <span th:text="${@num.money(draft.previousBalance)}">1,250,000</span>
+                            <div class="cell-sub" th:text="${draft.previous != null} ? #{reconciliation.ofDate(${#temporals.format(draft.previous.statementDate, 'dd/MM/yyyy')})} : #{reconciliation.none}">of 30/09/2026</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{reconciliation.statementBalance}">Statement balance (RWF)</label>
+                        <div class="value strong" th:text="${@num.money(draft.statementBalance)}">1,350,000</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{reconciliation.toClear}">To clear (RWF)</label>
+                        <div class="value" th:text="${@num.money(draft.toClear)}">100,000</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{reconciliation.bookBalance}">Ledger balance on that day (RWF)</label>
+                        <div class="value" th:text="${@num.money(draft.bookBalance)}">1,330,000</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{reconciliation.openLines}">Lines not cleared yet</span>
+                    <span class="section-count" th:text="${draft.open.size()}">0</span>
+                </h2>
+            </div>
+            <div class="section-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" class="checkbox" data-tick-all th:aria-label="#{reconciliation.tickAll}"></th>
+                                <th th:text="#{fin.date}">Date</th>
+                                <th th:text="#{fin.journal}">Journal</th>
+                                <th th:text="#{fin.description}">Description</th>
+                                <th class="num" th:text="#{reconciliation.deposit}">Money in (RWF)</th>
+                                <th class="num" th:text="#{reconciliation.payment}">Money out (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${draft.open}">
+                                <td><input type="checkbox" class="checkbox" name="lineIds" th:value="${l.id}" th:checked="${ticked != null and #lists.contains(ticked, l.id)}"
+                                           th:attr="data-net=${l.debit.subtract(l.credit)}" data-tick th:aria-label="${l.entry.number}"></td>
+                                <td class="nowrap" th:text="${#temporals.format(l.entry.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                                <td><a class="mono" th:href="@{/accounting/journals/{id}(id=${l.entry.id})}" target="_blank" rel="noopener" th:text="${l.entry.number}">JV-WH-2026-000074</a></td>
+                                <td>
+                                    <span th:text="${l.entry.description}">Payment SPAY-WH-2026-000001 to Shandong</span>
+                                    <div class="cell-sub mono" th:if="${l.memo != null}" th:text="${l.memo}">SWIFT-E2E</div>
+                                </td>
+                                <td class="num" th:text="${l.debit.signum() > 0} ? ${@num.money(l.debit)} : ''">100,000</td>
+                                <td class="num" th:text="${l.credit.signum() > 0} ? ${@num.money(l.credit)} : ''"></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(draft.open)}">
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{reconciliation.noOpen}">Every line up to that day is cleared</h3>
+                                        <p th:text="#{reconciliation.noOpenHint}">The statement balance must then equal the previous one</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pay-status reconcile-status" aria-live="polite" th:attr="data-to-clear=${draft.toClear}, data-done-label=#{reconciliation.reconciled},
+                     data-left-label=#{reconciliation.left}">
+                    <span class="pay-status-label" th:text="#{reconciliation.left}">Still to explain</span>
+                    <span class="pay-status-amount"></span>
+                </div>
+                <div class="form-group reconcile-notes">
+                    <label for="notes" th:text="#{customerAccount.notes}">Notes</label>
+                    <input type="text" id="notes" name="notes" maxlength="255" autocomplete="off" th:value="${notes}">
+                </div>
+                <p class="form-note" th:text="#{reconciliation.formNote}">Tick each line the statement shows. Bank charges or interest not in the ledger yet: record them by a manual journal first. What stays unticked is outstanding and comes back next time.</p>
+            </div>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{reconciliation.reconcile}">Reconcile</button>
+            <a href="/accounting/reconciliations" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/reconciliation.js"></script>
+</div>
+</body>
+</html>

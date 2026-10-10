@@ -58,6 +58,18 @@ class StockSummaryTest {
     }
 
     @Test
+    void byGlassAndPlaceEachGlassOnEachPlaceByCodes() {
+        List<StockSummary.Row> rows = StockSummary.group(facts, StockSummary.GroupBy.PRODUCT_LOCATION, products, locations);
+
+        assertThat(rows).extracting(r -> r.product().getCode() + " " + r.location().getCode())
+                .containsExactly("CLR-4 WH-A-R01", "CLR-6 WH-A-R01", "CLR-6 WH-A-R02", "MIR-4 WH-A-R02");
+        assertThat(rows.get(2).pieces()).isEqualTo(3);
+        // 5 x 34,478.0353 = 172,390.18
+        assertThat(rows.get(2).value()).isEqualByComparingTo("172390.18");
+        assertThat(StockSummary.total(rows).pieces()).isEqualTo(11);
+    }
+
+    @Test
     void productsBelowTheirReorderLevelCountOnlyAvailableM2() {
         List<StockSummary.Reorder> reorder = StockSummary.reorder(facts, products.values());
 

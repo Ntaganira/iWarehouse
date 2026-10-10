@@ -103,6 +103,10 @@
                 <span th:text="#{receipt.unitsTab}">Stock units</span>
                 <span class="section-count" th:text="${units.totalElements}">38</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -173,6 +177,10 @@
             <div class="tab-content" id="tab-units" th:classappend="${tab == 'units'} ? 'active'" th:if="${s == 'POSTED'}">
                 <th:block th:replace="~{stock/list :: unitTable(${units.content}, false)}"></th:block>
                 <th:block th:replace="~{layout/pagination :: pager(${units}, ${'/goods-receipts/' + receipt.id}, 'tab=units')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('GOODS_RECEIPT', ${receipt.id}, ${documents}, '/goods-receipts/' + ${receipt.id})}"></th:block>
             </div>
 
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">

@@ -102,6 +102,10 @@
                 <span th:text="#{shipment.claimTab}">Broken on arrival</span>
                 <span class="section-count" th:text="${sum.broken}">2</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -381,6 +385,10 @@
                         </div>
                     </th:block>
                 </div>
+            </div>
+
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('SHIPMENT', ${shipment.id}, ${documents}, '/shipments/' + ${shipment.id})}"></th:block>
             </div>
 
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">

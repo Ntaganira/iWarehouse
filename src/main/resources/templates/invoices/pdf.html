@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${invoice.number}">INV-WH-2026-000001</title>
+    <style th:replace="~{reports/pdf-parts :: style(false)}"></style>
+    <style>
+        .doc-head { width: 100%; margin-bottom: 12px; }
+        .doc-head td { border: none; padding: 0; vertical-align: top; }
+        .doc-title { font-size: 16pt; font-weight: bold; margin: 0; }
+        .facts td { border: none; padding: 1px 8px 1px 0; }
+        .facts td.label { color: #6b7280; }
+        .totals { width: 55%; margin-left: 45%; margin-top: 10px; }
+        .totals td { border-bottom: 0.5px solid #e5e7eb; }
+        .totals tr.grand td { font-size: 11pt; font-weight: bold; border-top: 1.5px solid #374151; border-bottom: none; }
+        .note { margin-top: 14px; color: #6b7280; }
+        .sub { color: #6b7280; font-size: 7.5pt; }
+    </style>
+</head>
+<body>
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+<div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+
+<!--/* An A4 copy of an issued invoice (RPT-07): who bought, what, VAT per tax letter (TAX-01), payments, balance due */-->
+<table class="doc-head">
+    <tr>
+        <td>
+            <div class="doc-title" th:text="#{invoicePdf.title}">INVOICE</div>
+            <div class="mono" th:text="${invoice.number}">INV-WH-2026-000001</div>
+        </td>
+        <td>
+            <table class="facts">
+                <tr><td class="label" th:text="#{posReceipt.date}">Date</td><td th:text="${#temporals.format(invoice.postedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</td></tr>
+                <tr><td class="label" th:text="#{posReceipt.customer}">Customer</td><td th:text="${invoice.billTo}">Jean Habimana</td></tr>
+                <tr th:if="${invoice.buyerTin != null}"><td class="label" th:text="#{posReceipt.buyerTin}">Buyer's TIN</td><td th:text="${invoice.buyerTin}">102938475</td></tr>
+                <tr><td class="label" th:text="#{posReceipt.cashier}">Cashier</td><td th:text="${invoice.postedBy}">cashier1</td></tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<table>
+    <thead>
+        <tr>
+            <th th:text="#{invoicePdf.item}">Item</th>
+            <th class="num" th:text="#{invoicePdf.quantity}">Quantity</th>
+            <th class="num" th:text="#{invoicePdf.price}">Price</th>
+            <th th:text="#{invoicePdf.tax}">Tax</th>
+            <th class="num" th:text="#{invoicePdf.amount}">Amount (RWF)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr th:each="l : ${invoice.lines}">
+            <td>
+                <span th:if="${!l.serviceLine}" th:text="${l.product.code + ' ' + l.widthMm + ' × ' + l.heightMm + ' mm'}">CLR-6 3210 × 2250 mm</span>
+                <span th:if="${l.serviceLine}" th:text="${'  ' + l.service.name}">Edging</span>
+                <div class="sub" th:if="${l.stockUnit}" th:text="${l.unitCode}">U-WH-000002</div>
+                <div class="sub" th:if="${l.customPiece}" th:text="#{invoicePdf.toCut}">cut to size</div>
+                <div class="sub" th:if="${l.priceChanged and l.discountPercent.signum() > 0}"
+                     th:text="#{posReceipt.discount(${@num.m2(l.discountPercent)}, ${@num.money(l.listPrice)})}">discount 11.11% (list 27,000)</div>
+            </td>
+            <td class="num">
+                <th:block th:if="${l.serviceLine}" th:text="${@num.m2(l.serviceQuantity) + ' ' + #messages.msg('sale.unit.' + l.service.chargeUnit)}">4 m</th:block>
+                <th:block th:if="${!l.serviceLine}" th:text="${(l.customPiece ? l.quantity + ' × ' : '') + @num.m2(l.chargeableAreaM2) + ' m²'}">7.2225 m²</th:block>
+            </td>
+            <td class="num" th:text="${l.serviceLine} ? ${@num.money(l.serviceUnitPrice)} : ${@num.money(l.pricePerM2)}">27,000</td>
+            <td th:text="${l.taxCode}">B</td>
+            <td class="num" th:text="${@num.money(l.amount)}">195,008</td>
+        </tr>
+    </tbody>
+</table>
+
+<table class="totals">
+    <tr th:each="g : ${totals.groups}">
+        <td th:text="#{invoicePdf.vatGroup(${g.taxCode}, ${@num.m2(g.rate)})}">B (18%): net, VAT</td>
+        <td class="num" th:text="${@num.money(g.net) + ' + ' + @num.money(g.vat)}">165,261.02 + 29,746.98</td>
+    </tr>
+    <tr><td th:text="#{invoicePdf.net}">Net (VAT excluded)</td><td class="num" th:text="${@num.money(invoice.netAmount)}">165,261.02</td></tr>
+    <tr><td th:text="#{invoicePdf.vat}">VAT</td><td class="num" th:text="${@num.money(invoice.vatAmount)}">29,746.98</td></tr>
+    <tr class="grand"><td th:text="#{posReceipt.total}">TOTAL</td><td class="num" th:text="${@num.money(invoice.totalAmount) + ' RWF'}">195,008 RWF</td></tr>
+    <tr th:each="p : ${payments}">
+        <td th:text="${#messages.msg('payment.method.' + p.method) + (p.reference != null ? ' ' + p.reference : '') + ' · ' + #temporals.format(p.createdAt, 'dd/MM/yyyy')}">Cash · 09/10/2026</td>
+        <td class="num" th:text="${@num.money(p.amount)}">195,008</td>
+    </tr>
+    <tr class="grand" th:if="${invoice.hasBalanceDue()}"><td th:text="#{posReceipt.balanceDue}">BALANCE DUE</td><td class="num" th:text="${@num.money(invoice.balanceDue)}">97,504</td></tr>
+</table>
+
+<div class="note" th:unless="${#lists.isEmpty(creditNotes)}">
+    <span th:text="#{invoicePdf.credited}">Credit notes on this invoice:</span>
+    <span th:each="cn, it : ${creditNotes}" th:text="${cn.number + ' (' + #temporals.format(cn.creditDate, 'dd/MM/yyyy') + ', ' + @num.money(cn.totalAmount) + ')' + (it.last ? '' : '; ')}">CN-WH-2026-000001 (09/10/2026, 195,008)</span>
+</div>
+<div class="note" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
+</body>
+</html>

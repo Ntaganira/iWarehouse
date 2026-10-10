@@ -4447,3 +4447,44 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
 .journal-line-table td:nth-child(2) { min-width: 180px; }
 .journal-line-table td.num:nth-child(3), .journal-line-table td.num:nth-child(4) { width: 150px; }
 .journal-balance { margin-top: 12px; }
+
+/* Financial statements (ACC-11): the statement tabs sit on the filter card; sections, totals and the result of a statement */
+.report-tabs a.tab { text-decoration: none; display: inline-block; }
+.statement-table tr.statement-section th { padding-top: 20px; background: transparent; color: var(--gray-500); font-size: 12px;
+  text-transform: uppercase; letter-spacing: .04em; text-align: left; border-bottom: 1px solid var(--gray-200); }
+.statement-table tr.statement-total td { font-weight: 700; color: var(--dark); border-top: 1px solid var(--gray-200); }
+.statement-table tr.statement-result td { font-weight: 700; font-size: 15px; color: var(--dark); border-top: 2px solid var(--gray-300);
+  background: var(--gray-50); }
+
+/* Reconciling a statement (ACC-12): the notes under what is still to explain */
+.reconcile-notes { margin-top: 16px; max-width: 520px; }
+
+/* Reports (RPT-07): on phones a choice of four or more wraps two by two, and a filter group of three or more selects stacks */
+@media (max-width: 640px) {
+  .segmented:has(> :nth-child(4)) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .segmented:has(> :nth-child(4)) .segmented-link { text-align: center; white-space: normal; }
+  .report-filters .filter-group:has(> select:nth-of-type(3)) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Notifications (RPT-06): the bell's items are forms (opening one marks it read); on phones the panel spans the screen */
+.notif-item-form { margin: 0; }
+button.notif-item { width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--border);
+  font-family: inherit; cursor: pointer; color: inherit; }
+button.notif-item:hover { background: var(--gray-100); }
+@media (max-width: 480px) {
+  .notif-panel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; }
+}
+.notification-list .notif-unread td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+
+/* Documents on records (SRS 3.1): the upload form above the list, a thumbnail of each photo, a PDF mark */
+.attach-form { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.attach-form .form-actions { padding-top: 0; border-top: 0; justify-content: flex-start; }
+.attach-form input[type="file"] { width: 100%; max-width: 100%; font-family: inherit; font-size: 14px; color: var(--gray-600); }
+.doc-file { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.doc-file > div { min-width: 0; overflow-wrap: anywhere; }
+.doc-thumb-link { flex: none; text-decoration: none; }
+.doc-thumb { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; object-fit: cover;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--gray-50); }
+.doc-thumb-pdf { font-size: 11px; font-weight: 700; color: var(--danger); background: var(--tint-red); }
+/* Phones: with the bell the header has no room for its title (the drawer shows the brand) */
+@media (max-width: 440px) { .header-left h1 { display: none; } }

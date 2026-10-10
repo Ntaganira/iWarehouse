@@ -58,12 +58,13 @@ public class SupplierAccountService {
     private final ExchangeRateService rates;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
+    private final PeriodLock periods;
     private final Clock clock;
 
     public SupplierAccountService(SupplierInvoiceRepository invoiceRepo, SupplierInvoiceLineRepository invoiceLineRepo,
                                   SupplierPaymentRepository paymentRepo, SupplierRepository supplierRepo, GoodsReceiptRepository receiptRepo,
                                   CurrencyRepository currencyRepo, JournalService journalService, ExchangeRateService rates,
-                                  PostingService postingService, DocumentNumberService numbers, Clock clock) {
+                                  PostingService postingService, DocumentNumberService numbers, PeriodLock periods, Clock clock) {
         this.invoiceRepo = invoiceRepo;
         this.invoiceLineRepo = invoiceLineRepo;
         this.paymentRepo = paymentRepo;
@@ -74,6 +75,7 @@ public class SupplierAccountService {
         this.rates = rates;
         this.postingService = postingService;
         this.numbers = numbers;
+        this.periods = periods;
         this.clock = clock;
     }
 
@@ -247,6 +249,7 @@ public class SupplierAccountService {
         if (date == null || date.isAfter(today())) {
             throw BusinessException.onField("invoiceDate", "supplierInvoice.date.invalid");
         }
+        periods.requireOpen(date, "invoiceDate");
         Map<UUID, Uninvoiced> open = uninvoiced(supplier).stream().collect(Collectors.toMap(u -> u.receipt().getId(), Function.identity()));
         List<Uninvoiced> chosen = new ArrayList<>();
         for (UUID id : form.receiptIds() == null ? List.<UUID>of() : form.receiptIds()) {

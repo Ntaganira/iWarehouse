@@ -28,6 +28,8 @@ public enum SettingKey {
     OFFCUT_MIN_SIDE("production.offcut.min-side", "offcutMinSide", "300"),
     /** kg per m2 per mm of thickness: weight = area x thickness x density. */
     GLASS_DENSITY("production.glass-density", "glassDensity", "2.5"),
+    /** Glass held longer than this many days is slow-moving (RPT-02). */
+    SLOW_MOVING_DAYS("stock.slow-moving-days", "slowMovingDays", "90"),
 
     /** Default minimum chargeable area per piece (m2) for new price lists (MD-06). */
     MIN_CHARGEABLE_AREA("pricing.min-chargeable-area", "minChargeableArea", "0.25"),
@@ -45,7 +47,10 @@ public enum SettingKey {
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),
     /** Documents refuse a rate older than this many days, so a forgotten update is noticed (ACC-02). */
-    MAX_RATE_AGE_DAYS("currency.max-rate-age-days", "maxRateAgeDays", "7");
+    MAX_RATE_AGE_DAYS("currency.max-rate-age-days", "maxRateAgeDays", "7"),
+
+    /** Alerts go by email too (RPT-06), when a mail account is configured. */
+    ALERT_EMAIL("alerts.email", "alertEmail", "false");
 
     private final String key;
     private final String property;

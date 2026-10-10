@@ -3,6 +3,7 @@ package com.ntaganira.heritier.iWarehouse.service;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
+import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class JournalServiceTest {
     private final List<JournalLine> lines = new ArrayList<>();
     private JournalService service;
     private int number;
+    private LocalDate closedThrough;
 
     @BeforeEach
     void setUp() {
@@ -52,8 +54,11 @@ class JournalServiceTest {
                 .filter(l -> l.getEntry().getId().equals(a.getArgument(0))).toList());
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.JOURNAL)).thenAnswer(a -> String.format("JV-WH-2026-%06d", ++number));
+        AccountingPeriodRepository periodRepo = mock(AccountingPeriodRepository.class);
+        when(periodRepo.closedThrough()).thenAnswer(a -> closedThrough);
         service = new JournalService(entryRepo, lineRepo, mock(AccountRepository.class), mock(ProductRepository.class),
-                mock(SupplierRepository.class), mock(CustomerRepository.class), mock(StockSummaryService.class), numbers, CLOCK);
+                mock(SupplierRepository.class), mock(CustomerRepository.class), mock(StockSummaryService.class), numbers,
+                new PeriodLock(periodRepo), CLOCK);
     }
 
     @Test
@@ -108,6 +113,23 @@ class JournalServiceTest {
         assertThat(back.get(1).getRate()).isEqualByComparingTo("1460");
 
         assertThatThrownBy(() -> service.reverse(original, LocalDate.of(2026, 10, 2), "again")).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void nothingIsPostedOnAClosedMonth() {   // ACC-10
+        closedThrough = LocalDate.of(2026, 9, 30);
+        List<JournalService.AccountLine> lines = List.of(line(account("5190"), "100", "0", null), line(account("1030"), "0", "100", null));
+        assertThatThrownBy(() -> service.postLines(JournalSource.MANUAL_JOURNAL, null, "MJ-1", LocalDate.of(2026, 9, 30), "x", lines))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("period.closed");
+                    assertThat(e.getArgs()).containsExactly("30/09/2026", "30/09/2026");
+                });
+        assertThat(entries).isEmpty();
+        assertThat(service.postLines(JournalSource.MANUAL_JOURNAL, null, "MJ-2", LocalDate.of(2026, 10, 1), "x", lines)).isNotNull();
+
+        JournalEntry october = entries.get(0);
+        closedThrough = LocalDate.of(2026, 10, 31);                                     // a reversal is refused there too
+        assertThatThrownBy(() -> service.reverse(october, LocalDate.of(2026, 10, 15), "x")).isInstanceOf(BusinessException.class);
     }
 
     private static Account account(String code) {

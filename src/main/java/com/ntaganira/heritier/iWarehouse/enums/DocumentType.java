@@ -38,6 +38,8 @@ public enum DocumentType {
     FX_REVALUATION("FXR"),
     /** A journal asked for by account and approved by another person (ACC-05): MJ-WH-2026-000001. */
     MANUAL_JOURNAL("MJ"),
+    /** A bank or mobile-money statement reconciled with the ledger (ACC-12): REC-WH-2026-000001. */
+    BANK_RECONCILIATION("REC"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

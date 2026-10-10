@@ -362,7 +362,7 @@ class CounterSalesTest {
         LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
                 jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, creditLineRepo, tills, cuttingJobs, stockService, pricing,
-                postings, journals, numbers, settings, CLOCK);
+                postings, journals, numbers, settings, mock(Notifier.class), CLOCK);
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
                 numbers, settings, CLOCK);

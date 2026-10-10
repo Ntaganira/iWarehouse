@@ -16,6 +16,7 @@
                sec:authorize="hasAuthority('PERM_RETURN_SALE')" th:text="#{creditNote.returnGoods}">Return goods</a>
             <a th:href="@{/credit-notes/cancel(invoice=${invoice.id})}" class="btn btn-outline" th:if="${canCancel}"
                sec:authorize="hasAuthority('PERM_RETURN_SALE')" th:text="#{creditNote.giveUpPieces}">Give up pieces</a>
+            <a th:href="@{/invoices/{id}/pdf(id=${invoice.id})}" class="btn btn-outline" th:title="#{invoice.pdfTitle}" th:text="#{export.pdf}">PDF</a>
             <a th:href="@{/invoices/{id}/receipt(id=${invoice.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{invoice.printReceipt}">Print the receipt</a>
         </div>
     </div>

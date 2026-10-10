@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{period.title}, ~{::content})}">
+<head><title>Period close - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{period.title}">Period close</h1>
+            <div class="subtitle" th:text="#{period.subtitle}">Months are closed in order once their books are complete: nothing can be posted on a closed month</div>
+        </div>
+        <a href="/accounting/trial-balance" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_TRIAL_BALANCE')" th:text="#{nav.trialBalance}">Trial Balance</a>
+    </div>
+
+    <div class="doc-note">
+        <span th:if="${closedThrough != null}" th:text="#{period.closedThrough(${#temporals.format(closedThrough, 'dd/MM/yyyy')})}">The books are closed through 30/09/2026: nothing can be posted on or before that day.</span>
+        <span th:if="${closedThrough == null}" th:text="#{period.noneClosed}">No month is closed yet.</span>
+    </div>
+
+    <!--/* The month to close next and what it waits for */-->
+    <div class="section" th:if="${checklist != null}">
+        <div class="section-header">
+            <h2 th:text="#{period.nextTitle(${#temporals.format(checklist.periodEnd, 'MMMM yyyy')})}">Close September 2026</h2>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{period.ended}">Ended on</label>
+                    <div class="value" th:text="${#temporals.format(checklist.periodEnd, 'dd/MM/yyyy')}">30/09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{period.waitingJournals}">Manual journals waiting</label>
+                    <div class="value">
+                        <span th:if="${checklist.manualJournalsWaiting == 0}" class="badge badge-success" th:text="#{period.none}">None</span>
+                        <a th:if="${checklist.manualJournalsWaiting > 0}" th:href="@{/accounting/manual-journals(status='PENDING_APPROVAL')}"
+                           th:text="#{period.waitingCount(${checklist.manualJournalsWaiting})}">2 to decide</a>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{period.revaluation}">FX revaluation</label>
+                    <div class="value" th:switch="${checklist.revaluation.name()}">
+                        <th:block th:case="'DONE'">
+                            <span class="badge badge-success" th:text="#{period.revaluation.DONE}">Done</span>
+                            <a class="mono" th:href="@{/accounting/fx-revaluations/{id}(id=${checklist.revaluationDone.id})}" th:text="${checklist.revaluationDone.number}">FXR-WH-2026-000001</a>
+                        </th:block>
+                        <span th:case="'NOT_NEEDED'" class="badge badge-secondary" th:text="#{period.revaluation.NOT_NEEDED}">Not needed</span>
+                        <th:block th:case="*">
+                            <span class="badge badge-warning" th:text="#{period.revaluation.DUE}">To do</span>
+                            <a th:href="@{/accounting/fx-revaluations/new(month=${checklist.month})}" sec:authorize="hasAuthority('PERM_REVALUE_FX')"
+                               th:text="#{period.revalue}">Revalue</a>
+                        </th:block>
+                    </div>
+                </div>
+            </div>
+            <p class="form-note" th:unless="${checklist.ready}" th:text="#{period.notReady}">Decide the manual journals waiting and revalue the foreign balances first.</p>
+            <form th:action="@{/accounting/periods/close}" method="post" class="form-actions confirm-submit" sec:authorize="hasAuthority('PERM_CLOSE_PERIOD')"
+                  th:attr="data-confirm=#{period.closeConfirm(${#temporals.format(checklist.periodEnd, 'MMMM yyyy')})}">
+                <input type="hidden" name="month" th:value="${checklist.month}">
+                <button type="submit" class="btn btn-primary" th:disabled="${!checklist.ready}"
+                        th:text="#{period.close(${#temporals.format(checklist.periodEnd, 'MMMM yyyy')})}">Close September 2026</button>
+            </form>
+        </div>
+    </div>
+    <div class="section" th:if="${checklist == null}">
+        <div class="section-body">
+            <div class="empty-state">
+                <h3 th:text="#{period.nothingToClose}">No month to close</h3>
+                <p th:if="${following != null}" th:text="#{period.nothingToCloseHint(${#temporals.format(following.atEndOfMonth(), 'MMMM yyyy')}, ${#temporals.format(following.atEndOfMonth().plusDays(1), 'dd/MM/yyyy')})}">October 2026 can be closed from 01/11/2026.</p>
+                <p th:if="${following == null}" th:text="#{period.nothingYet}">The ledger has no journal yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{period.closedMonths}">Closed months</span>
+                <span class="section-count" th:text="${periods.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{period.month}">Month</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{period.closedBy}">Closed</th>
+                        <th th:text="#{period.reopened}">Reopened</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${periods.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/accounting/periods/{id}(id=${p.id})}" th:text="${#temporals.format(p.periodEnd, 'MMMM yyyy')}">September 2026</a>
+                            <div class="cell-sub" th:text="${#temporals.format(p.periodEnd, 'dd/MM/yyyy')}">30/09/2026</div>
+                        </td>
+                        <td><th:block th:replace="~{periods/list :: periodStatus(${p.status})}"></th:block></td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(p.closedAt, 'dd/MM/yyyy HH:mm')}">09/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${p.closedBy}">accountant</div>
+                        </td>
+                        <td>
+                            <th:block th:if="${p.reopenedAt != null}">
+                                <span class="nowrap" th:text="${#temporals.format(p.reopenedAt, 'dd/MM/yyyy HH:mm') + ' · ' + p.reopenedBy}">10/10/2026 09:00 · owner</span>
+                                <div class="cell-sub" th:text="${p.reopenReason}">Supplier invoice found late</div>
+                            </th:block>
+                            <span class="text-muted" th:if="${p.reopenedAt == null}">—</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${periods.totalElements == 0}">
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <h3 th:text="#{period.empty}">No month closed yet</h3>
+                                <p th:text="#{period.emptyHint}">Close each month once its documents are in, its manual journals decided and its foreign balances revalued</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${periods}, '/accounting/periods', '')}"></th:block>
+    </div>
+</div>
+
+<!--/* A month's status as a badge */-->
+<th:block th:fragment="periodStatus(s)" th:switch="${s.name()}">
+    <span th:case="'CLOSED'" class="badge badge-secondary" th:text="#{period.status.CLOSED}">Closed</span>
+    <span th:case="*" class="badge badge-warning" th:text="#{period.status.REOPENED}">Reopened</span>
+</th:block>
+</body>
+</html>

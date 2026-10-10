@@ -18,11 +18,13 @@ import com.ntaganira.heritier.iWarehouse.service.SalesService;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.CuttingJobService;
 import com.ntaganira.heritier.iWarehouse.service.CuttingYield;
+import com.ntaganira.heritier.iWarehouse.service.Excel;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.StockService;
 import jakarta.validation.Validator;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,7 +34,9 @@ import org.springframework.validation.beanvalidation.SpringValidatorAdapter;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -58,6 +62,8 @@ public class CuttingJobController {
     static final String MODULE = "Cutting Jobs";
     private static final int REASON_MAX = 255;
 
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private final CuttingJobService jobService;
     private final JournalService journalService;
     private final SalesService salesService;
@@ -67,10 +73,12 @@ public class CuttingJobController {
     private final SpringValidatorAdapter validator;
     private final Messages messages;
     private final NumberFormats num;
+    private final ReportFiles reportFiles;
 
     public CuttingJobController(CuttingJobService jobService, StockService stockService, DataChangeService dataChangeService,
                                 JournalService journalService, SalesService salesService, ActivityLogService activityLogService,
-                                Validator validator, Messages messages, NumberFormats num) {
+                                Validator validator, Messages messages, NumberFormats num, ReportFiles reportFiles) {
+        this.reportFiles = reportFiles;
         this.jobService = jobService;
         this.stockService = stockService;
         this.journalService = journalService;
@@ -354,14 +362,9 @@ public class CuttingJobController {
                         @RequestParam(required = false) String operator,
                         @RequestParam(defaultValue = "0") int opage, @RequestParam(defaultValue = "0") int gpage,
                         @RequestParam(defaultValue = "0") int bpage, Model model) {
-        LocalDate today = jobService.today();
-        LocalDate end = to == null ? today : to;
-        LocalDate start = from == null ? end.withDayOfMonth(1) : from;
-        if (start.isAfter(end)) {
-            LocalDate swap = start;
-            start = end;
-            end = swap;
-        }
+        LocalDate[] period = yieldPeriod(from, to);
+        LocalDate start = period[0];
+        LocalDate end = period[1];
         CuttingJobService.YieldReport report = jobService.yieldReport(start, end, product, operator);
         model.addAttribute("report", report);
         // Three tables, each with its own page (operator, glass, breakage); each pager keeps the filters and the other pages
@@ -382,6 +385,71 @@ public class CuttingJobController {
         model.addAttribute("products", jobService.allProducts());
         model.addAttribute("operators", jobService.operators());
         return "cutting-jobs/yield";
+    }
+
+    /** The yield report in Excel or PDF (RPT-03, RPT-07): by operator, by glass, breakage by reason; costs only for those who see them. */
+    @GetMapping("/yield/export")
+    @PreAuthorize("hasAuthority('PAGE_CUTTING_YIELD') and hasAuthority('PERM_VIEW_CUTTING_YIELD')")
+    public ResponseEntity<byte[]> yieldExport(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                                              @RequestParam(required = false) UUID product, @RequestParam(required = false) String operator,
+                                              @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
+        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
+        LocalDate[] period = yieldPeriod(from, to);
+        CuttingJobService.YieldReport report = jobService.yieldReport(period[0], period[1], product, operator);
+        String covers = messages.get("fin.period", period[0].format(DAY), period[1].format(DAY));
+        Excel.Sheet byOperator = yieldSheet(messages.get("cutting.yield.byOperator"), covers, messages.get("cutting.operator"),
+                report.byOperator(), report.total(), seeCost);
+        Excel.Sheet byProduct = yieldSheet(messages.get("cutting.yield.byProduct"), covers, messages.get("product.name"),
+                report.byProduct(), report.total(), seeCost);
+        List<String> headers = new java.util.ArrayList<>(List.of(messages.get("cutting.reason"), messages.get("cutting.countCol"), messages.get("cutting.areaCol")));
+        if (seeCost) {
+            headers.add(messages.get("cutting.costCol"));
+        }
+        Excel.Builder breakage = Excel.sheet(messages.get("cutting.yield.byReason"), messages.get("cutting.yield.byReason"), covers,
+                headers.toArray(String[]::new));
+        for (CuttingYield.Breakage b : report.breakage()) {
+            List<Object> cells = new java.util.ArrayList<>(List.of(messages.get("cutting.reason." + b.reason()), b.pieces(), b.areaM2()));
+            if (seeCost) {
+                cells.add(b.cost());
+            }
+            breakage.row(cells.toArray());
+        }
+        activityLogService.record(MODULE, "EXPORT_CUTTING_YIELD", "Exported the cutting yield from " + period[0] + " to " + period[1]
+                + " to " + format.label(), ActivityStatus.SUCCESS);
+        return reportFiles.download(format, "cutting-yield-" + period[0] + "-" + period[1], byOperator, byProduct, breakage.build());
+    }
+
+    /** From and to: this month up to today by default, swapped when the start is after the end. */
+    private LocalDate[] yieldPeriod(LocalDate from, LocalDate to) {
+        LocalDate end = to == null ? jobService.today() : to;
+        LocalDate start = from == null ? end.withDayOfMonth(1) : from;
+        return start.isAfter(end) ? new LocalDate[]{end, start} : new LocalDate[]{start, end};
+    }
+
+    /** One table of the yield: a row per operator or glass, then the total. */
+    private Excel.Sheet yieldSheet(String title, String covers, String first, List<CuttingYield.Row> rows, CuttingYield.Row total, boolean seeCost) {
+        List<String> headers = new java.util.ArrayList<>(List.of(first, messages.get("cutting.yield.jobs"), messages.get("cutting.yield.consumed"),
+                messages.get("cutting.kind.PIECE"), messages.get("cutting.kind.OFFCUT"), messages.get("cutting.yield.cullet"),
+                messages.get("cutting.yield.broken"), messages.get("cutting.yieldKpi") + " (%)"));
+        if (seeCost) {
+            headers.add(messages.get("cutting.yield.spoilageCol"));
+        }
+        Excel.Builder sheet = Excel.sheet(title, title, covers, headers.toArray(String[]::new));
+        for (CuttingYield.Row r : rows) {
+            sheet.row(yieldCells(r.label(), r, seeCost));
+        }
+        sheet.bold(yieldCells(messages.get("cutting.total"), total, seeCost));
+        return sheet.build();
+    }
+
+    private static Object[] yieldCells(String label, CuttingYield.Row r, boolean seeCost) {
+        List<Object> cells = new java.util.ArrayList<>(List.of(label, r.jobs(), r.consumed(), r.pieces(), r.offcuts(), r.cullet(), r.broken(),
+                r.jobs() == 0 ? BigDecimal.ZERO.setScale(1) : r.getYieldPercent().setScale(1, java.math.RoundingMode.HALF_UP)));
+        if (seeCost) {
+            cells.add(r.spoilageCost());
+        }
+        return cells.toArray();
     }
 
     // ---------------------------------------------------------------- helpers

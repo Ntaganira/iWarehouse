@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{salesReport.title}, ~{::content})}">
+<head><title>Sales reports - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${report.total}, g=${group.name()}, seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
+                                   cols=${(g == 'INVOICE' ? 4 : 2) + (g == 'PRODUCT' ? 1 : 0) + 1 + (seeCost ? 3 : 0)}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{salesReport.title}">Sales reports</h1>
+            <div class="subtitle" th:text="#{salesReport.subtitle(${#temporals.format(from, 'dd/MM/yyyy')}, ${#temporals.format(to, 'dd/MM/yyyy')})}">Invoices issued from 01/10/2026 to 10/10/2026, less their credit notes, with the gross margin at average cost</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_REPORTS')" th:text="#{nav.reports}">Reports</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/sales/export(from=${from}, to=${to}, group=${group}, customer=${customer}, item=${item}, salesperson=${salesperson})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <!--/* The period, then what to group by and the filters with the button: the bar wraps between the two groups */-->
+        <form th:action="@{/reports/sales}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{fin.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${from}" th:max="${today}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{fin.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${to}" th:max="${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="group" class="toolbar-filter" th:aria-label="#{summary.groupBy}">
+                    <option th:each="gr : ${groups}" th:value="${gr}" th:selected="${gr == group}" th:text="#{${'salesReport.by.' + gr}}">By customer</option>
+                </select>
+                <select name="customer" class="toolbar-filter" th:aria-label="#{salesReport.customer}">
+                    <option value="" th:text="#{salesReport.allCustomers}">All customers</option>
+                    <option th:each="o : ${report.customers}" th:value="${o.value}" th:selected="${o.value == customer}" th:text="${o.label}">Umucyo Builders</option>
+                </select>
+                <select name="item" class="toolbar-filter" th:aria-label="#{salesReport.group.PRODUCT}">
+                    <option value="" th:text="#{salesReport.allItems}">All glass and processing</option>
+                    <option th:each="o : ${report.items}" th:value="${o.value}" th:selected="${o.value == item}" th:text="${o.label}">CLR-6</option>
+                </select>
+                <select name="salesperson" class="toolbar-filter" th:aria-label="#{salesReport.salesperson}">
+                    <option value="" th:text="#{salesReport.allSalespeople}">All salespeople</option>
+                    <option th:each="o : ${report.salespeople}" th:value="${o.value}" th:selected="${o.value == salesperson}" th:text="${o.label}">QA Admin</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{salesReport.kpi.net}">Net sales (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(t.net)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">2,115,400</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{salesReport.kpi.invoices(${t.invoices})}">21 invoices, VAT excluded</span></div>
+            </div>
+        </div>
+        <div class="kpi-card" th:if="${seeCost}">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{salesReport.kpi.cost}">Cost of glass sold</div>
+                <div class="kpi-value" th:with="v=${@num.money(t.cost)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">1,402,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{salesReport.kpi.costHint}">at average cost (MAC)</span></div>
+            </div>
+        </div>
+        <div class="kpi-card" th:if="${seeCost}">
+            <div class="kpi-icon" th:classappend="${t.margin.signum() < 0} ? 'red' : 'green'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{salesReport.kpi.margin}">Gross margin</div>
+                <div class="kpi-value" th:with="v=${@num.money(t.margin)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">713,400</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${t.marginPercent != null} ? #{salesReport.kpi.marginPercent(${t.marginPercent})} : '—'">33.7 % of net sales</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{salesReport.kpi.area}">Glass sold</div>
+                <div class="kpi-value" th:text="${@num.m2(t.areaM2)}">48.6</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{salesReport.kpi.areaHint}">m², less returns</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{${'salesReport.by.' + g}}">By customer</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr th:if="${g == 'INVOICE'}">
+                        <th th:text="#{salesReport.invoice}">Invoice</th>
+                        <th th:text="#{salesReport.date}">Date</th>
+                        <th th:text="#{salesReport.customer}">Customer</th>
+                        <th th:text="#{salesReport.salesperson}">Salesperson</th>
+                        <th class="num" th:text="#{salesReport.net}">Net sales (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.cost}">Cost (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.margin}">Gross margin (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.marginPercent}">Margin %</th>
+                    </tr>
+                    <tr th:unless="${g == 'INVOICE'}">
+                        <th th:text="#{${'salesReport.group.' + g}}">Customer</th>
+                        <th class="num" th:text="#{salesReport.invoices}">Invoices</th>
+                        <th class="num" th:if="${g == 'PRODUCT'}" th:text="#{salesReport.area}">m²</th>
+                        <th class="num" th:text="#{salesReport.net}">Net sales (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.cost}">Cost (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.margin}">Gross margin (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.marginPercent}">Margin %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <th:block th:if="${g == 'INVOICE'}">
+                            <td>
+                                <a class="row-link mono" th:href="@{/invoices/{id}(id=${r.invoice.id})}" th:text="${r.invoice.number}">INV-WH-2026-000012</a>
+                                <div th:if="${r.invoice.pending}"><span class="badge badge-warning" th:text="#{salesReport.pending}">Pieces to hand over</span></div>
+                            </td>
+                            <td th:text="${#temporals.format(r.invoice.date, 'dd/MM/yyyy')}">09/10/2026</td>
+                            <td>
+                                <span th:text="${r.invoice.buyer ?: r.invoice.customer}">Mukamana Alice</span>
+                                <div class="cell-sub" th:if="${r.invoice.buyer != null}" th:text="${r.invoice.customer}">Walk-in customer</div>
+                            </td>
+                            <td th:text="${r.invoice.salespersonName}">QA Admin</td>
+                        </th:block>
+                        <th:block th:unless="${g == 'INVOICE'}">
+                            <td th:switch="${g}">
+                                <a th:case="'CUSTOMER'" th:href="@{/reports/sales(from=${from}, to=${to}, group='INVOICE', customer=${r.key}, item=${item}, salesperson=${salesperson})}" th:text="${r.label}">Umucyo Builders</a>
+                                <a th:case="'PRODUCT'" th:classappend="${#strings.startsWith(r.key, 'P:')} ? 'mono'" th:href="@{/reports/sales(from=${from}, to=${to}, group='INVOICE', customer=${customer}, item=${r.key}, salesperson=${salesperson})}" th:text="${r.label}">CLR-6</a>
+                                <a th:case="'SALESPERSON'" th:href="@{/reports/sales(from=${from}, to=${to}, group='INVOICE', customer=${customer}, item=${item}, salesperson=${r.key})}" th:text="${r.label}">QA Admin</a>
+                                <a th:case="'DAY'" th:href="@{/reports/sales(from=${r.date}, to=${r.date}, group='INVOICE', customer=${customer}, item=${item}, salesperson=${salesperson})}" th:text="${#temporals.format(r.date, 'dd/MM/yyyy')}">09/10/2026</a>
+                                <a th:case="'MONTH'" th:href="@{/reports/sales(from=${r.date}, to=${r.date.plusMonths(1).minusDays(1).isAfter(today) ? today : r.date.plusMonths(1).minusDays(1)}, group='DAY', customer=${customer}, item=${item}, salesperson=${salesperson})}" th:text="${#temporals.format(r.date, 'MMMM yyyy')}">October 2026</a>
+                            </td>
+                            <td class="num" th:text="${r.invoices}">5</td>
+                            <td class="num" th:if="${g == 'PRODUCT'}" th:text="${r.areaM2 == null or r.areaM2.signum() == 0} ? '—' : ${@num.m2(r.areaM2)}">12.48</td>
+                        </th:block>
+                        <td class="num strong" th:text="${@num.money(r.net)}">330,509</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(r.cost)}">199,720</td>
+                        <td class="num" th:if="${seeCost}" th:classappend="${r.margin.signum() < 0} ? 'text-danger'" th:text="${@num.money(r.margin)}">130,789</td>
+                        <td class="num" th:if="${seeCost}" th:text="${r.marginPercent != null} ? ${#numbers.formatDecimal(r.marginPercent, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">39.6 %</td>
+                    </tr>
+                    <tr th:if="${rows.totalElements == 0}">
+                        <td th:colspan="${cols}">
+                            <div class="empty-state">
+                                <h3 th:text="#{salesReport.empty}">No sales in this period</h3>
+                                <p th:text="#{salesReport.emptyHint}">Choose other dates or clear the filters: only issued invoices count</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th:block th:if="${g == 'INVOICE'}"><th></th><th></th><th></th></th:block>
+                        <th class="num" th:unless="${g == 'INVOICE'}" th:text="${t.invoices}">21</th>
+                        <th class="num" th:if="${g == 'PRODUCT'}" th:text="${@num.m2(t.areaM2)}">48.6</th>
+                        <th class="num" th:text="${@num.money(t.net)}">2,115,400</th>
+                        <th class="num" th:if="${seeCost}" th:text="${@num.money(t.cost)}">1,402,000</th>
+                        <th class="num" th:if="${seeCost}" th:text="${@num.money(t.margin)}">713,400</th>
+                        <th class="num" th:if="${seeCost}" th:text="${t.marginPercent != null} ? ${#numbers.formatDecimal(t.marginPercent, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">33.7 %</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/reports/sales', ${query})}"></th:block>
+        <p class="doc-note" th:if="${report.pending > 0}" th:text="#{salesReport.pendingNote(${report.pending})}">2 invoices still have pieces to hand over: their cost is counted when the pieces leave, so their margin will come down.</p>
+        <p class="form-note" th:text="#{salesReport.note}">Net sales leave VAT out. Each invoice counts with its credit notes, whenever they were issued. Cost is what the sale and hand-over journals took out of stock at average cost; processing has none. The salesperson is who took the payment.</p>
+    </div>
+</div>
+</body>
+</html>

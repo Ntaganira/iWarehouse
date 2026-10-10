@@ -104,7 +104,7 @@ class FxRevaluationServiceTest {
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.FX_REVALUATION)).thenReturn("FXR-WH-2026-000001");
         service = new FxRevaluationService(repo, lineRepo, journalLineRepo, entryRepo, accountRepo, supplierRepo, rates, postings,
-                numbers, CLOCK);
+                numbers, mock(PeriodLock.class), CLOCK);
     }
 
     @AfterEach

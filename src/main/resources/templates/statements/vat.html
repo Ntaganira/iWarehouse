@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{vatReport.title}, ~{::content})}">
+<head><title>VAT report - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{vatReport.title}">VAT report</h1>
+            <div class="subtitle" th:text="#{vatReport.subtitle(${#temporals.format(report.to, 'MMMM yyyy')})}">Output and input VAT of September 2026, for filing</div>
+        </div>
+        <div class="btn-group">
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/vat-report/export(month=${month})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/accounting/vat-report}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{fxRevaluation.month}">Month</span>
+                    <select name="month" class="toolbar-filter" onchange="this.form.submit()">
+                        <option th:each="m : ${months}" th:value="${m}" th:selected="${m == month}" th:text="${#temporals.format(m.atEndOfMonth(), 'MMMM yyyy')}">October 2026</option>
+                    </select>
+                </label>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:classappend="${report.ledgerDifference.signum() == 0} ? '' : 'is-danger'">
+        <span th:if="${report.ledgerDifference.signum() == 0}" th:text="#{vatReport.ledgerAgrees(${@num.money(report.ledgerOutputVat)})}">The VAT Output account moved by the same 54,000 RWF.</span>
+        <strong th:if="${report.ledgerDifference.signum() != 0}" th:text="#{vatReport.ledgerDiffers(${@num.money(report.ledgerOutputVat)}, ${@num.money(report.ledgerDifference)})}">The VAT Output account moved by 60,000 RWF: 6,000 more than the documents.</strong>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{vatReport.outputVat}">Output VAT</label>
+                    <div class="value strong" th:text="${@num.money(report.outputVat)}">54,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vatReport.inputVat}">Input VAT</label>
+                    <div class="value strong" th:text="${@num.money(report.inputVat)}">0</div>
+                </div>
+                <div class="item">
+                    <label th:text="${report.payable.signum() < 0} ? #{vatReport.credit} : #{vatReport.payable}">VAT payable</label>
+                    <div class="value strong" th:text="${@num.money(report.payable.abs())}">54,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vatReport.documents}">Documents</label>
+                    <div class="value" th:text="#{vatReport.documentsCount(${report.output.invoices}, ${report.output.creditNotes})}">12 invoices, 1 credit note</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{vatReport.outputTitle}">Output VAT by tax letter</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{vatReport.letter}">Tax letter</th>
+                        <th class="num" th:text="#{vatReport.salesGross}">Sales (VAT incl.)</th>
+                        <th class="num" th:text="#{vatReport.creditGross}">Credit notes (VAT incl.)</th>
+                        <th class="num" th:text="#{vatReport.net}">Taxable amount</th>
+                        <th class="num" th:text="#{vatReport.vat}">VAT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${report.output.letters}">
+                        <td>
+                            <span class="strong" th:text="${l.taxCode}">B</span>
+                            <div class="cell-sub" th:text="#{vatReport.rateLine(${@num.amount(l.rate, 0)})}">18%</div>
+                        </td>
+                        <td class="num">
+                            <span th:text="${@num.money(l.salesGross)}">354,000</span>
+                            <div class="cell-sub" th:text="#{vatReport.vatIn(${@num.money(l.salesVat)})}">VAT 54,000</div>
+                        </td>
+                        <td class="num">
+                            <span th:text="${l.creditGross.signum() == 0} ? '—' : ${@num.money(l.creditGross)}">—</span>
+                            <div class="cell-sub" th:if="${l.creditGross.signum() != 0}" th:text="#{vatReport.vatIn(${@num.money(l.creditVat)})}">VAT 0</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(l.net)}">300,000</td>
+                        <td class="num strong" th:text="${@num.money(l.vat)}">54,000</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(report.output.letters)}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{vatReport.empty}">No sale or credit note this month</h3>
+                                <p th:text="#{vatReport.emptyHint}">Invoices issued and credit notes dated in the month appear here, per tax letter</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:unless="${#lists.isEmpty(report.output.letters)}">
+                    <tr>
+                        <th th:text="#{fin.total}">Total</th>
+                        <th class="num" th:text="${@num.money(report.output.salesGross)}">354,000</th>
+                        <th class="num" th:text="${@num.money(report.output.creditGross)}">0</th>
+                        <th class="num" th:text="${@num.money(report.output.net)}">300,000</th>
+                        <th class="num" th:text="${@num.money(report.output.vat)}">54,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{vatReport.outputNote}">VAT is worked out on each document per tax letter, as the invoice and EBM show it: A exempt, B standard, C zero-rated.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{vatReport.inputTitle}">Input VAT</span>
+                <span class="section-count" th:text="${inputLines.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{fin.date}">Date</th>
+                        <th th:text="#{fin.journal}">Journal</th>
+                        <th th:text="#{fin.description}">Description</th>
+                        <th class="num" th:text="#{fin.amount}">Amount (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${inputLines.content}">
+                        <td class="nowrap" th:text="${#temporals.format(l.entry.entryDate, 'dd/MM/yyyy')}">30/09/2026</td>
+                        <td>
+                            <a class="mono" th:href="@{/accounting/journals/{id}(id=${l.entry.id})}" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="${l.entry.number}">JV-WH-2026-000080</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_ACCOUNTING')" th:text="${l.entry.number}">JV-WH-2026-000080</span>
+                        </td>
+                        <td>
+                            <span th:text="${l.entry.description}">Import VAT paid at customs</span>
+                            <div class="cell-sub" th:if="${l.memo != null}" th:text="${l.memo}">Customs receipt 1234</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(l.debit.subtract(l.credit))}">25,000</td>
+                    </tr>
+                    <tr th:if="${inputLines.totalElements == 0}">
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <h3 th:text="#{vatReport.noInput}">No input VAT this month</h3>
+                                <p th:text="#{vatReport.noInputHint}">VAT recovered on purchases (import VAT paid at customs) is booked on the VAT Input account by a manual journal</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${inputLines}, '/accounting/vat-report', ${query})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
@@ -38,6 +40,7 @@ public class SupplierInvoiceController {
 
     static final String MODULE = "Procurement";
 
+    private final AttachmentService attachmentService;
     private final SupplierAccountService accountService;
     private final SupplierService supplierService;
     private final JournalService journalService;
@@ -48,7 +51,9 @@ public class SupplierInvoiceController {
 
     public SupplierInvoiceController(SupplierAccountService accountService, SupplierService supplierService, JournalService journalService,
                                      DataChangeService dataChangeService, ActivityLogService activityLogService, Messages messages,
-                                     NumberFormats num) {
+                                     NumberFormats num,
+            AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
         this.accountService = accountService;
         this.supplierService = supplierService;
         this.journalService = journalService;
@@ -69,11 +74,15 @@ public class SupplierInvoiceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PAGE_SUPPLIER_INVOICES') and hasAuthority('PERM_VIEW_SUPPLIER_ACCOUNT')")
-    public String view(@PathVariable UUID id, @RequestParam(defaultValue = "0") int page, Model model) {
+    public String view(@PathVariable UUID id, @RequestParam(required = false) String tab, @RequestParam(defaultValue = "0") int page,
+                       Model model) {
+        String open = "documents".equals(tab) ? tab : "history";
         model.addAttribute("invoice", accountService.findInvoice(id));
         model.addAttribute("lines", accountService.invoiceLines(id));
         model.addAttribute("journals", journalService.forSource(id, JournalSource.SUPPLIER_INVOICE));
-        model.addAttribute("history", dataChangeService.history("SupplierInvoice", id.toString(), Paging.page(page), Paging.SIZE));
+        model.addAttribute("history", dataChangeService.historyWithChildren("SupplierInvoice", id.toString(), List.of("Attachment"), "ownerId",
+                Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.SUPPLIER_INVOICE, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         return "supplier-invoices/view";
     }
 

@@ -77,6 +77,11 @@ public class SettingsDto {
     private BigDecimal minChargeableArea;
 
     @NotNull(message = "{settings.value.required}")
+    @Min(value = 7, message = "{settings.slowMovingDays.range}")
+    @Max(value = 730, message = "{settings.slowMovingDays.range}")
+    private Integer slowMovingDays;
+
+    @NotNull(message = "{settings.value.required}")
     @Min(value = 1, message = "{settings.quotationValidityDays.range}")
     @Max(value = 365, message = "{settings.quotationValidityDays.range}")
     private Integer quotationValidityDays;
@@ -110,6 +115,11 @@ public class SettingsDto {
     @Min(value = 1, message = "{settings.maxRateAgeDays.range}")
     @Max(value = 90, message = "{settings.maxRateAgeDays.range}")
     private Integer maxRateAgeDays;
+
+    // --- Alerts (RPT-06) ---
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean alertEmail;
 
     public void setBranchCode(String branchCode) {
         this.branchCode = branchCode == null ? null : branchCode.trim().toUpperCase(Locale.ROOT);

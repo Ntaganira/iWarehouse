@@ -21,6 +21,9 @@ import com.ntaganira.heritier.iWarehouse.service.GoodsReceiptService;
 import com.ntaganira.heritier.iWarehouse.service.Labels;
 import com.ntaganira.heritier.iWarehouse.service.LocationService;
 import com.ntaganira.heritier.iWarehouse.service.StockReservationService;
+import com.ntaganira.heritier.iWarehouse.service.Excel;
+import com.ntaganira.heritier.iWarehouse.service.StockAgeing;
+import com.ntaganira.heritier.iWarehouse.service.StockReportService;
 import com.ntaganira.heritier.iWarehouse.service.StockService;
 import com.ntaganira.heritier.iWarehouse.service.StockSummary;
 import com.ntaganira.heritier.iWarehouse.service.StockSummaryService;
@@ -39,6 +42,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -70,12 +74,17 @@ public class StockController {
     private final ActivityLogService activityLogService;
     private final StockReservationService reservationService;
     private final StockSummaryService summaryService;
+    private final StockReportService stockReports;
+    private final ReportFiles reportFiles;
     private final Messages messages;
 
     public StockController(StockService stockService, GoodsReceiptService receiptService, CuttingJobService jobService,
                            LocationService locationService, ProductRepository productRepo, DataChangeService dataChangeService,
                            ActivityLogService activityLogService, StockReservationService reservationService,
-                           StockSummaryService summaryService, Messages messages) {
+                           StockSummaryService summaryService, StockReportService stockReports, ReportFiles reportFiles,
+                           Messages messages) {
+        this.stockReports = stockReports;
+        this.reportFiles = reportFiles;
         this.stockService = stockService;
         this.receiptService = receiptService;
         this.jobService = jobService;
@@ -221,46 +230,216 @@ public class StockController {
         model.addAttribute("products", summaryService.products());
         model.addAttribute("group", group);
         model.addAttribute("product", product);
-        model.addAttribute("csvQuery", QueryString.of("group", group.name(), "product", product == null ? null : product.toString()));
+        model.addAttribute("query", QueryString.of("group", group.name(), "product", product == null ? null : product.toString()));
         return "stock/summary";
     }
 
-    /** The same summary as CSV (opens in Excel); values only for those who may see costs. */
-    @GetMapping(value = "/summary.csv")
+    /** The summary and the glass to reorder in Excel or PDF (RPT-07); values only for those who may see costs. */
+    @GetMapping("/summary/export")
     @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
-    public ResponseEntity<byte[]> summaryCsv(@RequestParam(defaultValue = "PRODUCT") StockSummary.GroupBy group,
-                                             @RequestParam(required = false) UUID product) {
+    public ResponseEntity<byte[]> summaryExport(@RequestParam(defaultValue = "PRODUCT") StockSummary.GroupBy group,
+                                                @RequestParam(required = false) UUID product,
+                                                @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
         boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
         StockSummaryService.View view = summaryService.summary(group, product);
-        StringBuilder csv = new StringBuilder("﻿");
-        csv.append(messages.get("summary.group." + group)).append(',').append(messages.get("summary.pieces")).append(',')
-                .append(messages.get("summary.area"));
+        List<String> headers = new ArrayList<>();
+        if (group == StockSummary.GroupBy.PRODUCT_LOCATION) {
+            headers.add(messages.get("summary.group.PRODUCT"));
+            headers.add(messages.get("summary.group.LOCATION"));
+        } else {
+            headers.add(messages.get("summary.group." + group));
+        }
+        headers.add(messages.get("summary.pieces"));
+        headers.add(messages.get("summary.area"));
         if (seeCost) {
-            csv.append(',').append(messages.get("summary.value"));
+            headers.add(messages.get("summary.value"));
         }
-        csv.append("\r\n");
+        Excel.Builder sheet = Excel.sheet(messages.get("summary.title"), messages.get("summary.title"),
+                messages.get("summary.exportSubtitle", messages.get("summary.by." + group), day(stockReports.today())),
+                headers.toArray(String[]::new));
         for (StockSummary.Row r : view.rows()) {
-            String label = switch (group) {
-                case PRODUCT -> r.product() == null ? r.key() : r.product().getCode();
-                case LOCATION -> r.location() == null ? r.key() : r.location().getCode();
-                case STATUS -> messages.get("stock.status." + r.status());
-            };
-            csv.append(csvCell(label)).append(',').append(r.pieces()).append(',').append(r.areaM2().toPlainString());
-            if (seeCost) {
-                csv.append(',').append(r.value().toPlainString());
+            List<Object> cells = new ArrayList<>();
+            switch (group) {
+                case PRODUCT -> cells.add(r.product() == null ? r.key() : r.product().getCode());
+                case LOCATION -> cells.add(r.location() == null ? r.key() : r.location().getCode());
+                case PRODUCT_LOCATION -> {
+                    cells.add(r.product() == null ? "" : r.product().getCode());
+                    cells.add(r.location() == null ? "" : r.location().getCode());
+                }
+                case STATUS -> cells.add(messages.get("stock.status." + r.status()));
             }
-            csv.append("\r\n");
+            cells.add(r.pieces());
+            cells.add(r.areaM2());
+            if (seeCost) {
+                cells.add(r.value());
+            }
+            sheet.row(cells.toArray());
         }
-        activityLogService.record(MODULE, "EXPORT_STOCK_SUMMARY", "Downloaded the stock summary by " + group + " as CSV",
+        List<Object> total = new ArrayList<>();
+        total.add(messages.get("cutting.total"));
+        if (group == StockSummary.GroupBy.PRODUCT_LOCATION) {
+            total.add(null);
+        }
+        total.add(view.total().pieces());
+        total.add(view.total().areaM2());
+        if (seeCost) {
+            total.add(view.total().value());
+        }
+        sheet.bold(total.toArray());
+        Excel.Builder reorder = Excel.sheet(messages.get("summary.reorderTitle"), messages.get("summary.reorderTitle"), null,
+                messages.get("product.name"), messages.get("summary.available"), messages.get("summary.reorderLevel"), messages.get("summary.short"));
+        view.reorder().forEach(r -> reorder.row(r.product().getCode(), r.availableM2(), r.levelM2(), r.getShortM2()));
+        activityLogService.record(MODULE, "EXPORT_STOCK_SUMMARY", "Exported the stock summary by " + group + " to " + format.label(),
                 ActivityStatus.SUCCESS);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"stock-summary-" + group.name().toLowerCase() + ".csv\"")
-                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
-                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+        String name = "stock-summary-" + group.name().toLowerCase().replace('_', '-');
+        return view.reorder().isEmpty() ? reportFiles.download(format, name, sheet.build())
+                : reportFiles.download(format, name, sheet.build(), reorder.build());
     }
 
-    private static String csvCell(String value) {
-        return value.contains(",") || value.contains("\"") ? "\"" + value.replace("\"", "\"\"") + "\"" : value;
+    // ---------------------------------------------------------------- off-cut ageing, slow-moving stock (RPT-02)
+
+    @GetMapping("/offcut-ageing")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
+    public String offcutAgeing(@RequestParam(required = false) UUID product, @RequestParam(defaultValue = "0") int page,
+                               @RequestParam(defaultValue = "0") int upage, Model model) {
+        StockReportService.OffcutReport report = stockReports.offcuts(product);
+        model.addAttribute("report", report);
+        model.addAttribute("rowPage", Paging.of(report.rows(), Paging.page(page)));
+        model.addAttribute("unitPage", Paging.of(report.units(), Paging.page(upage)));
+        model.addAttribute("bands", StockAgeing.Band.values());
+        model.addAttribute("products", summaryService.products());
+        model.addAttribute("product", product);
+        model.addAttribute("today", stockReports.today());
+        model.addAttribute("query", QueryString.of("product", product == null ? null : product.toString()));
+        return "stock/offcut-ageing";
+    }
+
+    @GetMapping("/offcut-ageing/export")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
+    public ResponseEntity<byte[]> offcutAgeingExport(@RequestParam(required = false) UUID product,
+                                                     @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
+        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
+        StockReportService.OffcutReport report = stockReports.offcuts(product);
+        LocalDate today = stockReports.today();
+        List<String> headers = new ArrayList<>(List.of(messages.get("product.name")));
+        for (StockAgeing.Band b : StockAgeing.Band.values()) {
+            headers.add(messages.get("ageing.band." + b) + " (m\u00b2)");
+        }
+        headers.add(messages.get("summary.pieces"));
+        headers.add(messages.get("summary.area"));
+        if (seeCost) {
+            headers.add(messages.get("summary.value"));
+        }
+        Excel.Builder bands = Excel.sheet(messages.get("offcutAgeing.title"), messages.get("offcutAgeing.title"),
+                messages.get("fin.asOf", day(today)), headers.toArray(String[]::new));
+        for (StockAgeing.AgeRow r : report.rows()) {
+            bands.row(ageCells(r, r.product().getCode(), seeCost));
+        }
+        bands.bold(ageCells(report.total(), messages.get("cutting.total"), seeCost));
+        List<String> unitHeaders = new ArrayList<>(List.of(messages.get("stock.code"), messages.get("product.name"), messages.get("cutting.size"),
+                messages.get("summary.area"), messages.get("stock.location"), messages.get("offcutAgeing.since"), messages.get("offcutAgeing.days")));
+        if (seeCost) {
+            unitHeaders.add(messages.get("summary.value"));
+        }
+        Excel.Builder units = Excel.sheet(messages.get("offcutAgeing.units"), messages.get("offcutAgeing.units"), null, unitHeaders.toArray(String[]::new));
+        report.units().forEach(u -> units.row(unitCells(u, today, seeCost)));
+        activityLogService.record(MODULE, "EXPORT_OFFCUT_AGEING", "Exported the off-cut ageing to " + format.label(), ActivityStatus.SUCCESS);
+        return reportFiles.download(format, "offcut-ageing-" + today, bands.build(), units.build());
+    }
+
+    @GetMapping("/slow-moving")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
+    public String slowMoving(@RequestParam(required = false) Integer days, @RequestParam(required = false) UUID product,
+                             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "0") int upage, Model model) {
+        int d = slowDays(days);
+        StockReportService.SlowReport report = stockReports.slowMoving(d, product);
+        model.addAttribute("report", report);
+        model.addAttribute("rowPage", Paging.of(report.rows(), Paging.page(page)));
+        model.addAttribute("unitPage", Paging.of(report.units(), Paging.page(upage)));
+        model.addAttribute("products", summaryService.products());
+        model.addAttribute("product", product);
+        model.addAttribute("days", d);
+        model.addAttribute("defaultDays", stockReports.slowMovingDays());
+        model.addAttribute("today", stockReports.today());
+        model.addAttribute("query", QueryString.of("days", String.valueOf(d), "product", product == null ? null : product.toString()));
+        return "stock/slow-moving";
+    }
+
+    @GetMapping("/slow-moving/export")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
+    public ResponseEntity<byte[]> slowMovingExport(@RequestParam(required = false) Integer days, @RequestParam(required = false) UUID product,
+                                                   @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
+        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
+        int d = slowDays(days);
+        StockReportService.SlowReport report = stockReports.slowMoving(d, product);
+        LocalDate today = stockReports.today();
+        List<String> headers = new ArrayList<>(List.of(messages.get("product.name"), messages.get("summary.pieces"), messages.get("summary.area"),
+                messages.get("slowMoving.oldPieces"), messages.get("slowMoving.oldArea")));
+        if (seeCost) {
+            headers.add(messages.get("slowMoving.oldValue"));
+        }
+        headers.add(messages.get("slowMoving.sold", d));
+        headers.add(messages.get("slowMoving.lastSold"));
+        Excel.Builder glass = Excel.sheet(messages.get("slowMoving.title"), messages.get("slowMoving.title"),
+                messages.get("slowMoving.exportSubtitle", d, day(today)), headers.toArray(String[]::new));
+        for (StockAgeing.SlowRow r : report.rows()) {
+            glass.row(slowCells(r, r.product().getCode(), seeCost, r.lastSold()));
+        }
+        glass.bold(slowCells(report.total(), messages.get("cutting.total"), seeCost, null));
+        List<String> unitHeaders = new ArrayList<>(List.of(messages.get("stock.code"), messages.get("product.name"), messages.get("cutting.size"),
+                messages.get("summary.area"), messages.get("stock.location"), messages.get("offcutAgeing.since"), messages.get("offcutAgeing.days")));
+        if (seeCost) {
+            unitHeaders.add(messages.get("summary.value"));
+        }
+        Excel.Builder units = Excel.sheet(messages.get("slowMoving.units"), messages.get("slowMoving.units"), null, unitHeaders.toArray(String[]::new));
+        report.units().forEach(u -> units.row(unitCells(u, today, seeCost)));
+        activityLogService.record(MODULE, "EXPORT_SLOW_MOVING", "Exported the slow-moving stock (over " + d + " days) to " + format.label(),
+                ActivityStatus.SUCCESS);
+        return reportFiles.download(format, "slow-moving-" + today, glass.build(), units.build());
+    }
+
+    /** The days asked, or the Settings' days; kept between 1 and 730. */
+    private int slowDays(Integer days) {
+        int d = days == null ? stockReports.slowMovingDays() : days;
+        return Math.max(1, Math.min(730, d));
+    }
+
+    private static Object[] ageCells(StockAgeing.AgeRow r, String label, boolean seeCost) {
+        List<Object> cells = new ArrayList<>(List.of(label));
+        for (StockAgeing.Band b : StockAgeing.Band.values()) {
+            cells.add(r.get(b).isEmpty() ? null : r.get(b).areaM2());
+        }
+        cells.add(r.pieces());
+        cells.add(r.areaM2());
+        if (seeCost) {
+            cells.add(r.value());
+        }
+        return cells.toArray();
+    }
+
+    private static Object[] slowCells(StockAgeing.SlowRow r, String label, boolean seeCost, LocalDate lastSold) {
+        List<Object> cells = new ArrayList<>(List.of(label, r.pieces(), r.areaM2(), r.oldPieces(), r.oldAreaM2()));
+        if (seeCost) {
+            cells.add(r.oldValue());
+        }
+        cells.add(r.soldM2());
+        cells.add(lastSold);
+        return cells.toArray();
+    }
+
+    private Object[] unitCells(StockAgeing.Unit u, LocalDate today, boolean seeCost) {
+        List<Object> cells = new ArrayList<>(List.of(u.code(), u.product().getCode(), u.widthMm() + " x " + u.heightMm(), u.areaM2()));
+        cells.add(u.location() == null ? "" : u.location().getCode());
+        cells.add(u.since());
+        cells.add(u.days(today));
+        if (seeCost) {
+            cells.add(u.getValue());
+        }
+        return cells.toArray();
+    }
+
+    private static String day(LocalDate date) {
+        return date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     /** Printable labels (50 x 30 mm) of a posted receipt, one crate, a completed cutting job, or one unit. */

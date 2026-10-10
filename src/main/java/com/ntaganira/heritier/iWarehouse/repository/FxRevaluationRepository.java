@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -21,6 +22,8 @@ import java.util.UUID;
 public interface FxRevaluationRepository extends JpaRepository<FxRevaluation, UUID> {
 
     boolean existsByPeriodEnd(LocalDate periodEnd);
+
+    Optional<FxRevaluation> findByPeriodEnd(LocalDate periodEnd);
 
     /** The months revalued already (their last days). */
     @Query("select r.periodEnd from FxRevaluation r")

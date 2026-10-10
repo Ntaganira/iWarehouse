@@ -59,11 +59,12 @@ public class JournalService {
     private final CustomerRepository customerRepo;
     private final StockSummaryService summaryService;
     private final DocumentNumberService numbers;
+    private final PeriodLock periods;
     private final Clock clock;
 
     public JournalService(JournalEntryRepository entryRepo, JournalLineRepository lineRepo, AccountRepository accountRepo,
                           ProductRepository productRepo, SupplierRepository supplierRepo, CustomerRepository customerRepo,
-                          StockSummaryService summaryService, DocumentNumberService numbers, Clock clock) {
+                          StockSummaryService summaryService, DocumentNumberService numbers, PeriodLock periods, Clock clock) {
         this.entryRepo = entryRepo;
         this.lineRepo = lineRepo;
         this.accountRepo = accountRepo;
@@ -72,6 +73,7 @@ public class JournalService {
         this.customerRepo = customerRepo;
         this.summaryService = summaryService;
         this.numbers = numbers;
+        this.periods = periods;
         this.clock = clock;
     }
 
@@ -193,9 +195,13 @@ public class JournalService {
         return entry;
     }
 
-    /** A journal's header, numbered JV-WH-2026-000001 and saved: posted now by the current user. */
+    /**
+     * A journal's header, numbered JV-WH-2026-000001 and saved: posted now by the current user. Refused on a closed month
+     * (ACC-10): the event that posts it is refused with it.
+     */
     private JournalEntry newEntry(JournalSource source, UUID sourceId, String sourceNumber, LocalDate date, String description,
                                   BigDecimal total, UUID reversesId) {
+        periods.requireOpen(date);
         Optional<AppUserPrincipal> user = AppUserPrincipal.current();
         JournalEntry entry = new JournalEntry();
         entry.setNumber(numbers.next(DocumentType.JOURNAL));

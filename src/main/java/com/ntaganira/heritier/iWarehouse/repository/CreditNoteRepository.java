@@ -43,4 +43,9 @@ public interface CreditNoteRepository extends JpaRepository<CreditNote, UUID>, J
     @Query("select coalesce(sum(c.refundAmount), 0) from CreditNote c where c.tillSessionId = :sessionId"
             + " and c.refundMethod = com.ntaganira.heritier.iWarehouse.enums.PaymentMethod.CASH")
     BigDecimal cashRefundsOfSession(@Param("sessionId") UUID sessionId);
+
+    /** Credit notes of the invoices issued in a period as (id, invoice id, net), whenever issued, for the sales reports (RPT-05). */
+    @Query("select cn.id, i.id, cn.netAmount from CreditNote cn join cn.invoice i"
+            + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
+    List<Object[]> ofInvoicesIssuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 }

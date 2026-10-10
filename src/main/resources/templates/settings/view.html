@@ -104,6 +104,13 @@
                                 </dt>
                                 <dd><span th:text="*{glassDensity}">2.5</span> <span class="unit" th:text="#{settings.unit.density}">kg/m2/mm</span></dd>
                             </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.slowMovingDays}">Slow-moving after</span>
+                                    <span class="setting-hint" th:text="#{settings.slowMovingDaysHint}">Glass held longer shows on the slow-moving report (RPT-02)</span>
+                                </dt>
+                                <dd><span th:text="*{slowMovingDays}">90</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
+                            </div>
                         </dl>
                     </div>
 
@@ -193,6 +200,24 @@
                                     <span class="setting-hint" th:text="#{settings.maxRateAgeDaysHint}">Older rates are refused, so a missed update is noticed</span>
                                 </dt>
                                 <dd><span th:text="*{maxRateAgeDays}">7</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.alerts}">Alerts</div>
+                                <div class="role-card-desc" th:text="#{settings.group.alertsHint}">Who is told when something needs attention (RPT-06)</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.alertEmail}">Email alerts</span>
+                                    <span class="setting-hint" th:text="#{settings.alertEmailHint}">Emails need the mail account set on the server (MAIL_USERNAME)</span>
+                                </dt>
+                                <dd th:text="${settings.alertEmail} ? #{settings.alertEmail.on} : #{settings.alertEmail.off}">In the app only</dd>
                             </div>
                         </dl>
                     </div>

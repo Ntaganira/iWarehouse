@@ -30,4 +30,7 @@ public interface TillSessionRepository extends JpaRepository<TillSession, UUID>,
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from TillSession t where t.id = :id")
     Optional<TillSession> lockById(@Param("id") UUID id);
+
+    /** Tills in a state (the owner dashboard counts the open ones). */
+    long countByStatus(TillStatus status);
 }

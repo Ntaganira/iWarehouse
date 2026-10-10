@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{notification.title}, ~{::content})}">
+<head><title>Notifications - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{notification.title}">Notifications</h1>
+            <div class="subtitle" th:text="#{notification.subtitle(${unreadCount})}">3 unread: low stock, requests waiting for you and decisions on yours</div>
+        </div>
+        <div class="btn-group">
+            <form th:if="${unreadCount > 0}" th:action="@{/notifications/read-all}" method="post">
+                <button type="submit" class="btn btn-outline" th:text="#{notification.markAll}">Mark all read</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="${show == 'unread'} ? #{notification.unread} : #{notification.all}">All</h2>
+            <div class="table-toolbar">
+                <div class="segmented" role="group" th:aria-label="#{notification.title}">
+                    <a href="/notifications" class="segmented-link" th:classappend="${show == 'all'} ? 'active'" th:text="#{notification.all}">All</a>
+                    <a href="/notifications?show=unread" class="segmented-link" th:classappend="${show == 'unread'} ? 'active'" th:text="#{notification.unread}">Unread</a>
+                </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <table class="notification-list">
+                <thead>
+                    <tr>
+                        <th th:text="#{notification.when}">When</th>
+                        <th th:text="#{notification.what}">Notification</th>
+                        <th th:text="#{notification.kindCol}">About</th>
+                        <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="n : ${notifications.content}" th:classappend="${!n.read} ? 'notif-unread'">
+                        <td class="cell-muted" th:text="${#temporals.format(n.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:30</td>
+                        <td>
+                            <span th:classappend="${!n.read} ? 'strong'" th:text="${n.title}">Low stock: CLR-4</span>
+                            <div class="cell-sub" th:if="${n.message != null}" th:text="${n.message}">2 m² available, reorder level 20 m²</div>
+                        </td>
+                        <td th:switch="${n.kind.name()}">
+                            <span th:case="'LOW_STOCK'" class="badge badge-warning" th:text="#{notification.kind.LOW_STOCK}">Low stock</span>
+                            <span th:case="'APPROVAL'" class="badge badge-info" th:text="#{notification.kind.APPROVAL}">To approve</span>
+                            <span th:case="'DECISION'" class="badge badge-success" th:text="#{notification.kind.DECISION}">Decision</span>
+                            <span th:case="*" class="badge badge-secondary" th:text="#{notification.kind.SYSTEM}">System</span>
+                        </td>
+                        <td class="actions">
+                            <form th:action="@{/notifications/{id}/open(id=${n.id})}" method="post">
+                                <button type="submit" class="btn btn-outline btn-sm" th:text="#{notification.open}">Open</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${notifications.totalElements == 0}">
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <h3 th:text="${show == 'unread'} ? #{notification.noUnread} : #{notification.empty}">No notifications yet</h3>
+                                <p th:text="#{notification.emptyHint}">Low stock and requests waiting for you appear here</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${notifications}, '/notifications', ${query})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

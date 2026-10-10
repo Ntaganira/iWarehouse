@@ -60,4 +60,19 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from SalesInvoice i where i.id = :id")
     Optional<SalesInvoice> lockById(@Param("id") UUID id);
+
+    /** Invoices issued in a period as (id, number, date, customer id, customer name, buyer name, posted by, net), for the sales reports (RPT-05). */
+    @Query("select i.id, i.number, i.invoiceDate, c.id, c.name, i.buyerName, i.postedBy, i.netAmount from SalesInvoice i join i.customer c"
+            + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
+    List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
+
+    /**
+     * Invoices issued between two moments per channel, as (channel, invoices, net, total): COUNTER for a till's sale (the
+     * vehicles' sales join with the mobile POS), for the owner dashboard (RPT-01).
+     */
+    @Query("select case when i.tillSession is null then 'OTHER' else 'COUNTER' end, count(i), coalesce(sum(i.netAmount), 0),"
+            + " coalesce(sum(i.totalAmount), 0) from SalesInvoice i"
+            + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.postedAt between :from and :to"
+            + " group by case when i.tillSession is null then 'OTHER' else 'COUNTER' end")
+    List<Object[]> perChannel(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 }

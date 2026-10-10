@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  The two export buttons of a report (RPT-07), for its page header's btn-group.
+  url: the report's export URL with its filters, without the format, e.g. @{/accounting/trial-balance/export(asOf=${asOf})}
+*/-->
+<th:block th:fragment="buttons(url)" th:with="sep=${#strings.contains(url, '?')} ? '&' : '?'">
+    <a th:href="${url + sep + 'format=XLSX'}" class="btn btn-outline" th:title="#{export.excel.title}" th:aria-label="#{export.excel.title}">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span th:text="#{export.excel}">Excel</span>
+    </a>
+    <a th:href="${url + sep + 'format=PDF'}" class="btn btn-outline" th:title="#{export.pdf.title}" th:aria-label="#{export.pdf.title}">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        <span th:text="#{export.pdf}">PDF</span>
+    </a>
+</th:block>
+</body>
+</html>

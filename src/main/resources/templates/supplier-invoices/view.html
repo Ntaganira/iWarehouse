@@ -91,13 +91,23 @@
         </div>
     </div>
 
+    <div class="section" id="documents">
+        <div class="section-header">
+            <h2 th:text="#{attachment.tab}">Documents</h2>
+            <span class="section-count" th:text="${documents.totalElements}">0</span>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{fragments/attachments :: documents('SUPPLIER_INVOICE', ${invoice.id}, ${documents}, '/supplier-invoices/' + ${invoice.id})}"></th:block>
+        </div>
+    </div>
+
     <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
         <div class="section-header">
             <h2 th:text="#{user.history}">History</h2>
         </div>
         <div class="section-body">
-            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
-            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/supplier-invoices/' + invoice.id}, '')}"></th:block>
+            <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/supplier-invoices/' + invoice.id}, 'tab=history')}"></th:block>
         </div>
     </div>
 </div>

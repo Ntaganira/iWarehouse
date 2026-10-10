@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
@@ -52,6 +54,7 @@ public class ShipmentController {
     static final String MODULE = "Shipments";
     private static final int REASON_MAX = 255;
 
+    private final AttachmentService attachmentService;
     private final ShipmentService shipmentService;
     private final JournalService journalService;
     private final DataChangeService dataChangeService;
@@ -62,7 +65,9 @@ public class ShipmentController {
 
     public ShipmentController(ShipmentService shipmentService, DataChangeService dataChangeService,
                               JournalService journalService, ActivityLogService activityLogService, Validator validator,
-                              Messages messages, NumberFormats num) {
+                              Messages messages, NumberFormats num,
+            AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
         this.shipmentService = shipmentService;
         this.journalService = journalService;
         this.dataChangeService = dataChangeService;
@@ -100,9 +105,11 @@ public class ShipmentController {
                 JournalSource.CLAIM_SETTLED, JournalSource.CLAIM_REJECTED));
         model.addAttribute("base", shipmentService.baseCurrency());
         model.addAttribute("today", shipmentService.today());
+        String open = List.of("costs", "crates", "claim", "documents", "history").contains(tab) ? tab : "costs";
         model.addAttribute("history", dataChangeService.historyWithChildren("Shipment", id.toString(),
-                List.of("ShipmentCost", "ShipmentReceipt"), "shipment", Paging.page(page), Paging.SIZE));
-        model.addAttribute("tab", List.of("costs", "crates", "claim", "history").contains(tab) ? tab : "costs");
+                List.of("ShipmentCost", "ShipmentReceipt"), "shipment", Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.SHIPMENT, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "shipments/view";
     }
 

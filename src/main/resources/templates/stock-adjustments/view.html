@@ -55,6 +55,10 @@
                 <span th:text="#{adjustment.linesTitle}">Changes</span>
                 <span class="section-count" th:text="${adjustment.lines.size()}">1</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -110,6 +114,10 @@
                     </table>
                 </div>
             </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('STOCK_ADJUSTMENT', ${adjustment.id}, ${documents}, '/stock-adjustments/' + ${adjustment.id})}"></th:block>
+            </div>
+
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
                 <th:block th:replace="~{layout/pagination :: pager(${history}, '/stock-adjustments/' + ${adjustment.id}, 'tab=history')}"></th:block>

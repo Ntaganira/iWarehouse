@@ -63,11 +63,13 @@ public class FxRevaluationService {
     private final ExchangeRateService rates;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
+    private final PeriodLock periods;
     private final Clock clock;
 
     public FxRevaluationService(FxRevaluationRepository repo, FxRevaluationLineRepository lineRepo, JournalLineRepository journalLineRepo,
                                 JournalEntryRepository entryRepo, AccountRepository accountRepo, SupplierRepository supplierRepo,
-                                ExchangeRateService rates, PostingService postingService, DocumentNumberService numbers, Clock clock) {
+                                ExchangeRateService rates, PostingService postingService, DocumentNumberService numbers, PeriodLock periods,
+                                Clock clock) {
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.journalLineRepo = journalLineRepo;
@@ -77,6 +79,7 @@ public class FxRevaluationService {
         this.rates = rates;
         this.postingService = postingService;
         this.numbers = numbers;
+        this.periods = periods;
         this.clock = clock;
     }
 
@@ -104,9 +107,31 @@ public class FxRevaluationService {
 
     // ---------------------------------------------------------------- reading
 
-    /** The months that can be revalued, newest first. */
+    /** The months that can be revalued, newest first: ended, not revalued, not closed. */
     public List<YearMonth> months() {
-        return FxRevaluations.months(entryRepo.firstEntryDate(), today(), repo.findPeriodEnds());
+        LocalDate closedThrough = periods.closedThrough();
+        return FxRevaluations.months(entryRepo.firstEntryDate(), today(), repo.findPeriodEnds()).stream()
+                .filter(m -> !Periods.isClosed(m.atEndOfMonth(), closedThrough)).toList();
+    }
+
+    /** Whether a month's foreign balances are revalued (ACC-10 asks before closing it). */
+    public enum MonthState { DONE, NOT_NEEDED, DUE }
+
+    /**
+     * DONE once revalued; DUE while something would move at its last rate, or a rate is missing for what is open; NOT_NEEDED
+     * when nothing foreign is open or nothing would move.
+     */
+    public MonthState state(YearMonth month) {
+        if (repo.existsByPeriodEnd(month.atEndOfMonth())) {
+            return MonthState.DONE;
+        }
+        Preview preview = compute(month);
+        return !preview.missingRates().isEmpty() || preview.isReady() ? MonthState.DUE : MonthState.NOT_NEEDED;
+    }
+
+    /** The revaluation of a month, if it was revalued. */
+    public Optional<FxRevaluation> ofMonth(YearMonth month) {
+        return repo.findByPeriodEnd(month.atEndOfMonth());
     }
 
     /** What revaluing a month would post. Refused before the month has ended and once it is revalued. */
@@ -191,6 +216,7 @@ public class FxRevaluationService {
         if (repo.existsByPeriodEnd(month.atEndOfMonth())) {
             throw BusinessException.of("fxRevaluation.done", month.atEndOfMonth().format(DAY));
         }
+        periods.requireOpen(month.atEndOfMonth());
     }
 
     /** The open foreign balances at the month's last day, each at that day's rate, by account code, supplier and currency. */

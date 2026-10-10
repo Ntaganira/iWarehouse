@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{fin.balance.title}, ~{::content})}">
+<head><title>Balance sheet - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="yearStart=${asOf.withDayOfYear(1)}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{fin.balance.title}">Balance sheet</h1>
+            <div class="subtitle" th:text="#{fin.balance.subtitle(${#temporals.format(asOf, 'dd/MM/yyyy')})}">What the business owns and owes as at 09/10/2026</div>
+        </div>
+        <div class="btn-group">
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/balance-sheet/export(asOf=${asOf})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{statements/tabs :: tabs('balance')}"></th:block>
+        <form th:action="@{/accounting/balance-sheet}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{tb.asOf}">As at</span>
+                    <input type="date" name="asOf" class="toolbar-filter" th:value="${asOf}" th:max="${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:classappend="${bs.balanced} ? '' : 'is-danger'">
+        <strong th:text="${bs.balanced} ? #{fin.balance.balanced} : #{fin.balance.unbalanced(${@num.money(bs.difference)})}">Assets equal liabilities and equity.</strong>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{fin.totalAssets}">Total assets</label>
+                    <div class="value strong" th:text="${@num.money(bs.totalAssets)}">7,500,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{fin.totalLiabilities}">Total liabilities</label>
+                    <div class="value strong" th:text="${@num.money(bs.totalLiabilities)}">300,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{fin.totalEquity}">Total equity</label>
+                    <div class="value strong" th:text="${@num.money(bs.totalEquity)}">7,200,000</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="table-container">
+                <table class="statement-table" data-cards="off">
+                    <thead>
+                        <tr>
+                            <th th:text="#{fin.account}">Account</th>
+                            <th class="num" th:text="#{fin.amount}">Amount (RWF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="statement-section"><th colspan="2" th:text="#{fin.assets}">Assets</th></tr>
+                        <tr th:each="l : ${bs.assets}">
+                            <td><th:block th:replace="~{statements/tabs :: account(${l.account}, ${yearStart}, ${asOf})}"></th:block></td>
+                            <td class="num" th:text="${@num.money(l.amount)}">7,135,242</td>
+                        </tr>
+                        <tr class="statement-total"><td th:text="#{fin.totalAssets}">Total assets</td><td class="num" th:text="${@num.money(bs.totalAssets)}">7,500,000</td></tr>
+
+                        <tr class="statement-section"><th colspan="2" th:text="#{fin.liabilities}">Liabilities</th></tr>
+                        <tr th:each="l : ${bs.liabilities}">
+                            <td><th:block th:replace="~{statements/tabs :: account(${l.account}, ${yearStart}, ${asOf})}"></th:block></td>
+                            <td class="num" th:text="${@num.money(l.amount)}">300,000</td>
+                        </tr>
+                        <tr class="statement-total"><td th:text="#{fin.totalLiabilities}">Total liabilities</td><td class="num" th:text="${@num.money(bs.totalLiabilities)}">300,000</td></tr>
+
+                        <tr class="statement-section"><th colspan="2" th:text="#{fin.equity}">Equity</th></tr>
+                        <tr th:each="l : ${bs.equity}">
+                            <td><th:block th:replace="~{statements/tabs :: account(${l.account}, ${yearStart}, ${asOf})}"></th:block></td>
+                            <td class="num" th:text="${@num.money(l.amount)}">7,135,242</td>
+                        </tr>
+                        <tr th:if="${bs.earlierProfit.signum() != 0}">
+                            <td th:text="#{fin.earlierProfit}">Profit of earlier years, not closed</td>
+                            <td class="num" th:text="${@num.money(bs.earlierProfit)}">0</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a th:href="@{/accounting/income-statement(from=${yearStart}, to=${asOf})}" th:text="#{fin.yearProfit(${'' + asOf.year})}">Profit for 2026</a>
+                            </td>
+                            <td class="num" th:classappend="${bs.yearProfit.signum() < 0} ? 'text-danger'" th:text="${@num.money(bs.yearProfit)}">64,758</td>
+                        </tr>
+                        <tr class="statement-total"><td th:text="#{fin.totalEquity}">Total equity</td><td class="num" th:text="${@num.money(bs.totalEquity)}">7,200,000</td></tr>
+
+                        <tr class="statement-result">
+                            <td th:text="#{fin.totalLiabilitiesEquity}">Total liabilities and equity</td>
+                            <td class="num" th:text="${@num.money(bs.liabilitiesAndEquity)}">7,500,000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{fin.balance.note}">Balances as booked, in RWF. No year-end journal closes the profit yet: this year's profit and any earlier years' profit are shown in equity as earned.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{reconciliation.title}, ~{::content})}">
+<head><title>Reconciliations - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{reconciliation.title}">Reconciliations</h1>
+            <div class="subtitle" th:text="#{reconciliation.subtitle}">Bank and mobile-money statements ticked against the ledger, with what is still outstanding</div>
+        </div>
+        <a href="/accounting/reconciliations/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_RECONCILE_ACCOUNT')" th:text="#{reconciliation.new}">Reconcile a statement</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{reconciliation.sectionTitle}">Statements reconciled</span>
+                <span class="section-count" th:text="${reconciliations.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{reconciliation.number}">Reconciliation</th>
+                        <th th:text="#{reconciliation.account}">Account</th>
+                        <th th:text="#{reconciliation.statementDate}">Statement date</th>
+                        <th class="num" th:text="#{reconciliation.statementBalance}">Statement balance (RWF)</th>
+                        <th class="num" th:text="#{reconciliation.outstanding}">Outstanding (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${reconciliations.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/accounting/reconciliations/{id}(id=${r.id})}" th:text="${r.number}">REC-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${#temporals.format(r.reconciledAt, 'dd/MM/yyyy HH:mm') + ' · ' + r.reconciledBy}">09/10/2026 10:30 · accountant</div>
+                        </td>
+                        <td><span class="mono" th:text="${r.account.code}">1030</span> <span th:text="${r.account.name}">Bank</span></td>
+                        <td class="nowrap" th:text="${#temporals.format(r.statementDate, 'dd/MM/yyyy')}">30/09/2026</td>
+                        <td class="num" th:text="${@num.money(r.statementBalance)}">1,250,000</td>
+                        <td class="num">
+                            <span th:if="${r.outstandingDeposits.signum() == 0 and r.outstandingPayments.signum() == 0}">—</span>
+                            <th:block th:unless="${r.outstandingDeposits.signum() == 0 and r.outstandingPayments.signum() == 0}">
+                                <div th:if="${r.outstandingDeposits.signum() != 0}" th:text="#{reconciliation.depositsShort(${@num.money(r.outstandingDeposits)})}">+ 100,000 in</div>
+                                <div th:if="${r.outstandingPayments.signum() != 0}" th:text="#{reconciliation.paymentsShort(${@num.money(r.outstandingPayments)})}">- 20,000 out</div>
+                            </th:block>
+                        </td>
+                        <td><th:block th:replace="~{reconciliations/list :: recStatus(${r.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${reconciliations.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{reconciliation.empty}">No statement reconciled yet</h3>
+                                <p th:text="#{reconciliation.emptyHint}">Each month, tick the bank and mobile-money lines their statements show</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${reconciliations}, '/accounting/reconciliations', '')}"></th:block>
+    </div>
+</div>
+
+<!--/* A reconciliation's status as a badge */-->
+<th:block th:fragment="recStatus(s)" th:switch="${s.name()}">
+    <span th:case="'RECONCILED'" class="badge badge-success" th:text="#{reconciliation.status.RECONCILED}">Reconciled</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{reconciliation.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

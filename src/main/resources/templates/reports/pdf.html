@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${tables[0].title}">Report</title>
+    <style th:replace="~{reports/pdf-parts :: style(${landscape})}"></style>
+</head>
+<body>
+<!--/* Running footer: who printed and when, page numbers (filled on each page) */-->
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+<div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+
+<th:block th:each="t, it : ${tables}">
+    <div class="sheet" th:classappend="${!it.first} ? 'next'">
+        <h1 th:text="${t.title}">Trial balance</h1>
+        <div class="covers" th:if="${t.subtitle != null}" th:text="${t.subtitle}">As at 10/10/2026</div>
+        <table>
+            <thead>
+                <tr>
+                    <th th:each="h, c : ${t.headers}" th:classappend="${t.numeric[c.index]} ? 'num'" th:text="${h}">Account</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r : ${t.rows}" th:classappend="${r.bold} ? 'bold'">
+                    <td th:each="cell : ${r.cells}" th:classappend="${cell.number} ? 'num'" th:text="${cell.text}">1,250.00</td>
+                </tr>
+                <tr th:if="${t.empty}">
+                    <td class="none" th:colspan="${#lists.size(t.headers)}" th:text="#{report.pdf.empty}">Nothing to show.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--/* Parts shared by every PDF (reports/pdf, document copies). The model comes from ReportFiles.letterhead(). */-->
+<body>
+<!--/* Shared by every PDF: page, fonts, tables (landscape: true for wide tables) */-->
+<style th:fragment="style(landscape)" th:inline="text">
+    @page {
+        size: A4 [(${landscape} ? 'landscape' : 'portrait')];
+        margin: 14mm 12mm 18mm 12mm;
+        @bottom-left { content: element(footer); }
+    }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #1f2937; margin: 0; }
+    #footer { position: running(footer); width: 100%; font-size: 7.5pt; color: #6b7280; }
+    #footer .pages { float: right; }
+    #footer .pg::before { content: counter(page); }
+    #footer .pgs::before { content: counter(pages); }
+    .letterhead { border-bottom: 2px solid #1f6f62; padding-bottom: 6px; margin-bottom: 12px; }
+    .letterhead .name { font-size: 13pt; font-weight: bold; color: #1f6f62; }
+    .letterhead .details { color: #6b7280; margin-top: 2px; }
+    .sheet.next { margin-top: 18px; }
+    h1 { font-size: 12pt; margin: 0 0 2px 0; }
+    h2 { font-size: 10pt; margin: 14px 0 4px 0; }
+    .covers { color: #6b7280; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; -fs-table-paginate: paginate; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+    th { background: #eef2f1; text-align: left; font-weight: bold; padding: 4px 5px; border-bottom: 1px solid #9ca3af; }
+    td { padding: 3px 5px; border-bottom: 0.5px solid #e5e7eb; vertical-align: top; }
+    .num { text-align: right; white-space: nowrap; }
+    tr.bold td { font-weight: bold; border-top: 1px solid #9ca3af; background: #f9fafb; }
+    td.none { color: #6b7280; text-align: center; padding: 10px; }
+    .muted { color: #6b7280; }
+</style>
+
+<div th:fragment="footer" id="footer">
+    <span class="pages"><span th:text="#{report.pdf.page}">Page</span>&#160;<span class="pg"></span>&#160;/&#160;<span class="pgs"></span></span>
+    <span th:text="#{report.pdf.printed(${#temporals.format(printedAt, 'dd/MM/yyyy HH:mm')}, ${printedBy})}">Printed 10/10/2026 14:05 by System Admin</span>
+</div>
+
+<div th:fragment="letterhead" class="letterhead">
+    <div class="name" th:text="${companyName}">iWarehouse</div>
+    <div class="details">
+        <span th:if="${companyAddress != null}" th:text="${companyAddress}">Kigali, Rwanda</span>
+        <span th:if="${companyTin != null}" th:text="${' · ' + #messages.msg('report.pdf.tin', companyTin)}"> · TIN 100200300</span>
+        <span th:if="${companyPhone != null}" th:text="${' · ' + companyPhone}"> · +250 788 000 000</span>
+    </div>
+</div>
+</body>
+</html>

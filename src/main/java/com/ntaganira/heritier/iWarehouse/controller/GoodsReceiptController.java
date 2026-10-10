@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
@@ -53,6 +55,7 @@ public class GoodsReceiptController {
     static final String MODULE = "Goods Receipts";
     private static final int REASON_MAX = 255;
 
+    private final AttachmentService attachmentService;
     private final GoodsReceiptService receiptService;
     private final JournalService journalService;
     private final PurchaseOrderService orderService;
@@ -66,7 +69,9 @@ public class GoodsReceiptController {
     public GoodsReceiptController(GoodsReceiptService receiptService, PurchaseOrderService orderService,
                                   StockService stockService, ShipmentService shipmentService,
                                   DataChangeService dataChangeService, JournalService journalService,
-                                  ActivityLogService activityLogService, Validator validator, Messages messages) {
+                                  ActivityLogService activityLogService, Validator validator, Messages messages,
+            AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
         this.receiptService = receiptService;
         this.orderService = orderService;
         this.stockService = stockService;
@@ -99,7 +104,7 @@ public class GoodsReceiptController {
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "crates") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
         GoodsReceipt receipt = receiptService.findDetailed(id);
-        String open = List.of("crates", "units", "history").contains(tab) ? tab : "crates";
+        String open = List.of("crates", "units", "documents", "history").contains(tab) ? tab : "crates";
         model.addAttribute("receipt", receipt);
         model.addAttribute("journals", journalService.forSource(id, JournalSource.GOODS_RECEIPT));
         model.addAttribute("units", Paging.of(receipt.getStatus() == GoodsReceiptStatus.POSTED ? stockService.unitsOfReceipt(id) : List.of(),
@@ -108,6 +113,7 @@ public class GoodsReceiptController {
         model.addAttribute("landing", shipmentService.landingOf(receipt).orElse(null));
         model.addAttribute("history", dataChangeService.historyWithChildren("GoodsReceipt", id.toString(),
                 "CrateBatch", "goodsReceipt", Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.GOODS_RECEIPT, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "goods-receipts/view";
     }

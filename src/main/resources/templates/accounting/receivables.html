@@ -9,7 +9,10 @@
             <h1 th:text="#{receivables.title}">Receivables</h1>
             <div class="subtitle" th:text="#{receivables.subtitle(${#temporals.format(today, 'dd/MM/yyyy')})}">What customers owe on 09/10/2026, by days past due</div>
         </div>
-        <a href="/customer-payments" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS')" th:text="#{nav.customerPayments}">Customer payments</a>
+        <div class="btn-group">
+            <a href="/customer-payments" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS')" th:text="#{nav.customerPayments}">Customer payments</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/receivables/export})}"></th:block>
+        </div>
     </div>
 
     <div class="section">

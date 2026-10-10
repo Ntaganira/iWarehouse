@@ -247,6 +247,33 @@ public class PostingService {
     }
 
     /**
+     * A sale from a vehicle (SRS 4.9.1 "mobile cash sale", ACC-06): Dr Driver Float naming the driver for the cash, Dr Mobile
+     * Money for mobile money / Cr Sales and VAT Output; Dr Cost of Goods Sold / Cr Inventory, the change of each glass's value
+     * (glass on a vehicle is valued at its MAC like any stock).
+     */
+    public JournalEntry mobileSale(SalesInvoice invoice, List<SalesPayment> payments, StockValues before, UUID driverId) {
+        Journal journal = Journal.of(JournalSource.MOBILE_SALE, invoice.getId(), invoice.getNumber(), invoice.getInvoiceDate(),
+                "Sale " + invoice.getNumber() + " from the vehicle to " + invoice.getBillTo());
+        for (SalesPayment p : payments) {
+            if (p.getMethod() == PaymentMethod.CASH) {
+                journal.addForDriver(AccountKey.DRIVER_FLOAT, p.getAmount(), driverId, null);
+            } else {
+                journal.add(p.getMethod().account(), p.getAmount(), null, null, null, p.getReference(), null);
+            }
+        }
+        journal.credit(AccountKey.SALES, invoice.getNetAmount())
+                .credit(AccountKey.VAT_OUTPUT, invoice.getVatAmount());
+        Map<UUID, BigDecimal> after = valuesNow(before);
+        journal.stockChange(before.values(), after);
+        BigDecimal cost = BigDecimal.ZERO;
+        for (Map.Entry<UUID, BigDecimal> e : before.values().entrySet()) {
+            cost = cost.add(e.getValue().subtract(after.getOrDefault(e.getKey(), BigDecimal.ZERO)));
+        }
+        journal.debit(AccountKey.COGS, cost);
+        return journalService.post(journal);
+    }
+
+    /**
      * Pieces of a paid sale's custom sizes handed over (SRS 5.3 step 5): Dr Cost of Goods Sold / Cr Inventory, the
      * change of each glass's value (the sale itself was posted when it was paid).
      */

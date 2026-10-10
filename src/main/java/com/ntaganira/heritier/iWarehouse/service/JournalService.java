@@ -10,6 +10,7 @@ import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.AccountRepository;
 import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
+import com.ntaganira.heritier.iWarehouse.repository.DriverRepository;
 import com.ntaganira.heritier.iWarehouse.repository.JournalEntryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.JournalLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
@@ -57,6 +58,7 @@ public class JournalService {
     private final ProductRepository productRepo;
     private final SupplierRepository supplierRepo;
     private final CustomerRepository customerRepo;
+    private final DriverRepository driverRepo;
     private final StockSummaryService summaryService;
     private final DocumentNumberService numbers;
     private final PeriodLock periods;
@@ -64,13 +66,14 @@ public class JournalService {
 
     public JournalService(JournalEntryRepository entryRepo, JournalLineRepository lineRepo, AccountRepository accountRepo,
                           ProductRepository productRepo, SupplierRepository supplierRepo, CustomerRepository customerRepo,
-                          StockSummaryService summaryService, DocumentNumberService numbers, PeriodLock periods, Clock clock) {
+                          DriverRepository driverRepo, StockSummaryService summaryService, DocumentNumberService numbers, PeriodLock periods, Clock clock) {
         this.entryRepo = entryRepo;
         this.lineRepo = lineRepo;
         this.accountRepo = accountRepo;
         this.productRepo = productRepo;
         this.supplierRepo = supplierRepo;
         this.customerRepo = customerRepo;
+        this.driverRepo = driverRepo;
         this.summaryService = summaryService;
         this.numbers = numbers;
         this.periods = periods;
@@ -114,6 +117,7 @@ public class JournalService {
             line.setProduct(l.productId() == null ? null : productRepo.getReferenceById(l.productId()));
             line.setSupplier(l.supplierId() == null ? null : supplierRepo.getReferenceById(l.supplierId()));
             line.setCustomer(l.customerId() == null ? null : customerRepo.getReferenceById(l.customerId()));
+            line.setDriver(l.driverId() == null ? null : driverRepo.getReferenceById(l.driverId()));
             if (l.fx() != null) {
                 line.setCurrencyCode(l.fx().currencyCode());
                 line.setFxAmount(l.fx().amount());
@@ -187,6 +191,7 @@ public class JournalService {
             line.setProduct(l.getProduct());
             line.setSupplier(l.getSupplier());
             line.setCustomer(l.getCustomer());
+            line.setDriver(l.getDriver());
             line.setCurrencyCode(l.getCurrencyCode());
             line.setFxAmount(l.getFxAmount());
             line.setRate(l.getRate());

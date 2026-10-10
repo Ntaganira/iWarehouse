@@ -52,9 +52,13 @@ public class SalesPayment {
     @Column(length = 60)
     private String reference;
 
-    /** The till that took it: the balance of an order is often paid in another till than the sale. */
-    @Column(name = "till_session_id", nullable = false)
+    /** The till that took it: the balance of an order is often paid in another till than the sale. None for a mobile sale. */
+    @Column(name = "till_session_id")
     private UUID tillSessionId;
+
+    /** The trip whose driver took it, for a sale from a vehicle (ACC-06); never with a till. */
+    @Column(name = "trip_id")
+    private UUID tripId;
 
     /** A payment of the balance, after the invoice was issued (POS-08). */
     @Column(name = "balance_payment", nullable = false)

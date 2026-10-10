@@ -33,7 +33,9 @@ public enum StockAction {
     /** Sold at the counter: available, or reserved for the buyer (POS-01). */
     SELL(EnumSet.of(StockStatus.AVAILABLE, StockStatus.RESERVED)),
     /** Planned on a trip's manifest and loaded on its vehicle (FLT-05..07): available only. */
-    LOAD(EnumSet.of(StockStatus.AVAILABLE));
+    LOAD(EnumSet.of(StockStatus.AVAILABLE)),
+    /** Sold from the vehicle on the mobile POS (MPOS-02): on the vehicle only. */
+    SELL_FROM_VEHICLE(EnumSet.of(StockStatus.ON_VEHICLE));
 
     private final Set<StockStatus> allowed;
 

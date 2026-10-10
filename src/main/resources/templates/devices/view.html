@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${device.name}, ~{::content})}">
+<head><title>Mobile Device - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/devices/' + device.id}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${device.name}">Jean's phone</h1>
+            <div class="subtitle">
+                <span th:text="${device.user.fullName}">Jean Driver</span>
+                &middot; <th:block th:replace="~{devices/list :: deviceStatus(${device})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/devices" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" th:unless="${device.revoked}" sec:authorize="hasAuthority('PERM_REVOKE_DEVICE')"
+                    data-modal-open="revoke-modal" th:text="#{device.revoke}">Revoke</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${device.revoked}">
+        <strong th:text="#{device.revokedBy(${device.revokedBy}, ${#temporals.format(device.revokedAt, 'dd/MM/yyyy HH:mm')})}">Revoked by qa-admin on 10/10/2026 12:00:</strong>
+        <span th:text="${device.revokeReason}">Phone lost</span>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{device.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{device.user}">User</label>
+                        <div class="value">
+                            <a sec:authorize="hasAuthority('PAGE_USERS')" th:href="@{/users/{id}(id=${device.user.id})}" th:text="${device.username}">driver-m7</a>
+                            <span sec:authorize="!hasAuthority('PAGE_USERS')" th:text="${device.username}">driver-m7</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{device.key}">Phone id</label>
+                        <div class="value mono" th:text="${device.deviceKey}">4f1c2a9e-77b3-4c4f-9a2b-1c0e5d6f7a8b</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{device.signedIn}">Signed in</label>
+                        <div class="value" th:text="${#temporals.format(device.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:30</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{device.lastSeen}">Last seen</label>
+                        <div class="value" th:text="${device.lastSeenAt != null} ? ${#temporals.format(device.lastSeenAt, 'dd/MM/yyyy HH:mm')} : '—'">10/10/2026 11:05</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{device.browser}">Browser</label>
+                        <div class="value" th:text="${device.userAgent ?: '—'}">Mozilla/5.0 (Linux; Android 14)</div>
+                    </div>
+                </div>
+                <p class="form-note" th:text="#{device.tokenNote}">The phone's token is kept only as a fingerprint (SHA-256): nobody can read it back. Revoking it signs the phone out at its next request.</p>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:unless="${device.revoked}" sec:authorize="hasAuthority('PERM_REVOKE_DEVICE')">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('revoke-modal', #{device.revokeTitle}, @{/devices/{id}/revoke(id=${device.id})}, #{device.revokeText}, #{device.revoke})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

@@ -8,6 +8,11 @@ import com.ntaganira.heritier.iWarehouse.dto.TripDto;
 import com.ntaganira.heritier.iWarehouse.dto.TripFuelDto;
 import com.ntaganira.heritier.iWarehouse.entity.Driver;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
+import com.ntaganira.heritier.iWarehouse.service.SyncConflictService;
+import com.ntaganira.heritier.iWarehouse.service.MobileTripService;
+import com.ntaganira.heritier.iWarehouse.service.MobileSaleService;
+import com.ntaganira.heritier.iWarehouse.entity.TripInvoiceNumber;
+import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.Trip;
 import com.ntaganira.heritier.iWarehouse.entity.TripFuel;
 import com.ntaganira.heritier.iWarehouse.entity.TripLine;
@@ -66,6 +71,9 @@ public class TripController {
     private final VehicleService vehicleService;
     private final DriverService driverService;
     private final StockService stockService;
+    private final MobileSaleService mobileSaleService;
+    private final MobileTripService mobileTripService;
+    private final SyncConflictService syncConflictService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final NumberFormats num;
@@ -73,12 +81,16 @@ public class TripController {
     private final Clock clock;
 
     public TripController(TripService tripService, VehicleService vehicleService, DriverService driverService, StockService stockService,
+                          MobileSaleService mobileSaleService, MobileTripService mobileTripService, SyncConflictService syncConflictService,
                           DataChangeService dataChangeService, ActivityLogService activityLogService, NumberFormats num, Messages messages,
                           Clock clock) {
         this.tripService = tripService;
         this.vehicleService = vehicleService;
         this.driverService = driverService;
         this.stockService = stockService;
+        this.mobileSaleService = mobileSaleService;
+        this.mobileTripService = mobileTripService;
+        this.syncConflictService = syncConflictService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.num = num;
@@ -118,7 +130,7 @@ public class TripController {
     public String view(@PathVariable UUID id, @RequestParam(required = false) String tab, @RequestParam(defaultValue = "0") int page,
                        Model model) {
         Trip trip = visible(id);
-        String open = tab != null && List.of("manifest", "fuel", "history").contains(tab) ? tab : "manifest";
+        String open = tab != null && List.of("manifest", "sales", "fuel", "history").contains(tab) ? tab : "manifest";
         Map<UUID, StockUnit> units = tripService.units(trip);
         List<Row> rows = TripService.sortedLines(trip).stream().map(l -> new Row(l, units.get(l.getStockUnitId()))).toList();
         List<TripFuel> fuel = trip.getFuel().stream()
@@ -147,6 +159,14 @@ public class TripController {
             model.addAttribute("fuelDto", fuelDto);
         }
         model.addAttribute("today", today);
+        // Sales from the vehicle on the mobile POS (MPOS), the numbers its phones hold, the sales in conflict (SYNC-05)
+        List<SalesInvoice> sales = mobileSaleService.salesOf(id);
+        List<TripInvoiceNumber> numbers = mobileTripService.numbersOf(id);
+        model.addAttribute("sales", Paging.of(sales, Paging.pageOf("sales", open, page)));
+        model.addAttribute("salesTotal", sales.stream().map(SalesInvoice::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+        model.addAttribute("numbersGiven", numbers.size());
+        model.addAttribute("numbersUsed", numbers.stream().filter(TripInvoiceNumber::isUsed).count());
+        model.addAttribute("openConflicts", syncConflictService.openOfTrip(id));
         model.addAttribute("history", dataChangeService.historyWithChildren("Trip", id.toString(), List.of("TripLine", "TripFuel"), "trip",
                 Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

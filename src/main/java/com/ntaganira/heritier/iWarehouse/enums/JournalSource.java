@@ -33,7 +33,9 @@ public enum JournalSource {
     SUPPLIER_INVOICE("/supplier-invoices/"),
     SUPPLIER_PAYMENT("/supplier-payments/"),
     FX_REVALUATION("/accounting/fx-revaluations/"),
-    MANUAL_JOURNAL("/accounting/manual-journals/");
+    MANUAL_JOURNAL("/accounting/manual-journals/"),
+    /** A sale from a vehicle (ACC-06): cash to the driver's float. */
+    MOBILE_SALE("/invoices/");
 
     private final String path;
 

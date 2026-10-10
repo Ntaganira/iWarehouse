@@ -14,6 +14,8 @@ package com.ntaganira.heritier.iWarehouse.enums;
 public enum DocumentType {
 
     INVOICE("INV"),
+    /** An invoice made on a phone from a vehicle (MPOS): numbers handed to the phone in a block at trip start (SYNC-01). */
+    MOBILE_INVOICE("MINV"),
     QUOTATION("QUO"),
     SALES_ORDER("SO"),
     CREDIT_NOTE("CN"),

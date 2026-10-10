@@ -360,6 +360,65 @@ class PostingServiceTest {
     }
 
     @Test
+    void aSaleFromAVehiclePutsItsCashOnTheDriversFloat() {   // ACC-06, AT-04, AT-10
+        held.put(clear6.getId(), new BigDecimal("100.0000"));
+        clear6.setMacPerM2(new BigDecimal("5000.0000"));
+        postings.openingStock();
+        UUID driver = UUID.randomUUID();
+        Customer walkIn = new Customer();
+        walkIn.setId(UUID.randomUUID());
+        walkIn.setName("Walk-in customer");
+
+        // A 0.96 m² piece sold from the vehicle for 25,920 RWF VAT included: 20,000 cash, the rest by mobile money
+        SalesInvoice sale = new SalesInvoice();
+        sale.setId(UUID.randomUUID());
+        sale.setNumber("MINV-WH-2026-000001");
+        sale.setCustomer(walkIn);
+        sale.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        sale.setNetAmount(new BigDecimal("21966.10"));
+        sale.setVatAmount(new BigDecimal("3953.90"));
+        sale.setTotalAmount(new BigDecimal("25920.00"));
+        PostingService.StockValues before = postings.stockValues(List.of(clear6));
+        held.put(clear6.getId(), held().subtract(new BigDecimal("0.9600")));
+        postings.mobileSale(sale, List.of(salePayment(PaymentMethod.CASH, "20000", null), salePayment(PaymentMethod.MOBILE_MONEY, "5920", "MP-77")),
+                before, driver);
+        Journal mobile = last();
+        assertThat(mobile.source()).isEqualTo(JournalSource.MOBILE_SALE);
+        assertThat(line(mobile, AccountKey.DRIVER_FLOAT).debit()).isEqualByComparingTo("20000");
+        assertThat(line(mobile, AccountKey.DRIVER_FLOAT).driverId()).isEqualTo(driver);
+        assertThat(lines(AccountKey.CASH)).isEmpty();                                   // never the counter's till
+        assertThat(line(mobile, AccountKey.MOBILE_MONEY).debit()).isEqualByComparingTo("5920");
+        assertThat(line(mobile, AccountKey.MOBILE_MONEY).memo()).isEqualTo("MP-77");
+        assertThat(line(mobile, AccountKey.SALES).credit()).isEqualByComparingTo("21966.10");
+        assertThat(line(mobile, AccountKey.VAT_OUTPUT).credit()).isEqualByComparingTo("3953.90");
+        assertThat(line(mobile, AccountKey.COGS).debit()).isEqualByComparingTo("4800.00");   // 0.96 m² x 5,000 MAC
+        assertThat(line(mobile, AccountKey.INVENTORY).credit()).isEqualByComparingTo("4800.00");
+        assertInventoryEqualsValuation();
+
+        // A second sale of the same driver adds to their float; another driver's float is their own
+        UUID other = UUID.randomUUID();
+        SalesInvoice second = new SalesInvoice();
+        second.setId(UUID.randomUUID());
+        second.setNumber("MINV-WH-2026-000002");
+        second.setCustomer(walkIn);
+        second.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        second.setNetAmount(new BigDecimal("8474.58"));
+        second.setVatAmount(new BigDecimal("1525.42"));
+        second.setTotalAmount(new BigDecimal("10000.00"));
+        before = postings.stockValues(List.of(clear6));
+        held.put(clear6.getId(), held().subtract(new BigDecimal("0.4000")));
+        postings.mobileSale(second, List.of(salePayment(PaymentMethod.CASH, "10000", null)), before, other);
+        assertThat(lines(AccountKey.DRIVER_FLOAT).stream().filter(l -> driver.equals(l.driverId())).map(Journal.Line::signed)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("20000");
+        assertThat(lines(AccountKey.DRIVER_FLOAT).stream().filter(l -> other.equals(l.driverId())).map(Journal.Line::signed)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("10000");
+        assertInventoryEqualsValuation();
+        BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debits).isEqualByComparingTo(credits);
+    }
+
+    @Test
     void aCreditNoteReversesTheSaleAndPutsGlassBackAtItsOwnCost() {   // POS-09, AT-10
         held.put(clear6.getId(), new BigDecimal("100.0000"));
         clear6.setMacPerM2(new BigDecimal("5000.0000"));

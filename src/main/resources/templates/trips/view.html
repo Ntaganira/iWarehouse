@@ -173,6 +173,10 @@
                 <span th:text="#{trip.tab.manifest}">Manifest</span>
                 <span class="section-count" th:text="${rows.totalElements}">0</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-sales" th:classappend="${tab == 'sales'} ? 'active'">
+                <span th:text="#{trip.tab.sales}">Sales</span>
+                <span class="section-count" th:text="${sales.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-fuel" th:classappend="${tab == 'fuel'} ? 'active'">
                 <span th:text="#{trip.tab.fuel}">Fuel</span>
                 <span class="section-count" th:text="${fuel.totalElements}">0</span>
@@ -236,6 +240,47 @@
                     </table>
                 </div>
                 <th:block th:replace="~{layout/pagination :: pager(${rows}, ${base}, 'tab=manifest')}"></th:block>
+            </div>
+
+            <!-- Sales from the vehicle on the mobile POS (MPOS): the invoice numbers its phones hold, the sales in conflict (SYNC-05) -->
+            <div class="tab-content" id="tab-sales" th:classappend="${tab == 'sales'} ? 'active'">
+                <p class="form-note" th:text="#{trip.salesNote(${numbersGiven}, ${numbersUsed}, ${@num.money(salesTotal)})}">Phones hold 12 invoice numbers for this trip, 3 used; 3 sales, 45,000 RWF.</p>
+                <div class="doc-note is-warning" th:if="${openConflicts > 0}">
+                    <span th:text="#{trip.salesConflicts(${openConflicts})}">1 sale from this trip waits for the supervisor.</span>
+                    <a sec:authorize="hasAuthority('PAGE_SYNC_CONFLICTS')" th:href="@{/sync-conflicts(search=${trip.number}, status='OPEN')}" th:text="#{sync.showOpen}">Show them</a>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{trip.saleNumber}">Invoice</th>
+                                <th th:text="#{trip.saleMadeAt}">Made</th>
+                                <th th:text="#{trip.saleCustomer}">Customer</th>
+                                <th class="num" th:text="#{trip.saleTotal}">Total (RWF)</th>
+                                <th th:text="#{trip.saleSynced}">Synced</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${sales.content}">
+                                <td>
+                                    <a class="row-link strong mono nowrap" sec:authorize="hasAuthority('PAGE_INVOICES')" th:href="@{/invoices/{id}(id=${s.id})}" th:text="${s.number}">MINV-WH-2026-000001</a>
+                                    <span class="mono strong nowrap" sec:authorize="!hasAuthority('PAGE_INVOICES')" th:text="${s.number}">MINV-WH-2026-000001</span>
+                                </td>
+                                <td class="nowrap" th:text="${#temporals.format(s.clientCreatedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 11:20</td>
+                                <td th:text="${s.billTo}">Walk-in customer</td>
+                                <td class="num" th:text="${@num.money(s.totalAmount)}">45,000</td>
+                                <td>
+                                    <span class="nowrap" th:text="${#temporals.format(s.syncedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</span>
+                                    <div class="cell-sub" th:text="${s.device.name}">Jean's phone</div>
+                                </td>
+                            </tr>
+                            <tr th:if="${sales.totalElements == 0}">
+                                <td colspan="5"><div class="empty-state"><p th:text="#{trip.noSales}">No sales from the vehicle yet.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${sales}, ${base}, 'tab=sales')}"></th:block>
             </div>
 
             <!-- Fuel bought for the trip (FLT-12) -->

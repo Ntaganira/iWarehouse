@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#1565e0">
+    <meta name="color-scheme" content="light dark">
+    <title>iWarehouse Mobile POS</title>
+    <link rel="manifest" href="/m/manifest.webmanifest">
+    <link rel="icon" type="image/png" href="/m/icon-192.png">
+    <link rel="apple-touch-icon" href="/m/icon-192.png">
+    <link rel="stylesheet" href="/m/app.css">
+</head>
+<body>
+<!--
+  iWarehouse mobile POS (MPOS-01, SYNC-01..08): an installable PWA. The service worker keeps this shell for offline use;
+  the trip, the stock on board, the prices, the invoice numbers and every sale live in IndexedDB on the phone; sales sync
+  to /api/v1 when there is network. All texts come from the server's message bundles (mobile.* keys).
+-->
+<div id="app" class="app" aria-live="polite">
+    <div class="splash"><div class="splash-logo">iW</div></div>
+</div>
+<noscript>JavaScript is needed to sell on this phone.</noscript>
+<script src="/m/app.js" defer></script>
+</body>
+</html>

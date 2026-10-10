@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{device.title}, ~{::content})}">
+<head><title>Mobile Devices - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{device.title}">Mobile Devices</h1>
+            <div class="subtitle" th:text="#{device.subtitle}">Phones signed in to the mobile POS, each with a token of its own</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{device.sectionTitle}">Phones</span>
+                <span class="section-count" th:text="${devices.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/devices}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{device.searchPh}" th:aria-label="#{device.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="live" th:selected="${status == 'live'}" th:text="#{device.status.live}">Signed in</option>
+                    <option value="revoked" th:selected="${status == 'revoked'}" th:text="#{device.status.revoked}">Revoked</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{device.phone}">Phone</th>
+                        <th th:text="#{device.user}">User</th>
+                        <th th:text="#{device.signedIn}">Signed in</th>
+                        <th th:text="#{device.lastSeen}">Last seen</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${devices.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/devices/{id}(id=${d.id})}" th:text="${d.name}">Jean's phone</a>
+                            <div class="cell-sub mono" th:text="${d.deviceKey.length() > 13 ? d.deviceKey.substring(0, 13) + '…' : d.deviceKey}">4f1c2a9e-77b3…</div>
+                        </td>
+                        <td>
+                            <span th:text="${d.user.fullName}">Jean Driver</span>
+                            <div class="cell-sub" th:text="${d.username}">driver-m7</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(d.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:30</td>
+                        <td class="nowrap" th:text="${d.lastSeenAt != null} ? ${#temporals.format(d.lastSeenAt, 'dd/MM/yyyy HH:mm')} : '—'">10/10/2026 11:05</td>
+                        <td><th:block th:replace="~{devices/list :: deviceStatus(${d})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(devices.content)}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{device.empty}">No phones yet</h3>
+                                <p th:text="#{device.emptyHint}">A driver's phone appears here once they sign in to the mobile POS at /m/</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${devices}, '/devices', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Signed in, or revoked. */-->
+<th:block th:fragment="deviceStatus(d)">
+    <span class="badge badge-success" th:unless="${d.revoked}" th:text="#{device.status.live}">Signed in</span>
+    <span class="badge badge-secondary" th:if="${d.revoked}" th:text="#{device.status.revoked}">Revoked</span>
+</th:block>
+</body>
+</html>

@@ -34,7 +34,7 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
 
     /** An invoice with its customer, till, lines and their glass. */
     @EntityGraph(attributePaths = {"customer", "customer.priceList", "tillSession", "lines", "lines.product", "lines.priceList",
-            "lines.service", "lines.parentLine"})
+            "lines.service", "lines.parentLine", "trip", "trip.vehicle", "trip.driver", "trip.driver.user", "device"})
     Optional<SalesInvoice> findDetailedById(UUID id);
 
     /**
@@ -67,12 +67,23 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
     List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 
     /**
-     * Invoices issued between two moments per channel, as (channel, invoices, net, total): COUNTER for a till's sale (the
-     * vehicles' sales join with the mobile POS), for the owner dashboard (RPT-01).
+     * Invoices issued between two moments per channel, as (channel name, invoices, net, total): COUNTER for a till's sale,
+     * MOBILE for a vehicle's, for the owner dashboard (RPT-01).
      */
-    @Query("select case when i.tillSession is null then 'OTHER' else 'COUNTER' end, count(i), coalesce(sum(i.netAmount), 0),"
-            + " coalesce(sum(i.totalAmount), 0) from SalesInvoice i"
+    @Query("select str(i.channel), count(i), coalesce(sum(i.netAmount), 0), coalesce(sum(i.totalAmount), 0) from SalesInvoice i"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.postedAt between :from and :to"
-            + " group by case when i.tillSession is null then 'OTHER' else 'COUNTER' end")
+            + " group by i.channel order by i.channel")
     List<Object[]> perChannel(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
+
+    /** The mobile sale a phone sent under this UUID (SYNC-03): the same sale sent twice is taken once. */
+    Optional<SalesInvoice> findByClientId(UUID clientId);
+
+    /** A trip's mobile sales with their customer, by number. */
+    @EntityGraph(attributePaths = {"customer", "device"})
+    List<SalesInvoice> findByTrip_IdOrderByNumberAsc(UUID tripId);
+
+    /** A mobile sale with its lines, trip, vehicle and driver, for the phone's receipt. */
+    @EntityGraph(attributePaths = {"customer", "lines", "lines.product", "trip", "trip.vehicle", "trip.driver", "trip.driver.user", "device"})
+    @Query("select i from SalesInvoice i where i.clientId = :clientId")
+    Optional<SalesInvoice> findMobileByClientId(@Param("clientId") UUID clientId);
 }

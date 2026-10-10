@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${conflict.number} ?: #{sync.title}, ~{::content})}">
+<head><title>Sync Conflict - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/sync-conflicts/' + conflict.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${conflict.number ?: '—'}">MINV-WH-2026-000003</h1>
+            <div class="subtitle">
+                <span th:text="${conflict.username}">driver-m7</span>
+                &middot; <span th:text="${#temporals.format(conflict.receivedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</span>
+                &middot; <th:block th:replace="~{sync-conflicts/list :: conflictStatus(${conflict.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/sync-conflicts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" th:if="${conflict.open}" sec:authorize="hasAuthority('PERM_REVIEW_SYNC_CONFLICT')"
+                    data-modal-open="review-modal" th:text="#{sync.review}">Record the review</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${conflict.open}">
+        <strong th:text="#{${'sync.reason.' + conflict.reason}}">Unit no longer on the vehicle</strong>
+        <span th:text="${'· ' + conflict.detail}">· U-WH-000037 no longer on RAC123A</span>
+    </div>
+    <div class="doc-note is-success" th:unless="${conflict.open}">
+        <strong th:text="#{sync.reviewedBy(${conflict.reviewedBy}, ${#temporals.format(conflict.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by supervisor1 on 10/10/2026 15:00:</strong>
+        <span th:text="${conflict.reviewNote}">Sold at the counter as INV-WH-2026-000030</span>
+    </div>
+    <p class="form-note" th:if="${conflict.open}" th:text="#{sync.howTo}">The glass left with the customer: settle it with the documents that fit (a counter sale, a credit note, an adjustment, the end of day), then record what was done.</p>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{sync.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{sync.reason}">Why</label>
+                        <div class="value">
+                            <span th:text="#{${'sync.reason.' + conflict.reason}}">Unit no longer on the vehicle</span>
+                            <div class="cell-sub" th:text="${conflict.detail}">U-WH-000037 no longer on RAC123A</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{sync.trip}">Trip</label>
+                        <div class="value">
+                            <th:block th:if="${conflict.trip != null}">
+                                <a class="mono" sec:authorize="hasAuthority('PAGE_FLEET')" th:href="@{/trips/{id}(id=${conflict.trip.id})}" th:text="${conflict.trip.number}">TRP-WH-2026-000002</a>
+                                <span class="mono" sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="${conflict.trip.number}">TRP-WH-2026-000002</span>
+                                <div class="cell-sub" th:text="${conflict.trip.vehicle.plate + ' · ' + conflict.trip.driver.user.fullName}">RAC123A · Jean Driver</div>
+                            </th:block>
+                            <span th:if="${conflict.trip == null}">—</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{sync.device}">Phone</label>
+                        <div class="value">
+                            <a sec:authorize="hasAuthority('PAGE_DEVICES')" th:href="@{/devices/{id}(id=${conflict.device.id})}" th:text="${conflict.device.name}">Jean's phone</a>
+                            <span sec:authorize="!hasAuthority('PAGE_DEVICES')" th:text="${conflict.device.name}">Jean's phone</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{sync.madeAt}">Made on the phone</label>
+                        <div class="value" th:text="${conflict.clientCreatedAt != null} ? ${#temporals.format(conflict.clientCreatedAt, 'dd/MM/yyyy HH:mm')} : '—'">10/10/2026 11:20</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{sync.receivedAt}">Reached the server</label>
+                        <div class="value" th:text="${#temporals.format(conflict.receivedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{sync.total}">Charged (RWF)</label>
+                        <div class="value strong" th:text="${conflict.totalAmount != null} ? ${@num.money(conflict.totalAmount)} : '—'">45,000</div>
+                    </div>
+                </div>
+                <!-- The sale read back: the glass (and where it is now), the customer, the payments -->
+                <th:block th:if="${sent != null}">
+                    <h3 class="detail-heading" th:text="#{sync.sold}">What the phone sold</h3>
+                    <div class="detail-list">
+                        <div class="item">
+                            <label th:text="#{sync.customer}">Customer</label>
+                            <div class="value" th:text="${sent.customer ?: '—'}">Walk-in customer</div>
+                        </div>
+                        <div class="item" th:if="${!#strings.isEmpty(sent.buyerName)}">
+                            <label th:text="#{sync.buyer}">Buyer</label>
+                            <div class="value" th:text="${sent.buyerName}">Jean Habimana</div>
+                        </div>
+                        <div class="item" th:if="${!#strings.isEmpty(sent.buyerTin)}">
+                            <label th:text="#{sync.buyerTin}">Buyer TIN</label>
+                            <div class="value mono" th:text="${sent.buyerTin}">100200301</div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{sync.unit}">Label</th>
+                                    <th th:text="#{sync.glass}">Glass</th>
+                                    <th th:text="#{sync.now}">Now</th>
+                                    <th class="num" th:text="#{sync.pricePerM2}">Price per m²</th>
+                                    <th class="num" th:text="#{sync.amount}">Amount (RWF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="l : ${sent.lines}" th:with="u=${l.unit}">
+                                    <td>
+                                        <th:block th:if="${u != null}">
+                                            <a class="mono strong" sec:authorize="hasAuthority('PAGE_STOCK') and hasAuthority('PERM_VIEW_STOCK')"
+                                               th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000046</a>
+                                            <span class="mono strong" sec:authorize="!(hasAuthority('PAGE_STOCK') and hasAuthority('PERM_VIEW_STOCK'))" th:text="${u.code}">U-WH-000046</span>
+                                        </th:block>
+                                        <span th:if="${u == null}" class="text-muted" th:text="#{sync.unitUnknown}">Unknown unit</span>
+                                    </td>
+                                    <td>
+                                        <th:block th:if="${u != null}">
+                                            <span class="mono" th:text="${u.product.code}">CLR-6</span>
+                                            <div class="cell-sub" th:text="${u.widthMm + ' × ' + u.heightMm + ' mm'}">3210 × 2250 mm</div>
+                                        </th:block>
+                                        <span th:if="${u == null}">—</span>
+                                    </td>
+                                    <td>
+                                        <th:block th:if="${u != null}">
+                                            <th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block>
+                                            <div class="cell-sub mono" th:text="${u.location != null} ? ${u.location.code} : '—'">VEH-RAC123A</div>
+                                        </th:block>
+                                        <span th:if="${u == null}">—</span>
+                                    </td>
+                                    <td class="num">
+                                        <span th:text="${l.pricePerM2 != null} ? ${@num.price(l.pricePerM2)} : '—'">27,000</span>
+                                        <div class="cell-sub" th:if="${!#strings.isEmpty(l.priceReason)}" th:text="${l.priceReason}">Delivered to site</div>
+                                    </td>
+                                    <td class="num" th:text="${l.amount != null} ? ${@num.money(l.amount)} : '—'">195,008</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h3 class="detail-heading" th:text="#{sync.payments}">Payments</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{sync.method}">Method</th>
+                                    <th th:text="#{sync.reference}">Reference</th>
+                                    <th class="num" th:text="#{sync.amount}">Amount (RWF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="p : ${sent.payments}">
+                                    <td th:text="${p.method != null} ? #{${'payment.method.' + p.method}} : '—'">Mobile money</td>
+                                    <td class="mono" th:text="${!#strings.isEmpty(p.reference)} ? ${p.reference} : '—'">MP-3</td>
+                                    <td class="num" th:text="${p.amount != null} ? ${@num.money(p.amount)} : '—'">195,008</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="form-note" th:if="${sent.cashTendered != null}" th:text="#{sync.tendered(${@num.money(sent.cashTendered)})}">Cash handed over: 200,000 RWF</p>
+                </th:block>
+                <p class="form-note" th:if="${sent == null}" th:text="#{sync.soldUnreadable}">What the phone sent cannot be read as a sale.</p>
+                <h3 class="detail-heading" th:text="#{sync.payload}">The sale as the phone sent it</h3>
+                <pre class="raw-payload" th:text="${payload}">{"clientId":"..."}</pre>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${conflict.open}" sec:authorize="hasAuthority('PERM_REVIEW_SYNC_CONFLICT')">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('review-modal', #{sync.reviewTitle}, @{/sync-conflicts/{id}/review(id=${conflict.id})}, #{sync.reviewText}, #{sync.review})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

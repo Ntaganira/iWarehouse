@@ -21,5 +21,7 @@ public enum NotificationKind {
     /** EBM refused a receipt, or receipts wait too long for their signature (TAX-03). */
     EBM,
     /** A driving licence, a vehicle's insurance or inspection about to expire, or expired (FLT-04). */
-    FLEET
+    FLEET,
+    /** A mobile sale the server could not take as it was made, waiting for the supervisor (SYNC-05). */
+    SYNC
 }

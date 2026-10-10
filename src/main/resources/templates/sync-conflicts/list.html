@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{sync.title}, ~{::content})}">
+<head><title>Sync Conflicts - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{sync.title}">Sync Conflicts</h1>
+            <div class="subtitle" th:text="#{sync.subtitle}">Sales from the vehicles the server could not take as they were made: kept here, never dropped</div>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${open > 0}">
+        <span th:text="#{sync.openNote(${open})}">2 mobile sales wait for review.</span>
+        <a th:href="@{/sync-conflicts(status='OPEN')}" th:text="#{sync.showOpen}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{sync.sectionTitle}">Conflicts</span>
+                <span class="section-count" th:text="${conflicts.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/sync-conflicts}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{sync.searchPh}" th:aria-label="#{sync.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null}" th:text="#{common.allStatus}">All Status</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st == status}" th:text="#{${'sync.status.' + st}}">Open</option>
+                </select>
+                <select name="reason" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{sync.reason}">
+                    <option value="" th:selected="${reason == null}" th:text="#{sync.allReasons}">All reasons</option>
+                    <option th:each="r : ${reasons}" th:value="${r}" th:selected="${r == reason}" th:text="#{${'sync.reason.' + r}}">Unit no longer on the vehicle</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{sync.sale}">Sale</th>
+                        <th th:text="#{sync.driver}">Driver</th>
+                        <th th:text="#{sync.trip}">Trip</th>
+                        <th th:text="#{sync.reason}">Why</th>
+                        <th class="num" th:text="#{sync.total}">Charged (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${conflicts.content}">
+                        <td>
+                            <a class="row-link strong mono nowrap" th:href="@{/sync-conflicts/{id}(id=${c.id})}" th:text="${c.number ?: '—'}">MINV-WH-2026-000003</a>
+                            <div class="cell-sub" th:text="${#temporals.format(c.receivedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</div>
+                        </td>
+                        <td th:text="${c.username}">driver-m7</td>
+                        <td>
+                            <span class="mono nowrap" th:text="${c.trip != null} ? ${c.trip.number} : '—'">TRP-WH-2026-000002</span>
+                            <div class="cell-sub mono" th:if="${c.trip != null}" th:text="${c.trip.vehicle.plate}">RAC123A</div>
+                        </td>
+                        <td th:text="#{${'sync.reason.' + c.reason}}">Unit no longer on the vehicle</td>
+                        <td class="num" th:text="${c.totalAmount != null} ? ${@num.money(c.totalAmount)} : '—'">45,000</td>
+                        <td><th:block th:replace="~{sync-conflicts/list :: conflictStatus(${c.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(conflicts.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{sync.empty}">No conflicts</h3>
+                                <p th:text="#{sync.emptyHint}">Every sale the phones sent was taken as it was made</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${conflicts}, '/sync-conflicts', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A conflict's state. */-->
+<th:block th:fragment="conflictStatus(s)" th:switch="${s.name()}">
+    <span th:case="'OPEN'" class="badge badge-warning" th:text="#{sync.status.OPEN}">To review</span>
+    <span th:case="*" class="badge badge-success" th:text="#{sync.status.REVIEWED}">Reviewed</span>
+</th:block>
+</body>
+</html>

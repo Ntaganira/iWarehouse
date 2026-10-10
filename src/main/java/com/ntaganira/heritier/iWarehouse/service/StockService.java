@@ -464,6 +464,16 @@ public class StockService {
         record(unit, MovementType.SALE, from, fromStatus, LocalDateTime.now(clock), null, REF_SALES_INVOICE, invoiceId, invoiceNumber);
     }
 
+    /** A unit sold from its vehicle on the mobile POS (MPOS-02) leaves stock: SOLD, off the vehicle. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void sellFromVehicle(StockUnit unit, UUID invoiceId, String invoiceNumber) {
+        requireAllowed(unit, StockAction.SELL_FROM_VEHICLE);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setStatus(StockStatus.SOLD);
+        unit.setLocation(null);
+        record(unit, MovementType.SALE, from, StockStatus.ON_VEHICLE, LocalDateTime.now(clock), null, REF_SALES_INVOICE, invoiceId, invoiceNumber);
+    }
+
     /**
      * A sold unit the customer brought back (POS-09): available again on the rack or slot chosen, at its own cost. The
      * caller checked rack limits and moves the MAC.

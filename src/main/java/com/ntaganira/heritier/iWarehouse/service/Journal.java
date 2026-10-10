@@ -19,7 +19,7 @@ import java.util.*;
  *               RWF with 2 decimals (ACC-01); a positive amount debits, a negative one credits. Stock lines
  *               are the change of each glass's stock value, so the inventory account follows the stock
  *               valuation exactly (AT-10); what is left over (moving average rounding) is put on one account
- *               so the journal balances. Lines on the same account, glass and supplier are added together.
+ *               so the journal balances. Lines on the same account, glass, supplier, customer and driver are added together.
  *               Pure: no Spring, unit-tested.
  * </pre>
  */
@@ -33,7 +33,7 @@ public final class Journal {
 
     /** One line: debit or credit (one of them zero), with what it is about. */
     public record Line(AccountKey account, BigDecimal debit, BigDecimal credit, UUID productId, UUID supplierId, UUID customerId,
-                       String memo, Fx fx) {
+                       UUID driverId, String memo, Fx fx) {
 
         /** Debit less credit. */
         public BigDecimal signed() {
@@ -41,7 +41,7 @@ public final class Journal {
         }
     }
 
-    private record Key(AccountKey account, UUID productId, UUID supplierId, UUID customerId, String memo) {
+    private record Key(AccountKey account, UUID productId, UUID supplierId, UUID customerId, UUID driverId, String memo) {
     }
 
     private final JournalSource source;
@@ -87,18 +87,28 @@ public final class Journal {
     /** The same, for a line about a customer (a receivable). */
     public Journal add(AccountKey account, BigDecimal signedAmount, UUID productId, UUID supplierId, UUID customerId, String memo,
                        Fx fx) {
+        return add(account, signedAmount, productId, supplierId, customerId, null, memo, fx);
+    }
+
+    /** A line of a driver's float (ACC-06): the account, naming the driver. */
+    public Journal addForDriver(AccountKey account, BigDecimal signedAmount, UUID driverId, String memo) {
+        return add(account, signedAmount, null, null, null, driverId, memo, null);
+    }
+
+    private Journal add(AccountKey account, BigDecimal signedAmount, UUID productId, UUID supplierId, UUID customerId, UUID driverId,
+                        String memo, Fx fx) {
         Objects.requireNonNull(account);
         if (signedAmount == null || signedAmount.signum() == 0) {
             return this;
         }
         BigDecimal amount = signedAmount.setScale(SCALE, RoundingMode.HALF_UP);
         if (fx != null) {
-            Line line = line(account, amount, productId, supplierId, customerId, memo, fx);
+            Line line = line(account, amount, productId, supplierId, customerId, driverId, memo, fx);
             fxLines.add(line);
             order.add(line);
             return this;
         }
-        Key key = new Key(account, productId, supplierId, customerId, memo);
+        Key key = new Key(account, productId, supplierId, customerId, driverId, memo);
         if (!merged.containsKey(key)) {
             order.add(key);
         }
@@ -127,7 +137,7 @@ public final class Journal {
     public Journal reversal(LocalDate date, String description) {
         Journal reversal = new Journal(source, sourceId, sourceNumber, date, description);
         for (Line l : lines()) {
-            reversal.add(l.account(), l.signed().negate(), l.productId(), l.supplierId(), l.customerId(), l.memo(), l.fx());
+            reversal.add(l.account(), l.signed().negate(), l.productId(), l.supplierId(), l.customerId(), l.driverId(), l.memo(), l.fx());
         }
         return reversal;
     }
@@ -157,7 +167,7 @@ public final class Journal {
                 Key key = (Key) o;
                 BigDecimal amount = merged.get(key);
                 if (amount.signum() != 0) {
-                    lines.add(line(key.account(), amount, key.productId(), key.supplierId(), key.customerId(), key.memo(), null));
+                    lines.add(line(key.account(), amount, key.productId(), key.supplierId(), key.customerId(), key.driverId(), key.memo(), null));
                 }
             }
         }
@@ -221,11 +231,11 @@ public final class Journal {
         return rounded;
     }
 
-    private static Line line(AccountKey account, BigDecimal signed, UUID productId, UUID supplierId, UUID customerId, String memo,
-                             Fx fx) {
+    private static Line line(AccountKey account, BigDecimal signed, UUID productId, UUID supplierId, UUID customerId, UUID driverId,
+                             String memo, Fx fx) {
         BigDecimal zero = BigDecimal.ZERO.setScale(SCALE);
         return signed.signum() > 0
-                ? new Line(account, signed, zero, productId, supplierId, customerId, memo, fx)
-                : new Line(account, zero, signed.negate(), productId, supplierId, customerId, memo, fx);
+                ? new Line(account, signed, zero, productId, supplierId, customerId, driverId, memo, fx)
+                : new Line(account, zero, signed.negate(), productId, supplierId, customerId, driverId, memo, fx);
     }
 }

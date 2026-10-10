@@ -1,5 +1,11 @@
 package com.ntaganira.heritier.iWarehouse.config;
 
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
+import org.springframework.core.annotation.Order;
+import jakarta.servlet.http.HttpServletResponse;
+import com.ntaganira.heritier.iWarehouse.service.DeviceService;
+import com.ntaganira.heritier.iWarehouse.security.ApiTokenFilter;
 import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
@@ -37,7 +43,59 @@ import java.util.Set;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * The mobile POS app shell (/m/: static files, MPOS-01): open, and without the web session, so an expired back-office
+     * session on the same phone never turns the app's files into a redirect to the login page.
+     */
     @Bean
+    @Order(0)
+    public SecurityFilterChain pwaFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/m", "/m/**")
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .requestCache(cache -> cache.disable())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
+    /**
+     * The mobile POS API (NFR-10): stateless, no session and no CSRF (no cookie is used), each request authenticated by its
+     * phone's token. Signing in and the PWA's texts are open; anything else without a valid token is a 401, a missing right a
+     * 403, both as JSON.
+     */
+    @Bean
+    @Order(1)
+    public SecurityFilterChain apiFilterChain(HttpSecurity http, DeviceService deviceService) throws Exception {
+        http
+            .securityMatcher("/api/**")
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .requestCache(cache -> cache.disable())
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
+            .logout(logout -> logout.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/messages").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(new ApiTokenFilter(deviceService), UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, e) -> json(response, 401, "unauthorized"))
+                .accessDeniedHandler((request, response, e) -> json(response, 403, "forbidden")));
+        return http.build();
+    }
+
+    private static void json(HttpServletResponse response, int status, String error) throws java.io.IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"error\":\"" + error + "\"}");
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    AuthenticationSuccessHandler auditSuccessHandler,
                                                    AuthenticationFailureHandler auditFailureHandler,

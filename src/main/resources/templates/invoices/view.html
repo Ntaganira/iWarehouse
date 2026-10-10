@@ -52,13 +52,31 @@
                     <label th:text="#{invoice.purchaseCode}">Purchase code</label>
                     <div class="value mono" th:text="${invoice.purchaseCode}">123456</div>
                 </div>
-                <div class="item">
+                <div class="item" th:if="${invoice.tillSession != null}">
                     <label th:text="#{invoice.till}">Till</label>
                     <div class="value">
                         <a class="mono" th:href="@{/till-sessions/{id}(id=${invoice.tillSession.id})}" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:text="${invoice.tillSession.number}">TILL-WH-2026-000001</a>
                         <span class="mono" sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="${invoice.tillSession.number}">TILL-WH-2026-000001</span>
                     </div>
                 </div>
+                <!--/* A sale from a vehicle (MPOS): its trip, the phone, when it was made and when it reached the server (AUD-07) */-->
+                <th:block th:if="${invoice.mobile}">
+                    <div class="item">
+                        <label th:text="#{invoice.trip}">Trip</label>
+                        <div class="value">
+                            <a class="mono" th:href="@{/trips/{id}(id=${invoice.trip.id})}" sec:authorize="hasAuthority('PAGE_FLEET')" th:text="${invoice.trip.number}">TRP-WH-2026-000002</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="${invoice.trip.number}">TRP-WH-2026-000002</span>
+                            <div class="cell-sub" th:text="${invoice.trip.vehicle.plate + ' · ' + invoice.trip.driver.user.fullName}">RAC123A · Jean Driver</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{invoice.madeOnPhone}">Made on the phone</label>
+                        <div class="value">
+                            <span th:text="${#temporals.format(invoice.clientCreatedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 11:20</span>
+                            <div class="cell-sub" th:text="#{invoice.syncedAt(${invoice.device.name}, ${#temporals.format(invoice.syncedAt, 'dd/MM/yyyy HH:mm')})}">Jean's phone · synced 10/10/2026 14:05</div>
+                        </div>
+                    </div>
+                </th:block>
                 <div class="item">
                     <label th:text="#{invoice.total}">Total (RWF)</label>
                     <div class="value strong" th:text="${@num.money(invoice.totalAmount)}">195,008</div>

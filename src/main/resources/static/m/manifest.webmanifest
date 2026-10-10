@@ -1,0 +1,16 @@
+{
+  "name": "iWarehouse Mobile POS",
+  "short_name": "iW POS",
+  "description": "Sell glass from the vehicle, with or without network",
+  "start_url": "/m/",
+  "scope": "/m/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6fb",
+  "theme_color": "#1565e0",
+  "icons": [
+    { "src": "/m/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/m/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/m/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

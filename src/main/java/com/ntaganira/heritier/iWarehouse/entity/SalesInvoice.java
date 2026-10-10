@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.SaleChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -43,9 +44,37 @@ public class SalesInvoice extends BaseEntity {
     @Column(nullable = false, length = 10)
     private SalesInvoiceStatus status = SalesInvoiceStatus.DRAFT;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "till_session_id", nullable = false)
+    /** The till that rang it up; none for a sale from a vehicle. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "till_session_id")
     private TillSession tillSession;
+
+    /** At the counter, or from a vehicle on the mobile POS (MPOS). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10, updatable = false)
+    private SaleChannel channel = SaleChannel.COUNTER;
+
+    /** The trip a mobile sale was made on. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trip_id", updatable = false)
+    private Trip trip;
+
+    /** The UUID the phone gave the sale (SYNC-03): the same sale sent twice is taken once. */
+    @Column(name = "client_id", unique = true, updatable = false)
+    private UUID clientId;
+
+    /** The phone that made it (AUD-07). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "device_id", updatable = false)
+    private ApiDevice device;
+
+    /** When the phone made it, on its own clock (AUD-07). */
+    @Column(name = "client_created_at", updatable = false)
+    private LocalDateTime clientCreatedAt;
+
+    /** When the server took it. */
+    @Column(name = "synced_at", updatable = false)
+    private LocalDateTime syncedAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "customer_id", nullable = false)
@@ -99,6 +128,10 @@ public class SalesInvoice extends BaseEntity {
 
     public boolean isDraft() {
         return status == SalesInvoiceStatus.DRAFT;
+    }
+
+    public boolean isMobile() {
+        return channel == SaleChannel.MOBILE;
     }
 
     /** An issued invoice with a balance still to pay (POS-08). */

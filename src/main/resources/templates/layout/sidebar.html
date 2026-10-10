@@ -115,6 +115,13 @@
         <a sec:authorize="hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')" th:classappend="${#strings.startsWith(requestURI, '/drivers')} ? 'active' : ''" href="/drivers">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="2.5"></circle><line x1="13" y1="10" x2="18" y2="10"></line><line x1="13" y1="14" x2="17" y2="14"></line></svg></span> <span th:text="#{nav.drivers}">Drivers</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_SYNC_CONFLICTS') and hasAuthority('PERM_VIEW_SYNC_CONFLICTS')" th:classappend="${#strings.startsWith(requestURI, '/sync-conflicts')} ? 'active' : ''" href="/sync-conflicts">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span> <span th:text="#{nav.syncConflicts}">Sync Conflicts</span>
+            <th:block th:with="waiting=${@syncConflictService.openCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.syncConflictsOpen}">1</span></th:block>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')" href="/m/" target="_blank" rel="noopener">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></span> <span th:text="#{nav.mobilePos}">Mobile POS</span>
+        </a>
         <a sec:authorize="hasAuthority('PAGE_POS')" th:classappend="${#strings.startsWith(requestURI, '/pos')} ? 'active' : ''" href="/pos">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></span> <span th:text="#{nav.pos}">Counter POS</span>
         </a>
@@ -205,6 +212,9 @@
         </a>
         <a sec:authorize="hasAuthority('PAGE_PERMISSIONS')" th:classappend="${#strings.startsWith(requestURI, '/permissions')} ? 'active' : ''" href="/permissions">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span> <span th:text="#{nav.permissions}">Permissions</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_DEVICES') and hasAuthority('PERM_VIEW_DEVICES')" th:classappend="${#strings.startsWith(requestURI, '/devices')} ? 'active' : ''" href="/devices">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></span> <span th:text="#{nav.devices}">Mobile Devices</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_ACTIVITY_LOGS')" th:classappend="${requestURI == '/activity'} ? 'active' : ''" href="/activity">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></span> <span th:text="#{nav.activityLogs}">Activity Logs</span>

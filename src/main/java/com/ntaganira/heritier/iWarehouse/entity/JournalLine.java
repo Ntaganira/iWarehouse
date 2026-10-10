@@ -66,6 +66,11 @@ public class JournalLine {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
+    /** Driver Float lines: the driver whose float it is (ACC-06). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "driver_id")
+    private Driver driver;
+
     @Column(name = "currency_code", length = 3)
     private String currencyCode;
 

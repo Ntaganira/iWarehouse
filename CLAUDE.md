@@ -25,7 +25,7 @@ Flyway runs on startup. `ddl-auto` is `validate`, so the app refuses to start if
 
 Java 17 · Spring Boot 3.4 (MVC, Security, Validation, Data JPA, Mail, Actuator) · Hibernate 6.6 · PostgreSQL 16 · Flyway · Thymeleaf + thymeleaf-extras-springsecurity6 · custom CSS (`static/css/iwarehouse.css`, iVura's design system) · Choices.js, Chart.js (vendored, no CDN) · MinIO · OpenHTMLToPDF · ZXing · Lombok · Maven wrapper.
 
-Planned: the mobile POS is a PWA (Service Worker + IndexedDB) calling a versioned JSON API under `/api/v1/**`.
+The mobile POS is a PWA (`static/m/`: Service Worker + IndexedDB) calling the versioned JSON API under `/api/v1/**`.
 
 ## Layout
 
@@ -33,7 +33,7 @@ Planned: the mobile POS is a PWA (Service Worker + IndexedDB) calling a versione
 src/main/java/com/ntaganira/heritier/iWarehouse/
   audit/        before/after change capture (listener, context, annotations)  <- read before touching entities
   config/       security, web, JPA auditing, global model
-  controller/   MVC controllers (one per screen group)
+  controller/   MVC controllers (one per screen group); controller/api/ the mobile POS's JSON API (/api/v1)
   dto/          form and view objects
   entity/       JPA entities (BaseEntity for business data)
   enums/        status and type enums
@@ -43,7 +43,7 @@ src/main/java/com/ntaganira/heritier/iWarehouse/
 src/main/resources/
   db/migration/ Flyway scripts V{n}__{module}.sql
   templates/    layout/, fragments/, error/, one folder per module (list/form/view.html)
-  static/       css/iwarehouse.css, js/iwarehouse.js, js/session-timeout.js, vendor/
+  static/       css/iwarehouse.css, js/iwarehouse.js, js/session-timeout.js, vendor/, m/ (the mobile POS PWA)
   messages*.properties   en (default), fr, rw
 ```
 
@@ -162,6 +162,26 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
   - A trip (TRP number) is PLANNED, then DEPARTED, or CANCELLED with a reason (M9 adds the return). While planned its manifest (`trip_lines`) holds its units (`TripRepository.findHolds` in `StockService.holds`). Units are added by label, or every available, free unit of a rack or slot whose label is scanned; only AVAILABLE units (`StockAction.LOAD`). Scanning confirms a planned unit (`loaded_at`); a label not on the manifest is refused and logged FAILED (FLT-06).
   - Departure (PERM_DEPART_TRIP: the supervisor approves the loading) locks the trip, then the vehicle, then the driver, and needs: the trip's day reached, papers valid today, vehicle and driver on no other trip (`uk_trips_vehicle_on_road`, `uk_trips_driver_on_road`), every planned unit scanned, still available and held by nothing else, the load within the vehicle's pieces and kg (`TripLoading.check`; AT-03), an odometer not below the vehicle's last reading. Then `StockService.load` moves each unit ON_VEHICLE to the vehicle's location (LOAD movement, ref TRIP), each line keeps the rack it left from, the trip keeps what left, and the driver is told the units are in their charge (FLT-07). Stock on a vehicle is still on hand at its own cost: no journal.
   - Without PERM_VIEW_TRIP a user sees and scan-loads only the trips they drive (`TripService.canSee`, 403 otherwise). Odometer and fuel (`trip_fuel`, removed with a reason) are kept per trip (FLT-12); fuel is not posted (the accountant books what was paid).
+- **Mobile POS (MPOS-01..05, SYNC-01..08, NFR-10, AUD-07, ACC-06)** goes through `DeviceService`, `MobileTripService`, `MobileSaleService` and `SyncConflictService`. `MobileSales` is pure and tested, and the PWA (`static/m/app.js`) does the same sums with integers: change both together.
+  - The API is `/api/v1/**` (`controller/api`): stateless, with its own security chains (`SecurityConfig`: `/m/**` static and public, `/api/**` by token, the web chain last). A phone signs in with the user's password (PERM_USE_MOBILE_POS) and gets a token kept only as its SHA-256 (`api_devices`: one live token per user and phone, the phone named by `X-Device-Id`). `ApiTokenFilter` authenticates every call; a revoked token, a disabled user or another phone's id gets 401. Revoke through `DeviceService.revoke` with a reason.
+  - API errors are `MobileApi.ErrorView` from `MobileApiAdvice`. It comes first of the advices, so the phone never gets the web pages' redirect or an exception's own text. A new endpoint: `@PreAuthorize` like any handler, its records in `MobileApi`, every text the phone shows under `mobile.*`. `/api/v1/messages` serves those texts raw (no choice formats): a count takes a `.one` key and `tn()` in the app.
+  - The trip download (`MobileTripService.download`) freezes the trip's prices once: `trip_price_lists` and `trip_prices` (append-only), the default list and the customers' lists, for the glass on board. It also tops up the phone's invoice numbers to the units on board (`trip_invoice_numbers`, `DocumentType.MOBILE_INVOICE`: numbered in advance, each phone its own). Sales are checked against the frozen prices, never today's lists.
+  - `MobileSaleService.submit` is idempotent on the phone's `clientId`: the same sale sent again gets the same answer (AT-05). It locks the trip, then checks in order:
+    - the units are ON_VEHICLE at the vehicle's location (`StockAction.SELL_FROM_VEHICLE`);
+    - the number (locked) was given to this phone for this trip and is unused;
+    - the prices are within the driver's limit (`MobileTripService.discountLimit`: the counter's rule, `Discounts`);
+    - the amounts (`MobileSales.lineAmount`) and the total match;
+    - the payments are cash and mobile money with a reference, and add up.
+  - A refused sale becomes a `SyncConflict` (reason, detail, the payload as sent; REVIEW_SYNC_CONFLICT holders are told). It is never dropped and never an error to the phone; the supervisor settles it with the existing documents and records a review note. A new check = a `SyncConflictReason` + `chk_mobile_sync_conflicts_reason` + its `sync.reason.*` text.
+  - Taking a sale, in this order:
+    - an invoice of channel MOBILE (`chk_sales_invoices_channel`: a trip, the phone, its `clientId`, synced, POSTED, no till) with the phone's number, dated the day it was made when that falls between the departure and today;
+    - `StockService.sellFromVehicle` (a SALE movement from ON_VEHICLE);
+    - payments that name the trip, not a till (`chk_sales_payments_place`), and the number marked used;
+    - `PostingService.mobileSale` (cash Dr Driver Float with the driver, `Journal.addForDriver` / `journal_lines.driver_id`), then `EbmService.queueSale`.
+  - A driver's float is their lines on DRIVER_FLOAT: never keep a second balance.
+  - The PWA keeps its data in IndexedDB (`iwarehouse-pos`) and syncs oldest first with backoff. Signing out or closing the trip is refused while sales wait.
+  - The service worker (`sw.js`) loads the shell from the network, falling back to its cache after 3 s or offline. Bump its `VERSION` when the shell's file list changes.
+  - Check the PWA at 360–1024 px, offline (CDP network emulation, then a reload) and in both themes (`prefers-color-scheme`).
 - **Set a status and the fields its CHECK needs in one step, after the operation's queries.** A query flushes pending changes, so an entity left POSTED without its `posted_at` while the service still reads stock breaks the constraint (a 500 the unit tests cannot see). See `StockAdjustmentService.post`.
 - **Optimistic lock failures** (`@Version`) are answered by `StaleDataAdvice`: back to the page with "changed by someone else, reload". Controllers do not catch them.
 - **Labels (INV-03, MD-02):** `Labels.qrSvg(code)` for pages, `Labels.zpl(...)` (units) and `Labels.placeZpl(...)` (racks and slots) for label printers (50 x 30 mm, 203 dpi). Print units through `/stock/labels?receipt=|crate=|job=|unit=`, places through `/locations/{id}/labels` (its active racks and slots). A scanned code that is no unit's but a location's is a place: a transfer takes it as the destination, a count as where the next labels were found, the stock search as its location filter, a trip's manifest as every available unit there. Look units up first, then places.

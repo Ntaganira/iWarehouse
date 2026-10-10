@@ -57,7 +57,7 @@ class JournalServiceTest {
         AccountingPeriodRepository periodRepo = mock(AccountingPeriodRepository.class);
         when(periodRepo.closedThrough()).thenAnswer(a -> closedThrough);
         service = new JournalService(entryRepo, lineRepo, mock(AccountRepository.class), mock(ProductRepository.class),
-                mock(SupplierRepository.class), mock(CustomerRepository.class), mock(StockSummaryService.class), numbers,
+                mock(SupplierRepository.class), mock(CustomerRepository.class), mock(DriverRepository.class), mock(StockSummaryService.class), numbers,
                 new PeriodLock(periodRepo), CLOCK);
     }
 

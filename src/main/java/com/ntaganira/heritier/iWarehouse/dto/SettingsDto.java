@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
+import com.ntaganira.heritier.iWarehouse.enums.EbmMode;
 import com.ntaganira.heritier.iWarehouse.enums.RateSource;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -121,8 +122,41 @@ public class SettingsDto {
     @NotNull(message = "{settings.value.required}")
     private Boolean alertEmail;
 
+    // --- EBM fiscal signing (TAX-02) ---
+
+    @NotNull(message = "{settings.value.required}")
+    private EbmMode ebmMode;
+
+    @Pattern(regexp = "^$|^https?://[^\\s]{3,240}$", message = "{settings.ebmVsdcUrl.pattern}")
+    private String ebmVsdcUrl;
+
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^[0-9]{2}$", message = "{settings.ebmBranchId.pattern}")
+    private String ebmBranchId;
+
+    @Size(max = 100, message = "{settings.ebmDeviceSerial.size}")
+    private String ebmDeviceSerial;
+
+    @Pattern(regexp = "^$|^[0-9A-Za-z]{1,10}$", message = "{settings.ebmItemClass.pattern}")
+    private String ebmGlassItemClass;
+
+    @Pattern(regexp = "^$|^[0-9A-Za-z]{1,10}$", message = "{settings.ebmItemClass.pattern}")
+    private String ebmServiceItemClass;
+
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^[A-Z]{2}$", message = "{settings.ebmOriginCountry.pattern}")
+    private String ebmOriginCountry;
+
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^https://[^\\s]{3,240}$", message = "{settings.ebmReceiptUrl.pattern}")
+    private String ebmReceiptUrl;
+
     public void setBranchCode(String branchCode) {
         this.branchCode = branchCode == null ? null : branchCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public void setEbmOriginCountry(String ebmOriginCountry) {
+        this.ebmOriginCountry = ebmOriginCountry == null ? null : ebmOriginCountry.trim().toUpperCase(Locale.ROOT);
     }
 
     public void setCompanyTin(String companyTin) {

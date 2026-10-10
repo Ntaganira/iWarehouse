@@ -4,8 +4,10 @@ import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.CreditNoteDto;
+import com.ntaganira.heritier.iWarehouse.ebm.EbmCodes;
 import com.ntaganira.heritier.iWarehouse.entity.CreditNote;
 import com.ntaganira.heritier.iWarehouse.entity.CreditNoteLine;
+import com.ntaganira.heritier.iWarehouse.entity.EbmReceipt;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoiceLine;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -55,11 +57,13 @@ public class CreditNoteController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
+    private final EbmService ebmService;
 
     public CreditNoteController(CreditNoteService creditNoteService, SalesService salesService, TillService tillService,
                                 StockService stockService, JournalService journalService, DataChangeService dataChangeService,
                                 SettingService settingService, ActivityLogService activityLogService, Messages messages,
-                                NumberFormats num) {
+                                NumberFormats num, EbmService ebmService) {
+        this.ebmService = ebmService;
         this.creditNoteService = creditNoteService;
         this.salesService = salesService;
         this.tillService = tillService;
@@ -91,24 +95,43 @@ public class CreditNoteController {
         model.addAttribute("units", creditNoteService.units(id));
         model.addAttribute("till", note.getTillSessionId() == null ? null : tillService.findById(note.getTillSessionId()));
         model.addAttribute("journals", journalService.forSource(id, JournalSource.CREDIT_NOTE));
+        EbmReceipt ebm = ebmService.ofCreditNote(id).orElse(null);
+        model.addAttribute("ebm", ebm);
+        model.addAttribute("ebmQr", ebm != null && ebm.isSigned() ? Labels.qrSvg(ebmService.qrData(ebm)) : null);
         model.addAttribute("history", dataChangeService.history("CreditNote", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "credit-notes/view";
     }
 
-    /** The credit note slip for the 80 mm receipt printer. */
+    /** The credit note slip for the 80 mm receipt printer: its EBM refund receipt, printed as original or copy (TAX-02). */
     @GetMapping("/{id}/receipt")
     @PreAuthorize("hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')")
     public String receipt(@PathVariable UUID id, Model model) {
         CreditNote note = creditNoteService.findDetailed(id);
         details(model, note);
+        EbmReceipt ebm = ebmService.ofCreditNote(id).orElse(null);
+        Object printing = model.getAttribute("printing");
+        model.addAttribute("ebm", ebm);
+        model.addAttribute("ebmQr", ebm != null && ebm.isSigned() ? Labels.qrSvg(ebmService.qrData(ebm)) : null);
+        model.addAttribute("copy", printing != null ? EbmService.Print.COPY.name().equals(printing) : ebm != null && ebm.getPrintedAt() != null);
+        model.addAttribute("printNow", printing != null);
         model.addAttribute("companyName", settingService.get(SettingKey.COMPANY_NAME));
         model.addAttribute("companyTin", settingService.get(SettingKey.COMPANY_TIN));
         model.addAttribute("companyAddress", settingService.get(SettingKey.COMPANY_ADDRESS));
         model.addAttribute("companyPhone", settingService.get(SettingKey.COMPANY_PHONE));
-        activityLogService.record(PosController.MODULE, "PRINT_CREDIT_NOTE", "Opened credit note " + note.getNumber() + " for printing",
-                ActivityStatus.SUCCESS);
         return "credit-notes/receipt";
+    }
+
+    /** Records a print of the credit note slip, then opens it to print. */
+    @PostMapping("/{id}/receipt/print")
+    @PreAuthorize("hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')")
+    public String printReceipt(@PathVariable UUID id, RedirectAttributes redirect) {
+        CreditNote note = creditNoteService.findDetailed(id);
+        EbmService.Print print = ebmService.printCreditNote(id);
+        activityLogService.record(PosController.MODULE, print == EbmService.Print.COPY ? "PRINT_CREDIT_NOTE_COPY" : "PRINT_CREDIT_NOTE",
+                "Printed credit note " + note.getNumber() + InvoiceController.printed(print), ActivityStatus.SUCCESS);
+        redirect.addFlashAttribute("printing", print.name());
+        return "redirect:/credit-notes/" + id + "/receipt";
     }
 
     // ---------------------------------------------------------------- the return (POS-09)
@@ -205,6 +228,7 @@ public class CreditNoteController {
             methods.add(PaymentMethod.CREDIT);
         }
         model.addAttribute("refundMethods", methods);
+        model.addAttribute("refundReasons", EbmCodes.REFUND_REASONS);
         model.addAttribute("myTill", tillService.current().map(tillService::summary).orElse(null));
         if (!model.containsAttribute("formErrors")) {
             model.addAttribute("formErrors", new BeanPropertyBindingResult(dto, "creditNoteDto").getFieldErrors());

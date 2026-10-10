@@ -234,6 +234,15 @@
                             </tr>
                             <tr>
                                 <td>
+                                    <a sec:authorize="hasAuthority('PAGE_EBM')" href="/ebm?show=unsigned" th:text="#{dash.biz.ebmUnsigned}">Not signed by EBM</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_EBM')" th:text="#{dash.biz.ebmUnsigned}">Not signed by EBM</span>
+                                    <div class="cell-sub" th:if="${biz.ebm.oldest != null}"
+                                         th:text="#{dash.biz.ebmOldest(${#temporals.format(biz.ebm.oldest, 'dd/MM/yyyy HH:mm')})}">oldest since 10/10/2026 09:00</div>
+                                </td>
+                                <td class="num" th:classappend="${biz.ebm.count > 0} ? 'strong text-danger'" th:text="${biz.ebm.count}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
                                     <a sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" href="/till-sessions" th:text="#{dash.biz.openTills}">Tills open</a>
                                     <span sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{dash.biz.openTills}">Tills open</span>
                                 </td>

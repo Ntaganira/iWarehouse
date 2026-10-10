@@ -69,4 +69,12 @@ class AuditSnapshotsTest {
         assertThat(AuditSnapshots.isMaskedName("TOKEN", masked)).isTrue();
         assertThat(AuditSnapshots.isMaskedName("username", masked)).isFalse();
     }
+
+    @Test
+    void anUpdateOfOnlyTheStampsIsNoChange() {
+        assertThat(AuditSnapshots.nothingChanged(List.of())).isTrue();
+        assertThat(AuditSnapshots.nothingChanged(List.of("updatedAt"))).isTrue();
+        assertThat(AuditSnapshots.nothingChanged(List.of("updatedAt", "updatedBy"))).isTrue();
+        assertThat(AuditSnapshots.nothingChanged(List.of("status", "updatedAt"))).isFalse();
+    }
 }

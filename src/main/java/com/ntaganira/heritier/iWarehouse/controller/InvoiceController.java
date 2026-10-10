@@ -6,6 +6,7 @@ import com.ntaganira.heritier.iWarehouse.service.PdfService;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
+import com.ntaganira.heritier.iWarehouse.entity.EbmReceipt;
 import com.ntaganira.heritier.iWarehouse.entity.SaleApproval;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoiceLine;
@@ -57,12 +58,14 @@ public class InvoiceController {
     private final NumberFormats num;
     private final ReportFiles reportFiles;
     private final PdfService pdfService;
+    private final EbmService ebmService;
 
     public InvoiceController(SalesService salesService, CreditNoteService creditNoteService, JournalService journalService,
                              DataChangeService dataChangeService,
                              SettingService settingService, ActivityLogService activityLogService,
                              Messages messages, NumberFormats num,
-                             ReportFiles reportFiles, PdfService pdfService) {
+                             ReportFiles reportFiles, PdfService pdfService, EbmService ebmService) {
+        this.ebmService = ebmService;
         this.reportFiles = reportFiles;
         this.pdfService = pdfService;
         this.salesService = salesService;
@@ -95,6 +98,9 @@ public class InvoiceController {
         SalesInvoice invoice = issued(id);
         model.addAttribute("invoice", invoice);
         model.addAttribute("totals", salesService.totals(invoice));
+        EbmReceipt ebm = ebmService.ofInvoice(id).orElse(null);
+        model.addAttribute("ebm", ebm);
+        model.addAttribute("ebmQr", ebm != null && ebm.isSigned() ? Labels.qrSvg(ebmService.qrData(ebm)) : null);
         List<SalesPayment> payments = salesService.payments(id);
         model.addAttribute("payments", payments);
         // An order paid by a deposit (POS-08): what was paid when it was issued, and the balance
@@ -128,11 +134,20 @@ public class InvoiceController {
         return "invoices/view";
     }
 
-    /** The receipt to print on the 80 mm receipt printer. */
+    /**
+     * The receipt to print on the 80 mm receipt printer (POS-07, TAX-02). It prints only through its Print button, which
+     * records the print: the first of a signed receipt is the original, later ones copies (COPY, CS).
+     */
     @GetMapping("/{id}/receipt")
     @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')")
     public String receipt(@PathVariable UUID id, Model model) {
         SalesInvoice invoice = issued(id);
+        EbmReceipt ebm = ebmService.ofInvoice(id).orElse(null);
+        Object printing = model.getAttribute("printing");
+        model.addAttribute("ebm", ebm);
+        model.addAttribute("ebmQr", ebm != null && ebm.isSigned() ? Labels.qrSvg(ebmService.qrData(ebm)) : null);
+        model.addAttribute("copy", printing != null ? EbmService.Print.COPY.name().equals(printing) : ebm != null && ebm.getPrintedAt() != null);
+        model.addAttribute("printNow", printing != null);
         model.addAttribute("invoice", invoice);
         model.addAttribute("totals", salesService.totals(invoice));
         List<SalesPayment> payments = salesService.payments(id);
@@ -142,24 +157,51 @@ public class InvoiceController {
         model.addAttribute("companyTin", settingService.get(SettingKey.COMPANY_TIN));
         model.addAttribute("companyAddress", settingService.get(SettingKey.COMPANY_ADDRESS));
         model.addAttribute("companyPhone", settingService.get(SettingKey.COMPANY_PHONE));
-        activityLogService.record(PosController.MODULE, "PRINT_RECEIPT", "Opened the receipt of " + invoice.getNumber() + " for printing",
-                ActivityStatus.SUCCESS);
         return "invoices/receipt";
     }
 
-    /** An A4 copy of the invoice as PDF (RPT-07): to send to the customer or keep with the accounts. */
-    @GetMapping("/{id}/pdf")
+    /** Records a print of the receipt (the original, a copy, or not signed yet), then opens it to print. */
+    @PostMapping("/{id}/receipt/print")
+    @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')")
+    public String printReceipt(@PathVariable UUID id, RedirectAttributes redirect) {
+        SalesInvoice invoice = issued(id);
+        EbmService.Print print = ebmService.printInvoice(id);
+        activityLogService.record(PosController.MODULE, print == EbmService.Print.COPY ? "PRINT_RECEIPT_COPY" : "PRINT_RECEIPT",
+                "Printed the receipt of " + invoice.getNumber() + printed(print), ActivityStatus.SUCCESS);
+        redirect.addFlashAttribute("printing", print.name());
+        return "redirect:/invoices/" + id + "/receipt";
+    }
+
+    static String printed(EbmService.Print print) {
+        return switch (print) {
+            case ORIGINAL -> " (the original)";
+            case COPY -> " (a copy)";
+            case UNSIGNED -> " (not signed by EBM yet)";
+        };
+    }
+
+    /**
+     * An A4 copy of the invoice as PDF (RPT-07): to send to the customer or keep with the accounts. With its EBM signature,
+     * it is a print like the receipt (TAX-02): the first is the original, later ones copies.
+     */
+    @PostMapping("/{id}/pdf")
     @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')")
     public ResponseEntity<byte[]> pdf(@PathVariable UUID id) {
         SalesInvoice invoice = issued(id);
         List<SalesPayment> payments = salesService.payments(id);
+        EbmService.Print print = ebmService.printInvoice(id);
+        EbmReceipt ebm = ebmService.ofInvoice(id).orElse(null);
         Map<String, Object> model = reportFiles.letterhead();
+        model.put("ebm", ebm);
+        model.put("ebmQr", ebm != null && ebm.isSigned() ? Labels.qrPngDataUri(ebmService.qrData(ebm), 4) : null);
+        model.put("copy", print == EbmService.Print.COPY);
         model.put("invoice", invoice);
         model.put("totals", salesService.totals(invoice));
         model.put("payments", payments);
         model.put("creditNotes", creditNoteService.ofInvoice(id));
         byte[] body = pdfService.render("invoices/pdf", model);
-        activityLogService.record(PosController.MODULE, "EXPORT_INVOICE", "Downloaded " + invoice.getNumber() + " as PDF", ActivityStatus.SUCCESS);
+        activityLogService.record(PosController.MODULE, "EXPORT_INVOICE", "Downloaded " + invoice.getNumber() + " as PDF" + printed(print),
+                ActivityStatus.SUCCESS);
         return ReportFiles.file(invoice.getNumber() + ".pdf", MediaType.APPLICATION_PDF, body);
     }
 

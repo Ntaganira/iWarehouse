@@ -5,6 +5,7 @@ import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.SettingsDto;
 import com.ntaganira.heritier.iWarehouse.entity.NumberSequence;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.EbmMode;
 import com.ntaganira.heritier.iWarehouse.enums.RateSource;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
@@ -88,6 +89,7 @@ public class SettingsController {
     public String editForm(Model model) {
         model.addAttribute("settingsDto", settingService.load());
         model.addAttribute("rateSources", RateSource.values());
+        model.addAttribute("ebmModes", EbmMode.values());
         return "settings/form";
     }
 
@@ -125,6 +127,7 @@ public class SettingsController {
     private String invalid(Model model, BindingResult result) {
         model.addAttribute("formErrors", result.getFieldErrors());
         model.addAttribute("rateSources", RateSource.values());
+        model.addAttribute("ebmModes", EbmMode.values());
         return "settings/form";
     }
 }

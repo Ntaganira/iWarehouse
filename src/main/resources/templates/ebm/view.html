@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{ebm.viewTitle(${receipt.documentNumber})}, ~{::content})}">
+<head><title>EBM receipt - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${receipt.documentNumber}">INV-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{ebm.viewSubtitle(${receipt.invcNo}, ${#messages.msg('ebm.type.' + receipt.receiptType)})}">EBM no. 15 · Sale</span>
+                &middot; <th:block th:replace="~{ebm/list :: ebmStatus(${receipt})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/ebm" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${!receipt.refund}" th:href="@{/invoices/{id}(id=${receipt.invoiceId})}" class="btn btn-outline"
+               sec:authorize="hasAuthority('PAGE_INVOICES')" th:text="#{ebm.openDocument}">Open the document</a>
+            <a th:if="${receipt.refund}" th:href="@{/credit-notes/{id}(id=${receipt.creditNoteId})}" class="btn btn-outline"
+               sec:authorize="hasAuthority('PAGE_CREDIT_NOTES')" th:text="#{ebm.openDocument}">Open the document</a>
+            <form th:action="@{/ebm/{id}/retry(id=${receipt.id})}" method="post" class="row-action-form" th:unless="${receipt.signed}"
+                  sec:authorize="hasAuthority('PERM_MANAGE_EBM')">
+                <button type="submit" class="btn btn-primary" th:text="#{ebm.retry}">Send again</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${receipt.queued}">
+        <span th:text="#{ebm.note.queued(${#temporals.format(receipt.createdAt, 'dd/MM/yyyy HH:mm')}, ${receipt.attempts})}">Waiting for the EBM signature since 10/10/2026 14:05 (2 attempts so far).</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${receipt.failed}" th:text="#{ebm.note.failedAction(${receipt.lastError})}">EBM refused this receipt: fix the cause, then send it again.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{ebm.details}">Receipt</h2>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{ebm.invcNo}">EBM no.</label>
+                    <div class="value mono strong" th:text="${receipt.invcNo}">15</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ebm.type}">Type</label>
+                    <div class="value" th:text="#{${'ebm.type.' + receipt.receiptType}}">Sale</div>
+                </div>
+                <div class="item" th:if="${receipt.refund}">
+                    <label th:text="#{ebm.orgInvcNo}">Refund of EBM no.</label>
+                    <div class="value mono" th:text="${receipt.orgInvcNo}">14</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ebm.queuedAt}">Issued</label>
+                    <div class="value" th:text="${#temporals.format(receipt.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ebm.attempts}">Attempts</label>
+                    <div class="value" th:text="${receipt.attempts}">2</div>
+                </div>
+                <div class="item" th:if="${receipt.lastAttemptAt != null}">
+                    <label th:text="#{ebm.lastAttempt}">Last attempt</label>
+                    <div class="value" th:text="${#temporals.format(receipt.lastAttemptAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</div>
+                </div>
+                <div class="item" th:if="${receipt.queued}">
+                    <label th:text="#{ebm.nextAttempt}">Next attempt</label>
+                    <div class="value" th:text="${#temporals.format(receipt.nextAttemptAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:06</div>
+                </div>
+                <div class="item" th:if="${receipt.resultCode != null}">
+                    <label th:text="#{ebm.lastError}">Last answer</label>
+                    <div class="value">
+                        <span class="mono" th:if="${receipt.signed}" th:text="${receipt.resultCode}">000</span>
+                        <th:block th:unless="${receipt.signed}"><th:block th:replace="~{ebm/list :: lastAnswer(${receipt})}"></th:block></th:block>
+                    </div>
+                </div>
+                <div class="item" th:unless="${receipt.refund}">
+                    <label th:text="#{ebm.purchaseCode}">Purchase code</label>
+                    <div class="value mono" th:text="${receipt.purchaseCode ?: '—'}">123456</div>
+                </div>
+            </div>
+
+            <form th:action="@{/ebm/{id}/purchase-code(id=${receipt.id})}" method="post" class="inline-form ebm-purchase-code" novalidate
+                  th:if="${!receipt.signed and !receipt.refund}" sec:authorize="hasAuthority('PERM_MANAGE_EBM')">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="purchaseCode" th:text="#{ebm.purchaseCode}">Purchase code</label>
+                        <input type="text" id="purchaseCode" name="purchaseCode" maxlength="6" autocomplete="off" class="input-code"
+                               th:value="${receipt.purchaseCode}">
+                        <span class="hint" th:text="#{ebm.purchaseCodeHint}">Given by a buyer with a TIN; correct it if EBM refused it</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-outline" th:text="#{ebm.changePurchaseCode}">Save and send again</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/ebm :: signature(${receipt}, ${qr})}"></div>
+
+    <div class="section" th:if="${requestJson != null}">
+        <div class="section-header">
+            <h2 th:text="#{ebm.request}">Request sent</h2>
+        </div>
+        <div class="section-body">
+            <pre class="raw-payload" th:text="${requestJson}">{"tin":"100200300"}</pre>
+        </div>
+    </div>
+    <div class="section" th:if="${responseJson != null}">
+        <div class="section-header">
+            <h2 th:text="#{ebm.response}">Answer</h2>
+        </div>
+        <div class="section-body">
+            <pre class="raw-payload" th:text="${responseJson}">{"resultCd":"000"}</pre>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/ebm/' + receipt.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

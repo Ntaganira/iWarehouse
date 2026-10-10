@@ -44,7 +44,9 @@ public enum DocumentType {
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),
     /** Label code of a stock unit (INV-03): U-WH-000001, never reset. */
-    STOCK_UNIT("U");
+    STOCK_UNIT("U"),
+    /** The invoice number EBM receipts are sent under (invcNo, TAX-02): a plain integer, never reset. */
+    EBM_INVOICE("EBM");
 
     private final String defaultPrefix;
 

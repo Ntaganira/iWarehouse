@@ -8,10 +8,10 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V34.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V35.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
-## Where we are (2026-10-09)
+## Where we are (2026-10-10)
 
 | Area | State | Where |
 |---|---|---|
@@ -27,15 +27,15 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Accounting core: chart of accounts, posting engine, journals, trial balance (AT-10 passes) | Done (M2) | V16, `/accounting/journals`, `/accounting/accounts`, `/accounting/trial-balance` |
 | Counter sales, part 1: tills, POS for stock units, VAT, split payment, invoices, receipts (AT-08 passes) | Done (M3, part 1) | V17, `/pos`, `/invoices`, `/till-sessions` |
 | Counter sales, part 2: custom cut sizes, credit and discount approvals, quotations, deposits, returns and order cancellations, performance | Done (M3) | V18–V23, `/pos`, `/invoices`, `/sale-approvals`, `/quotations`, `/credit-notes` |
-| EBM / VSDC fiscal signing | **Next** (M4): deferred until after M5 at the owner's request (2026-10-09) | — |
+| EBM / VSDC fiscal signing (AT-09 passes) | Done (M4), with the simulator until RRA installs the business's VSDC | V34, `/ebm`, the signature on invoices, receipts, the A4 PDF and credit notes |
 | Customer and supplier accounts, FX revaluation, manual journals, period close, financial statements, VAT report, bank reconciliation | Done (M5) | V24–V30, `/customer-payments`, `/supplier-invoices`, `/supplier-payments`, `/accounting/*` |
 | Dashboard, reports, alerts, notifications, files | Done (M6) | V31–V33, `/dashboard`, `/reports`, `/reports/sales`, `/stock/offcut-ageing`, `/stock/slow-moving`, `/notifications`, documents on receipts, shipments, supplier invoices and adjustments |
-| Fleet: vehicles, drivers, trips, loading | Not started (M7) | — |
+| Fleet: vehicles, drivers, trips, loading | **Next** (M7) | — |
 | Mobile POS app (PWA) with offline sync | Not started (M8) | — |
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 420, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 and AT-10 (for the events built so far) pass; AT-03 to AT-07 and AT-09 wait for their milestones.
+Unit tests: 437, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08, AT-09 and AT-10 (for the events built so far) pass; AT-03 to AT-07 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -63,9 +63,10 @@ Unit tests: 420, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08 an
 Goal: every sale, credit note and copy is signed by RRA (TAX-02, TAX-03, POS-07). AT-09.
 
 - [ ] Confirm the business's EBM registration and VSDC device setup; confirm the tax type letters seeded in V5 (A exempt, B 18%, C zero-rated) (M)
-- [ ] VSDC client behind an interface, with a simulator for development and tests (M). Reuse RRA's VSDC experience
-- [ ] Submission queue: a sale completes even when EBM is down; retries with backoff; unsigned invoices and their age on the dashboard (TAX-03) (M)
-- [ ] Signature, receipt number and QR code on the invoice and receipt (TAX-02) (M)
+- [x] VSDC client behind an interface, with a simulator for development and tests (M). Reuse RRA's VSDC experience — 2026-10-10 (V34): built from RRA's VSDC API v1.0.5 and RRA's own EBM 2.1 client and server code (on this machine under H:\RRA and H:\ZRA): device initialisation, item registration, sales and refunds with their receipt. The business's VSDC over HTTP (Settings: its URL, the branch, the device serial; 3 s to connect, 15 s to answer), or the simulator, which checks a request as RRA's server does and signs it with numbers that go on from its last receipt; its receipts print "Simulator: not a fiscal receipt". Settings → EBM fiscal signing; `/ebm` initialises the device (our EBM numbers go on after RRA's last one)
+- [x] Submission queue: a sale completes even when EBM is down; retries with backoff; unsigned invoices and their age on the dashboard (TAX-03) (M) — 2026-10-10 (V34): every invoice and credit note is queued when issued, under its own EBM invoice number, and sent right after; while the VSDC cannot be reached or a setting is missing it is sent again after 30 s, 1, 2, 4 ... at most 30 minutes; a refund waits for its sale. A receipt EBM refuses waits for a person (`/ebm`: why, the request and the answer, send again, correct the purchase code), and the EBM alert's holders (owner, accountant, admin) are told; receipts unsigned for over an hour raise one alert until none is left. `/ebm` lists every receipt (not signed yet, refused, signed) with how old the oldest is; the owner dashboard and the sidebar show the count. AT-09 checked in the browser: a simulated outage, the sale completed and its receipt printed "not yet signed", signed by the queue 25 s after the outage ended
+- [x] Signature, receipt number and QR code on the invoice and receipt (TAX-02) (M) — 2026-10-10: the invoice and credit note pages show the EBM state and the signature (receipt number 27/32 NS, SDC ID, MRC, internal data, signature, QR code to RRA's receipt check); the 80 mm receipt, the credit note slip and the A4 PDF print RRA's SDC block. Printing is counted: the first print is the original, later ones are copies (COPY, CS / CR); a credit note's slip says REFUND and names its sale's receipt. The buyer's purchase code at the counter (with their TIN) and the refund reason on credit notes (RRA's 13 codes) go to EBM
+- [ ] Stock reporting to RRA (stock in/out after sales, purchases, cuts and adjustments, and the quantity left: /stock/saveStockItems, /stockMaster/saveStockMaster, VSDC spec 2.2): not built; waits for the business's answer below (M)
 
 ## M5 — Customer and supplier accounts, closing the books
 
@@ -209,7 +210,13 @@ Answers change what gets built; record each answer next to the question.
 - [ ] Returns: built for the cashier, the owner and the admin (RETURN_SALE), with a reason and no approval; cash refunds only as far as the till holds. Should a refund above an amount, or cullet returns (no glass back on the rack), need the owner's approval? (POS-09, ADM-04)
 - [ ] Deposits on orders: built as SRS 5.3 says (the invoice and its VAT at the deposit, the balance a receivable until collection), the smallest deposit 50% of the order (Settings). Confirm the share with the owner, and with the accountant that VAT at the deposit is right for EBM (POS-08)
 - [ ] Which mobile-money providers and card terminals are used? (SRS 8.3)
-- [ ] Is the business registered on EBM, and with which VSDC setup? (SRS 8.3)
+- [ ] Is the business registered on EBM, and with which VSDC setup? (SRS 8.3) Built for RRA's VSDC (Settings → EBM fiscal signing): its TIN (company TIN), branch (bhfId, 00 = head office), the device serial RRA approved and where the VSDC runs; the simulator signs until then
+- [ ] EBM item classes of glass and of processing (RRA codes from the VSDC's classification list) and the glass's country of origin, part of each item code (Settings; built: RW by default) (TAX-02)
+- [ ] EBM tax letters: seeded A exempt, B 18%, C zero-rated. RRA's code list says A-EX, B 18%, C and D without saying what C is (D is what non-VAT taxpayers use). Check against the VSDC's codes once it runs (TAX-01)
+- [ ] Copies: TAX-02 says every copy is submitted to EBM; RRA's VSDC spec v1.0.5 says to send only normal sales, and RRA's own client prints copies locally. Built like RRA's client: copies are counted and printed with COPY and CS / CR, not sent. Confirm with RRA (TAX-02)
+- [ ] Purchase code: RRA asks business buyers for a purchase code (VSDC errors 881-884). Built: an optional field at the counter next to the buyer's TIN, correctable on a refused receipt, not sent with refunds. Should the counter require it whenever a TIN is given? (TAX-04)
+- [ ] Stock reporting to RRA (stock in/out and the quantity left, VSDC spec 2.2): does the registration require it, and in m²? Not built (TAX-02)
+- [ ] A glass line goes to EBM as m² at 2 decimals with the unit price = amount ÷ m² (the amount stays exact). Confirm RRA accepts it, or whether glass should go per piece (TAX-02)
 
 **Fleet and go-live**
 - [ ] Do vehicles carry only pre-cut pieces, or also full sheets for on-site cutting? (SRS 8.3)
@@ -226,6 +233,7 @@ Answers change what gets built; record each answer next to the question.
 - Transfer TRF-WH-2026-000001 (U-WH-000038 to WH-A-R01); adjustments ADJ-WH-2026-000001 (U-WH-000039 broken), -000002 (rejected), -000003 (U-WH-000040 resized to U-WH-000061), -000004 (withdrawn)
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
 - Counter sales on 2026-10-09 by qa-admin: tills TILL-WH-2026-000001..6 (all closed; -000002 sold U-WH-000061 and U-WH-000011 on INV-WH-2026-000001, 389,408 RWF to "Jean Habimana", TIN 102938475, half cash half mobile money MP-778812, and closed 500 RWF short, "Change given twice"; the others opened and closed for checks without a sale), and their journals
+- M4 tests on 2026-10-10 (EBM simulator): Settings company TIN 100200300 (was empty) and EBM item classes 3017170000 (glass) and 7213150000 (processing), test values; simulated receipts INV-WH-2026-000022 (EBM no. 1), INV-WH-2026-000023 (EBM no. 2), CN-WH-2026-000005 (EBM no. 3), INV-WH-2026-000024 (EBM no. 4), INV-WH-2026-000025 (EBM no. 5); CN-WH-2026-000005 (U-WH-000016 back on WH-A-R04, "E2E EBM: damaged on delivery", refund reason Damaged); the sale to "E2E Buyer Ltd" (TIN 102938475, purchase code AB12C3); ebm_items RW2NTXM2X0000001 (CLR-6, simulator); the simulated device SIMULATOR (ebm_devices); notifications EBM backlog to the owner, accountant and admin accounts; tills TILL-WH-2026-000028, TILL-WH-2026-000029, TILL-WH-2026-000030
 - M6 tests on 2026-10-10: CLR-6 given a reorder level of 100,000 m² and back to none (a low stock alert raised and cleared: alert_states LOW_STOCK:<CLR-6>); MJ-WH-2026-000004 (qa-admin, Dr Bank / Cr Main Cash Vault 1,500, "Bank charges for October (E2E notifications)", rejected by owner38648 "E2E: not our bank charge"); notifications of these to qa-admin, admin and owner38648 (the real admin account has 2 unread); customs-entry.pdf kept on SHP-WH-2026-000002 and broken-sheet.png kept and removed on ADJ-WH-2026-000001 ("E2E: wrong unit"); their files in the MinIO bucket iwarehouse-files (container iwarehouse-minio, port 9010 here)
 - Period close, statements and reconciliation tests on 2026-10-09: September 2026 closed by qa-admin, reopened by owner38648 ("E2E: a supplier invoice came late") and closed again: the books are closed through 30/09/2026 (go-live starts afresh). REC-WH-2026-000001 (Bank, statement of 09/10/2026 at 875.20, cancelled "E2E: the deposit pair was on the statement after all") and REC-WH-2026-000002 (the same statement, every Bank line cleared)
 - Manual journal tests on 2026-10-09: MJ-WH-2026-000001 (qa-admin, Dr Bank / Cr Main Cash Vault 100,000, approved by owner38648 as JV-WH-2026-000074, reversed by qa-admin as JV-WH-2026-000075 "E2E: the deposit did not happen"), -000002 (a copy, withdrawn), -000003 (a copy, rejected by owner38648). Journals up to JV-WH-2026-000075

@@ -15,6 +15,13 @@
         .totals tr.grand td { font-size: 11pt; font-weight: bold; border-top: 1.5px solid #374151; border-bottom: none; }
         .note { margin-top: 14px; color: #6b7280; }
         .sub { color: #6b7280; font-size: 7.5pt; }
+        .sdc { width: 100%; margin-top: 16px; border: 0.75px solid #9ca3af; }
+        .sdc td { border: none; padding: 2px 8px; vertical-align: top; }
+        .sdc .sdc-title { font-weight: bold; padding-top: 6px; }
+        .sdc .sdc-qr { width: 30mm; padding: 6px; }
+        .sdc .sdc-qr img { width: 28mm; height: 28mm; }
+        .copy-mark { font-size: 12pt; font-weight: bold; letter-spacing: 2pt; }
+        .not-fiscal { font-weight: bold; color: #b91c1c; }
     </style>
 </head>
 <body>
@@ -27,6 +34,7 @@
         <td>
             <div class="doc-title" th:text="#{invoicePdf.title}">INVOICE</div>
             <div class="mono" th:text="${invoice.number}">INV-WH-2026-000001</div>
+            <div class="copy-mark" th:if="${copy}" th:text="#{posReceipt.copy}">COPY</div>
         </td>
         <td>
             <table class="facts">
@@ -89,6 +97,20 @@
     <span th:text="#{invoicePdf.credited}">Credit notes on this invoice:</span>
     <span th:each="cn, it : ${creditNotes}" th:text="${cn.number + ' (' + #temporals.format(cn.creditDate, 'dd/MM/yyyy') + ', ' + @num.money(cn.totalAmount) + ')' + (it.last ? '' : '; ')}">CN-WH-2026-000001 (09/10/2026, 195,008)</span>
 </div>
-<div class="note" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
+<!--/* The EBM signature (TAX-02), laid out as RRA's receipts print it, with the receipt's QR code */-->
+<table class="sdc" th:if="${ebm != null and ebm.signed}">
+    <tr>
+        <td class="sdc-title" colspan="2" th:text="#{posReceipt.sdcInfo}">SDC INFORMATION</td>
+        <td class="sdc-qr" rowspan="7"><img th:src="${ebmQr}" alt="QR" /></td>
+    </tr>
+    <tr><td th:text="#{posReceipt.sdcId}">SDC ID:</td><td class="mono" th:text="${ebm.sdcId}">SDC010000005</td></tr>
+    <tr><td th:text="#{posReceipt.receiptNumber}">RECEIPT NUMBER:</td><td class="mono" th:text="${ebm.receiptLabel(copy) + ' · ' + #messages.msg('ebm.invcNo') + ' ' + ebm.invcNo}">27/32 NS · EBM no. 15</td></tr>
+    <tr><td th:text="#{posReceipt.internalData}">Internal Data:</td><td class="mono" th:text="${ebm.intrlDataGroups}">GZGG-IZLY-TJSS-D7YL-YLGI-IG6F-CY</td></tr>
+    <tr><td th:text="#{posReceipt.signature}">Receipt Signature:</td><td class="mono" th:text="${ebm.rcptSignGroups}">TQZM-KL57-AGBM-STPO</td></tr>
+    <tr><td th:text="#{posReceipt.mrc}">MRC:</td><td class="mono" th:text="${ebm.mrcNo}">WIS01006230</td></tr>
+    <tr><td th:text="#{ebm.vsdcDate}">Signed on</td><td th:text="${#temporals.format(ebm.vsdcDate ?: ebm.signedAt, 'dd/MM/yyyy HH:mm:ss')}">10/10/2026 14:05:09</td></tr>
+</table>
+<div class="note not-fiscal" th:if="${ebm != null and ebm.signed and ebm.simulated}" th:text="#{posReceipt.notFiscal}">SIMULATOR: NOT A FISCAL RECEIPT</div>
+<div class="note" th:unless="${ebm != null and ebm.signed}" th:text="#{posReceipt.unsigned}">NOT YET SIGNED BY EBM: NOT A FISCAL RECEIPT</div>
 </body>
 </html>

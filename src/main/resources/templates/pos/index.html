@@ -186,6 +186,12 @@
                             <input type="text" id="buyerTin" name="buyerTin" maxlength="9" inputmode="numeric" class="input-code"
                                    th:value="${sale != null ? sale.buyerTin : ''}" th:placeholder="#{pos.buyerTinPh}">
                         </div>
+                        <div class="form-group">
+                            <label for="purchaseCode" th:text="#{pos.purchaseCode}">Purchase code</label>
+                            <input type="text" id="purchaseCode" name="purchaseCode" maxlength="6" autocomplete="off" class="input-code"
+                                   th:value="${sale != null ? sale.purchaseCode : ''}" th:placeholder="#{pos.purchaseCodePh}">
+                            <span class="hint" th:text="#{pos.purchaseCodeHint}">From a buyer with a TIN, for EBM</span>
+                        </div>
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-outline" th:text="#{pos.setCustomer}">Use this customer</button>

@@ -13,7 +13,7 @@
     </script>
     <link rel="stylesheet" href="/css/iwarehouse.css">
 </head>
-<body class="label-page receipt-page">
+<body class="label-page receipt-page" th:classappend="${!printNow and ebm != null and ebm.signed} ? 'print-locked'">
     <!-- Toolbar: screen only -->
     <div class="label-toolbar">
         <div>
@@ -22,11 +22,14 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/credit-notes/{id}(id=${note.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
-            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+            <form th:action="@{/credit-notes/{id}/receipt/print(id=${note.id})}" method="post" class="row-action-form">
+                <button type="submit" class="btn btn-primary" th:text="${ebm != null and ebm.signed and ebm.printedAt != null} ? #{posReceipt.printCopy} : #{label.printNow}">Print</button>
+            </form>
         </div>
     </div>
+    <p class="print-locked-note" th:text="#{posReceipt.printLocked}">Print with the Print button: the first print is the original, the next ones copies.</p>
 
-    <!-- The credit note (POS-09, without the EBM signature until M4) -->
+    <!-- The credit note (POS-09) and its EBM refund receipt (TAX-02) -->
     <div class="receipt">
         <div class="receipt-head">
             <div class="receipt-company" th:text="${companyName}">iWarehouse</div>
@@ -67,7 +70,8 @@
         </div>
         <div class="receipt-foot" th:text="${note.reason}">Wrong size ordered</div>
         <div class="receipt-rule"></div>
-        <div class="receipt-foot" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
+        <th:block th:replace="~{fragments/ebm :: receipt(${ebm}, ${ebmQr}, ${copy}, ${note.postedAt})}"></th:block>
     </div>
+    <script th:if="${printNow}">window.addEventListener('load', function () { window.print(); });</script>
 </body>
 </html>

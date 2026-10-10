@@ -80,6 +80,7 @@ public class SalesService {
     private final DocumentNumberService numbers;
     private final SettingService settingService;
     private final Notifier notifier;
+    private final EbmService ebmService;
     private final Clock clock;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
@@ -89,8 +90,10 @@ public class SalesService {
                         QuotationRepository quotationRepo, CreditNoteLineRepository creditLineRepo, TillService tillService,
                         CuttingJobService cuttingJobService,
                         StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
-                        DocumentNumberService numbers, SettingService settingService, Notifier notifier, Clock clock) {
+                        DocumentNumberService numbers, SettingService settingService, Notifier notifier, EbmService ebmService,
+                        Clock clock) {
         this.notifier = notifier;
+        this.ebmService = ebmService;
         this.repo = repo;
         this.paymentRepo = paymentRepo;
         this.unitRepo = unitRepo;
@@ -330,6 +333,12 @@ public class SalesService {
     /** Who the sale is for: the customer (their price list reprices the lines), and the name and TIN printed (TAX-04). */
     @Transactional
     public SalesInvoice setCustomer(UUID customerId, String buyerName, String buyerTin) {
+        return setCustomer(customerId, buyerName, buyerTin, null);
+    }
+
+    /** ...with the buyer's EBM purchase code (prcOrdCd), which goes with a TIN. */
+    @Transactional
+    public SalesInvoice setCustomer(UUID customerId, String buyerName, String buyerTin, String purchaseCode) {
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cartOrNew(session);
         Customer customer = customerRepo.findById(customerId == null ? sale.getCustomer().getId() : customerId)
@@ -342,6 +351,10 @@ public class SalesService {
         String name = PartyRules.clean(buyerName);
         if (name != null && name.length() > 100) {
             throw BusinessException.onField("buyerName", "sale.buyerName.size");
+        }
+        String code = PartyRules.clean(purchaseCode);
+        if (code != null && !code.matches("[A-Za-z0-9]{1,6}")) {
+            throw BusinessException.onField("purchaseCode", "sale.purchaseCode.invalid");
         }
         if (!customer.getId().equals(sale.getCustomer().getId())) {
             Map<UUID, StockUnit> units = unitsOf(sale);
@@ -365,6 +378,7 @@ public class SalesService {
         }
         sale.setBuyerName(name);
         sale.setBuyerTin(tin != null ? tin : customer.getType() != CustomerType.WALK_IN ? customer.getTin() : null);
+        sale.setPurchaseCode(sale.getBuyerTin() == null ? null : code);
         return sale;
     }
 
@@ -495,6 +509,7 @@ public class SalesService {
             });
         }
         JournalEntry journal = postingService.sale(sale, payments, before);
+        ebmService.queueSale(sale);                                     // signed after the commit; queued if EBM is down (TAX-03)
         return new Paid(sale, split.change(), journal, createJobs(sale));
     }
 

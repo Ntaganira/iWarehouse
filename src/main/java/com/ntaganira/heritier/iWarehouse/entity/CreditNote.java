@@ -57,6 +57,10 @@ public class CreditNote extends BaseEntity {
     @Column(nullable = false, length = 255, updatable = false)
     private String reason;
 
+    /** The refund reason EBM reports (spec 4.16, rfdRsnCd): 01 to 13, 06 "Refund" by default. */
+    @Column(name = "refund_reason", length = 2, updatable = false)
+    private String refundReason;
+
     @Column(name = "net_amount", nullable = false, precision = 18, scale = 2, updatable = false)
     private BigDecimal netAmount;
 

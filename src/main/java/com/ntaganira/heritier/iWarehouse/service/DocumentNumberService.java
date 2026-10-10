@@ -75,6 +75,39 @@ public class DocumentNumberService {
                 today, value, sequence.getPadding());
     }
 
+    /**
+     * Issues the next plain number of a sequence, for the default branch: the EBM invoice number (invcNo, TAX-02) is an
+     * integer, not a formatted document number. Same lock and rules as next().
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public long nextSerial(DocumentType type) {
+        String branchCode = settingService.branchCode();
+        NumberSequence sequence = repo.findForUpdate(type, branchCode)
+                .orElseThrow(() -> BusinessException.of("numbering.missing", type.name(), branchCode));
+        LocalDate today = LocalDate.now(clock);
+        long value = DocumentNumbers.effectiveNext(sequence.getResetPolicy(), sequence.getPeriodKey(), sequence.getNextValue(), today);
+        sequence.setPeriodKey(DocumentNumbers.periodKey(sequence.getResetPolicy(), today));
+        sequence.setNextValue(value + 1);
+        sequence.setLastIssuedAt(LocalDateTime.now(clock));
+        return value;
+    }
+
+    /**
+     * Moves the default branch's sequence up so its next number is at least {@code next}, when numbers were issued
+     * elsewhere first (the EBM device's last invoice number). Never moves it down. True when it moved.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean raiseTo(DocumentType type, long next) {
+        String branchCode = settingService.branchCode();
+        NumberSequence sequence = repo.findForUpdate(type, branchCode)
+                .orElseThrow(() -> BusinessException.of("numbering.missing", type.name(), branchCode));
+        if (sequence.getNextValue() >= next) {
+            return false;
+        }
+        sequence.setNextValue(next);
+        return true;
+    }
+
     /** Every sequence, by branch and then in DocumentType order. */
     public List<NumberSequence> findAll() {
         return repo.findAll().stream()

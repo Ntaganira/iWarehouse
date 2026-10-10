@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.dto.CreditNoteDto;
+import com.ntaganira.heritier.iWarehouse.ebm.EbmCodes;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.*;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
@@ -62,13 +63,15 @@ public class CreditNoteService {
     private final StockService stockService;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
+    private final EbmService ebmService;
     private final Clock clock;
 
     public CreditNoteService(CreditNoteRepository repo, CreditNoteLineRepository lineRepo, CreditNoteUnitRepository returnedRepo,
                              SalesInvoiceRepository invoiceRepo, SalesDeliveryRepository deliveryRepo, StockUnitRepository unitRepo,
                              ProductRepository productRepo, CuttingJobRepository jobRepo, CuttingJobLineRepository jobLineRepo,
                              SalesService salesService, CuttingJobService cuttingJobService, TillService tillService,
-                             StockService stockService, PostingService postingService, DocumentNumberService numbers, Clock clock) {
+                             StockService stockService, PostingService postingService, DocumentNumberService numbers,
+                             EbmService ebmService, Clock clock) {
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.returnedRepo = returnedRepo;
@@ -84,6 +87,7 @@ public class CreditNoteService {
         this.stockService = stockService;
         this.postingService = postingService;
         this.numbers = numbers;
+        this.ebmService = ebmService;
         this.clock = clock;
     }
 
@@ -334,6 +338,7 @@ public class CreditNoteService {
         TillSession till = tillFor(form);
         SalesInvoice invoice = lockedInvoice(form.getInvoiceId());
         String reason = reason(form);
+        String refundReason = refundReason(form);
 
         // What comes back, and where it goes
         Map<UUID, Returnable> returnable = returnables(invoice).stream()
@@ -381,7 +386,7 @@ public class CreditNoteService {
         products.keySet().forEach(id -> heldBefore.put(id, stockService.heldArea(id)));
         PostingService.StockValues before = postingService.stockValues(products.values());
 
-        CreditNote note = save(CreditNoteKind.RETURN, invoice, reason, totals, refund, till);
+        CreditNote note = save(CreditNoteKind.RETURN, invoice, reason, refundReason, totals, refund, till);
         BigDecimal restockedCost = BigDecimal.ZERO;
         BigDecimal culletCost = BigDecimal.ZERO;
         Map<UUID, BigDecimal> areaBack = new HashMap<>();
@@ -421,6 +426,7 @@ public class CreditNoteService {
         TillSession till = tillFor(form);
         SalesInvoice invoice = lockedInvoice(form.getInvoiceId());
         String reason = reason(form);
+        String refundReason = refundReason(form);
 
         Map<UUID, Cancellable> cancellable = cancellables(invoice).stream()
                 .collect(Collectors.toMap(c -> c.line().getId(), Function.identity()));
@@ -456,7 +462,7 @@ public class CreditNoteService {
         Vat.Totals totals = totals(lines);
         Refund refund = refund(form, invoice, totals, till);
 
-        CreditNote note = save(CreditNoteKind.CANCEL, invoice, reason, totals, refund, till);
+        CreditNote note = save(CreditNoteKind.CANCEL, invoice, reason, refundReason, totals, refund, till);
         String why = "Given up on " + note.getNumber() + ": " + reason;
         for (Map.Entry<Cancellable, Integer> e : chosen.entrySet()) {
             Cancellable c = e.getKey();
@@ -497,6 +503,15 @@ public class CreditNoteService {
         invoiceRepo.lockById(id).orElseThrow(() -> new NotFoundException("SalesInvoice", id));
         return invoiceRepo.findDetailedById(id).filter(i -> i.getStatus() == SalesInvoiceStatus.POSTED)
                 .orElseThrow(() -> new NotFoundException("SalesInvoice", id));
+    }
+
+    /** The EBM refund reason chosen (spec 4.16). */
+    private static String refundReason(CreditNoteDto form) {
+        String code = form.getRefundReason() == null ? EbmCodes.DEFAULT_REFUND_REASON : form.getRefundReason().trim();
+        if (!EbmCodes.REFUND_REASONS.contains(code)) {
+            throw BusinessException.onField("refundReason", "creditNote.refundReason.invalid");
+        }
+        return code;
     }
 
     private static String reason(CreditNoteDto form) {
@@ -561,7 +576,9 @@ public class CreditNoteService {
         return new Refund(split, method, method.needsReference() ? reference : null);
     }
 
-    private CreditNote save(CreditNoteKind kind, SalesInvoice invoice, String reason, Vat.Totals totals, Refund refund, TillSession till) {
+    /** Saves the issued credit note and queues its EBM refund receipt (TAX-02), in the same transaction. */
+    private CreditNote save(CreditNoteKind kind, SalesInvoice invoice, String reason, String refundReason, Vat.Totals totals,
+                            Refund refund, TillSession till) {
         LocalDateTime now = LocalDateTime.now(clock);
         CreditNote note = new CreditNote();
         note.setNumber(numbers.next(DocumentType.CREDIT_NOTE));
@@ -570,6 +587,7 @@ public class CreditNoteService {
         note.setCustomer(invoice.getCustomer());
         note.setCreditDate(now.toLocalDate());
         note.setReason(reason);
+        note.setRefundReason(refundReason);
         note.setNetAmount(totals.net());
         note.setVatAmount(totals.vat());
         note.setTotalAmount(totals.gross());
@@ -580,7 +598,9 @@ public class CreditNoteService {
         note.setTillSessionId(refund.method() == PaymentMethod.CASH ? till.getId() : null);
         note.setPostedAt(now);
         note.setPostedBy(AppUserPrincipal.currentUsername());
-        return repo.save(note);
+        CreditNote saved = repo.save(note);
+        ebmService.queueRefund(saved);
+        return saved;
     }
 
     private void saveUnit(CreditNote note, SalesInvoice invoice, SalesInvoiceLine line, StockUnit unit, ReturnOutcome outcome,

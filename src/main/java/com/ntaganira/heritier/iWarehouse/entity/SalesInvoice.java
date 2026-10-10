@@ -57,6 +57,10 @@ public class SalesInvoice extends BaseEntity {
     @Column(name = "buyer_tin", length = 9)
     private String buyerTin;
 
+    /** The buyer's EBM purchase code (prcOrdCd), given with their TIN. */
+    @Column(name = "purchase_code", length = 6)
+    private String purchaseCode;
+
     @Column(name = "invoice_date")
     private LocalDate invoiceDate;
 

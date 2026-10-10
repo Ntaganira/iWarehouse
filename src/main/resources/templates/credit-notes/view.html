@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <div class="doc-note is-warning" th:text="#{creditNote.ebmPending}">Not signed by EBM yet: fiscal signing comes with the EBM connection.</div>
+    <th:block th:replace="~{fragments/ebm :: status(${ebm})}"></th:block>
 
     <div class="section">
         <div class="section-body">
@@ -61,10 +61,17 @@
                     <label th:text="${note.cancel} ? #{creditNote.cancelReason} : #{creditNote.reason}">Why it comes back</label>
                     <div class="value" th:text="${note.reason}">Wrong size ordered</div>
                 </div>
+                <div class="item" th:if="${note.refundReason != null}">
+                    <label th:text="#{creditNote.refundReason}">Refund reason (EBM)</label>
+                    <div class="value" th:text="#{${'ebm.refundReason.' + note.refundReason}}">Refund</div>
+                </div>
                 <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
             </div>
         </div>
     </div>
+
+    <!-- The EBM signature of its refund receipt (TAX-02) -->
+    <div th:replace="~{fragments/ebm :: signature(${ebm}, ${ebmQr})}"></div>
 
     <div class="section" th:unless="${#lists.isEmpty(units)}">
         <div class="section-header">

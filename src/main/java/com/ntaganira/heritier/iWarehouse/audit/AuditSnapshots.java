@@ -61,6 +61,17 @@ public final class AuditSnapshots {
         return changed;
     }
 
+    /** The audit stamps BaseEntity sets on every update: on their own they are no change. */
+    private static final Set<String> STAMPS = Set.of("updatedAt", "updatedBy");
+
+    /**
+     * True when nothing worth a change row changed: no field, or only the update stamps (an update of ignored fields
+     * still moves updatedAt, e.g. an EBM receipt's next attempt).
+     */
+    public static boolean nothingChanged(List<String> changed) {
+        return STAMPS.containsAll(changed);
+    }
+
     /** True if the field name is in the masked set (case-insensitive). */
     public static boolean isMaskedName(String field, Set<String> maskedLowerCase) {
         return field != null && maskedLowerCase.contains(field.toLowerCase(Locale.ROOT));

@@ -16,12 +16,14 @@
                sec:authorize="hasAuthority('PERM_RETURN_SALE')" th:text="#{creditNote.returnGoods}">Return goods</a>
             <a th:href="@{/credit-notes/cancel(invoice=${invoice.id})}" class="btn btn-outline" th:if="${canCancel}"
                sec:authorize="hasAuthority('PERM_RETURN_SALE')" th:text="#{creditNote.giveUpPieces}">Give up pieces</a>
-            <a th:href="@{/invoices/{id}/pdf(id=${invoice.id})}" class="btn btn-outline" th:title="#{invoice.pdfTitle}" th:text="#{export.pdf}">PDF</a>
+            <form th:action="@{/invoices/{id}/pdf(id=${invoice.id})}" method="post" target="_blank" class="row-action-form">
+                <button type="submit" class="btn btn-outline" th:title="#{invoice.pdfTitle}" th:text="#{export.pdf}">PDF</button>
+            </form>
             <a th:href="@{/invoices/{id}/receipt(id=${invoice.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{invoice.printReceipt}">Print the receipt</a>
         </div>
     </div>
 
-    <div class="doc-note is-warning" th:text="#{invoice.ebmPending}">Not signed by EBM yet: fiscal signing comes with the EBM connection (M4).</div>
+    <th:block th:replace="~{fragments/ebm :: status(${ebm})}"></th:block>
     <div class="doc-note is-warning" th:if="${invoice.hasBalanceDue()}">
         <span th:text="#{invoice.balanceNote(${@num.money(invoice.balanceDue)})}">Balance due on collection: 97,504 RWF. The pieces are handed over once it is paid.</span>
         <button type="button" class="btn btn-primary btn-sm" data-modal-open="balance-modal" sec:authorize="hasAuthority('PERM_SELL')"
@@ -45,6 +47,10 @@
                 <div class="item">
                     <label th:text="#{invoice.buyerTin}">Buyer's TIN</label>
                     <div class="value mono" th:text="${invoice.buyerTin ?: '—'}">102938475</div>
+                </div>
+                <div class="item" th:if="${invoice.purchaseCode != null}">
+                    <label th:text="#{invoice.purchaseCode}">Purchase code</label>
+                    <div class="value mono" th:text="${invoice.purchaseCode}">123456</div>
                 </div>
                 <div class="item">
                     <label th:text="#{invoice.till}">Till</label>
@@ -81,6 +87,9 @@
             </div>
         </div>
     </div>
+
+    <!-- The EBM signature and the receipt's QR code (TAX-02) -->
+    <div th:replace="~{fragments/ebm :: signature(${ebm}, ${ebmQr})}"></div>
 
     <!-- Sizes to cut (POS-02): their cutting jobs and the pieces to hand over (SRS 5.3) -->
     <div class="section" th:if="${custom}">

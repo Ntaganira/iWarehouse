@@ -98,6 +98,14 @@
                         <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
                     </div>
                     <div class="form-group">
+                        <label for="refundReason" th:text="#{creditNote.refundReason}">Refund reason (EBM)</label>
+                        <select id="refundReason" th:field="*{refundReason}" required th:classappend="${#fields.hasErrors('refundReason')} ? 'is-invalid'">
+                            <option th:each="c : ${refundReasons}" th:value="${c}" th:text="#{${'ebm.refundReason.' + c}}">Refund</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('refundReason')}" th:errors="*{refundReason}"></span>
+                        <span class="hint" th:text="#{creditNote.refundReasonHint}">Reported to RRA with the refund receipt</span>
+                    </div>
+                    <div class="form-group">
                         <label for="refundMethod" th:text="#{creditNote.refundMethod}">Refund</label>
                         <select id="refundMethod" th:field="*{refundMethod}" th:classappend="${#fields.hasErrors('refundMethod')} ? 'is-invalid'">
                             <option value="" th:text="#{creditNote.refundPh}">How the customer is refunded</option>

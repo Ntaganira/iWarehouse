@@ -202,6 +202,68 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.ebm}">EBM fiscal signing</h3>
+                <p class="hint" th:text="#{settings.group.ebmHint}">How RRA signs every invoice and credit note (TAX-02)</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="ebmMode" th:text="#{settings.ebmMode}">Signed by</label>
+                    <select id="ebmMode" th:field="*{ebmMode}" required th:classappend="${#fields.hasErrors('ebmMode')} ? 'is-invalid'">
+                        <option th:each="m : ${ebmModes}" th:value="${m}" th:text="#{${'settings.ebmMode.' + m}}">The simulator</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmMode')}" th:errors="*{ebmMode}"></span>
+                    <span class="hint" th:text="#{settings.ebmModeHint}">Switch to the VSDC once RRA has installed it</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmVsdcUrl" th:text="#{settings.ebmVsdcUrl}">VSDC address</label>
+                    <input type="text" id="ebmVsdcUrl" th:field="*{ebmVsdcUrl}" maxlength="250" autocomplete="off" inputmode="url" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('ebmVsdcUrl')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmVsdcUrl')}" th:errors="*{ebmVsdcUrl}"></span>
+                    <span class="hint" th:text="#{settings.ebmVsdcUrlHint}">Where RRA's VSDC runs</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmBranchId" th:text="#{settings.ebmBranchId}">Branch (bhfId)</label>
+                    <input type="text" id="ebmBranchId" th:field="*{ebmBranchId}" maxlength="2" autocomplete="off" inputmode="numeric" class="input-code" required
+                           th:classappend="${#fields.hasErrors('ebmBranchId')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmBranchId')}" th:errors="*{ebmBranchId}"></span>
+                    <span class="hint" th:text="#{settings.ebmBranchIdHint}">00 for the head office</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmDeviceSerial" th:text="#{settings.ebmDeviceSerial}">Device serial</label>
+                    <input type="text" id="ebmDeviceSerial" th:field="*{ebmDeviceSerial}" maxlength="100" autocomplete="off" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('ebmDeviceSerial')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmDeviceSerial')}" th:errors="*{ebmDeviceSerial}"></span>
+                    <span class="hint" th:text="#{settings.ebmDeviceSerialHint}">The serial RRA approved</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmGlassItemClass" th:text="#{settings.ebmGlassItemClass}">Item class of glass</label>
+                    <input type="text" id="ebmGlassItemClass" th:field="*{ebmGlassItemClass}" maxlength="10" autocomplete="off" class="input-code" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('ebmGlassItemClass')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmGlassItemClass')}" th:errors="*{ebmGlassItemClass}"></span>
+                    <span class="hint" th:text="#{settings.ebmGlassItemClassHint}">RRA item classification</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmServiceItemClass" th:text="#{settings.ebmServiceItemClass}">Item class of processing</label>
+                    <input type="text" id="ebmServiceItemClass" th:field="*{ebmServiceItemClass}" maxlength="10" autocomplete="off" class="input-code" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('ebmServiceItemClass')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmServiceItemClass')}" th:errors="*{ebmServiceItemClass}"></span>
+                    <span class="hint" th:text="#{settings.ebmServiceItemClassHint}">RRA item classification</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmOriginCountry" th:text="#{settings.ebmOriginCountry}">Country of origin of the glass</label>
+                    <input type="text" id="ebmOriginCountry" th:field="*{ebmOriginCountry}" maxlength="2" autocomplete="off" class="input-code" required autocapitalize="characters" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('ebmOriginCountry')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmOriginCountry')}" th:errors="*{ebmOriginCountry}"></span>
+                    <span class="hint" th:text="#{settings.ebmOriginCountryHint}">2 letters</span>
+                </div>
+                <div class="form-group">
+                    <label for="ebmReceiptUrl" th:text="#{settings.ebmReceiptUrl}">Receipt check address</label>
+                    <input type="text" id="ebmReceiptUrl" th:field="*{ebmReceiptUrl}" maxlength="250" autocomplete="off" inputmode="url" required spellcheck="false"
+                           th:classappend="${#fields.hasErrors('ebmReceiptUrl')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('ebmReceiptUrl')}" th:errors="*{ebmReceiptUrl}"></span>
+                    <span class="hint" th:text="#{settings.ebmReceiptUrlHint}">The QR code opens it</span>
+                </div>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" th:text="#{settings.save}">Save Settings</button>
                 <a href="/settings" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>

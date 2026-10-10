@@ -114,8 +114,8 @@ public class DataChangeEventListener
         Map<String, Object> before = oldState == null ? null : snapshot(session, persister, oldState, info);
         Map<String, Object> after = newState == null ? null : snapshot(session, persister, newState, info);
         List<String> changed = AuditSnapshots.changedFields(before, after);
-        if (operation == ChangeOperation.UPDATE && before != null && changed.isEmpty()) {
-            return; // only ignored, collection or version fields changed
+        if (operation == ChangeOperation.UPDATE && before != null && AuditSnapshots.nothingChanged(changed)) {
+            return; // only ignored, collection or version fields changed, or just the update stamps
         }
         before = mask(before, info);
         after = mask(after, info);

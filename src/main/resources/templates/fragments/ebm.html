@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<!--/* A document's EBM state (TAX-02, TAX-03): signed, waiting, refused, or issued before the EBM connection. */-->
+<th:block th:fragment="status(ebm)">
+    <div class="doc-note" th:if="${ebm == null}" th:text="#{ebm.note.none}">Not sent to EBM: issued before the EBM connection.</div>
+    <th:block th:if="${ebm != null}">
+        <div class="doc-note is-success" th:if="${ebm.signed}">
+            <span th:text="#{ebm.note.signed(${ebm.receiptLabel}, ${#temporals.format(ebm.signedAt, 'dd/MM/yyyy HH:mm')})}">Signed by EBM: receipt 27/32 NS on 10/10/2026 14:05.</span>
+            <span th:if="${ebm.simulated}" th:text="#{ebm.note.simulated}">Signed by the simulator: not a fiscal receipt.</span>
+            <a sec:authorize="hasAuthority('PAGE_EBM')" th:href="@{/ebm/{id}(id=${ebm.id})}" th:text="#{ebm.note.details}">Details</a>
+        </div>
+        <div class="doc-note is-warning" th:if="${ebm.queued}">
+            <span th:text="#{ebm.note.queued(${#temporals.format(ebm.createdAt, 'dd/MM/yyyy HH:mm')}, ${ebm.attempts})}">Waiting for the EBM signature since 10/10/2026 14:05 (2 attempts so far): it is signed automatically once EBM answers.</span>
+            <a sec:authorize="hasAuthority('PAGE_EBM')" th:href="@{/ebm/{id}(id=${ebm.id})}" th:text="#{ebm.note.details}">Details</a>
+        </div>
+        <div class="doc-note is-danger" th:if="${ebm.failed}">
+            <span th:text="#{ebm.note.failed(${ebm.lastError})}">EBM refused this receipt: Purchase code is mandatory</span>
+            <a sec:authorize="hasAuthority('PAGE_EBM')" th:href="@{/ebm/{id}(id=${ebm.id})}" th:text="#{ebm.note.details}">Details</a>
+        </div>
+    </th:block>
+</th:block>
+
+<!--/* The signature RRA returned, with the receipt's QR code, as a section of a page. */-->
+<div th:fragment="signature(ebm, qr)" class="section" th:if="${ebm != null and ebm.signed}">
+    <div class="section-header">
+        <h2 th:text="#{ebm.signature}">EBM signature</h2>
+        <span class="badge badge-warning" th:if="${ebm.simulated}" th:text="#{ebm.simulated}">Simulator: not a fiscal receipt</span>
+    </div>
+    <div class="section-body unit-summary">
+        <div class="unit-qr" th:utext="${qr}" th:title="#{ebm.qrTitle}"></div>
+        <div class="detail-list">
+            <div class="item">
+                <label th:text="#{ebm.receiptNo}">Receipt number</label>
+                <div class="value mono strong" th:text="${ebm.receiptLabel}">27/32 NS</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.invcNo}">EBM no.</label>
+                <div class="value mono" th:text="${ebm.invcNo}">15</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.sdcId}">SDC ID</label>
+                <div class="value mono" th:text="${ebm.sdcId}">SDC010000005</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.mrcNo}">MRC</label>
+                <div class="value mono" th:text="${ebm.mrcNo}">WIS01006230</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.intrlData}">Internal data</label>
+                <div class="value mono" th:text="${ebm.intrlDataGroups}">GZGG-IZLY-TJSS-D7YL-YLGI-IG6F-CY</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.rcptSign}">Receipt signature</label>
+                <div class="value mono" th:text="${ebm.rcptSignGroups}">TQZM-KL57-AGBM-STPO</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.vsdcDate}">Signed on</label>
+                <div class="value" th:text="${#temporals.format(ebm.vsdcDate ?: ebm.signedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</div>
+            </div>
+            <div class="item">
+                <label th:text="#{ebm.prints}">Printed</label>
+                <div class="value" th:text="${ebm.printedAt == null} ? #{ebm.notPrinted}
+                        : #{ebm.printsValue(${#temporals.format(ebm.printedAt, 'dd/MM/yyyy HH:mm')}, ${ebm.copies})}">original 10/10/2026 14:06 · 1 copy</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--/*
+  The SDC block of an 80 mm receipt, as RRA's receipts print it, after the receipt's own dashed rule. A copy says COPY and its receipt number CS / CR;
+  a refund says REFUND and names its sale's EBM number. Unsigned: says it is not a fiscal receipt yet.
+*/-->
+<th:block th:fragment="receipt(ebm, qr, copy, issuedAt)">
+    <th:block th:if="${ebm != null and ebm.signed}">
+        <div class="receipt-head receipt-total" th:if="${copy}" th:text="#{posReceipt.copy}">COPY</div>
+        <th:block th:if="${ebm.refund}">
+            <div class="receipt-head receipt-total" th:text="#{posReceipt.refund}">REFUND</div>
+            <div class="receipt-head" th:text="#{posReceipt.refundOf(${ebm.orgInvcNo})}">REF. NORMAL RECEIPT#: 15</div>
+        </th:block>
+        <div class="receipt-rule" th:if="${copy or ebm.refund}"></div>
+        <div class="receipt-head strong" th:text="#{posReceipt.sdcInfo}">SDC INFORMATION</div>
+        <div class="receipt-row" th:with="at=${ebm.vsdcDate ?: ebm.signedAt}">
+            <span th:text="#{posReceipt.sdcDate(${#temporals.format(at, 'dd/MM/yyyy')})}">Date: 10/10/2026</span>
+            <span th:text="#{posReceipt.sdcTime(${#temporals.format(at, 'HH:mm:ss')})}">Time: 14:05:09</span>
+        </div>
+        <div class="receipt-row"><span th:text="#{posReceipt.sdcId}">SDC ID:</span><span class="mono" th:text="${ebm.sdcId}">SDC010000005</span></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.receiptNumber}">RECEIPT NUMBER:</span><span class="mono" th:text="${ebm.receiptLabel(copy)}">27/32 NS</span></div>
+        <div th:text="#{posReceipt.internalData}">Internal Data:</div>
+        <div class="receipt-head mono" th:text="${ebm.intrlDataGroups}">GZGG-IZLY-TJSS-D7YL-YLGI-IG6F-CY</div>
+        <div th:text="#{posReceipt.signature}">Receipt Signature:</div>
+        <div class="receipt-head mono" th:text="${ebm.rcptSignGroups}">TQZM-KL57-AGBM-STPO</div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-row"><span th:text="#{posReceipt.receiptNumber}">RECEIPT NUMBER:</span><span class="mono" th:text="${ebm.invcNo}">15</span></div>
+        <div class="receipt-row">
+            <span th:text="#{posReceipt.sdcDate(${#temporals.format(issuedAt, 'dd/MM/yyyy')})}">Date: 10/10/2026</span>
+            <span th:text="#{posReceipt.sdcTime(${#temporals.format(issuedAt, 'HH:mm:ss')})}">Time: 14:05:02</span>
+        </div>
+        <div class="receipt-row"><span th:text="#{posReceipt.mrc}">MRC:</span><span class="mono" th:text="${ebm.mrcNo}">WIS01006230</span></div>
+        <div class="receipt-qr" th:utext="${qr}"></div>
+        <div class="receipt-foot" th:text="#{posReceipt.endLegal}">End of Legal Receipt</div>
+        <div class="receipt-foot" th:if="${ebm.refund}" th:text="#{posReceipt.refundNote}">REFUND IS APPROVED ONLY FOR ORIGINAL SALES RECEIPT</div>
+        <div class="receipt-foot receipt-total" th:if="${ebm.simulated}" th:text="#{posReceipt.notFiscal}">SIMULATOR: NOT A FISCAL RECEIPT</div>
+    </th:block>
+    <div class="receipt-foot receipt-total" th:unless="${ebm != null and ebm.signed}" th:text="#{posReceipt.unsigned}">NOT YET SIGNED BY EBM: NOT A FISCAL RECEIPT</div>
+</th:block>
+
+</body>
+</html>

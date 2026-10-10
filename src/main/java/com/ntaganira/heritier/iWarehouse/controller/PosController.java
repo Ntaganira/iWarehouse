@@ -255,12 +255,13 @@ public class PosController {
     @PostMapping("/customer")
     @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
     public String customer(@RequestParam(required = false) UUID customerId, @RequestParam(required = false) String buyerName,
-                           @RequestParam(required = false) String buyerTin, @RequestParam(required = false) String back,
-                           RedirectAttributes redirect) {
+                           @RequestParam(required = false) String buyerTin, @RequestParam(required = false) String purchaseCode,
+                           @RequestParam(required = false) String back, RedirectAttributes redirect) {
         try {
-            SalesInvoice sale = salesService.setCustomer(customerId, buyerName, buyerTin);
+            SalesInvoice sale = salesService.setCustomer(customerId, buyerName, buyerTin, purchaseCode);
             activityLogService.record(MODULE, "UPDATE_SALE", "Sale at till " + sale.getTillSession().getNumber() + " for "
-                    + sale.getCustomer().getName() + (sale.getBuyerTin() == null ? "" : ", TIN " + sale.getBuyerTin()), ActivityStatus.SUCCESS);
+                    + sale.getCustomer().getName() + (sale.getBuyerTin() == null ? "" : ", TIN " + sale.getBuyerTin())
+                    + (sale.getPurchaseCode() == null ? "" : ", purchase code given"), ActivityStatus.SUCCESS);
             redirect.addFlashAttribute("flashSuccess", messages.get("sale.customerSet", sale.getBillTo()));
         } catch (BusinessException e) {
             fail(redirect, "UPDATE_SALE", "Failed to set the customer of a sale", e);

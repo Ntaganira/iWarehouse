@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{ebm.title}, ~{::content})}">
+<head><title>EBM Signing - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{ebm.title}">EBM Signing</h1>
+            <div class="subtitle" th:text="#{ebm.subtitle}">Every invoice and credit note signed by RRA through the VSDC</div>
+        </div>
+        <div class="btn-group" sec:authorize="hasAuthority('PERM_MANAGE_EBM')">
+            <form th:action="@{/ebm/simulator/outage}" method="post" class="row-action-form" th:if="${summary.simulated}">
+                <input type="hidden" name="down" th:value="${!summary.outage}">
+                <button type="submit" class="btn btn-outline" th:text="${summary.outage} ? #{ebm.endOutage} : #{ebm.startOutage}">Simulate an outage</button>
+            </form>
+            <form th:action="@{/ebm/retry}" method="post" class="row-action-form" th:if="${summary.unsigned > 0}">
+                <button type="submit" class="btn btn-outline" th:text="#{ebm.retryAll}">Send unsigned again</button>
+            </form>
+            <form th:action="@{/ebm/device/init}" method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{ebm.initialiseConfirm}">
+                <button type="submit" class="btn btn-primary" th:text="#{ebm.initialise}">Initialise the device</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${summary.outage}" th:text="#{ebm.outageOn}">Simulated outage: EBM is down. Sales complete and their receipts wait.</div>
+    <div class="doc-note is-warning" th:unless="${#lists.isEmpty(summary.incomplete)}">
+        <span th:text="#{ebm.incomplete(${#strings.listJoin(summary.incomplete, ', ')})}">Settings still missing before receipts can be signed: company.tin.</span>
+        <a href="/settings/edit" sec:authorize="hasAuthority('PAGE_SETTINGS')" th:text="#{ebm.incompleteLink}">Open the settings</a>
+    </div>
+    <div class="doc-note" th:if="${summary.simulated}" th:text="#{ebm.simulatorNote}">The simulator signs receipts: they print that they are not fiscal.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{ebm.kpi.mode}">Signed by</div>
+                <div class="kpi-value" th:text="#{${'ebm.mode.' + summary.mode}}">Simulator</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${summary.simulated} ? #{ebm.kpi.modeSimulator} : #{ebm.kpi.modeVsdc}">not fiscal: for testing</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{ebm.kpi.unsigned}">Not signed yet</div>
+                <div class="kpi-value" th:text="${summary.unsigned}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${summary.oldest != null} ? #{ebm.kpi.oldest(${#temporals.format(summary.oldest, 'dd/MM/yyyy HH:mm')})} : #{ebm.kpi.none}">none waiting</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{ebm.kpi.failed}">Refused by EBM</div>
+                <div class="kpi-value" th:text="${summary.failed}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{ebm.kpi.failedHint}">wait for a person</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{ebm.kpi.device}">Device</div>
+                <div class="kpi-value" th:classappend="${summary.device != null and #strings.length(summary.device.deviceSerial) > 6} ? 'is-long'"
+                     th:text="${summary.device != null} ? ${summary.device.deviceSerial} : '—'">SIMULATOR</div>
+                <div class="kpi-trend flat">
+                    <span class="vs" th:text="${summary.device == null} ? #{ebm.kpi.deviceNone} : (${summary.device.sdcId != null}
+                            ? #{ebm.kpi.deviceSdc(${summary.device.sdcId}, ${summary.device.mrcNo})} : #{ebm.kpi.deviceInstalled})">SDC SDCSIM000001 · MRC SIM00000001</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{ebm.sectionTitle}">Receipts</span>
+                <span class="section-count" th:text="${receipts.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/ebm}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{ebm.searchPh}" th:aria-label="#{ebm.searchPh}">
+                </div>
+                <select name="show" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${show == null or show == ''}" th:text="#{ebm.show.all}">All receipts</option>
+                    <option value="unsigned" th:selected="${show == 'unsigned'}" th:text="#{ebm.show.unsigned}">Not signed yet</option>
+                    <option value="failed" th:selected="${show == 'failed'}" th:text="#{ebm.show.failed}">Refused</option>
+                    <option value="signed" th:selected="${show == 'signed'}" th:text="#{ebm.show.signed}">Signed</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{ebm.invcNo}">EBM no.</th>
+                        <th th:text="#{ebm.document}">Document</th>
+                        <th th:text="#{ebm.queuedAt}">Issued</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th th:text="#{ebm.receiptNo}">Receipt number</th>
+                        <th class="num" th:text="#{ebm.attempts}">Attempts</th>
+                        <th th:text="#{ebm.lastError}">Last answer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${receipts.content}">
+                        <td><a class="row-link strong mono" th:href="@{/ebm/{id}(id=${r.id})}" th:text="${r.invcNo}">15</a></td>
+                        <td>
+                            <span class="mono nowrap" th:text="${r.documentNumber}">INV-WH-2026-000001</span>
+                            <div class="cell-sub" th:text="#{${'ebm.type.' + r.receiptType}}">Sale</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(r.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 14:05</td>
+                        <td><th:block th:replace="~{ebm/list :: ebmStatus(${r})}"></th:block></td>
+                        <td class="mono nowrap" th:text="${r.receiptLabel ?: '—'}">27/32 NS</td>
+                        <td class="num" th:text="${r.attempts}">1</td>
+                        <td>
+                            <th:block th:replace="~{ebm/list :: lastAnswer(${r})}"></th:block>
+                        </td>
+                    </tr>
+                    <tr th:if="${receipts.totalElements == 0}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{ebm.empty}">No receipts yet</h3>
+                                <p th:text="#{ebm.emptyHint}">Each invoice and credit note issued from now on is sent to EBM</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${receipts}, '/ebm', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A receipt's state as a badge; signed by the simulator says so */-->
+<th:block th:fragment="ebmStatus(r)" th:switch="${r.status.name()}">
+    <span th:case="'SIGNED'" class="badge" th:classappend="${r.simulated} ? 'badge-info' : 'badge-success'"
+          th:text="${r.simulated} ? #{ebm.status.SIMULATED} : #{ebm.status.SIGNED}">Signed</span>
+    <span th:case="'FAILED'" class="badge badge-danger" th:text="#{ebm.status.FAILED}">Refused</span>
+    <span th:case="*" class="badge badge-warning" th:text="#{ebm.status.QUEUED}">Waiting</span>
+</th:block>
+
+<!--/* The last answer: what never reached the VSDC by its own name, a VSDC answer as it came */-->
+<th:block th:fragment="lastAnswer(r)">
+    <span class="text-muted" th:if="${r.signed or r.resultCode == null}">—</span>
+    <th:block th:unless="${r.signed or r.resultCode == null}">
+        <span th:if="${#lists.contains({'CFG', 'NET', 'WAIT', 'ERR'}, r.resultCode)}" th:text="#{${'ebm.code.' + r.resultCode}}">VSDC not reached</span>
+        <span class="mono" th:unless="${#lists.contains({'CFG', 'NET', 'WAIT', 'ERR'}, r.resultCode)}" th:text="${r.resultCode}">910</span>
+        <div class="cell-sub" th:text="${r.lastError}">Connection refused</div>
+    </th:block>
+</th:block>
+</body>
+</html>

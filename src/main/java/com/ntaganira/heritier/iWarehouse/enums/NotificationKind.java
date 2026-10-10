@@ -17,5 +17,7 @@ public enum NotificationKind {
     LOW_STOCK,
     APPROVAL,
     DECISION,
-    SYSTEM
+    SYSTEM,
+    /** EBM refused a receipt, or receipts wait too long for their signature (TAX-03). */
+    EBM
 }

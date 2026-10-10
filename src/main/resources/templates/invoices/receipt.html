@@ -13,7 +13,7 @@
     </script>
     <link rel="stylesheet" href="/css/iwarehouse.css">
 </head>
-<body class="label-page receipt-page">
+<body class="label-page receipt-page" th:classappend="${!printNow and ebm != null and ebm.signed} ? 'print-locked'">
     <!-- Toolbar: screen only -->
     <div class="label-toolbar">
         <div>
@@ -22,11 +22,14 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
-            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+            <form th:action="@{/invoices/{id}/receipt/print(id=${invoice.id})}" method="post" class="row-action-form">
+                <button type="submit" class="btn btn-primary" th:text="${ebm != null and ebm.signed and ebm.printedAt != null} ? #{posReceipt.printCopy} : #{label.printNow}">Print</button>
+            </form>
         </div>
     </div>
+    <p class="print-locked-note" th:text="#{posReceipt.printLocked}">Print with the Print button: the first print is the original, the next ones copies.</p>
 
-    <!-- The receipt (POS-07 without the EBM signature until M4; TAX-01, TAX-04) -->
+    <!-- The receipt (POS-07, TAX-01, TAX-02, TAX-04): its EBM signature once signed -->
     <div class="receipt">
         <div class="receipt-head">
             <div class="receipt-company" th:text="${companyName}">iWarehouse</div>
@@ -85,8 +88,9 @@
         <div class="receipt-row receipt-total" th:if="${invoice.hasBalanceDue()}"><span th:text="#{posReceipt.balanceDue}">BALANCE DUE</span><span th:text="${@num.money(invoice.balanceDue)}">97,504</span></div>
         <div class="receipt-foot" th:if="${invoice.hasBalanceDue()}" th:text="#{posReceipt.balanceNote}">Paid when the pieces are collected</div>
         <div class="receipt-rule"></div>
-        <div class="receipt-foot" th:text="#{posReceipt.ebmPending}">Not yet signed by EBM</div>
+        <th:block th:replace="~{fragments/ebm :: receipt(${ebm}, ${ebmQr}, ${copy}, ${invoice.postedAt})}"></th:block>
         <div class="receipt-foot" th:text="#{posReceipt.thanks}">Thank you</div>
     </div>
+    <script th:if="${printNow}">window.addEventListener('load', function () { window.print(); });</script>
 </body>
 </html>

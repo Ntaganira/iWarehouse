@@ -83,6 +83,7 @@ class CounterSalesTest {
     private final List<CreditNoteLine> creditLines = new ArrayList<>();
     private final List<CreditNoteUnit> unitsBack = new ArrayList<>();
     private CreditNoteService creditNoteService;
+    private EbmService ebm;
     private Location rack;
     private Location offcutRack;
 
@@ -117,6 +118,7 @@ class CounterSalesTest {
         CurrencyRepository currencyRepo = mock(CurrencyRepository.class);
         ProductRepository productRepo = mock(ProductRepository.class);
         numbers = mock(DocumentNumberService.class);
+        ebm = mock(EbmService.class);
         postings = mock(PostingService.class);
         journals = mock(JournalService.class);
         priceLists = mock(PriceListService.class);
@@ -362,12 +364,12 @@ class CounterSalesTest {
         LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
                 jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, creditLineRepo, tills, cuttingJobs, stockService, pricing,
-                postings, journals, numbers, settings, mock(Notifier.class), CLOCK);
+                postings, journals, numbers, settings, mock(Notifier.class), ebm, CLOCK);
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
                 numbers, settings, CLOCK);
         creditNoteService = new CreditNoteService(creditNoteRepo, creditLineRepo, unitsBackRepo, invoiceRepo, deliveryRepo, unitRepo,
-                productRepo, jobRepo, jobLineRepo, sales, cuttingJobs, tills, stockService, postings, numbers, CLOCK);
+                productRepo, jobRepo, jobLineRepo, sales, cuttingJobs, tills, stockService, postings, numbers, ebm, CLOCK);
     }
 
     @AfterEach
@@ -526,6 +528,7 @@ class CounterSalesTest {
             assertThat(m.getRefNumber()).isEqualTo("INV-WH-2026-000001");
         });
         verify(postings).sale(eq(sale), eq(payments), any());
+        verify(ebm).queueSale(sale);                                                   // its EBM receipt, signed after the commit (TAX-02)
         assertThat(tills.summary(session).getExpectedCash()).isEqualByComparingTo("170000");
     }
 
@@ -1168,6 +1171,8 @@ class CounterSalesTest {
 
         assertThat(note.getNumber()).isEqualTo("CN-WH-2026-000001");
         assertThat(note.getTotalAmount()).isEqualByComparingTo("204758");             // 195,008 + 6,750 + 3,000
+        assertThat(note.getRefundReason()).isEqualTo("06");                            // EBM's "Refund" unless chosen
+        verify(ebm).queueRefund(note);
         assertThat(creditLines).extracting(CreditNoteLine::getAmount).extracting(BigDecimal::intValue).containsExactly(195008, 6750, 3000);
         assertThat(note.getRefundMethod()).isEqualTo(PaymentMethod.CASH);
         assertThat(note.getRefundAmount()).isEqualByComparingTo("204758");

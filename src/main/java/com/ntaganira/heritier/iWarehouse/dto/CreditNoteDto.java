@@ -38,6 +38,9 @@ public class CreditNoteDto {
 
     private String reason;
 
+    /** The refund reason EBM reports (spec 4.16): 01 to 13, 06 "Refund" unless chosen. */
+    private String refundReason = "06";
+
     /** How the refund goes; CREDIT = to the customer's account. */
     private PaymentMethod refundMethod;
 

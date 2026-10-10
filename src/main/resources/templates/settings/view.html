@@ -221,6 +221,73 @@
                             </div>
                         </dl>
                     </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
+                                <div class="role-card-title" th:text="#{settings.group.ebm}">EBM fiscal signing</div>
+                                <div class="role-card-desc" th:text="#{settings.group.ebmHint}">How RRA signs every invoice and credit note (TAX-02)</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmMode}">ebmMode</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmModeHint}"></span>
+                                </dt>
+                                <dd th:text="#{${'settings.ebmMode.' + settings.ebmMode}}">The simulator</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmVsdcUrl}">ebmVsdcUrl</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmVsdcUrlHint}"></span>
+                                </dt>
+                                <dd th:classappend="*{ebmVsdcUrl} != null ? 'mono'" th:text="*{ebmVsdcUrl} ?: #{settings.notSet}">http://localhost:8088/rravsdc</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmBranchId}">ebmBranchId</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmBranchIdHint}"></span>
+                                </dt>
+                                <dd class="mono" th:text="*{ebmBranchId}">00</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmDeviceSerial}">ebmDeviceSerial</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmDeviceSerialHint}"></span>
+                                </dt>
+                                <dd th:classappend="*{ebmDeviceSerial} != null ? 'mono'" th:text="*{ebmDeviceSerial} ?: #{settings.notSet}">dvcv1130</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmGlassItemClass}">ebmGlassItemClass</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmGlassItemClassHint}"></span>
+                                </dt>
+                                <dd th:classappend="*{ebmGlassItemClass} != null ? 'mono'" th:text="*{ebmGlassItemClass} ?: #{settings.notSet}">3017170000</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmServiceItemClass}">ebmServiceItemClass</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmServiceItemClassHint}"></span>
+                                </dt>
+                                <dd th:classappend="*{ebmServiceItemClass} != null ? 'mono'" th:text="*{ebmServiceItemClass} ?: #{settings.notSet}">7213150000</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmOriginCountry}">ebmOriginCountry</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmOriginCountryHint}"></span>
+                                </dt>
+                                <dd class="mono" th:text="*{ebmOriginCountry}">RW</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmReceiptUrl}">ebmReceiptUrl</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmReceiptUrlHint}"></span>
+                                </dt>
+                                <dd class="mono setting-url" th:text="*{ebmReceiptUrl}">https://myrra.rra.gov.rw/...</dd>
+                            </div>
+                        </dl>
+                    </div>
                 </div>
             </div>
 

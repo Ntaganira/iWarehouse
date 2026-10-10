@@ -50,7 +50,24 @@ public enum SettingKey {
     MAX_RATE_AGE_DAYS("currency.max-rate-age-days", "maxRateAgeDays", "7"),
 
     /** Alerts go by email too (RPT-06), when a mail account is configured. */
-    ALERT_EMAIL("alerts.email", "alertEmail", "false");
+    ALERT_EMAIL("alerts.email", "alertEmail", "false"),
+
+    /** How receipts are signed (TAX-02): SIMULATOR (development: receipts marked not fiscal) or VSDC. An EbmMode name. */
+    EBM_MODE("ebm.mode", "ebmMode", "SIMULATOR"),
+    /** The business's VSDC (RRA's WAR on its own server), e.g. http://localhost:8088/rravsdc. */
+    EBM_VSDC_URL("ebm.vsdc-url", "ebmVsdcUrl", null),
+    /** The branch RRA registered the device for (bhfId): 00 is the head office. */
+    EBM_BRANCH_ID("ebm.branch-id", "ebmBranchId", "00"),
+    /** The device serial RRA approved (dvcSrlNo), sent when the device is initialised. */
+    EBM_DEVICE_SERIAL("ebm.device-serial", "ebmDeviceSerial", null),
+    /** RRA item classification of glass (itemClsCd, from the VSDC's classification list). */
+    EBM_GLASS_ITEM_CLASS("ebm.glass-item-class", "ebmGlassItemClass", null),
+    /** RRA item classification of processing (edging, drilling...). */
+    EBM_SERVICE_ITEM_CLASS("ebm.service-item-class", "ebmServiceItemClass", null),
+    /** Country of origin of the glass in its EBM item code (orgnNatCd). */
+    EBM_ORIGIN_COUNTRY("ebm.origin-country", "ebmOriginCountry", "RW"),
+    /** Where a receipt's QR code leads: RRA's receipt check, followed by TIN + branch + signature. */
+    EBM_RECEIPT_URL("ebm.receipt-url", "ebmReceiptUrl", "https://myrra.rra.gov.rw/common/link/ebm/receipt/indexEbmReceiptData?Data=");
 
     private final String key;
     private final String property;

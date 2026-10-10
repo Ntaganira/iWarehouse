@@ -4488,3 +4488,22 @@ button.notif-item:hover { background: var(--gray-100); }
 .doc-thumb-pdf { font-size: 11px; font-weight: 700; color: var(--danger); background: var(--tint-red); }
 /* Phones: with the bell the header has no room for its title (the drawer shows the brand) */
 @media (max-width: 440px) { .header-left h1 { display: none; } }
+
+/* EBM (TAX-02): a signed document's note, the receipt's QR code; a signed receipt prints only through its Print button,
+   which records the original and the copies */
+.doc-note.is-success { border-left-color: var(--success); background: var(--tint-green); }
+.receipt-qr { width: 30mm; margin: 2mm auto 0; }
+.receipt-qr svg { display: block; width: 100%; height: auto; }
+.print-locked-note { display: none; }
+@media print {
+  .print-locked .receipt { display: none; }
+  .print-locked .print-locked-note { display: block; margin: 4mm; font-size: 4mm; text-align: center; color: #000; }
+}
+.ebm-purchase-code { margin: 16px 0 0; }
+/* A long address in a setting row wraps under its label instead of squeezing it */
+.setting-row:has(.setting-url) { flex-direction: column; align-items: flex-start; gap: 4px; }
+.setting-row dd.setting-url { min-width: 0; max-width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; font-size: 12.5px; }
+/* Every form grid: a field never grows past its column (a select is as wide as its longest option otherwise) */
+.form-grid > .form-group { min-width: 0; }
+.form-group select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+.doc-kpis .kpi-value { overflow-wrap: anywhere; }

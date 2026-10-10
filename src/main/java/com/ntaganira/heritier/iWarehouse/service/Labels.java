@@ -7,7 +7,12 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -57,6 +62,28 @@ public final class Labels {
         return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " + matrix.getWidth() + " " + matrix.getHeight()
                 + "\" shape-rendering=\"crispEdges\" role=\"img\" aria-label=\"" + escapeXml(text) + "\">"
                 + "<path fill=\"#000\" d=\"" + path + "\"/></svg>";
+    }
+
+    /** The same QR code as a PNG data URI ({@code scale} pixels per module, a 4-module margin), for PDFs. */
+    public static String qrPngDataUri(String text, int scale) {
+        BitMatrix matrix = qrMatrix(text);
+        int margin = 4;
+        int size = (matrix.getWidth() + 2 * margin) * scale;
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_BYTE_BINARY);
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                int mx = x / scale - margin;
+                int my = y / scale - margin;
+                boolean dark = mx >= 0 && my >= 0 && mx < matrix.getWidth() && my < matrix.getHeight() && matrix.get(mx, my);
+                image.setRGB(x, y, dark ? 0xFF000000 : 0xFFFFFFFF);
+            }
+        }
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            ImageIO.write(image, "png", out);
+            return "data:image/png;base64," + Base64.getEncoder().encodeToString(out.toByteArray());
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot draw a QR code", e);
+        }
     }
 
     static BitMatrix qrMatrix(String text) {

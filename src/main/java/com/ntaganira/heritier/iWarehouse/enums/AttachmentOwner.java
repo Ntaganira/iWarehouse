@@ -18,7 +18,11 @@ public enum AttachmentOwner {
     GOODS_RECEIPT("PAGE_RECEIVING", "/goods-receipts/"),
     SHIPMENT("PAGE_SHIPMENTS", "/shipments/"),
     SUPPLIER_INVOICE("PAGE_SUPPLIER_INVOICES", "/supplier-invoices/"),
-    STOCK_ADJUSTMENT("PAGE_STOCK_ADJUSTMENTS", "/stock-adjustments/");
+    STOCK_ADJUSTMENT("PAGE_STOCK_ADJUSTMENTS", "/stock-adjustments/"),
+    /** Insurance and inspection certificates, the registration card. */
+    VEHICLE("PAGE_VEHICLES", "/vehicles/"),
+    /** A copy of the licence: personal data (NFR-12), opened only by those who see it. */
+    DRIVER("PERM_VIEW_DRIVER_DATA", "/drivers/");
 
     private final String page;
     private final String path;

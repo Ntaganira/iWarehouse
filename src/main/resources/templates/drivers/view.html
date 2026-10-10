@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${driver.user.fullName}, ~{::content})}">
+<head><title>Driver - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/drivers/' + driver.id}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${driver.user.fullName}">Jean Driver</h1>
+            <div class="subtitle">
+                <span th:text="${driver.username}">jdriver</span> &middot;
+                <span th:text="#{driver.categoryShort(${driver.licenceCategory})}">Licence B, C</span> &middot;
+                <th:block th:replace="~{fragments/fleet :: active(${driver.enabled})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/drivers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${driver.enabled}" sec:authorize="hasAuthority('PERM_PLAN_TRIP')" th:href="@{/trips/new(driver=${driver.id})}"
+               class="btn btn-outline" th:text="#{vehicle.planTrip}">Plan a trip</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_DRIVER')">
+                <form th:if="${driver.enabled}" th:action="@{/drivers/{id}/disable(id=${driver.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{driver.disableConfirm(${driver.user.fullName})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{driver.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${driver.enabled}" th:action="@{/drivers/{id}/enable(id=${driver.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{driver.enableConfirm(${driver.user.fullName})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{driver.enable}">Activate</button>
+                </form>
+                <a th:if="${personal}" th:href="@{/drivers/{id}/edit(id=${driver.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${licence.name() == 'EXPIRED'}"
+         th:text="#{driver.note.expired(${#temporals.format(driver.licenceExpiry, 'dd/MM/yyyy')})}">The licence expired on 01/10/2026: no trip until it is renewed.</div>
+    <div class="doc-note is-warning" th:if="${licence.name() == 'SOON'}"
+         th:text="#{driver.note.soon(${#temporals.format(driver.licenceExpiry, 'dd/MM/yyyy')})}">The licence expires on 05/11/2026: renew it in time.</div>
+    <div class="doc-note" th:if="${onTheRoad != null}">
+        <span th:text="#{driver.note.onTheRoad(${onTheRoad.vehicle.plate}, ${#temporals.format(onTheRoad.departedAt, 'dd/MM/yyyy HH:mm')})}">On the road with RAC123A since 10/10/2026 08:30:</span>
+        <a class="mono" th:href="@{/trips/{id}(id=${onTheRoad.id})}" th:text="${onTheRoad.number}">TRP-WH-2026-000001</a>
+    </div>
+    <div class="doc-note" th:unless="${driver.user.enabled}" th:text="#{driver.note.userDisabled}">Their user account is disabled: they cannot sign in.</div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{driver.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-trips" th:classappend="${tab == 'trips'} ? 'active'">
+                <span th:text="#{vehicle.tab.trips}">Trips</span>
+                <span class="section-count" th:text="${trips.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:if="${personal}" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{driver.user}">User</label>
+                        <div class="value">
+                            <a sec:authorize="hasAuthority('PAGE_USERS')" th:href="@{/users/{id}(id=${driver.user.id})}" th:text="${driver.username}">jdriver</a>
+                            <span sec:authorize="!hasAuthority('PAGE_USERS')" th:text="${driver.username}">jdriver</span>
+                            <div class="cell-sub" th:if="${driver.user.phone != null}" th:text="${driver.user.phone}">+250780000000</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{driver.nationalId}">National ID</label>
+                        <div class="value mono" th:text="${nationalIdShown}">1199080012345678</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{driver.licenceNumber}">Licence number</label>
+                        <div class="value mono" th:text="${licenceNumberShown}">RW-123456</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{driver.category}">Licence category</label>
+                        <div class="value" th:text="${driver.licenceCategory}">B, C</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{driver.expiry}">Licence until</label>
+                        <div class="value"><th:block th:replace="~{fragments/fleet :: paper(${driver.licenceExpiry}, ${licence})}"></th:block></div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{driver.defaultVehicle}">Usual vehicle</label>
+                        <div class="value">
+                            <th:block th:if="${driver.defaultVehicle != null}">
+                                <a class="mono" sec:authorize="hasAuthority('PAGE_VEHICLES')" th:href="@{/vehicles/{id}(id=${driver.defaultVehicle.id})}" th:text="${driver.defaultVehicle.plate}">RAC123A</a>
+                                <span class="mono" sec:authorize="!hasAuthority('PAGE_VEHICLES')" th:text="${driver.defaultVehicle.plate}">RAC123A</span>
+                            </th:block>
+                            <span th:if="${driver.defaultVehicle == null}">—</span>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(driver.createdAt, 'dd/MM/yyyy HH:mm') + (driver.createdBy != null ? ' · ' + driver.createdBy : '')}">10/10/2026 12:00 · admin</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${driver.version > 0} ? ${#temporals.format(driver.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + driver.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+                <p class="form-note" th:unless="${personal}" th:text="#{driver.personalNote}">The national ID and licence number are personal data: only the last four characters are shown to you.</p>
+            </div>
+
+            <div class="tab-content" id="tab-trips" th:classappend="${tab == 'trips'} ? 'active'">
+                <th:block th:replace="~{fragments/fleet :: tripRows(${trips}, ${base}, true)}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-documents" th:if="${personal}" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('DRIVER', ${driver.id}, ${documents}, ${base})}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Driver/{id}(id=${driver.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

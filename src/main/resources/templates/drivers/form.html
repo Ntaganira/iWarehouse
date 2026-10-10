@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${driverDto.id == null} ? #{driver.addTitle} : #{driver.editTitle}, ~{::content})}">
+<head><title>Driver - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${driverDto.id == null} ? #{driver.addTitle} : #{driver.editTitle}">Register a Driver</h1>
+            <div class="subtitle" th:text="#{driver.formSubtitle}">A user who drives a moving shop: an expired licence refuses their trips</div>
+        </div>
+        <a th:href="${driverDto.id == null} ? @{/drivers} : @{/drivers/{id}(id=${driverDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${driverDto.id == null} ? @{/drivers/new} : @{/drivers/{id}/edit(id=${driverDto.id})}"
+              th:object="${driverDto}" method="post" class="form-container" novalidate autocomplete="off">
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group full-width" th:if="${driver == null}">
+                    <label for="userId" th:text="#{driver.user}">User</label>
+                    <select id="userId" th:field="*{userId}" data-searchable required th:classappend="${#fields.hasErrors('userId')} ? 'is-invalid'">
+                        <option value="" th:text="#{driver.chooseUser}">Choose the user they sign in with</option>
+                        <option th:each="u : ${candidates}" th:value="${u.id}" th:text="${u.fullName + ' (' + u.username + ')'}">Jean Driver (jdriver)</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('userId')}" th:errors="*{userId}"></span>
+                    <span class="hint" th:text="#{driver.userHint}">They sign in with this account; give it the Driver role on the Users screen</span>
+                </div>
+                <th:block th:if="${driver != null}">
+                    <div class="form-group full-width">
+                        <span class="count-at-label" th:text="#{driver.user}">User</span>
+                        <div class="count-at" th:text="${driver.user.fullName + ' (' + driver.username + ')'}">Jean Driver (jdriver)</div>
+                        <input type="hidden" th:field="*{userId}">
+                    </div>
+                </th:block>
+                <div class="form-group">
+                    <label for="nationalId" th:text="#{driver.nationalId}">National ID</label>
+                    <input type="text" id="nationalId" th:field="*{nationalId}" class="input-code" maxlength="20" required inputmode="numeric"
+                           spellcheck="false" th:classappend="${#fields.hasErrors('nationalId')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('nationalId')}" th:errors="*{nationalId}"></span>
+                    <span class="hint" th:text="#{driver.nationalIdHint}">16 digits; personal data, shown only to those who manage drivers</span>
+                </div>
+                <div class="form-group">
+                    <label for="licenceNumber" th:text="#{driver.licenceNumber}">Licence number</label>
+                    <input type="text" id="licenceNumber" th:field="*{licenceNumber}" class="input-code" maxlength="30" required
+                           autocapitalize="characters" spellcheck="false" th:classappend="${#fields.hasErrors('licenceNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('licenceNumber')}" th:errors="*{licenceNumber}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="licenceCategory" th:text="#{driver.category}">Licence category</label>
+                    <input type="text" id="licenceCategory" th:field="*{licenceCategory}" maxlength="20" required autocapitalize="characters"
+                           th:placeholder="#{driver.categoryPh}" th:classappend="${#fields.hasErrors('licenceCategory')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('licenceCategory')}" th:errors="*{licenceCategory}"></span>
+                    <span class="hint" th:text="#{driver.categoryHint}">As printed on the licence</span>
+                </div>
+                <div class="form-group">
+                    <label for="licenceExpiry" th:text="#{driver.expiry}">Licence until</label>
+                    <input type="date" id="licenceExpiry" th:field="*{licenceExpiry}" required
+                           th:classappend="${#fields.hasErrors('licenceExpiry')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('licenceExpiry')}" th:errors="*{licenceExpiry}"></span>
+                    <span class="hint" th:text="#{vehicle.papersHint}">The last day it covers; no trip after it</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="defaultVehicleId" th:text="#{driver.defaultVehicle}">Usual vehicle</label>
+                    <select id="defaultVehicleId" th:field="*{defaultVehicleId}" th:classappend="${#fields.hasErrors('defaultVehicleId')} ? 'is-invalid'">
+                        <option value="" th:text="#{driver.noVehicle}">None</option>
+                        <option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.plate + ' · ' + v.model}">RAC123A · Isuzu NPR</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('defaultVehicleId')}" th:errors="*{defaultVehicleId}"></span>
+                    <span class="hint" th:text="#{driver.defaultVehicleHint}">Chosen for them when a trip is planned</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{driver.save}">Save driver</button>
+                <a th:href="${driverDto.id == null} ? @{/drivers} : @{/drivers/{id}(id=${driverDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

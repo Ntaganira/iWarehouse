@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{trip.title}, ~{::content})}">
+<head><title>Trips - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{trip.title}">Trips</h1>
+            <div class="subtitle" th:text="${allTrips} ? #{trip.subtitle} : #{trip.subtitleMine}">Moving-shop trips: the manifest, scan-loading and departure</div>
+        </div>
+        <a href="/trips/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_PLAN_TRIP')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{trip.add}">Plan a trip</span>
+        </a>
+    </div>
+
+    <div class="doc-note" th:if="${allTrips and (planned > 0 or onTheRoad > 0)}">
+        <span th:text="#{trip.listNote(${planned}, ${onTheRoad})}">2 trips planned, 1 on the road.</span>
+        <a th:if="${onTheRoad > 0}" th:href="@{/trips(status='DEPARTED')}" th:text="#{trip.showOnTheRoad}">Show those on the road</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{trip.sectionTitle}">Trips</span>
+                <span class="section-count" th:text="${trips.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/trips}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{trip.searchPh}" th:aria-label="#{trip.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null}" th:text="#{common.allStatus}">All Status</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st == status}" th:text="#{${'trip.status.' + st}}">Planned</option>
+                </select>
+                <select name="vehicle" class="toolbar-filter" onchange="this.form.submit()" th:if="${allTrips}" th:aria-label="#{trip.vehicle}">
+                    <option value="" th:text="#{trip.allVehicles}">All vehicles</option>
+                    <option th:each="v : ${vehicles}" th:value="${v.id}" th:selected="${v.id == vehicle}" th:text="${v.plate}">RAC123A</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{trip.number}">Trip</th>
+                        <th th:text="#{trip.date}">Date</th>
+                        <th th:text="#{trip.vehicle}">Vehicle</th>
+                        <th th:text="#{trip.driver}">Driver</th>
+                        <th class="num" th:text="#{trip.units}">Units</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="t : ${trips.content}" th:with="c=${counts.get(t.id)}">
+                        <td>
+                            <a class="row-link strong mono nowrap" th:href="@{/trips/{id}(id=${t.id})}" th:text="${t.number}">TRP-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${t.area}">Musanze</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(t.tripDate, 'dd/MM/yyyy')}">10/10/2026</td>
+                        <td class="mono" th:text="${t.vehicle.plate}">RAC123A</td>
+                        <td th:text="${t.driver.user.fullName}">Jean Driver</td>
+                        <td class="num">
+                            <th:block th:if="${t.status.name() == 'PLANNED'}">
+                                <span th:text="${c != null} ? ${c.planned} : 0">40</span>
+                                <div class="cell-sub" th:text="#{trip.scannedOf(${c != null} ? ${c.loaded} : 0)}">12 scanned</div>
+                            </th:block>
+                            <span th:if="${t.loadedPieces != null}" th:text="${t.loadedPieces}">35</span>
+                            <span th:if="${t.status.name() == 'CANCELLED'}" class="text-muted">—</span>
+                        </td>
+                        <td><th:block th:replace="~{fragments/fleet :: tripStatus(${t.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(trips.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{trip.empty}">No trips found</h3>
+                                <p th:text="${allTrips} ? #{trip.emptyHint} : #{trip.emptyHintMine}">Plan a trip: a vehicle, its driver, the day and the area</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${trips}, '/trips', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

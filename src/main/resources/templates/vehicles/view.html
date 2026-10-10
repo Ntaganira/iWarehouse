@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${vehicle.plate}, ~{::content})}">
+<head><title>Vehicle - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/vehicles/' + vehicle.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${vehicle.plate}">RAC123A</h1>
+            <div class="subtitle">
+                <span th:text="${vehicle.model}">Isuzu NPR</span> &middot;
+                <span class="mono" th:text="${vehicle.location.code}">VEH-RAC123A</span> &middot;
+                <th:block th:replace="~{fragments/fleet :: active(${vehicle.enabled})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/vehicles" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${vehicle.enabled}" sec:authorize="hasAuthority('PERM_PLAN_TRIP')" th:href="@{/trips/new(vehicle=${vehicle.id})}"
+               class="btn btn-outline" th:text="#{vehicle.planTrip}">Plan a trip</a>
+            <th:block sec:authorize="hasAuthority('PERM_MANAGE_VEHICLE')">
+                <form th:if="${vehicle.enabled}" th:action="@{/vehicles/{id}/disable(id=${vehicle.id})}" method="post"
+                      class="row-action-form confirm-submit danger" th:attr="data-confirm=#{vehicle.disableConfirm(${vehicle.plate})}">
+                    <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{vehicle.disable}">Deactivate</button>
+                </form>
+                <form th:unless="${vehicle.enabled}" th:action="@{/vehicles/{id}/enable(id=${vehicle.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{vehicle.enableConfirm(${vehicle.plate})}">
+                    <button type="submit" class="btn btn-outline" th:text="#{vehicle.enable}">Activate</button>
+                </form>
+                <a th:href="@{/vehicles/{id}/edit(id=${vehicle.id})}" class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+            </th:block>
+        </div>
+    </div>
+
+    <!-- Papers (FLT-04) and the trip it is on -->
+    <div class="doc-note is-danger" th:if="${papers.get('INSURANCE').name() == 'EXPIRED'}"
+         th:text="#{vehicle.note.expired(${#messages.msg('fleet.paperName.INSURANCE')}, ${#temporals.format(vehicle.insuranceExpiry, 'dd/MM/yyyy')})}">Insurance expired on 01/10/2026: no trip can be planned or depart until it is renewed.</div>
+    <div class="doc-note is-danger" th:if="${papers.get('INSPECTION').name() == 'EXPIRED'}"
+         th:text="#{vehicle.note.expired(${#messages.msg('fleet.paperName.INSPECTION')}, ${#temporals.format(vehicle.inspectionExpiry, 'dd/MM/yyyy')})}">Inspection expired on 01/10/2026.</div>
+    <div class="doc-note is-warning" th:if="${papers.get('INSURANCE').name() == 'SOON'}"
+         th:text="#{vehicle.note.soon(${#messages.msg('fleet.paperName.INSURANCE')}, ${#temporals.format(vehicle.insuranceExpiry, 'dd/MM/yyyy')})}">Insurance expires on 05/11/2026: renew it in time.</div>
+    <div class="doc-note is-warning" th:if="${papers.get('INSPECTION').name() == 'SOON'}"
+         th:text="#{vehicle.note.soon(${#messages.msg('fleet.paperName.INSPECTION')}, ${#temporals.format(vehicle.inspectionExpiry, 'dd/MM/yyyy')})}">Inspection expires on 05/11/2026.</div>
+    <div class="doc-note" th:if="${onTheRoad != null}">
+        <span th:text="#{vehicle.note.onTheRoad(${onTheRoad.driver.user.fullName}, ${#temporals.format(onTheRoad.departedAt, 'dd/MM/yyyy HH:mm')})}">On the road with Jean Driver since 10/10/2026 08:30:</span>
+        <a class="mono" th:href="@{/trips/{id}(id=${onTheRoad.id})}" th:text="${onTheRoad.number}">TRP-WH-2026-000001</a>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{vehicle.kpi.onBoard}">On board</div>
+                <div class="kpi-value" th:text="${load.pieces}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{vehicle.kpi.onBoardSub(${@num.kg(load.kg)})}">0 kg of glass</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{vehicle.kpi.limits}">Limits</div>
+                <div class="kpi-value" th:text="${vehicle.maxPieces}">35</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{vehicle.kpi.limitsSub(${@num.whole(vehicle.maxLoadKg)})}">pieces · 1,000 kg</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{vehicle.kpi.odometer}">Odometer</div>
+                <div class="kpi-value" th:text="${vehicle.odometerKm != null} ? ${@num.whole(vehicle.odometerKm)} : '—'">45,210</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{vehicle.kpi.odometerSub}">km, last trip reading</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{vehicle.kpi.trips}">Trips</div>
+                <div class="kpi-value" th:text="${trips.totalElements}">12</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${onTheRoad != null} ? #{vehicle.kpi.tripsOnRoad} : #{vehicle.kpi.tripsSub}">planned, made or cancelled</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{vehicle.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-trips" th:classappend="${tab == 'trips'} ? 'active'">
+                <span th:text="#{vehicle.tab.trips}">Trips</span>
+                <span class="section-count" th:text="${trips.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-stock" th:classappend="${tab == 'stock'} ? 'active'">
+                <span th:text="#{vehicle.tab.stock}">On board</span>
+                <span class="section-count" th:text="${units.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{vehicle.plate}">Plate</label>
+                        <div class="value mono" th:text="${vehicle.plate}">RAC123A</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.model}">Model</label>
+                        <div class="value" th:text="${vehicle.model}">Isuzu NPR</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.maxLoad}">Most load</label>
+                        <div class="value" th:text="${@num.whole(vehicle.maxLoadKg)} + ' kg'">1,000 kg</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.maxPieces}">Most pieces</label>
+                        <div class="value" th:text="${vehicle.maxPieces}">35</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.insurance}">Insurance until</label>
+                        <div class="value"><th:block th:replace="~{fragments/fleet :: paper(${vehicle.insuranceExpiry}, ${papers.get('INSURANCE')})}"></th:block></div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.inspection}">Inspection until</label>
+                        <div class="value"><th:block th:replace="~{fragments/fleet :: paper(${vehicle.inspectionExpiry}, ${papers.get('INSPECTION')})}"></th:block></div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.location}">Location</label>
+                        <div class="value">
+                            <a class="mono" sec:authorize="hasAuthority('PAGE_LOCATIONS')" th:href="@{/locations/{id}(id=${vehicle.location.id})}" th:text="${vehicle.location.code}">VEH-RAC123A</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_LOCATIONS')" th:text="${vehicle.location.code}">VEH-RAC123A</span>
+                            <div class="hint" th:text="#{vehicle.locationHint}">The units it carries are here while it is on the road</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.racks}">Racks</label>
+                        <div class="value" th:text="${vehicle.rackConfiguration ?: '—'}">2 A-frames</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.notes}">Notes</label>
+                        <div class="value" th:text="${vehicle.notes ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(vehicle.createdAt, 'dd/MM/yyyy HH:mm') + (vehicle.createdBy != null ? ' · ' + vehicle.createdBy : '')}">10/10/2026 12:00 · admin</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.updatedAt}">Updated</label>
+                        <div class="value" th:text="${vehicle.version > 0} ? ${#temporals.format(vehicle.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + vehicle.updatedBy} : '—'">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-trips" th:classappend="${tab == 'trips'} ? 'active'">
+                <th:block th:replace="~{fragments/fleet :: tripRows(${trips}, ${base}, false)}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-stock" th:classappend="${tab == 'stock'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{trip.label}">Label</th>
+                                <th th:text="#{trip.glass}">Glass</th>
+                                <th th:text="#{trip.size}">Size (mm)</th>
+                                <th class="num" th:text="#{trip.kg}">kg</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${units.content}">
+                                <td>
+                                    <a class="row-link strong mono" sec:authorize="hasAuthority('PAGE_STOCK')" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000041</a>
+                                    <span class="mono strong" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${u.code}">U-WH-000041</span>
+                                </td>
+                                <td class="mono" th:text="${u.product.code}">CLR-6</td>
+                                <td class="nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">1200 × 800</td>
+                                <td class="num" th:text="${@num.kg(u.weightKg)}">14.4</td>
+                                <td th:text="#{${'stock.status.' + u.status}}">On a vehicle</td>
+                            </tr>
+                            <tr th:if="${units.totalElements == 0}">
+                                <td colspan="5"><div class="empty-state"><p th:text="#{vehicle.nothingOnBoard}">Nothing on board.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${units}, ${base}, 'tab=stock')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('VEHICLE', ${vehicle.id}, ${documents}, ${base})}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+                <a class="link-more" th:href="@{/audit/history/Vehicle/{id}(id=${vehicle.id})}" th:text="#{audit.fullHistory}">Full history</a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

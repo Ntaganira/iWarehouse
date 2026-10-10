@@ -80,6 +80,16 @@ public class NumberFormats {
         return kg == null ? "" : format("#,##0.##", kg);
     }
 
+    /** Fuel in litres with up to 2 decimals: 45.5, 1,200. */
+    public String litres(BigDecimal litres) {
+        return litres == null ? "" : format("#,##0.##", litres);
+    }
+
+    /** A whole number with grouping: 1,000 (a vehicle's kg, an odometer's km). */
+    public String whole(Number value) {
+        return value == null ? "" : format("#,##0", new BigDecimal(value.toString()));
+    }
+
     /** A price as typed in an input: 25000 or 12500.5 (no grouping, no trailing zeros). */
     public String plain(BigDecimal amount) {
         return amount == null ? "" : amount.stripTrailingZeros().toPlainString();

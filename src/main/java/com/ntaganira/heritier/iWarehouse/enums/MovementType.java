@@ -36,5 +36,7 @@ public enum MovementType {
     /** Sold at the counter: the unit leaves stock (POS-01). */
     SALE,
     /** Brought back by the customer on a credit note (POS-09): back in stock, or cullet. */
-    RETURN
+    RETURN,
+    /** Loaded on a vehicle when its trip departed (FLT-07): off its rack, ON_VEHICLE in the driver's charge. */
+    LOAD
 }

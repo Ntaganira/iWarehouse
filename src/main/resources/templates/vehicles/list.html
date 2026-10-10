@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{vehicle.title}, ~{::content})}">
+<head><title>Vehicles - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{vehicle.title}">Vehicles</h1>
+            <div class="subtitle" th:text="#{vehicle.subtitle}">Moving shops: each vehicle is a stock location with its own limits and papers</div>
+        </div>
+        <a href="/vehicles/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_VEHICLE')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{vehicle.add}">Add vehicle</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{vehicle.sectionTitle}">Vehicles</span>
+                <span class="section-count" th:text="${vehicles.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/vehicles}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{vehicle.searchPh}" th:aria-label="#{vehicle.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{vehicle.vehicle}">Vehicle</th>
+                        <th class="num" th:text="#{vehicle.maxLoad}">Most load</th>
+                        <th class="num" th:text="#{vehicle.maxPieces}">Most pieces</th>
+                        <th th:text="#{vehicle.insurance}">Insurance until</th>
+                        <th th:text="#{vehicle.inspection}">Inspection until</th>
+                        <th th:text="#{vehicle.location}">Location</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="v : ${vehicles.content}" th:with="p=${papers.get(v.id)}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/vehicles/{id}(id=${v.id})}" th:text="${v.plate}">RAC123A</a>
+                            <div class="cell-sub" th:text="${v.model}">Isuzu NPR</div>
+                        </td>
+                        <td class="num nowrap" th:text="${@num.whole(v.maxLoadKg)} + ' kg'">1,000 kg</td>
+                        <td class="num" th:text="${v.maxPieces}">35</td>
+                        <td><th:block th:replace="~{fragments/fleet :: paper(${v.insuranceExpiry}, ${p.get('INSURANCE')})}"></th:block></td>
+                        <td><th:block th:replace="~{fragments/fleet :: paper(${v.inspectionExpiry}, ${p.get('INSPECTION')})}"></th:block></td>
+                        <td class="mono" th:text="${v.location.code}">VEH-RAC123A</td>
+                        <td><th:block th:replace="~{fragments/fleet :: active(${v.enabled})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(vehicles.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{vehicle.empty}">No vehicles found</h3>
+                                <p th:text="#{vehicle.emptyHint}">Add the delivery vehicles that sell on the road</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${vehicles}, '/vehicles', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

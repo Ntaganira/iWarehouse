@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${vehicleDto.id == null} ? #{vehicle.addTitle} : #{vehicle.editTitle}, ~{::content})}">
+<head><title>Vehicle - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${vehicleDto.id == null} ? #{vehicle.addTitle} : #{vehicle.editTitle}">Add Vehicle</h1>
+            <div class="subtitle" th:text="#{vehicle.formSubtitle}">A moving shop: its limits are checked when a trip departs, its papers before every trip</div>
+        </div>
+        <a th:href="${vehicleDto.id == null} ? @{/vehicles} : @{/vehicles/{id}(id=${vehicleDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${vehicleDto.id == null} ? @{/vehicles/new} : @{/vehicles/{id}/edit(id=${vehicleDto.id})}"
+              th:object="${vehicleDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="plate" th:text="#{vehicle.plate}">Plate</label>
+                    <input type="text" id="plate" th:field="*{plate}" class="input-code" maxlength="20" required autocapitalize="characters"
+                           spellcheck="false" th:placeholder="#{vehicle.platePh}" th:classappend="${#fields.hasErrors('plate')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('plate')}" th:errors="*{plate}"></span>
+                    <span class="hint" th:text="${vehicle == null} ? #{vehicle.plateHint} : #{vehicle.plateEditHint(${vehicle.location.code})}">Its location is VEH- and the plate</span>
+                </div>
+                <div class="form-group">
+                    <label for="model" th:text="#{vehicle.model}">Model</label>
+                    <input type="text" id="model" th:field="*{model}" maxlength="60" required th:placeholder="#{vehicle.modelPh}"
+                           th:classappend="${#fields.hasErrors('model')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('model')}" th:errors="*{model}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="maxLoadKg" th:text="#{vehicle.maxLoad}">Most load</label>
+                    <div class="input-unit">
+                        <input type="number" id="maxLoadKg" th:field="*{maxLoadKg}" step="1" min="1" max="60000" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('maxLoadKg')} ? 'is-invalid'">
+                        <span>kg</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('maxLoadKg')}" th:errors="*{maxLoadKg}"></span>
+                    <span class="hint" th:text="#{vehicle.maxLoadHint}">The glass it may carry; a heavier load cannot depart</span>
+                </div>
+                <div class="form-group">
+                    <label for="maxPieces" th:text="#{vehicle.maxPieces}">Most pieces</label>
+                    <input type="number" id="maxPieces" th:field="*{maxPieces}" step="1" min="1" max="2000" required inputmode="numeric"
+                           th:classappend="${#fields.hasErrors('maxPieces')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('maxPieces')}" th:errors="*{maxPieces}"></span>
+                    <span class="hint" th:text="#{vehicle.maxPiecesHint}">Sheets and pieces its racks hold</span>
+                </div>
+                <div class="form-group">
+                    <label for="insuranceExpiry" th:text="#{vehicle.insurance}">Insurance until</label>
+                    <input type="date" id="insuranceExpiry" th:field="*{insuranceExpiry}" required
+                           th:classappend="${#fields.hasErrors('insuranceExpiry')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('insuranceExpiry')}" th:errors="*{insuranceExpiry}"></span>
+                    <span class="hint" th:text="#{vehicle.papersHint}">The last day it covers; no trip after it</span>
+                </div>
+                <div class="form-group">
+                    <label for="inspectionExpiry" th:text="#{vehicle.inspection}">Inspection until</label>
+                    <input type="date" id="inspectionExpiry" th:field="*{inspectionExpiry}" required
+                           th:classappend="${#fields.hasErrors('inspectionExpiry')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('inspectionExpiry')}" th:errors="*{inspectionExpiry}"></span>
+                    <span class="hint" th:text="#{vehicle.papersHint}">The last day it covers; no trip after it</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="rackConfiguration" th:text="#{vehicle.racks}">Racks</label>
+                    <input type="text" id="rackConfiguration" th:field="*{rackConfiguration}" maxlength="255" th:placeholder="#{vehicle.racksPh}"
+                           th:classappend="${#fields.hasErrors('rackConfiguration')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('rackConfiguration')}" th:errors="*{rackConfiguration}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="notes" th:text="#{vehicle.notes}">Notes</label>
+                    <input type="text" id="notes" th:field="*{notes}" maxlength="255" th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{vehicle.save}">Save vehicle</button>
+                <a th:href="${vehicleDto.id == null} ? @{/vehicles} : @{/vehicles/{id}(id=${vehicleDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

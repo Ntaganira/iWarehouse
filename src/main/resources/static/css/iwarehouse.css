@@ -4439,8 +4439,8 @@ td.num, th.num { font-variant-numeric: tabular-nums; }
   .print-doc-title, .print-doc-dates { text-align: left; }
 }
 
-/* A dialog's opening sentence keeps the same space above its first field in every dialog */
-.modal-body > p.text-muted:first-child { margin-bottom: 16px; }
+/* A dialog's sentences keep the same space between them and above its first field in every dialog */
+.modal-body > p.text-muted:not(:last-child) { margin-bottom: 16px; }
 
 /* Manual journal lines (ACC-05): the account and memo take the room, debit and credit keep a fixed width */
 .journal-line-table .line-product { min-width: 240px; }

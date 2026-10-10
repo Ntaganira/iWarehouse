@@ -51,6 +51,8 @@ public enum SettingKey {
 
     /** Alerts go by email too (RPT-06), when a mail account is configured. */
     ALERT_EMAIL("alerts.email", "alertEmail", "false"),
+    /** Days before a driving licence, insurance or inspection expires that the fleet is told (FLT-04). */
+    FLEET_EXPIRY_ALERT_DAYS("fleet.expiry-alert-days", "fleetExpiryAlertDays", "30"),
 
     /** How receipts are signed (TAX-02): SIMULATOR (development: receipts marked not fiscal) or VSDC. An EbmMode name. */
     EBM_MODE("ebm.mode", "ebmMode", "SIMULATOR"),

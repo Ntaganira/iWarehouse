@@ -7,6 +7,7 @@ import com.ntaganira.heritier.iWarehouse.enums.AdjustmentStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TillStatus;
+import com.ntaganira.heritier.iWarehouse.enums.TripStatus;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,13 +55,16 @@ public class BusinessDashboardService {
     private final ManualJournalRepository manualJournalRepo;
     private final TillSessionRepository tillRepo;
     private final EbmService ebmService;
+    private final FleetAlertService fleetAlerts;
+    private final TripRepository tripRepo;
     private final Clock clock;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
                                     JournalService journalService, CustomerAccountService customerAccounts,
                                     SupplierAccountService supplierAccounts, SaleApprovalRepository saleApprovalRepo,
                                     StockAdjustmentRepository adjustmentRepo, ManualJournalRepository manualJournalRepo,
-                                    TillSessionRepository tillRepo, EbmService ebmService, Clock clock) {
+                                    TillSessionRepository tillRepo, EbmService ebmService, FleetAlertService fleetAlerts,
+                                    TripRepository tripRepo, Clock clock) {
         this.invoiceRepo = invoiceRepo;
         this.salesReports = salesReports;
         this.stockSummary = stockSummary;
@@ -72,6 +76,8 @@ public class BusinessDashboardService {
         this.manualJournalRepo = manualJournalRepo;
         this.tillRepo = tillRepo;
         this.ebmService = ebmService;
+        this.fleetAlerts = fleetAlerts;
+        this.tripRepo = tripRepo;
         this.clock = clock;
     }
 
@@ -87,7 +93,7 @@ public class BusinessDashboardService {
                        List<SalesAnalysis.Row> bySalesperson, StockSummary.Row stock, List<CashLine> cash, BigDecimal cashTotal,
                        BigDecimal receivable, BigDecimal overdue, long customersOwing, BigDecimal payable, long suppliersOwed,
                        List<StockSummary.Reorder> reorder, long saleApprovals, long adjustments, long manualJournals, long openTills,
-                       EbmService.Backlog ebm, List<String> chartDays, List<BigDecimal> chartNet) {
+                       EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, List<String> chartDays, List<BigDecimal> chartNet) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
@@ -138,7 +144,8 @@ public class BusinessDashboardService {
                 receivables.total(), overdue, receivables.customers().size(), payables.total(), payables.suppliers().size(),
                 stockSummary.reorder(), saleApprovalRepo.countByStatus(SaleApprovalStatus.PENDING),
                 adjustmentRepo.countByStatus(AdjustmentStatus.PENDING_APPROVAL), manualJournalRepo.countByStatus(ManualJournalStatus.PENDING_APPROVAL),
-                tillRepo.countByStatus(TillStatus.OPEN), ebmService.backlog(),
+                tillRepo.countByStatus(TillStatus.OPEN), ebmService.backlog(), fleetAlerts.dueCount(),
+                tripRepo.countByStatus(TripStatus.DEPARTED),
                 perDay.keySet().stream().map(LocalDate::toString).toList(), new ArrayList<>(perDay.values()));
     }
 

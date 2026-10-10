@@ -243,6 +243,21 @@
                             </tr>
                             <tr>
                                 <td>
+                                    <a sec:authorize="hasAuthority('PAGE_VEHICLES')" href="/vehicles" th:text="#{dash.biz.fleetPapers}">Licences, insurance and inspections to renew</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_VEHICLES')" th:text="#{dash.biz.fleetPapers}">Licences, insurance and inspections to renew</span>
+                                    <div class="cell-sub" th:text="#{dash.biz.fleetPapersSub}">expired or expiring soon</div>
+                                </td>
+                                <td class="num" th:classappend="${biz.fleetPapers > 0} ? 'strong text-danger'" th:text="${biz.fleetPapers}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_FLEET')" href="/trips?status=DEPARTED" th:text="#{dash.biz.onTheRoad}">Vehicles on the road</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="#{dash.biz.onTheRoad}">Vehicles on the road</span>
+                                </td>
+                                <td class="num" th:text="${biz.vehiclesOnTheRoad}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
                                     <a sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" href="/till-sessions" th:text="#{dash.biz.openTills}">Tills open</a>
                                     <span sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{dash.biz.openTills}">Tills open</span>
                                 </td>

@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V35.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V36.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-10)
@@ -30,12 +30,12 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | EBM / VSDC fiscal signing (AT-09 passes) | Done (M4), with the simulator until RRA installs the business's VSDC | V34, `/ebm`, the signature on invoices, receipts, the A4 PDF and credit notes |
 | Customer and supplier accounts, FX revaluation, manual journals, period close, financial statements, VAT report, bank reconciliation | Done (M5) | V24–V30, `/customer-payments`, `/supplier-invoices`, `/supplier-payments`, `/accounting/*` |
 | Dashboard, reports, alerts, notifications, files | Done (M6) | V31–V33, `/dashboard`, `/reports`, `/reports/sales`, `/stock/offcut-ageing`, `/stock/slow-moving`, `/notifications`, documents on receipts, shipments, supplier invoices and adjustments |
-| Fleet: vehicles, drivers, trips, loading | **Next** (M7) | — |
-| Mobile POS app (PWA) with offline sync | Not started (M8) | — |
+| Fleet: vehicles, drivers, trips, loading (AT-03 passes) | Done (M7) | V35, `/vehicles`, `/drivers`, `/trips` |
+| Mobile POS app (PWA) with offline sync | **Next** (M8) | — |
 | End of day: return scan, reconciliation, audit cases, driver floats | Not started (M9) | — |
 | Hardening and go-live | Not started (M10) | — |
 
-Unit tests: 437, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-08, AT-09 and AT-10 (for the events built so far) pass; AT-03 to AT-07 wait for their milestones.
+Unit tests: 459, all passing. Acceptance tests (SRS 8.1): AT-01, AT-02, AT-03, AT-08, AT-09 and AT-10 (for the events built so far) pass; AT-04 to AT-07 wait for their milestones.
 
 ## Definition of done for a module
 
@@ -98,13 +98,13 @@ Goal: the owner sees the business at a glance and is told when something goes wr
 
 Goal: vehicles are moving shops with controlled loading (FLT-01..FLT-07, FLT-12, MD-02). AT-03.
 
-- [ ] Vehicles with plate, model, rack configuration, max kg and pieces, insurance and inspection expiry; each vehicle creates its own VEHICLE location (no parent), never edited on the Locations screen (FLT-01, FLT-02) (M)
-- [ ] Drivers linked to users: national ID, licence number, category and expiry, default vehicle (FLT-03) (M); personal data handled per Law No. 058/2021 (NFR-12)
-- [ ] Expired licence, insurance or inspection blocks a trip; alert 30 days before (FLT-04) (M)
-- [ ] Trips (vehicle, driver, date, area) with a loading manifest of planned units; TRIP numbers exist (FLT-05) (M)
-- [ ] Scan-load: units not on the manifest refused; departure refused over the vehicle's kg or piece limit (FLT-06) (M)
-- [ ] Departure moves units to the vehicle location, ON_VEHICLE, and the driver becomes accountable (FLT-07) (M). The SRS says IN_TRANSIT; the code has ON_VEHICLE (SRS 6.2): keep ON_VEHICLE
-- [ ] Odometer and fuel per trip (FLT-12) (C)
+- [x] Vehicles with plate, model, rack configuration, max kg and pieces, insurance and inspection expiry; each vehicle creates its own VEHICLE location (no parent), never edited on the Locations screen (FLT-01, FLT-02) (M) — 2026-10-10 (V35): `/vehicles` (Vehicles, Fleet). The plate is kept upper case without spaces (RAC123A); adding a vehicle makes VEH-RAC123A named after its model, a new plate renames it, deactivating the vehicle deactivates it (refused while a trip is planned or on the road, or anything is on board). Its page: papers with their state, the trip it is on, on board, limits, odometer, trips, the units on board, documents (insurance and inspection certificates), History. The location's page says it belongs to the vehicle and has no edit buttons
+- [x] Drivers linked to users: national ID, licence number, category and expiry, default vehicle (FLT-03) (M); personal data handled per Law No. 058/2021 (NFR-12) — 2026-10-10 (V35): `/drivers` registers an enabled user once (the user stays fixed): national ID (16 digits), licence number and category as printed, expiry, usual vehicle (chosen for them when a trip is planned). Personal data: the national ID and licence number show in full, and the forms and licence copies open, only with VIEW_DRIVER_DATA (fleet manager, owner, admin); others see the last four characters; the change log masks both
+- [x] Expired licence, insurance or inspection blocks a trip; alert 30 days before (FLT-04) (M) — 2026-10-10: a paper covers its expiry day; planning checks the trip's day (the refusal under the driver or the vehicle), departure checks today. The papers are watched every 6 hours: within the Settings' days (30) the fleet manager, owner and admin are told once, again the day it expires, the driver about their own licence; renewing or deactivating clears it. The owner dashboard counts the papers to renew and the vehicles on the road
+- [x] Trips (vehicle, driver, date, area) with a loading manifest of planned units; TRIP numbers exist (FLT-05) (M) — 2026-10-10: `/trips` (Trips, Fleet). Plan a trip (TRP-WH-2026-000001): driver (their usual vehicle comes with them), vehicle, day (today or later), area. Its manifest takes unit labels scanned, typed or pasted, or a rack or slot label (every available unit there that nothing else holds); only available units; a planned trip holds them (nothing else moves, cuts or sells them) and can take one off, or be cancelled with a reason, which frees them. A driver without VIEW_TRIP sees only their own trips
+- [x] Scan-load: units not on the manifest refused; departure refused over the vehicle's kg or piece limit (FLT-06) (M) — 2026-10-10: the trip page scans each unit onto the vehicle (a scanner sends Enter); a label not on the manifest is refused and logged; the figures show pieces and kg against the vehicle's limits in red once over, and warn while planning and loading. AT-03 checked in the browser: 38 units on a 35-unit vehicle, "Departure refused: 38 units loaded, RAC123A carries at most 35. Take 3 off the manifest.", nothing moved (unit test: 40 on 35)
+- [x] Departure moves units to the vehicle location, ON_VEHICLE, and the driver becomes accountable (FLT-07) (M). The SRS says IN_TRANSIT; the code has ON_VEHICLE (SRS 6.2): keep ON_VEHICLE — 2026-10-10: "Confirm departure" (the supervisor, DEPART_TRIP) needs every planned unit scanned, the papers valid, the vehicle and driver on no other trip and the load within limits; each unit goes ON_VEHICLE at the vehicle's location with a LOAD movement naming the trip, each manifest line keeps the rack it left from, the trip keeps what left (pieces, kg, who, when) and the driver is told the units are in their charge. No journal: the glass is still stock at its own cost
+- [x] Odometer and fuel per trip (FLT-12) (C) — 2026-10-10: the odometer at departure (not below the vehicle's last reading) and back (Odometer, on the road: distance), fuel bought (day, litres, RWF, station, receipt; removed with a reason) by the driver, the supervisor or the fleet manager. Fuel is kept, not posted: the accountant books the payment
 
 ## M8 — Mobile POS app with offline sync
 
@@ -219,7 +219,14 @@ Answers change what gets built; record each answer next to the question.
 - [ ] A glass line goes to EBM as m² at 2 decimals with the unit price = amount ÷ m² (the amount stays exact). Confirm RRA accepts it, or whether glass should go per piece (TAX-02)
 
 **Fleet and go-live**
-- [ ] Do vehicles carry only pre-cut pieces, or also full sheets for on-site cutting? (SRS 8.3)
+- [ ] Do vehicles carry only pre-cut pieces, or also full sheets for on-site cutting? (SRS 8.3) Built: any available unit can be planned on a trip; a vehicle checks pieces and kg, not sheet sizes
+- [ ] Vehicle "capacity" (FLT-01): built as its most kg and most pieces, checked at departure. Is another measure needed (m² of glass, rack length)?
+- [ ] Pieces cut for a customer (reserved) cannot be loaded (built: available units only). Will vehicles deliver orders, not only sell from stock? Then reserved pieces need a delivery flow (M8/M9)
+- [ ] Departure: built as every planned unit must be scanned onto the vehicle (or taken off the manifest), confirmed by the supervisor (DEPART_TRIP), never the driver. Confirm
+- [ ] Should a vehicle require a licence category (a truck needs C) and refuse a driver without it? Not built: the category is recorded only (FLT-03)
+- [ ] Driver personal data: the fleet manager, the owner and the admin see national IDs and licence numbers in full (VIEW_DRIVER_DATA); the supervisor, accountant and auditor see the last four characters. Confirm with the data protection officer (NFR-12, Law 058/2021)
+- [ ] Papers alert: 30 days before expiry (Settings), to the fleet manager, owner and admin (ALERT_FLEET) and the driver for their licence. Confirm
+- [ ] Fuel: recorded per trip (litres, RWF, station), not posted. Is fuel paid from the driver's float, by the office, by fuel card? Then a posting rule follows (FLT-12, ACC-06)
 - [ ] How many vehicles, drivers, users and branches at go-live and in 2 years? (SRS 8.3)
 - [ ] Is opening stock migrated from an existing system or counted fresh? (SRS 8.3)
 
@@ -234,6 +241,7 @@ Answers change what gets built; record each answer next to the question.
 - Transfers TRF-WH-2026-000002 and -000003 (U-WH-000002 to WH-A-R04 by its scanned label, and back to WH-A-R01)
 - Counter sales on 2026-10-09 by qa-admin: tills TILL-WH-2026-000001..6 (all closed; -000002 sold U-WH-000061 and U-WH-000011 on INV-WH-2026-000001, 389,408 RWF to "Jean Habimana", TIN 102938475, half cash half mobile money MP-778812, and closed 500 RWF short, "Change given twice"; the others opened and closed for checks without a sale), and their journals
 - M4 tests on 2026-10-10 (EBM simulator): Settings company TIN 100200300 (was empty) and EBM item classes 3017170000 (glass) and 7213150000 (processing), test values; simulated receipts INV-WH-2026-000022 (EBM no. 1), INV-WH-2026-000023 (EBM no. 2), CN-WH-2026-000005 (EBM no. 3), INV-WH-2026-000024 (EBM no. 4), INV-WH-2026-000025 (EBM no. 5); CN-WH-2026-000005 (U-WH-000016 back on WH-A-R04, "E2E EBM: damaged on delivery", refund reason Damaged); the sale to "E2E Buyer Ltd" (TIN 102938475, purchase code AB12C3); ebm_items RW2NTXM2X0000001 (CLR-6, simulator); the simulated device SIMULATOR (ebm_devices); notifications EBM backlog to the owner, accountant and admin accounts; tills TILL-WH-2026-000028, TILL-WH-2026-000029, TILL-WH-2026-000030
+- M7 tests on 2026-10-10 (fleet): user driver-m7 (Jean Driver, DRIVER role, phone +250788100200) registered as a driver with a test national ID 1199080012345678 and licence RW-DL-0012345 (category C, usual vehicle RAC123A); vehicles RAC123A (Isuzu NPR, 35 pieces / 10,000 kg, insurance to 20/10/2026, location VEH-RAC123A) and RAB777C (Toyota Dyna, inspection expired, deactivated with its location VEH-RAB777C); trips TRP-WH-2026-000001 (AT-03: 38 units on RAC123A, departure refused, cancelled "E2E M7: AT-03, too many units for RAC123A"), -000002 (U-WH-000001, -000037, -000045 and -000046 from WH-A-R04 now ON_VEHICLE on VEH-RAC123A in driver-m7's charge: still on the road until M9 brings them back; odometer 45,210 to 45,296 km; 30 litres of fuel, 45,000 RWF, SP Nyabugogo), -000003 and -000004 (one unit each, cancelled after the screen checks); a refused scan of a sold unit (activity log); notifications FLEET (insurance of RAC123A due, inspection of RAB777C expired, the departure to driver-m7) and their alert_states FLEET:*
 - M6 tests on 2026-10-10: CLR-6 given a reorder level of 100,000 m² and back to none (a low stock alert raised and cleared: alert_states LOW_STOCK:<CLR-6>); MJ-WH-2026-000004 (qa-admin, Dr Bank / Cr Main Cash Vault 1,500, "Bank charges for October (E2E notifications)", rejected by owner38648 "E2E: not our bank charge"); notifications of these to qa-admin, admin and owner38648 (the real admin account has 2 unread); customs-entry.pdf kept on SHP-WH-2026-000002 and broken-sheet.png kept and removed on ADJ-WH-2026-000001 ("E2E: wrong unit"); their files in the MinIO bucket iwarehouse-files (container iwarehouse-minio, port 9010 here)
 - Period close, statements and reconciliation tests on 2026-10-09: September 2026 closed by qa-admin, reopened by owner38648 ("E2E: a supplier invoice came late") and closed again: the books are closed through 30/09/2026 (go-live starts afresh). REC-WH-2026-000001 (Bank, statement of 09/10/2026 at 875.20, cancelled "E2E: the deposit pair was on the statement after all") and REC-WH-2026-000002 (the same statement, every Bank line cleared)
 - Manual journal tests on 2026-10-09: MJ-WH-2026-000001 (qa-admin, Dr Bank / Cr Main Cash Vault 100,000, approved by owner38648 as JV-WH-2026-000074, reversed by qa-admin as JV-WH-2026-000075 "E2E: the deposit did not happen"), -000002 (a copy, withdrawn), -000003 (a copy, rejected by owner38648). Journals up to JV-WH-2026-000075

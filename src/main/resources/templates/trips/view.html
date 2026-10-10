@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${trip.number}, ~{::content})}">
+<head><title>Trip - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${trip.status.name()},
+        canPlan=${#authorization.expression('hasAuthority(''PERM_PLAN_TRIP'')')},
+        canLoad=${#authorization.expression('hasAuthority(''PERM_LOAD_TRIP'')')},
+        canDepart=${#authorization.expression('hasAuthority(''PERM_DEPART_TRIP'')')},
+        canRecord=${#authorization.expression('hasAuthority(''PERM_RECORD_TRIP_READINGS'')')},
+        canStock=${#authorization.expression('hasAuthority(''PAGE_STOCK'')')},
+        v=${trip.vehicle}, base=${'/trips/' + trip.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${trip.number}">TRP-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${v.plate}">RAC123A</span>
+                &middot; <span th:text="${trip.driver.user.fullName}">Jean Driver</span>
+                &middot; <span th:text="${#temporals.format(trip.tripDate, 'dd/MM/yyyy')}">10/10/2026</span>
+                &middot; <span th:text="${trip.area}">Musanze</span>
+                &middot; <th:block th:replace="~{fragments/fleet :: tripStatus(${trip.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/trips" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'PLANNED' and canPlan}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{trip.cancel}">Cancel the trip</button>
+                <a th:href="@{/trips/{id}/edit(id=${trip.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+            </th:block>
+            <button type="button" class="btn btn-outline" th:if="${s == 'DEPARTED' and canRecord}" data-modal-open="readings-modal"
+                    th:text="#{trip.readings}">Odometer</button>
+            <button type="button" class="btn btn-primary" th:if="${s == 'PLANNED' and canDepart}" data-modal-open="depart-modal"
+                    th:text="#{trip.depart}">Confirm departure</button>
+        </div>
+    </div>
+
+    <!-- Where the trip stands -->
+    <div class="doc-note" th:if="${s == 'PLANNED'}">
+        <span th:text="#{trip.plannedNote(${trip.lines.size()})}">Planned: the 40 units on its manifest are held until it departs or is cancelled. Each must be scanned onto the vehicle before it departs.</span>
+        <span th:if="${trip.note != null}" th:text="${'· ' + trip.note}">· Deliver Musanze first</span>
+    </div>
+    <div class="doc-note is-success" th:if="${s == 'DEPARTED'}">
+        <span th:text="#{trip.departedNote(${#temporals.format(trip.departedAt, 'dd/MM/yyyy HH:mm')}, ${trip.departedBy}, ${trip.loadedPieces}, ${@num.kg(trip.loadedKg)}, ${v.plate}, ${trip.driver.user.fullName})}">Departed on 10/10/2026 08:30 (confirmed by supervisor1): 35 units, 420 kg on RAC123A, in the charge of Jean Driver.</span>
+        <span th:if="${trip.note != null}" th:text="${'· ' + trip.note}">· Deliver Musanze first</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{trip.cancelledBy(${trip.cancelledBy}, ${#temporals.format(trip.cancelledAt, 'dd/MM/yyyy HH:mm')})}">Cancelled by supervisor1 on 10/10/2026 09:00:</strong>
+        <span th:text="${trip.cancelReason}">Vehicle broke down</span>
+    </div>
+    <th:block th:if="${s == 'PLANNED'}" th:each="p : ${papers}">
+        <div class="doc-note is-danger" th:if="${p.value.name() == 'EXPIRED'}"
+             th:text="#{${'trip.paperExpired.' + p.key}(${p.key == 'LICENCE'} ? ${trip.driver.user.fullName} : ${v.plate}, ${#temporals.format(p.key == 'LICENCE' ? trip.driver.licenceExpiry : (p.key == 'INSURANCE' ? v.insuranceExpiry : v.inspectionExpiry), 'dd/MM/yyyy')})}">The insurance of RAC123A expired on 01/10/2026: the trip cannot depart until it is renewed.</div>
+        <div class="doc-note is-warning" th:if="${p.value.name() == 'SOON'}"
+             th:text="#{${'trip.paperSoon.' + p.key}(${p.key == 'LICENCE'} ? ${trip.driver.user.fullName} : ${v.plate}, ${#temporals.format(p.key == 'LICENCE' ? trip.driver.licenceExpiry : (p.key == 'INSURANCE' ? v.insuranceExpiry : v.inspectionExpiry), 'dd/MM/yyyy')})}">The insurance of RAC123A expires on 05/11/2026.</div>
+    </th:block>
+
+    <!-- Scan-load (FLT-06): first, the page comes back here after each scan. A scanner types the label and presses Enter -->
+    <div class="section count-scan" id="scan" th:if="${s == 'PLANNED' and canLoad}">
+        <div class="section-header">
+            <h2 th:text="#{trip.scanTitle}">Scan-load</h2>
+            <span class="badge" th:classappend="${loadedCount == trip.lines.size() and loadedCount > 0} ? 'badge-success' : 'badge-info'"
+                  th:text="#{trip.scannedCount(${loadedCount}, ${trip.lines.size()})}">12 of 40 scanned</span>
+        </div>
+        <form th:action="@{/trips/{id}/scan(id=${trip.id})}" method="post" class="form-container count-scan-form" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="scan-codes" th:text="#{trip.scanLabel}">Label</label>
+                    <div class="scan-row">
+                        <textarea id="scan-codes" name="codes" rows="1" maxlength="4000" class="input-code scan-codes" autocomplete="off" autocapitalize="characters"
+                                  spellcheck="false" enterkeyhint="go" autofocus data-enter-submits th:placeholder="#{count.labelPh}"></textarea>
+                        <button type="submit" class="btn btn-primary" th:text="#{trip.scanLoad}">Load</button>
+                    </div>
+                    <span class="hint" th:text="#{trip.scanHint}">Scan each unit as it goes on the vehicle; a unit not on the manifest is refused</span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Building the manifest (FLT-05) -->
+    <div class="section count-scan" id="manifest-add" th:if="${s == 'PLANNED' and canPlan}">
+        <div class="section-header">
+            <h2 th:text="#{trip.addTitleUnits}">Add to the manifest</h2>
+        </div>
+        <form th:action="@{/trips/{id}/units(id=${trip.id})}" method="post" class="form-container count-scan-form" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="add-codes" th:text="#{trip.addLabel}">Units or a rack</label>
+                    <div class="scan-row">
+                        <textarea id="add-codes" name="codes" rows="1" maxlength="8000" class="input-code scan-codes" autocomplete="off" autocapitalize="characters"
+                                  spellcheck="false" enterkeyhint="go" data-enter-submits th:attr="autofocus=${canLoad} ? null : 'autofocus'"
+                                  th:placeholder="#{trip.addPh}" th:text="${codesBack}"></textarea>
+                        <button type="submit" class="btn btn-outline" th:text="#{trip.addUnits}">Add</button>
+                    </div>
+                    <span class="hint" th:text="#{trip.addHint}">Scan or type unit labels (paste several at once); a rack or slot label adds every available unit on it</span>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Figures -->
+    <div class="kpi-grid doc-kpis" th:if="${s == 'PLANNED'}">
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.scanned}">Scanned</div>
+                <div class="kpi-value" th:text="${loadedCount}">12</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.scannedSub(${trip.lines.size()})}">of 40 on the manifest</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.pieces}">Pieces</div>
+                <div class="kpi-value" th:classappend="${planned.overPieces()} ? 'text-danger'" th:text="${planned.load().pieces() + ' / ' + v.maxPieces}">40 / 35</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${planned.overPieces()} ? #{trip.kpi.overPieces(${planned.piecesOver()})} : #{trip.kpi.piecesSub}">planned · the vehicle's most</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 7h12l2 13H4z"></path><path d="M9 7a3 3 0 0 1 6 0"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.weight}">Weight</div>
+                <div class="kpi-value" th:classappend="${planned.overKg()} ? 'text-danger'" th:text="${@num.kg(planned.load().kg()) + ' / ' + @num.whole(v.maxLoadKg)}">420 / 1,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${planned.overKg()} ? #{trip.kpi.overKg(${@num.kg(planned.kgOver())})} : #{trip.kpi.weightSub}">kg planned · the vehicle's most</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17"></path><path d="M3 22h12"></path><path d="M15 9h2a2 2 0 0 1 2 2v6a2 2 0 0 0 4 0V8l-3-3"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.fuel}">Fuel</div>
+                <div class="kpi-value" th:text="${@num.money(fuelTotal)}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.fuelSub(${@num.litres(litresTotal)})}">RWF · 0 litres</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="kpi-grid doc-kpis" th:if="${s == 'DEPARTED'}">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.loaded}">Loaded</div>
+                <div class="kpi-value" th:text="${trip.loadedPieces}">35</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.loadedSub}">units in the driver's charge</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 7h12l2 13H4z"></path><path d="M9 7a3 3 0 0 1 6 0"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.weight}">Weight (kg)</div>
+                <div class="kpi-value" th:text="${@num.kg(trip.loadedKg) + ' / ' + @num.whole(v.maxLoadKg)}">420 / 1,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.weightLoadedSub}">loaded · the vehicle's most</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.distance}">Distance</div>
+                <div class="kpi-value" th:text="${trip.distanceKm != null} ? ${@num.whole(trip.distanceKm) + ' km'} : '—'">86 km</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${trip.odometerStart != null} ? #{trip.kpi.odometerFrom(${@num.whole(trip.odometerStart)})} : #{trip.kpi.noOdometer}">from 45,210 km</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17"></path><path d="M3 22h12"></path><path d="M15 9h2a2 2 0 0 1 2 2v6a2 2 0 0 0 4 0V8l-3-3"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.fuel}">Fuel</div>
+                <div class="kpi-value" th:text="${@num.money(fuelTotal)}">45,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.fuelSub(${@num.litres(litresTotal)})}">RWF · 30 litres</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-manifest" th:classappend="${tab == 'manifest'} ? 'active'">
+                <span th:text="#{trip.tab.manifest}">Manifest</span>
+                <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-fuel" th:classappend="${tab == 'fuel'} ? 'active'">
+                <span th:text="#{trip.tab.fuel}">Fuel</span>
+                <span class="section-count" th:text="${fuel.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <!-- The loading manifest, in the order it was planned -->
+            <div class="tab-content" id="tab-manifest" th:classappend="${tab == 'manifest'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{trip.label}">Label</th>
+                                <th th:text="#{trip.glass}">Glass</th>
+                                <th class="num" th:text="#{trip.kg}">kg</th>
+                                <th th:text="${s == 'PLANNED'} ? #{trip.place} : #{trip.from}">Place</th>
+                                <th th:text="#{trip.scanned}">Scanned</th>
+                                <th th:if="${s == 'PLANNED' and canPlan}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${rows.content}" th:with="u=${r.unit}, l=${r.line}">
+                                <td>
+                                    <a class="row-link strong mono" th:if="${canStock and u != null}" th:href="@{/stock/{id}(id=${u.id})}" th:text="${l.unitCode}">U-WH-000041</a>
+                                    <span class="mono strong" th:unless="${canStock and u != null}" th:text="${l.unitCode}">U-WH-000041</span>
+                                </td>
+                                <td>
+                                    <th:block th:if="${u != null}">
+                                        <span class="mono" th:text="${u.product.code}">CLR-6</span>
+                                        <div class="cell-sub" th:text="${u.widthMm + ' × ' + u.heightMm + ' mm'}">1200 × 800 mm</div>
+                                    </th:block>
+                                </td>
+                                <td class="num" th:text="${u != null} ? ${@num.kg(u.weightKg)} : '—'">14.4</td>
+                                <td class="mono" th:if="${s == 'PLANNED'}" th:text="${u != null and u.location != null} ? ${u.location.code} : '—'">WH-A-R01</td>
+                                <td class="mono" th:unless="${s == 'PLANNED'}"
+                                    th:text="${l.fromLocationId != null and locations.get(l.fromLocationId) != null} ? ${locations.get(l.fromLocationId).code} : '—'">WH-A-R01</td>
+                                <td>
+                                    <th:block th:if="${l.loaded}">
+                                        <span class="badge badge-success" th:text="#{trip.loadedBadge}">Loaded</span>
+                                        <div class="cell-sub" th:text="${#temporals.format(l.loadedAt, 'dd/MM/yyyy HH:mm') + ' · ' + l.loadedBy}">10/10/2026 08:10 · jdriver</div>
+                                    </th:block>
+                                    <span th:unless="${l.loaded}" class="badge badge-secondary" th:text="#{trip.notYet}">Not yet</span>
+                                </td>
+                                <td th:if="${s == 'PLANNED' and canPlan}">
+                                    <form th:action="@{/trips/{id}/lines/{line}/remove(id=${trip.id}, line=${l.id})}" method="post"
+                                          class="row-action-form confirm-submit danger" th:attr="data-confirm=#{trip.removeConfirm(${l.unitCode})}">
+                                        <button type="submit" class="action-icon delete" th:title="#{trip.remove}" th:aria-label="#{trip.remove}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${rows.totalElements == 0}">
+                                <td th:attr="colspan=${s == 'PLANNED' and canPlan} ? 6 : 5">
+                                    <div class="empty-state"><p th:text="${s == 'PLANNED'} ? #{trip.noUnits} : #{trip.noUnitsLeft}">Nothing on the manifest yet.</p></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${rows}, ${base}, 'tab=manifest')}"></th:block>
+            </div>
+
+            <!-- Fuel bought for the trip (FLT-12) -->
+            <div class="tab-content" id="tab-fuel" th:classappend="${tab == 'fuel'} ? 'active'">
+                <form th:if="${canRecord and s != 'CANCELLED'}" th:action="@{/trips/{id}/fuel(id=${trip.id})}" th:object="${fuelDto}" method="post"
+                      class="attach-form" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="filledOn" th:text="#{tripFuel.date}">Day</label>
+                            <input type="date" id="filledOn" th:field="*{filledOn}" required th:attr="max=${today}"
+                                   th:classappend="${#fields.hasErrors('filledOn')} ? 'is-invalid'">
+                            <span class="field-error" th:if="${#fields.hasErrors('filledOn')}" th:errors="*{filledOn}"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="litres" th:text="#{tripFuel.litres}">Litres</label>
+                            <div class="input-unit">
+                                <input type="number" id="litres" th:field="*{litres}" step="0.01" min="0.01" required inputmode="decimal"
+                                       th:classappend="${#fields.hasErrors('litres')} ? 'is-invalid'">
+                                <span>l</span>
+                            </div>
+                            <span class="field-error" th:if="${#fields.hasErrors('litres')}" th:errors="*{litres}"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="amount" th:text="#{tripFuel.amount}">Paid</label>
+                            <div class="input-unit">
+                                <input type="number" id="amount" th:field="*{amount}" step="1" min="0" required inputmode="numeric"
+                                       th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
+                                <span>RWF</span>
+                            </div>
+                            <span class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="station" th:text="#{tripFuel.station}">Station</label>
+                            <input type="text" id="station" th:field="*{station}" maxlength="80" th:classappend="${#fields.hasErrors('station')} ? 'is-invalid'">
+                            <span class="field-error" th:if="${#fields.hasErrors('station')}" th:errors="*{station}"></span>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="fuel-note" th:text="#{tripFuel.note}">Receipt or note</label>
+                            <input type="text" id="fuel-note" th:field="*{note}" maxlength="255" th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                            <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" th:text="#{tripFuel.add}">Record fuel</button>
+                    </div>
+                </form>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{tripFuel.date}">Day</th>
+                                <th class="num" th:text="#{tripFuel.litres}">Litres</th>
+                                <th class="num" th:text="#{tripFuel.amountRwf}">Paid (RWF)</th>
+                                <th th:text="#{tripFuel.station}">Station</th>
+                                <th th:text="#{tripFuel.recordedBy}">Recorded</th>
+                                <th th:if="${canRecord and s != 'CANCELLED'}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="f : ${fuel.content}">
+                                <td class="nowrap">
+                                    <span th:text="${#temporals.format(f.filledOn, 'dd/MM/yyyy')}">10/10/2026</span>
+                                    <div class="cell-sub" th:if="${f.note != null}" th:text="${f.note}">Receipt 4521</div>
+                                </td>
+                                <td class="num" th:text="${@num.litres(f.litres)}">30</td>
+                                <td class="num" th:text="${@num.money(f.amount)}">45,000</td>
+                                <td th:text="${f.station ?: '—'}">SP Musanze</td>
+                                <td>
+                                    <span th:text="${f.createdBy}">jdriver</span>
+                                    <div class="cell-sub" th:text="${#temporals.format(f.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 10:00</div>
+                                </td>
+                                <td class="actions" th:if="${canRecord and s != 'CANCELLED'}">
+                                    <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'remove-fuel-' + f.id}" th:text="#{tripFuel.remove}">Remove</button>
+                                </td>
+                            </tr>
+                            <tr th:if="${fuel.totalElements == 0}">
+                                <td th:attr="colspan=${canRecord and s != 'CANCELLED'} ? 6 : 5"><div class="empty-state"><p th:text="#{tripFuel.none}">No fuel recorded.</p></div></td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:if="${fuel.totalElements > 0}">
+                            <tr>
+                                <td class="strong" th:text="#{tripFuel.total}">Total</td>
+                                <td class="num strong" th:text="${@num.litres(litresTotal)}">30</td>
+                                <td class="num strong" th:text="${@num.money(fuelTotal)}">45,000</td>
+                                <td></td>
+                                <td></td>
+                                <td th:if="${canRecord and s != 'CANCELLED'}"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${fuel}, ${base}, 'tab=fuel')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialogs -->
+    <th:block th:if="${s == 'PLANNED' and canPlan}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{trip.cancelTitle}, @{/trips/{id}/cancel(id=${trip.id})}, #{trip.cancelText}, #{trip.cancel})}"></div>
+    </th:block>
+    <th:block th:if="${canRecord and s != 'CANCELLED'}">
+        <th:block th:each="f : ${fuel.content}">
+            <div th:replace="~{fragments/reason-modal :: reasonModal(${'remove-fuel-' + f.id}, #{tripFuel.removeTitle}, @{/trips/{id}/fuel/{fuel}/remove(id=${trip.id}, fuel=${f.id})}, #{tripFuel.removeText}, #{tripFuel.remove})}"></div>
+        </th:block>
+    </th:block>
+
+    <!-- Departure (FLT-06, FLT-07): the supervisor approves the loading -->
+    <div class="modal-overlay" id="depart-modal" th:if="${s == 'PLANNED' and canDepart}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="depart-modal-title">
+            <div class="modal-header">
+                <h3 id="depart-modal-title" th:text="#{trip.departTitle}">Confirm the departure</h3>
+                <button type="button" class="modal-close" data-modal-close="depart-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/trips/{id}/depart(id=${trip.id})}" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{trip.departText(${loaded.load().pieces()}, ${@num.kg(loaded.load().kg())}, ${v.plate}, ${trip.driver.user.fullName})}">35 units (420 kg) leave their racks for RAC123A, in the charge of Jean Driver.</p>
+                    <p class="text-muted" th:if="${loadedCount < trip.lines.size()}" th:text="#{trip.departNotAll(${trip.lines.size() - loadedCount})}">5 units on the manifest are not scanned yet: the departure will be refused.</p>
+                    <div class="form-group">
+                        <label for="odometerStart" th:text="#{trip.odometerStart}">Odometer at departure</label>
+                        <div class="input-unit">
+                            <input type="number" id="odometerStart" name="odometerStart" step="1" min="0" inputmode="numeric"
+                                   th:attr="min=${v.odometerKm != null} ? ${v.odometerKm} : 0">
+                            <span>km</span>
+                        </div>
+                        <span class="hint" th:text="${v.odometerKm != null} ? #{trip.odometerLast(${@num.whole(v.odometerKm)})} : #{trip.odometerOptional}">Last reading 45,210 km; may be left empty</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="depart-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{trip.depart}">Confirm departure</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Odometer of a trip on the road (FLT-12) -->
+    <div class="modal-overlay" id="readings-modal" th:if="${s == 'DEPARTED' and canRecord}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="readings-modal-title">
+            <div class="modal-header">
+                <h3 id="readings-modal-title" th:text="#{trip.readingsTitle}">Odometer</h3>
+                <button type="button" class="modal-close" data-modal-close="readings-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/trips/{id}/readings(id=${trip.id})}" class="reason-form">
+                <div class="modal-body">
+                    <div class="form-group" th:if="${trip.odometerStart == null}">
+                        <label for="readings-start" th:text="#{trip.odometerStart}">Odometer at departure</label>
+                        <div class="input-unit">
+                            <input type="number" id="readings-start" name="odometerStart" step="1" min="0" required inputmode="numeric">
+                            <span>km</span>
+                        </div>
+                    </div>
+                    <p class="text-muted" th:if="${trip.odometerStart != null}" th:text="#{trip.odometerStarted(${@num.whole(trip.odometerStart)})}">Departed at 45,210 km.</p>
+                    <div class="form-group">
+                        <label for="readings-end" th:text="#{trip.odometerEnd}">Odometer back</label>
+                        <div class="input-unit">
+                            <input type="number" id="readings-end" name="odometerEnd" step="1" min="0" inputmode="numeric"
+                                   th:value="${trip.odometerEnd}" th:attr="min=${trip.odometerStart != null} ? ${trip.odometerStart} : 0">
+                            <span>km</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="readings-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{trip.readingsSave}">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script defer src="/js/stock-ops.js"></script>
+</div>
+</body>
+</html>

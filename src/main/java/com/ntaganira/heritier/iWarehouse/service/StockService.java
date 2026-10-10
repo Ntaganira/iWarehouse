@@ -26,6 +26,7 @@ import com.ntaganira.heritier.iWarehouse.repository.SalesInvoiceLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCountRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockMovementRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
+import com.ntaganira.heritier.iWarehouse.repository.TripRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -84,6 +85,8 @@ public class StockService {
     public static final String REF_SALES_INVOICE = "SALES_INVOICE";
     /** Movement reference type for units brought back on a credit note (POS-09). */
     public static final String REF_CREDIT_NOTE = "CREDIT_NOTE";
+    /** Movements of units loaded on a vehicle, referring to their trip (FLT-07). */
+    public static final String REF_TRIP = "TRIP";
     /** Status filter value for every status; empty means "in stock". */
     public static final String ALL_STATUSES = "all";
 
@@ -93,20 +96,22 @@ public class StockService {
     private final StockAdjustmentLineRepository adjustmentLineRepo;
     private final StockCountRepository countRepo;
     private final SalesInvoiceLineRepository saleLineRepo;
+    private final TripRepository tripRepo;
     private final LocationRepository locationRepo;
     private final DocumentNumberService numbers;
     private final Clock clock;
 
     public StockService(StockUnitRepository unitRepo, StockMovementRepository movementRepo,
                         StockCostEntryRepository costEntryRepo, StockAdjustmentLineRepository adjustmentLineRepo,
-                        StockCountRepository countRepo, SalesInvoiceLineRepository saleLineRepo, LocationRepository locationRepo,
-                        DocumentNumberService numbers, Clock clock) {
+                        StockCountRepository countRepo, SalesInvoiceLineRepository saleLineRepo, TripRepository tripRepo,
+                        LocationRepository locationRepo, DocumentNumberService numbers, Clock clock) {
         this.unitRepo = unitRepo;
         this.movementRepo = movementRepo;
         this.costEntryRepo = costEntryRepo;
         this.adjustmentLineRepo = adjustmentLineRepo;
         this.countRepo = countRepo;
         this.saleLineRepo = saleLineRepo;
+        this.tripRepo = tripRepo;
         this.locationRepo = locationRepo;
         this.numbers = numbers;
         this.clock = clock;
@@ -373,7 +378,7 @@ public class StockService {
 
     // ---------------------------------------------------------------- what a unit may do (INV-05)
 
-    /** Units held by pending adjustments and open stock counts: unit id to document number (INV-05, INV-08). */
+    /** Units held by pending adjustments, open stock counts, sales being rung up and planned trips: unit id to document number (INV-05, INV-08). */
     public Map<UUID, String> holds(Collection<UUID> unitIds) {
         if (unitIds.isEmpty()) {
             return Map.of();
@@ -387,6 +392,10 @@ public class StockService {
         }
         // A sale being rung up holds its units until it is paid or cancelled (POS-01)
         for (Object[] row : saleLineRepo.findHolds(unitIds)) {
+            holds.putIfAbsent((UUID) row[0], (String) row[1]);
+        }
+        // A planned trip holds the units on its manifest until it departs or is cancelled (FLT-05)
+        for (Object[] row : tripRepo.findHolds(unitIds)) {
             holds.putIfAbsent((UUID) row[0], (String) row[1]);
         }
         return holds;
@@ -482,6 +491,22 @@ public class StockService {
             throw BusinessException.of("creditNote.unit.notSold", unit.getCode(),
                     new DefaultMessageSourceResolvable("stock.status." + unit.getStatus().name()));
         }
+    }
+
+    // ---------------------------------------------------------------- vehicles (FLT-07)
+
+    /**
+     * A unit leaves its rack on a vehicle when its trip departs: ON_VEHICLE, at the vehicle's location, in the driver's
+     * charge. Its cost and the stock value do not change. The caller checked the manifest, holds and the vehicle's limits.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void load(StockUnit unit, Location vehicle, UUID tripId, String tripNumber) {
+        requireAllowed(unit, StockAction.LOAD);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        StockStatus fromStatus = unit.getStatus();
+        unit.setStatus(StockStatus.ON_VEHICLE);
+        unit.setLocation(vehicle);
+        record(unit, MovementType.LOAD, from, fromStatus, LocalDateTime.now(clock), null, REF_TRIP, tripId, tripNumber);
     }
 
     // ---------------------------------------------------------------- transfers and adjustments (INV-07)

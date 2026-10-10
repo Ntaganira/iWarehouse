@@ -122,6 +122,12 @@ public class SettingsDto {
     @NotNull(message = "{settings.value.required}")
     private Boolean alertEmail;
 
+    /** Days before a licence, insurance or inspection expires that the fleet is told (FLT-04). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.fleetExpiryAlertDays.range}")
+    @Max(value = 180, message = "{settings.fleetExpiryAlertDays.range}")
+    private Integer fleetExpiryAlertDays;
+
     // --- EBM fiscal signing (TAX-02) ---
 
     @NotNull(message = "{settings.value.required}")

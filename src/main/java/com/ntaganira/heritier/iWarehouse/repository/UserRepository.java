@@ -32,4 +32,9 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Query("select distinct u from User u join u.roles r join r.permissions p"
             + " where u.enabled = true and r.enabled = true and p.enabled = true and p.code = :code")
     List<User> findActiveHolding(@Param("code") String code);
+
+    /** Enabled users not registered as drivers yet (FLT-03), by name. */
+    @Query("select u from User u where u.enabled = true"
+            + " and not exists (select d.id from Driver d where d.user = u) order by u.fullName")
+    List<User> findDriverCandidates();
 }

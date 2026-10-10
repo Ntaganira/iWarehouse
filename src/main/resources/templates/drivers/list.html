@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{driver.title}, ~{::content})}">
+<head><title>Drivers - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{driver.title}">Drivers</h1>
+            <div class="subtitle" th:text="#{driver.subtitle}">Users who drive the moving shops, with their licence</div>
+        </div>
+        <a href="/drivers/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_DRIVER') and hasAuthority('PERM_VIEW_DRIVER_DATA')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{driver.add}">Register a driver</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{driver.sectionTitle}">Drivers</span>
+                <span class="section-count" th:text="${drivers.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/drivers}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{driver.searchPh}" th:aria-label="#{driver.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{driver.driver}">Driver</th>
+                        <th th:text="#{driver.category}">Licence category</th>
+                        <th th:text="#{driver.expiry}">Licence until</th>
+                        <th th:text="#{driver.defaultVehicle}">Usual vehicle</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${drivers.content}">
+                        <td>
+                            <a class="row-link strong" th:href="@{/drivers/{id}(id=${d.id})}" th:text="${d.user.fullName}">Jean Driver</a>
+                            <div class="cell-sub" th:text="${d.username}">jdriver</div>
+                        </td>
+                        <td th:text="${d.licenceCategory}">B, C</td>
+                        <td><th:block th:replace="~{fragments/fleet :: paper(${d.licenceExpiry}, ${licences.get(d.id)})}"></th:block></td>
+                        <td class="mono" th:text="${d.defaultVehicle != null} ? ${d.defaultVehicle.plate} : '—'">RAC123A</td>
+                        <td><th:block th:replace="~{fragments/fleet :: active(${d.enabled})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(drivers.content)}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{driver.empty}">No drivers found</h3>
+                                <p th:text="#{driver.emptyHint}">Register the users who drive the moving shops</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${drivers}, '/drivers', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

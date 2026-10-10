@@ -31,7 +31,9 @@ public enum StockAction {
     /** A lost unit found again. */
     FIND(EnumSet.of(StockStatus.LOST)),
     /** Sold at the counter: available, or reserved for the buyer (POS-01). */
-    SELL(EnumSet.of(StockStatus.AVAILABLE, StockStatus.RESERVED));
+    SELL(EnumSet.of(StockStatus.AVAILABLE, StockStatus.RESERVED)),
+    /** Planned on a trip's manifest and loaded on its vehicle (FLT-05..07): available only. */
+    LOAD(EnumSet.of(StockStatus.AVAILABLE));
 
     private final Set<StockStatus> allowed;
 

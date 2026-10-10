@@ -40,7 +40,8 @@ class AttachmentServiceTest {
     private final FileStorageService storage = mock(FileStorageService.class);
     private final ShipmentRepository shipmentRepo = mock(ShipmentRepository.class);
     private final AttachmentService service = new AttachmentService(repo, storage, mock(GoodsReceiptRepository.class), shipmentRepo,
-            mock(SupplierInvoiceRepository.class), mock(StockAdjustmentRepository.class), CLOCK);
+            mock(SupplierInvoiceRepository.class), mock(StockAdjustmentRepository.class), mock(VehicleRepository.class),
+            mock(DriverRepository.class), CLOCK);
     private final UUID shipment = UUID.randomUUID();
 
     @AfterEach

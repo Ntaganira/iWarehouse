@@ -52,6 +52,12 @@
         </div>
     </div>
 
+    <div class="doc-note" th:if="${vehicle != null}">
+        <span th:text="#{location.vehicleNote}">The location of a vehicle: it is changed on the vehicle's page.</span>
+        <a class="mono" sec:authorize="hasAuthority('PAGE_VEHICLES')" th:href="@{/vehicles/{id}(id=${vehicle.id})}" th:text="${vehicle.plate}">RAC123A</a>
+        <span class="mono" sec:authorize="!hasAuthority('PAGE_VEHICLES')" th:text="${vehicle.plate}">RAC123A</span>
+    </div>
+
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>

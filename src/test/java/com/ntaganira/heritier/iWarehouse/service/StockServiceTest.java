@@ -10,6 +10,7 @@ import com.ntaganira.heritier.iWarehouse.repository.StockCostEntryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCountRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockMovementRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
+import com.ntaganira.heritier.iWarehouse.repository.TripRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -62,7 +63,7 @@ class StockServiceTest {
             return u;
         });
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
-        service = new StockService(unitRepo, movementRepo, costEntryRepo, mock(StockAdjustmentLineRepository.class), mock(StockCountRepository.class), mock(SalesInvoiceLineRepository.class), locationRepo, numbers, clock);
+        service = new StockService(unitRepo, movementRepo, costEntryRepo, mock(StockAdjustmentLineRepository.class), mock(StockCountRepository.class), mock(SalesInvoiceLineRepository.class), mock(TripRepository.class), locationRepo, numbers, clock);
     }
 
     @Test

@@ -13,6 +13,7 @@ import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.Labels;
 import com.ntaganira.heritier.iWarehouse.service.LocationService;
+import com.ntaganira.heritier.iWarehouse.service.VehicleService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,13 +53,15 @@ public class LocationController {
     static final String MODULE = "Locations";
 
     private final LocationService locationService;
+    private final VehicleService vehicleService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
 
-    public LocationController(LocationService locationService, DataChangeService dataChangeService,
+    public LocationController(LocationService locationService, VehicleService vehicleService, DataChangeService dataChangeService,
                               ActivityLogService activityLogService, Messages messages) {
         this.locationService = locationService;
+        this.vehicleService = vehicleService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.messages = messages;
@@ -79,6 +82,8 @@ public class LocationController {
         String open = List.of("details", "children", "history").contains(tab) ? tab : "details";
         Location location = locationService.findById(id);
         model.addAttribute("location", location);
+        // A vehicle's location is kept with its vehicle (FLT-02): the page says which
+        model.addAttribute("vehicle", location.getType().isManual() ? null : vehicleService.ofLocation(id).orElse(null));
         model.addAttribute("ancestors", locationService.ancestors(location));
         model.addAttribute("children", Paging.of(locationService.children(id), Paging.pageOf("children", open, page)));
         model.addAttribute("history", dataChangeService.history("Location", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));

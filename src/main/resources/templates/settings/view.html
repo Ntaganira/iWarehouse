@@ -219,6 +219,13 @@
                                 </dt>
                                 <dd th:text="${settings.alertEmail} ? #{settings.alertEmail.on} : #{settings.alertEmail.off}">In the app only</dd>
                             </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.fleetExpiryAlertDays}">Papers alert</span>
+                                    <span class="setting-hint" th:text="#{settings.fleetExpiryAlertDaysHint}">Before a licence, insurance or inspection expires (FLT-04)</span>
+                                </dt>
+                                <dd><span th:text="${settings.fleetExpiryAlertDays}">30</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
+                            </div>
                         </dl>
                     </div>
 

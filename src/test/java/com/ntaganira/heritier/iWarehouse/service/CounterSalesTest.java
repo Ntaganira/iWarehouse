@@ -205,7 +205,7 @@ class CounterSalesTest {
         when(locationRepo.findAll()).thenReturn(List.of(rack, offcutRack));
         when(unitRepo.sumArea(any(), any())).thenReturn(new BigDecimal("100.0000"));
         StockService stockService = new StockService(unitRepo, movementRepo, mock(StockCostEntryRepository.class), adjustmentLineRepo,
-                mock(StockCountRepository.class), saleLineRepo, locationRepo, numbers, CLOCK);
+                mock(StockCountRepository.class), saleLineRepo, mock(TripRepository.class), locationRepo, numbers, CLOCK);
         // Credit notes (POS-09): what they credit, the units back, the cash a till refunded
         CreditNoteRepository creditNoteRepo = mock(CreditNoteRepository.class);
         when(creditNoteRepo.save(any())).thenAnswer(a -> {

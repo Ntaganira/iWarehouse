@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Fleet</title></head>
+<body>
+
+<!--/* A paper's expiry date with its state (FLT-04): nothing when valid, "Expires soon" or "Expired". */-->
+<th:block th:fragment="paper(expiry, stage)">
+    <span class="nowrap" th:text="${#temporals.format(expiry, 'dd/MM/yyyy')}">05/11/2026</span>
+    <span th:if="${stage.name() == 'SOON'}" class="badge badge-warning" th:text="#{fleet.paper.SOON}">Expires soon</span>
+    <span th:if="${stage.name() == 'EXPIRED'}" class="badge badge-danger" th:text="#{fleet.paper.EXPIRED}">Expired</span>
+</th:block>
+
+<!--/* Status badge of a trip. */-->
+<th:block th:fragment="tripStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PLANNED'" class="badge badge-info" th:text="#{trip.status.PLANNED}">Planned</span>
+    <span th:case="'DEPARTED'" class="badge badge-success" th:text="#{trip.status.DEPARTED}">On the road</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{trip.status.CANCELLED}">Cancelled</span>
+</th:block>
+
+<!--/* Active or inactive. */-->
+<th:block th:fragment="active(enabled)">
+    <span class="badge badge-success" th:if="${enabled}" th:text="#{common.active}">Active</span>
+    <span class="badge badge-secondary" th:unless="${enabled}" th:text="#{common.inactive}">Inactive</span>
+</th:block>
+
+<!--/* A trip list inside a vehicle or driver page: number, date, the other side (driver or vehicle), area, status. */-->
+<th:block th:fragment="tripRows(trips, base, showVehicle)">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th th:text="#{trip.number}">Trip</th>
+                    <th th:text="#{trip.date}">Date</th>
+                    <th th:text="${showVehicle} ? #{trip.vehicle} : #{trip.driver}">Driver</th>
+                    <th th:text="#{trip.area}">Area</th>
+                    <th class="num" th:text="#{trip.loadedPieces}">Units</th>
+                    <th th:text="#{common.status}">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="t : ${trips.content}">
+                    <td><a class="row-link strong mono nowrap" th:href="@{/trips/{id}(id=${t.id})}" th:text="${t.number}">TRP-WH-2026-000001</a></td>
+                    <td class="nowrap" th:text="${#temporals.format(t.tripDate, 'dd/MM/yyyy')}">10/10/2026</td>
+                    <td th:if="${showVehicle}" class="mono" th:text="${t.vehicle.plate}">RAC123A</td>
+                    <td th:unless="${showVehicle}" th:text="${t.driver.user.fullName}">Jean Driver</td>
+                    <td th:text="${t.area}">Musanze</td>
+                    <td class="num" th:text="${t.loadedPieces != null} ? ${t.loadedPieces} : '—'">35</td>
+                    <td><th:block th:replace="~{fragments/fleet :: tripStatus(${t.status})}"></th:block></td>
+                </tr>
+                <tr th:if="${trips.totalElements == 0}">
+                    <td colspan="6"><div class="empty-state"><p th:text="#{trip.noneYet}">No trips yet.</p></div></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <th:block th:replace="~{layout/pagination :: pager(${trips}, ${base}, 'tab=trips')}"></th:block>
+</th:block>
+
+</body>
+</html>

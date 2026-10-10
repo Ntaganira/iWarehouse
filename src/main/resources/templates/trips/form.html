@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${tripDto.id == null} ? #{trip.addTitle} : #{trip.editTitle(${trip.number})}, ~{::content})}">
+<head><title>Trip - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${tripDto.id == null} ? #{trip.addTitle} : #{trip.editTitle(${trip.number})}">Plan a Trip</h1>
+            <div class="subtitle" th:text="#{trip.formSubtitle}">A vehicle, its driver, the day and the area; the papers must cover the day</div>
+        </div>
+        <a th:href="${tripDto.id == null} ? @{/trips} : @{/trips/{id}(id=${tripDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${tripDto.id == null} ? @{/trips/new} : @{/trips/{id}/edit(id=${tripDto.id})}"
+              th:object="${tripDto}" method="post" class="form-container trip-form" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="driverId" th:text="#{trip.driver}">Driver</label>
+                    <select id="driverId" th:field="*{driverId}" required th:classappend="${#fields.hasErrors('driverId')} ? 'is-invalid'">
+                        <option value="" th:text="#{trip.chooseDriver}">Choose the driver</option>
+                        <option th:each="d : ${drivers}" th:value="${d.id}" th:text="${d.user.fullName}"
+                                th:attr="data-vehicle=${d.defaultVehicle != null} ? ${d.defaultVehicle.id} : ''">Jean Driver</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('driverId')}" th:errors="*{driverId}"></span>
+                    <span class="hint" th:text="#{trip.driverHint}">Their usual vehicle is chosen with them</span>
+                </div>
+                <div class="form-group">
+                    <label for="vehicleId" th:text="#{trip.vehicle}">Vehicle</label>
+                    <select id="vehicleId" th:field="*{vehicleId}" required th:classappend="${#fields.hasErrors('vehicleId')} ? 'is-invalid'">
+                        <option value="" th:text="#{trip.chooseVehicle}">Choose the vehicle</option>
+                        <option th:each="v : ${vehicles}" th:value="${v.id}"
+                                th:text="${v.plate + ' · ' + v.model + ' · ' + v.maxPieces + ' / ' + @num.whole(v.maxLoadKg) + ' kg'}">RAC123A · Isuzu NPR · 35 / 1,000 kg</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('vehicleId')}" th:errors="*{vehicleId}"></span>
+                    <span class="hint" th:text="#{trip.vehicleHint}">Most pieces / most kg: checked when it departs</span>
+                </div>
+                <div class="form-group">
+                    <label for="tripDate" th:text="#{trip.date}">Date</label>
+                    <input type="date" id="tripDate" th:field="*{tripDate}" required th:attr="min=${today}"
+                           th:classappend="${#fields.hasErrors('tripDate')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('tripDate')}" th:errors="*{tripDate}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="area" th:text="#{trip.area}">Area</label>
+                    <input type="text" id="area" th:field="*{area}" maxlength="120" required th:placeholder="#{trip.areaPh}"
+                           th:classappend="${#fields.hasErrors('area')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('area')}" th:errors="*{area}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="note" th:text="#{trip.note}">Note</label>
+                    <input type="text" id="note" th:field="*{note}" maxlength="255" th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                </div>
+            </div>
+            <p class="form-note" th:if="${tripDto.id == null}" th:text="#{trip.formNote}">Once planned, add the units to its manifest on the trip's page.</p>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="${tripDto.id == null} ? #{trip.create} : #{trip.save}">Plan the trip</button>
+                <a th:href="${tripDto.id == null} ? @{/trips} : @{/trips/{id}(id=${tripDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/trip-form.js"></script>
+</div>
+</body>
+</html>

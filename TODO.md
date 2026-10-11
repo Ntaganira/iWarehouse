@@ -162,6 +162,18 @@ Goal: every unit and every franc that left in the morning is accounted for at ni
 - [ ] Audit export to Excel/PDF (AUD-12); monthly partitioning (AUD-13); hash chain (AUD-14)
 - [ ] Multiple branches from one installation (ADM-05)
 - [ ] Automatic download of BNR daily rates when the server has internet (ACC-02)
+- [ ] Driver shortage recovery: a recovery document per driver (a salary deduction or cash paid back) that clears their part of Driver Shortage Receivable (`journal_lines.driver_id`), the account then controlled like the floats (`ManualJournals.CONTROLLED`), and a monthly "deductions to make" list per driver for whoever runs payroll (ACC-07; see the question under "Fleet and go-live") (S)
+- [ ] Payroll journal, until the payroll module below exists: the month's payroll result from the payroll tool or the accountant (gross salaries, PAYE, RSSB contributions, net pay), entered once or imported from a file, posts its journal (Dr salaries and wages / Cr PAYE payable, RSSB payable, net salaries payable) and then the salary payments; once per month, refused in a closed month (S)
+
+## Payroll — a module of its own, after go-live (not in SRS v2.1)
+
+Scope (owner, 2026-10-11): the payroll module stores employee and salary data, calculates gross pay, deductions and net pay each period, generates payslips and statutory reports, and posts the journal entries to the accounting ledger. Build it after go-live, once the business has answered the payroll question under "Accounting"; until then the payroll journal (Phase 3) brings each month's result into the ledger.
+
+- [ ] Employees and salary data: an employee record (optionally linked to a user and a driver), national ID, RSSB number, contract and start date, base salary, allowances, the bank or mobile-money account paid into. Salary and personal data get their own PAGE_/PERM_ (not every role that sees users), are masked in the change log (`@AuditMask`) and shown in full only with a view permission (NFR-12, Law 058/2021) (M)
+- [ ] Pay runs per period (monthly): gross pay (base, allowances, overtime), statutory deductions (PAYE by brackets, RSSB pension and maternity, CBHI and whatever else the accountant confirms), other deductions (salary advances, loans, driver shortages from the recovery document) and net pay. Rates and brackets live in Settings with the date they apply from, so a change in the law is a new row, never a code change; the calculation is a pure class unit-tested on the accountant's worked examples. A run is a draft, approved by another person, then posted; a posted run never changes (a correction goes into the next run) (L)
+- [ ] Payslips: an A4 PDF per employee per run (letterhead and logo, `reports/pdf-parts`), printed or emailed; each employee sees only their own, on My profile (M)
+- [ ] Statutory reports: the monthly PAYE declaration for RRA and the RSSB contributions declaration in the formats their portals accept (Excel/CSV), and the payroll summary of each run (M)
+- [ ] Ledger: a `JournalSource.PAYROLL` rule in `PostingService`: Dr salaries and wages and the employer's contributions / Cr PAYE payable, RSSB payable, other deductions (Driver Shortage Receivable for recoveries) and net salaries payable; paying salaries Dr net salaries payable / Cr bank or mobile money. New `AccountKey`s and their accounts seeded in the module's migration, the payable accounts controlled (`ManualJournals.CONTROLLED`), `PostingServiceTest` keeping AT-10 passing. Replaces the payroll journal once built (M)
 
 ---
 
@@ -200,6 +212,7 @@ Answers change what gets built; record each answer next to the question.
 - [ ] Import VAT paid at customs is recoverable (VAT Input), not a cost of the glass: keep it out of the shipment bills. Confirm how it is paid and declared (TAX-05)
 - [ ] Import costs reaching glass already sold or cut go to Cost of Goods Sold (built). Agree
 - [ ] Sheets broken on arrival are expensed to Glass Spoilage at receipt; a claim brings back what it recovers (built). Agree
+- [ ] Payroll: who runs it today (a payroll tool, the accountant, by hand), for how many employees, paid monthly? Which allowances and deductions besides PAYE and RSSB (advances, loans, driver shortages)? Is the payroll module wanted (scope under "Payroll"), or is the payroll journal enough? Before any calculation is built, the accountant confirms the rates and gives worked examples
 
 **Sales and money**
 - [ ] Contractor prices exclude VAT: the POS adds 18% to them; retail prices include it (V9 lists). Confirm, and whether a VAT-excluded list should print net prices on the invoice
@@ -230,7 +243,7 @@ Answers change what gets built; record each answer next to the question.
 - [ ] No credit from the vehicle: account customers pay cash or mobile money on the road (MPOS-05). Should account customers buy on credit from a vehicle, within their limit?
 - [ ] Vehicle sales have their own number series (MINV-WH-2026-000001), handed to each phone in advance; EBM numbers them like any sale. Does the accountant accept a separate series?
 - [ ] Receipts from the vehicle print through the phone's print dialog (80 mm) or go by SMS or WhatsApp. Which printers do the drivers carry (Bluetooth thermal)? A direct printer link would be built for them
-- [ ] How are driver shortages recovered (a payroll deduction, cash paid back)? Driver Shortage Receivable keeps each driver's part; a manual journal could move the account but not name the driver, so a recovery document per driver is to build (and the account then controlled like the floats)
+- [ ] How are driver shortages recovered (a payroll deduction, cash paid back)? Driver Shortage Receivable keeps each driver's part; a manual journal could move the account but not name the driver, so a recovery document per driver is to build (and the account then controlled like the floats). Planned in Phase 3: driver shortage recovery
 - [ ] A missing unit charged to the driver is charged at its cost (what the books lose). Should it be charged at its selling price instead (the difference to income)?
 - [ ] Floats are cleared per trip. Does a driver hand over the cash of each trip separately, or once for several trips?
 - [ ] A vehicle and its driver may leave on a new trip while the previous one is back but not closed (its case or float pending). Should that be refused?

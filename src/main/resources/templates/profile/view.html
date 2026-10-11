@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{profile.title}, ~{::content})}">
+<head><title>My profile - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{profile.title}">My profile</h1>
+            <div class="subtitle" th:text="#{profile.subtitle}">Your photo, your details and your password</div>
+        </div>
+        <a href="/dashboard" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <!-- Photo and details -->
+    <div class="section" id="details">
+        <div class="section-header">
+            <h2 th:text="#{profile.details}">Your details</h2>
+        </div>
+        <div class="form-container">
+            <div class="profile-photo">
+                <div class="avatar">
+                    <img th:if="${profilePhotoUrl != null}" th:src="${profilePhotoUrl}" th:alt="#{profile.photo}" class="avatar-img" id="profile-photo-img">
+                    <img th:if="${profilePhotoUrl == null}" th:alt="#{profile.photo}" class="avatar-img" id="profile-photo-img" hidden>
+                    <span th:if="${profilePhotoUrl == null}" th:text="${profileInitials}" id="profile-photo-initials">A</span>
+                </div>
+                <div class="avatar-meta">
+                    <div class="profile-username" th:text="${me.fullName}">Jean Uwase</div>
+                    <div class="profile-sub">
+                        <span class="mono" th:text="${me.username}">jean</span>
+                        <th:block th:if="${me.jobTitle != null}"> &middot; <span th:text="${me.jobTitle}">Warehouse supervisor</span></th:block>
+                    </div>
+                    <div class="profile-roles">
+                        <span class="profile-role" th:each="r : ${me.roles}" th:if="${r.enabled}" th:text="${r.code}">SUPERVISOR</span>
+                    </div>
+                    <div class="photo-actions">
+                        <form th:action="@{/profile/photo}" method="post" enctype="multipart/form-data" id="photo-form">
+                            <label class="btn btn-outline btn-sm" for="photo-file" tabindex="0"
+                                   th:text="${profilePhotoUrl != null} ? #{profile.photo.change} : #{profile.photo.add}">Add a photo</label>
+                            <input type="file" id="photo-file" name="photo" accept="image/jpeg,image/png,image/webp,image/*" class="sr-only">
+                            <button type="submit" class="btn btn-primary btn-sm" id="photo-save" th:text="#{profile.photo.save}">Save the photo</button>
+                        </form>
+                        <form th:if="${profilePhotoUrl != null}" th:action="@{/profile/photo/remove}" method="post"
+                              class="confirm-submit danger" th:attr="data-confirm=#{profile.photo.removeConfirm}">
+                            <button type="submit" class="btn btn-outline btn-sm btn-danger-outline" th:text="#{profile.photo.remove}">Remove</button>
+                        </form>
+                    </div>
+                    <span class="hint" th:text="#{profile.photo.hint}">A JPEG or PNG photo of up to 5 MB, cut square around its centre.</span>
+                </div>
+            </div>
+
+            <form th:action="@{/profile}" th:object="${profileDto}" method="post" class="profile-details" novalidate>
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="fullName" th:text="#{user.fullName}">Full name</label>
+                        <input type="text" id="fullName" th:field="*{fullName}" th:placeholder="#{user.fullNamePh}"
+                               th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'" maxlength="100" autocomplete="name" required>
+                        <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="jobTitle" th:text="#{user.jobTitle}">Job title</label>
+                        <input type="text" id="jobTitle" th:field="*{jobTitle}" th:placeholder="#{user.jobTitlePh}"
+                               th:classappend="${#fields.hasErrors('jobTitle')} ? 'is-invalid'" maxlength="100" autocomplete="organization-title">
+                        <span class="field-error" th:if="${#fields.hasErrors('jobTitle')}" th:errors="*{jobTitle}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="email" th:text="#{user.email}">Email</label>
+                        <input type="email" id="email" th:field="*{email}" th:placeholder="#{user.emailPh}"
+                               th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'" maxlength="100" autocomplete="email" required>
+                        <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                        <span class="hint" th:text="#{profile.emailHint}">Alerts and password resets are sent here.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone" th:text="#{user.phone}">Phone</label>
+                        <input type="tel" id="phone" th:field="*{phone}" th:placeholder="#{user.phonePh}"
+                               th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'" maxlength="20" autocomplete="tel">
+                        <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                    </div>
+                </div>
+                <p class="form-note" th:text="#{profile.adminNote}">Your username and roles are changed by an administrator.</p>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:text="#{profile.save}">Save my details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Password -->
+    <div class="section" id="password" th:attr="data-open=${tab == 'password'}">
+        <div class="section-header">
+            <h2 th:text="#{profile.password.title}">Change my password</h2>
+        </div>
+        <form th:action="@{/profile/password}" th:object="${passwordDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <input type="text" name="username" th:value="${me.username}" autocomplete="username" hidden>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="currentPassword" th:text="#{profile.password.current}">Current password</label>
+                    <input type="password" id="currentPassword" th:field="*{currentPassword}"
+                           th:classappend="${#fields.hasErrors('currentPassword')} ? 'is-invalid'" maxlength="72" autocomplete="current-password" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('currentPassword')}" th:errors="*{currentPassword}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword" th:text="#{profile.password.new}">New password</label>
+                    <input type="password" id="newPassword" th:field="*{newPassword}"
+                           th:classappend="${#fields.hasErrors('newPassword')} ? 'is-invalid'" minlength="8" maxlength="72" autocomplete="new-password" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('newPassword')}" th:errors="*{newPassword}"></span>
+                    <span class="hint" th:text="#{user.passwordHint}">At least 8 characters</span>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword" th:text="#{profile.password.confirm}">New password again</label>
+                    <input type="password" id="confirmPassword" th:field="*{confirmPassword}"
+                           th:classappend="${#fields.hasErrors('confirmPassword')} ? 'is-invalid'" minlength="8" maxlength="72" autocomplete="new-password" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('confirmPassword')}" th:errors="*{confirmPassword}"></span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{profile.password.save}">Change my password</button>
+            </div>
+        </form>
+    </div>
+
+    <script defer src="/js/profile.js"></script>
+</div>
+</body>
+</html>

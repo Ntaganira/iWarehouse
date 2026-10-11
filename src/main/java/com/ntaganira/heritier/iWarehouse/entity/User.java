@@ -38,8 +38,12 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    /** The profile photo's storage key (avatars/{id}/{uuid}.jpg), served by /profile/photo; null: the initials. */
     @Column(name = "photo_url")
     private String photoUrl;
+
+    @Column(name = "job_title", length = 100)
+    private String jobTitle;
 
     @Builder.Default
     @Column(nullable = false)

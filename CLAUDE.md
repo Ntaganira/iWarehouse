@@ -225,6 +225,8 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
 - **State changes are POST** (with CSRF), never GET links. For a confirmation, use `<form class="confirm-submit" data-confirm="...">` (add `danger` for destructive actions).
 - **When access is taken away, end the sessions:** call `UserSessions.expire(userId)` inside `AfterCommit.run(...)` (disable, password reset, role change).
 - **Check an action inside a handler with `AppUserPrincipal.currentHas("PERM_X")`**, for example to decide whether a form may change roles.
+- **My profile (`/profile`) is the one screen without a page code:** like signing out, every signed-in user has it (`isAuthenticated()`), and it only ever touches the caller's own account (`ProfileService`, the id from the session). The header reads the name and photo from the session's `AppUserPrincipal` (no database call per page): after changing them, replace it with `withProfile(...)` and save the security context (`ProfileController.refreshSession`). Profile photos are redrawn by `Avatars` (square 256 px JPEG) before they are stored; `users.photo_url` holds the storage key.
+- **A public page that writes a form gets its CSRF token before it renders** (`WebConfig`, `/login`): made lazily when Thymeleaf reaches the form, the session holding it can no longer be created once 8 KB of the page has been sent, and the page breaks off.
 
 ### UI (iVura page anatomy, SRS 3.3)
 

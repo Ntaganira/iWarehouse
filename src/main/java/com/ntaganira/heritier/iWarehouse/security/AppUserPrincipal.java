@@ -16,12 +16,26 @@ public class AppUserPrincipal extends User {
 
     private final Long id;
     private final String fullName;
+    private final String photoKey;
 
     public AppUserPrincipal(Long id, String fullName, String username, String password, boolean enabled,
+                            boolean accountNonLocked, Collection<? extends GrantedAuthority> authorities) {
+        this(id, fullName, null, username, password, enabled, accountNonLocked, authorities);
+    }
+
+    public AppUserPrincipal(Long id, String fullName, String photoKey, String username, String password, boolean enabled,
                             boolean accountNonLocked, Collection<? extends GrantedAuthority> authorities) {
         super(username, password, enabled, true, true, accountNonLocked, authorities);
         this.id = id;
         this.fullName = fullName;
+        this.photoKey = photoKey;
+    }
+
+    /** The same user and rights with a new name and photo (My profile), for the session's header. */
+    public AppUserPrincipal withProfile(String newFullName, String newPhotoKey) {
+        // The password is erased once signed in; the user class refuses null
+        return new AppUserPrincipal(id, newFullName, newPhotoKey, getUsername(), getPassword() == null ? "" : getPassword(),
+                isEnabled(), isAccountNonLocked(), getAuthorities());
     }
 
     public Long getId() {
@@ -30,6 +44,11 @@ public class AppUserPrincipal extends User {
 
     public String getFullName() {
         return fullName;
+    }
+
+    /** The profile photo's storage key, or null. */
+    public String getPhotoKey() {
+        return photoKey;
     }
 
     /** The current principal, if the request is authenticated with an AppUserPrincipal. */

@@ -117,6 +117,7 @@ public class UserController {
         dto.setFullName(user.getFullName());
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
+        dto.setJobTitle(user.getJobTitle());
         user.getRoles().forEach(r -> dto.getRoleIds().add(r.getId()));
         return form(model, dto);
     }

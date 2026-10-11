@@ -148,6 +148,7 @@ public class SecurityConfig {
             .map(user -> new AppUserPrincipal(
                     user.getId(),
                     user.getFullName(),
+                    user.getPhotoUrl(),
                     user.getUsername(),
                     user.getPassword(),
                     user.isEnabled(),

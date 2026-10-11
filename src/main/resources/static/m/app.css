@@ -24,6 +24,7 @@
   --text: #0e2a57;
   --muted: #64748b;
   --soft: #f7f9fc;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   --radius: 12px;
   --shadow: 0 1px 2px rgba(15,40,90,.05), 0 1px 3px rgba(15,40,90,.04);
@@ -57,7 +58,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
   font-size: 16px;
@@ -131,6 +132,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Scan field (MPOS-03) */
 .scan-row { display: flex; gap: 8px; }
 .scan-row .input { flex: 1; min-width: 0; font-family: var(--font-mono); text-transform: uppercase; }
+/* The hint is a sentence, not a code: normal case in the body font, so it fits a phone (as .input-code in the web app) */
+.scan-row .input::placeholder { font-family: var(--font-sans); text-transform: none; }
 .scan-row .btn { flex-shrink: 0; }
 .camera { position: relative; border-radius: var(--radius); overflow: hidden; background: #000; }
 .camera video { width: 100%; display: block; max-height: 320px; object-fit: cover; }

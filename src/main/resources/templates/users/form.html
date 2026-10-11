@@ -45,6 +45,12 @@
                            th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'" maxlength="20">
                     <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
                 </div>
+                <div class="form-group">
+                    <label for="jobTitle" th:text="#{user.jobTitle}">Job title</label>
+                    <input type="text" id="jobTitle" th:field="*{jobTitle}" th:placeholder="#{user.jobTitlePh}"
+                           th:classappend="${#fields.hasErrors('jobTitle')} ? 'is-invalid'" maxlength="100">
+                    <span class="field-error" th:if="${#fields.hasErrors('jobTitle')}" th:errors="*{jobTitle}"></span>
+                </div>
                 <div class="form-group" th:if="${userDto.id == null}">
                     <label for="password" th:text="#{user.password}">Password</label>
                     <input type="password" id="password" th:field="*{password}" th:placeholder="#{user.passwordPh}"

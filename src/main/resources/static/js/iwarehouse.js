@@ -387,6 +387,34 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // My profile menu (header): opens below the avatar; outside click or Escape closes it, focus back on the button
+    const profileBtn = document.getElementById('profile-btn');
+    const profileMenu = document.getElementById('profile-menu');
+    if (profileBtn && profileMenu) {
+        const setProfileMenu = function (open, focusBack) {
+            profileMenu.classList.toggle('open', open);
+            profileBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) {
+                const first = profileMenu.querySelector('.profile-menu-item');
+                if (first) first.focus();
+            } else if (focusBack) {
+                profileBtn.focus();
+            }
+        };
+        // No stopPropagation: the same click closes the bell's and the language's panels
+        profileBtn.addEventListener('click', function () {
+            setProfileMenu(!profileMenu.classList.contains('open'), false);
+        });
+        document.addEventListener('click', function (e) {
+            if (profileMenu.classList.contains('open') && !profileMenu.contains(e.target) && !profileBtn.contains(e.target)) {
+                setProfileMenu(false, false);
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && profileMenu.classList.contains('open')) setProfileMenu(false, true);
+        });
+    }
+
     // Theme toggle
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {

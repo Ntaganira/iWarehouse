@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="#{login.welcome}">iWarehouse - Login</title>
+    <link rel="icon" type="image/png" href="/images/logo-mark.png">
     <script>
         (function () {
             var t = localStorage.getItem('iwarehouse-theme');
@@ -46,9 +47,9 @@
 
     <header class="auth-topbar">
         <div class="auth-brand">
-            <div class="logo-icon">iW</div>
+            <div class="logo-icon"><img src="/images/logo-mark.png" th:alt="#{app.name}"></div>
             <div>
-                <div class="name"><span>i</span>Warehouse</div>
+                <div class="name">HIGH BYTES</div>
                 <div class="tag" th:text="#{app.tagline}">Glass Warehouse &amp; POS</div>
             </div>
         </div>

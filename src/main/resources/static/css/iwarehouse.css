@@ -188,9 +188,9 @@ body {
   letter-spacing: .8px;
   text-transform: uppercase;
   margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  /* Wraps rather than cut: in the phone drawer the close button leaves it 134 px, less than a line in French */
+  overflow-wrap: anywhere;
 }
 
 .sidebar-menu {
@@ -546,7 +546,8 @@ html.sidebar-collapsed .sidebar-toggle .icon-collapse { display: none; }
   height: 100%;
 }
 
-.lang-caret {
+.lang-caret,
+.profile-caret {
   width: 14px;
   height: 14px;
   fill: none;
@@ -556,7 +557,8 @@ html.sidebar-collapsed .sidebar-toggle .icon-collapse { display: none; }
   stroke-linejoin: round;
 }
 
-.lang-menu {
+.lang-menu,
+.profile-menu {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -572,11 +574,13 @@ html.sidebar-collapsed .sidebar-toggle .icon-collapse { display: none; }
   z-index: 60;
 }
 
-.lang-menu.open { display: block; }
+.lang-menu.open,
+.profile-menu.open { display: block; }
 
 .lang-menu li { margin: 0; }
 
-.lang-option {
+.lang-option,
+.profile-menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -589,7 +593,9 @@ html.sidebar-collapsed .sidebar-toggle .icon-collapse { display: none; }
 }
 
 .lang-option:hover,
-.lang-option.active { background: var(--gray-100); color: var(--primary); }
+.lang-option.active,
+.profile-menu-item:hover,
+.profile-menu-item:focus-visible { background: var(--gray-100); color: var(--primary); }
 
 .header-right .notif-btn:hover { background: var(--gray-100); }
 
@@ -4510,3 +4516,33 @@ button.notif-item:hover { background: var(--gray-100); }
 
 /* A form that shows the record's figures first (clearing a float): the fields keep their distance */
 .detail-list + .form-grid { margin-top: 20px; }
+
+/* A code in a table (unit label, document number, place) is read and scanned whole: it never breaks at its hyphens; the table scrolls in its box instead */
+table .mono { white-space: nowrap; }
+
+/* The company's mark in the logo tiles (sidebar, login): the picture fills the white tile, with a little air */
+.logo-icon img { display: block; width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+
+/* === My profile: the header's menu (panel, rows and caret shared with the language menu) === */
+.profile-dropdown { position: relative; }
+.header-right button.profile { background: none; border: 0; font: inherit; text-align: left; }
+.header-right .profile .info .name { display: block; }
+.header-right .profile .profile-caret { flex-shrink: 0; stroke: var(--gray-500); transition: transform .2s ease; }
+#profile-btn[aria-expanded="true"] .profile-caret { transform: rotate(180deg); }
+.header-right .profile:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.profile-menu { min-width: 230px; max-width: calc(100vw - 32px); }
+.profile-menu-head { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; margin-bottom: 4px; border-bottom: 1px solid var(--gray-200); min-width: 0; }
+.profile-menu-name { font-size: 14px; font-weight: 700; color: var(--dark); overflow-wrap: anywhere; }
+.profile-menu-user { overflow-wrap: anywhere; }
+.profile-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.profile-menu-form { margin: 0; }
+button.profile-menu-item { width: 100%; border: 0; background: none; font-family: inherit; cursor: pointer; text-align: left; }
+.profile-menu-item.is-danger { color: var(--danger); }
+.profile-menu-item.is-danger:hover, .profile-menu-item.is-danger:focus-visible { background: var(--tint-red); color: var(--danger); }
+
+/* The profile page: who the photo is, under the name */
+.profile-photo .avatar-meta .profile-sub { font-size: 13px; color: var(--gray-500); overflow-wrap: anywhere; }
+.profile-photo .avatar-meta { min-width: 0; }
+.profile-photo .photo-actions { flex-wrap: wrap; }
+.profile-photo .photo-actions form { margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-details { margin-top: 24px; }

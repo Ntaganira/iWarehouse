@@ -101,7 +101,8 @@
                         </td>
                         <td>
                             <th:block th:if="${p.reopenedAt != null}">
-                                <span class="nowrap" th:text="${#temporals.format(p.reopenedAt, 'dd/MM/yyyy HH:mm') + ' · ' + p.reopenedBy}">10/10/2026 09:00 · owner</span>
+                                <span class="nowrap" th:text="${#temporals.format(p.reopenedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 09:00</span>
+                                <div class="cell-sub" th:text="${p.reopenedBy}">owner</div>
                                 <div class="cell-sub" th:text="${p.reopenReason}">Supplier invoice found late</div>
                             </th:block>
                             <span class="text-muted" th:if="${p.reopenedAt == null}">—</span>

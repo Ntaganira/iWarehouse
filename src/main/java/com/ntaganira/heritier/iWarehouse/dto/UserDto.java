@@ -45,6 +45,9 @@ public class UserDto {
     @Pattern(regexp = "^$|^[+0-9 ()-]{6,20}$", message = "{user.phone.pattern}")
     private String phone;
 
+    @Size(max = 100, message = "{user.jobTitle.size}")
+    private String jobTitle;
+
     /** Required when creating; ignored when editing. */
     private String password;
 

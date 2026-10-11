@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -45,6 +46,18 @@ public class WebConfig implements WebMvcConfigurer {
         LocaleChangeInterceptor interceptor = new LocaleChangeInterceptor();
         interceptor.setParamName("lang");
         registry.addInterceptor(interceptor).excludePathPatterns("/api/**");
+        // The sign-in page's CSRF token is made (with the session holding it) before the page is written. Made lazily, it would
+        // come when Thymeleaf reaches the form, about 8 KB in: once the page is that long before it (the "signed out" notice
+        // after logging out) Tomcat has already sent the start, no session can be created any more and the page breaks off.
+        registry.addInterceptor(new HandlerInterceptor() {
+            @Override
+            public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+                if (request.getAttribute(CsrfToken.class.getName()) instanceof CsrfToken token) {
+                    token.getToken();
+                }
+                return true;
+            }
+        }).addPathPatterns("/login");
         registry.addInterceptor(new HandlerInterceptor() {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

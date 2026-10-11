@@ -115,6 +115,7 @@ public class UserService {
                 .email(email)
                 .fullName(dto.getFullName().trim())
                 .phone(blankToNull(dto.getPhone()))
+                .jobTitle(blankToNull(dto.getJobTitle()))
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .roles(roles)
                 .build());
@@ -149,6 +150,7 @@ public class UserService {
         user.setEmail(email);
         user.setFullName(dto.getFullName().trim());
         user.setPhone(blankToNull(dto.getPhone()));
+        user.setJobTitle(blankToNull(dto.getJobTitle()));
         return user;
     }
 

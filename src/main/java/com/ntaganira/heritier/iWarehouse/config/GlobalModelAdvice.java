@@ -25,10 +25,12 @@ public class GlobalModelAdvice {
         return initials(profileFullName());
     }
 
-    /** Profile photos arrive with the MinIO file service (see TODO.md). */
+    /** The signed-in user's photo (My profile); the address changes with the photo, so the browser may keep it. */
     @ModelAttribute("profilePhotoUrl")
     public String profilePhotoUrl() {
-        return null;
+        return AppUserPrincipal.current().map(AppUserPrincipal::getPhotoKey)
+                .map(key -> "/profile/photo?v=" + Integer.toHexString(key.hashCode()))
+                .orElse(null);
     }
 
     public static String initials(String fullName) {

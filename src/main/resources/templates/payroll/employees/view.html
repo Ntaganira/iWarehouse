@@ -124,7 +124,7 @@
                                 <td class="num" th:text="${@num.money(p.gross())}">300,000</td>
                                 <td class="num strong" th:text="${@num.money(p.netPay())}">225,964</td>
                                 <td><th:block th:replace="~{payroll/runs/list :: runStatus(${p.status()})}"></th:block></td>
-                                <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{r}/payslips/{l}(r=${p.runId()}, l=${p.lineId()})}"
+                                <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{r}/payslips/{l}(r=${p.runId()}, l=${p.lineId()})}" download
                                        th:text="#{payslip.pdf}">Payslip (PDF)</a></td>
                             </tr>
                             <tr th:if="${payslips.totalElements == 0}">

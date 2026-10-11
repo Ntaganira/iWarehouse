@@ -516,10 +516,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Page-load skeleton on navigation
+    // Page-load skeleton on navigation. A file (an export, a payslip, a label file) downloads without leaving the page,
+    // so the next page never comes to take the skeleton away: downloads are left out (the download attribute, a form with
+    // data-download or another target), and the skeleton clears itself if no page has come after a while.
+    let skeletonTimer = null;
     window.showPageSkeleton = function () {
         const el = document.getElementById('page-skeleton');
-        if (el) el.hidden = false;
+        if (!el) return;
+        el.hidden = false;
+        clearTimeout(skeletonTimer);
+        skeletonTimer = setTimeout(function () { el.hidden = true; }, 8000);
     };
 
     const isPlainNavigation = function (a) {
@@ -543,7 +549,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('submit', function (e) {
         if (e.defaultPrevented) return;
         const form = e.target;
-        if (form && form.action) showPageSkeleton();
+        if (!form || !form.action) return;
+        if (form.target && form.target !== '_self') return;     // opens in another tab (the invoice's A4 PDF)
+        if (form.hasAttribute('data-download')) return;          // answers with a file
+        showPageSkeleton();
     });
 
     window.addEventListener('pageshow', function () {

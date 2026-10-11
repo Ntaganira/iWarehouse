@@ -31,7 +31,7 @@
                 <button type="button" class="btn btn-outline" data-modal-open="release-modal" th:if="${canReserve and st == 'RESERVED'}" th:text="#{stock.release}">Release</button>
             </th:block>
             <th:block sec:authorize="hasAuthority('PERM_PRINT_LABEL')">
-                <a th:href="@{/stock/labels.zpl(unit=${unit.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+                <a th:href="@{/stock/labels.zpl(unit=${unit.id})}" download class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
                 <a th:href="@{/stock/labels(unit=${unit.id})}" class="btn btn-primary" th:text="#{label.print}">Print label</a>
             </th:block>
         </div>

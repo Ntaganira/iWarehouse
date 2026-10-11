@@ -29,7 +29,7 @@
                 </form>
             </th:block>
             <th:block th:if="${canPrint and s == 'POSTED' and receipt.sheets > 0}">
-                <a th:href="@{/stock/labels.zpl(receipt=${receipt.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+                <a th:href="@{/stock/labels.zpl(receipt=${receipt.id})}" download class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
                 <a th:href="@{/stock/labels(receipt=${receipt.id})}" class="btn btn-primary" th:text="#{label.printAll(${receipt.sheets})}">Print 38 labels</a>
             </th:block>
         </div>

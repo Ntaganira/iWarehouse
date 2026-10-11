@@ -22,7 +22,7 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/locations/{id}(id=${location.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
-            <a th:href="@{/locations/{id}/labels.zpl(id=${location.id})}" class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
+            <a th:href="@{/locations/{id}/labels.zpl(id=${location.id})}" download class="btn btn-outline" th:text="#{label.zpl}">ZPL file</a>
             <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
         </div>
     </div>

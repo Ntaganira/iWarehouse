@@ -144,7 +144,7 @@
                         <td class="nowrap strong" th:text="${#temporals.format(p.period(), 'MMMM yyyy')}">October 2026</td>
                         <td class="num" th:text="${@num.money(p.gross())}">300,000</td>
                         <td class="num strong" th:text="${@num.money(p.netPay())}">225,964</td>
-                        <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/profile/payslips/{id}(id=${p.lineId()})}" th:text="#{payslip.pdf}">Payslip (PDF)</a></td>
+                        <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/profile/payslips/{id}(id=${p.lineId()})}" download th:text="#{payslip.pdf}">Payslip (PDF)</a></td>
                     </tr>
                 </tbody>
             </table>

@@ -273,6 +273,7 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
     - A report's filters are a full-width `.table-toolbar.report-filters` card above the figures, left-aligned, in two `.filter-group`s: the period, then the other filters with the apply button (`btn-outline btn-sm`). The bar then wraps between the groups and never leaves the button alone. See `cutting-jobs/yield.html`.
   - **Forms:** a single-card form uses `.form-container` (800 px) with `.form-actions` inside it. A document form with line tables uses full-width sections and a `.form-actions.sticky-actions` bar.
   - **Check:** compare a new screen with a finished one of the same kind (list, detail, form) in light and dark themes before calling it done.
+- **A link or form that answers with a file** (an export, a payslip, a label file) carries `download` (a form: `data-download`, or a `target` of its own): every other click shows the page-load skeleton until the next page comes, and a download never brings one (`iwarehouse.js` also clears the skeleton after 8 s).
 - No CDN links. Vendor any new library under `static/vendor/`, because the warehouse LAN may have no internet.
 
 ### i18n

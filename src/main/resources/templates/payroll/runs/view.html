@@ -141,7 +141,7 @@
                                 <span class="strong" th:text="#{payslip.all}">Payslips</span>
                                 <div class="cell-sub" th:text="${run.posted} ? #{payslip.allHint} : #{payslip.draftHint}">One employee a page, to print or send</div>
                             </td>
-                            <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/payslips(id=${run.id})}" th:text="#{export.pdf}">PDF</a></td>
+                            <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/payslips(id=${run.id})}" download th:text="#{export.pdf}">PDF</a></td>
                         </tr>
                         <tr th:each="r : ${reports}">
                             <td>
@@ -149,8 +149,8 @@
                                 <div class="cell-sub" th:text="#{${'payRun.reportHint.' + r}}">What each employee earned and the PAYE kept, for the RRA declaration</div>
                             </td>
                             <td class="actions nowrap">
-                                <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/export(id=${run.id}, report=${r}, format='XLSX')}" th:text="#{export.excel}">Excel</a>
-                                <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/export(id=${run.id}, report=${r}, format='PDF')}" th:text="#{export.pdf}">PDF</a>
+                                <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/export(id=${run.id}, report=${r}, format='XLSX')}" download th:text="#{export.excel}">Excel</a>
+                                <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/export(id=${run.id}, report=${r}, format='PDF')}" download th:text="#{export.pdf}">PDF</a>
                             </td>
                         </tr>
                     </tbody>
@@ -199,7 +199,7 @@
                                 <td class="num" th:text="${@num.money(l.otherDeductions)}">0</td>
                                 <td class="num strong" th:text="${@num.money(l.netPay)}">225,964</td>
                                 <td class="actions nowrap">
-                                    <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{r}/payslips/{l}(r=${run.id}, l=${l.id})}" th:text="#{payslip.short}">Payslip</a>
+                                    <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{r}/payslips/{l}(r=${run.id}, l=${l.id})}" download th:text="#{payslip.short}">Payslip</a>
                                     <form th:if="${s == 'DRAFT' and canPrepare}" th:action="@{/payroll/runs/{r}/lines/{l}/remove(r=${run.id}, l=${l.id})}"
                                           method="post" class="row-action-form confirm-submit danger" th:attr="data-confirm=#{payRun.removeConfirm(${l.employeeName})}">
                                         <button type="submit" class="btn btn-outline btn-sm btn-danger-outline" th:text="#{payRun.remove}">Take off</button>

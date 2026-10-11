@@ -4546,3 +4546,20 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
 .profile-photo .photo-actions { flex-wrap: wrap; }
 .profile-photo .photo-actions form { margin: 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .profile-details { margin-top: 24px; }
+
+/* === Search: the header's button on phones and tablets (the field is hidden there), the results page === */
+.header-search-btn { display: none; }
+@media (max-width: 768px) {
+  .header-right .header-search-btn { display: flex; }
+}
+.search-toolbar .toolbar-search { flex: 1 1 260px; }
+.search-hits td:first-child { width: 1%; }
+/* Small phones: the header's right side gives up words for room (flag without its code, avatar without its caret), so the
+   menu button, search, bell, theme, language and avatar all fit from 360 px */
+@media (max-width: 480px) {
+  .header-right { gap: 6px; }
+  .header-right .lang-btn { padding: 7px 9px; }
+  .header-right .lang-btn .lang-code, .header-right .lang-btn .lang-caret { display: none; }
+  .header-right .profile { padding: 2px; }
+  .header-right .profile .profile-caret { display: none; }
+}

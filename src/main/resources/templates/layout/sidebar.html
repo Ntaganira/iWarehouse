@@ -312,15 +312,21 @@
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <h1 th:text="#{header.title}">iWarehouse</h1>
-            <div class="search-box">
+            <!-- Search (GlobalSearchService): Enter, or a scanner's Enter, opens a code's record or lists the matches -->
+            <form class="search-box" th:action="@{/search}" method="get" role="search">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" th:placeholder="#{header.search}" th:aria-label="#{header.search}">
-            </div>
+                <input type="text" name="q" th:placeholder="#{header.search}" th:aria-label="#{header.search}"
+                       autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" maxlength="100">
+            </form>
         </div>
         <div class="header-right">
+            <!-- Phones and tablets: the header's field is hidden, the search page has its own -->
+            <a href="/search" class="theme-toggle header-search-btn" th:aria-label="#{search.title}" th:title="#{search.title}">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </a>
             <!-- Notifications bell (RPT-06): unread count and the latest five; opening one marks it read -->
             <div class="notif-dropdown" sec:authorize="hasAuthority('PAGE_NOTIFICATIONS')" th:with="bell=${@notificationService.bell()}">
                 <button type="button" class="notif-btn" id="notif-btn" th:aria-label="#{notification.title}" th:title="#{notification.title}">

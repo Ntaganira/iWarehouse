@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{search.title}, ~{::content})}">
+<head><title>Search - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{search.title}">Search</h1>
+            <div class="subtitle" th:text="#{search.subtitle}">A label, a document number, a code or a name</div>
+        </div>
+    </div>
+
+    <!-- The field (the header's is hidden on phones and tablets) -->
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{search.found}">Results</span>
+                <span class="section-count" th:if="${!result.groups.isEmpty()}" th:text="${result.totalHits}">0</span>
+            </h2>
+            <form th:action="@{/search}" method="get" class="table-toolbar search-toolbar" role="search">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="search" name="q" id="search-q" th:value="${result.query}" th:placeholder="#{header.search}" th:aria-label="#{header.search}"
+                           autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" maxlength="100">
+                </div>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{search.submit}">Search</button>
+            </form>
+        </div>
+        <div class="empty-state" th:if="${result.groups.isEmpty()}">
+            <h3 th:if="${result.query.isEmpty()}" th:text="#{search.start}">What are you looking for?</h3>
+            <h3 th:if="${result.tooShort}" th:text="#{search.tooShort}">Type at least 2 characters</h3>
+            <h3 th:if="${!result.query.isEmpty() and !result.tooShort}" th:text="#{search.none(${result.query})}">Nothing found for “abc”</h3>
+            <p th:text="#{search.hint}">Scan or type a label (unit, rack, slot), a document number (invoice, order, trip…), a code or part of a name.</p>
+        </div>
+    </div>
+
+    <!-- The matches, by kind -->
+    <div class="section" th:each="g : ${result.groups}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{${g.titleKey}}">Invoices</span>
+                <span class="section-count" th:text="${g.total}">3</span>
+            </h2>
+            <a th:if="${g.listUrl != null and g.total > g.hits.size()}" th:href="${g.listUrl}" class="link-more"
+               th:text="#{search.seeAll(${g.total})}">See all 12</a>
+        </div>
+        <div class="table-container">
+            <table class="search-hits">
+                <thead>
+                    <tr>
+                        <th th:text="#{search.col.code}">Code</th>
+                        <th th:text="#{search.col.details}">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="h : ${g.hits}">
+                        <td class="nowrap"><a class="row-link strong mono" th:href="${h.url}" th:text="${h.code}">INV-WH-2026-000001</a></td>
+                        <td>
+                            <span th:text="${h.title ?: '—'}">Jean Uwase</span>
+                            <div class="cell-sub" th:if="${h.detail != null}" th:text="${h.detail}">09/10/2026 · 120,000 RWF</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script th:if="${result.query.isEmpty() or result.groups.isEmpty()}">
+        (function () { var q = document.getElementById('search-q'); if (q) { q.focus(); q.select(); } })();
+    </script>
+</div>
+</body>
+</html>

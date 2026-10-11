@@ -35,7 +35,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats (AT-06, AT-07 pass) | Done (M9) | V37, the trip's End of day tab, `/audit-cases`, `/floats`, `/reports/fleet`, the phone's breakage and cash screens |
 | Hardening and go-live | **Next** (M10) | — |
 
-Unit tests: 507, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
+Unit tests: 511, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
 
 ## Definition of done for a module
 
@@ -137,6 +137,7 @@ Goal: every unit and every franc that left in the morning is accounted for at ni
 
 - [ ] Account lockout after 5 failed logins (`users.failed_login_attempts`, `locked_until`) (NFR-09) (M)
 - [x] Profile page and change password (NFR-09) (S) — 2026-10-11 (V38): the avatar in the header opens My account (My profile, Change password, Logout; keyboard and Escape). `/profile`, for every signed-in user: the photo (squared and shrunk in the browser, drawn again as a 256 px JPEG by the server, so no file is kept as sent; MinIO, served by `/profile/photo`; removed back to the initials), the name, email, phone and a new job title (also on the user form), the password (the current one first, typed twice, not the same). Audited and logged (UPDATE_PROFILE, UPDATE_PROFILE_PHOTO, CHANGE_PASSWORD with failures); the header shows the new name and photo at once
+- [x] Search in the header (S) — 2026-10-11: it searched nothing (iVura's box without a form). Now Enter, or a scanner's, opens a unit, rack or slot label, any document number, a customer, supplier or glass code at once (any case); other text lists the first 5 of each kind (units in every state, places, glass, customers, suppliers, sales, purchasing, stock documents, trips, vehicles, drivers, audit cases, users) with See all to the list filtered the same way, only the kinds the user may open (a driver: their own trips). On phones and tablets a search button in the header opens the page (the field is hidden there); the header fits from 360 px
 - [ ] Forgot/reset password by single-use email link valid 60 minutes (NFR-09) (M). With it: ask for the current password before the email changes on My profile (the reset goes to that address)
 - [ ] MockMvc tests: every handler refuses a user without its PAGE_/PERM_ (NFR-10) (S)
 - [ ] Testcontainers integration tests on PostgreSQL: one audited save gives one change row and a rollback none (AUD-04); two concurrent `DocumentNumberService.next()` calls get different numbers and a rollback gives the number back (MD-07); journals balance under concurrency (M)

@@ -239,6 +239,7 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
 ### UI (iVura page anatomy, SRS 3.3)
 
 - Every page wraps itself in the shell: `th:replace="~{layout/sidebar :: html(#{title.key}, ~{::content})}"`.
+- **The sidebar is in sections:** Main Menu, Warehouse, Purchasing, Sales, Fleet, Accounting, Payroll, Other, Administration (`menu.*`). A new screen's link goes into its section with the same `sec:authorize` as its handler; a section title shows only to those who may open one of its links (its `sec:authorize` is the OR of theirs), so no one sees an empty section.
 - **Every screen works from a 360 px phone to a desktop:** the warehouse floor uses phones and tablets.
   - At 768 px and less the sidebar is a drawer opened from the header's menu button (`iwarehouse.js`).
   - At 640 px and less table rows become cards. `iwarehouse.js` labels each cell with its column header, so every table needs a `<thead>`. An actions column takes `<th><span class="sr-only">…</span></th>` (no label on the card). Opt out with `data-cards="off"`.

@@ -62,6 +62,7 @@
         <a sec:authorize="hasAuthority('PAGE_DASHBOARD')" th:classappend="${requestURI == '/' or requestURI == '/dashboard'} ? 'active' : ''" href="/dashboard">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg></span> <span th:text="#{nav.dashboard}">Dashboard</span>
         </a>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_STOCK')) or (hasAuthority('PAGE_STOCK_SUMMARY')) or (hasAuthority('PAGE_STOCK_TRANSFERS')) or (hasAuthority('PAGE_STOCK_ADJUSTMENTS')) or (hasAuthority('PAGE_STOCK_COUNTS')) or (hasAuthority('PAGE_PRODUCTION')) or (hasAuthority('PAGE_CUTTING_YIELD')) or (hasAuthority('PAGE_PRODUCTS')) or (hasAuthority('PAGE_LOCATIONS'))" th:text="#{menu.warehouse}">Warehouse</div>
         <a sec:authorize="hasAuthority('PAGE_STOCK')" th:classappend="${#strings.startsWith(requestURI, '/stock') and !#strings.startsWith(requestURI, '/stock-') and !#strings.startsWith(requestURI, '/stock/summary') and !#strings.startsWith(requestURI, '/stock/offcut-ageing') and !#strings.startsWith(requestURI, '/stock/slow-moving')} ? 'active' : ''" href="/stock">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.stock}">Inventory</span>
         </a>
@@ -77,18 +78,19 @@
         <a sec:authorize="hasAuthority('PAGE_STOCK_COUNTS')" th:classappend="${#strings.startsWith(requestURI, '/stock-counts')} ? 'active' : ''" href="/stock-counts">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1"></rect><polyline points="9 14 11 16 15 12"></polyline></svg></span> <span th:text="#{nav.stockCounts}">Stock Counts</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_PRODUCTS')" th:classappend="${#strings.startsWith(requestURI, '/products')} ? 'active' : ''" href="/products">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span> <span th:text="#{nav.products}">Glass Products</span>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_LOCATIONS')" th:classappend="${#strings.startsWith(requestURI, '/locations')} ? 'active' : ''" href="/locations">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span> <span th:text="#{nav.locations}">Locations</span>
-        </a>
         <a sec:authorize="hasAuthority('PAGE_PRODUCTION')" th:classappend="${#strings.startsWith(requestURI, '/cutting-jobs') and !#strings.startsWith(requestURI, '/cutting-jobs/yield')} ? 'active' : ''" href="/cutting-jobs">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg></span> <span th:text="#{nav.production}">Production</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_CUTTING_YIELD')" th:classappend="${#strings.startsWith(requestURI, '/cutting-jobs/yield')} ? 'active' : ''" href="/cutting-jobs/yield">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> <span th:text="#{nav.cuttingYield}">Cutting Yield</span>
         </a>
+        <a sec:authorize="hasAuthority('PAGE_PRODUCTS')" th:classappend="${#strings.startsWith(requestURI, '/products')} ? 'active' : ''" href="/products">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span> <span th:text="#{nav.products}">Glass Products</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_LOCATIONS')" th:classappend="${#strings.startsWith(requestURI, '/locations')} ? 'active' : ''" href="/locations">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span> <span th:text="#{nav.locations}">Locations</span>
+        </a>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_PROCUREMENT')) or (hasAuthority('PAGE_RECEIVING')) or (hasAuthority('PAGE_SHIPMENTS')) or (hasAuthority('PAGE_SUPPLIERS')) or (hasAuthority('PAGE_SUPPLIER_INVOICES') and hasAuthority('PERM_VIEW_SUPPLIER_ACCOUNT')) or (hasAuthority('PAGE_SUPPLIER_PAYMENTS') and hasAuthority('PERM_VIEW_SUPPLIER_ACCOUNT'))" th:text="#{menu.purchasing}">Purchasing</div>
         <a sec:authorize="hasAuthority('PAGE_PROCUREMENT')" th:classappend="${#strings.startsWith(requestURI, '/purchase-orders')} ? 'active' : ''" href="/purchase-orders">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"></path><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"></path><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"></path><path d="M12 10v4"></path></svg></span> <span th:text="#{nav.procurement}">Procurement</span>
         </a>
@@ -107,26 +109,7 @@
         <a sec:authorize="hasAuthority('PAGE_SUPPLIER_PAYMENTS') and hasAuthority('PERM_VIEW_SUPPLIER_ACCOUNT')" th:classappend="${#strings.startsWith(requestURI, '/supplier-payments')} ? 'active' : ''" href="/supplier-payments">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span> <span th:text="#{nav.supplierPayments}">Supplier Payments</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_FLEET')" th:classappend="${#strings.startsWith(requestURI, '/trips')} ? 'active' : ''" href="/trips">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg></span> <span th:text="#{nav.fleet}">Trips</span>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_VEHICLES') and hasAuthority('PERM_VIEW_VEHICLE')" th:classappend="${#strings.startsWith(requestURI, '/vehicles')} ? 'active' : ''" href="/vehicles">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></span> <span th:text="#{nav.vehicles}">Vehicles</span>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')" th:classappend="${#strings.startsWith(requestURI, '/drivers')} ? 'active' : ''" href="/drivers">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="2.5"></circle><line x1="13" y1="10" x2="18" y2="10"></line><line x1="13" y1="14" x2="17" y2="14"></line></svg></span> <span th:text="#{nav.drivers}">Drivers</span>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_SYNC_CONFLICTS') and hasAuthority('PERM_VIEW_SYNC_CONFLICTS')" th:classappend="${#strings.startsWith(requestURI, '/sync-conflicts')} ? 'active' : ''" href="/sync-conflicts">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span> <span th:text="#{nav.syncConflicts}">Sync Conflicts</span>
-            <th:block th:with="waiting=${@syncConflictService.openCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.syncConflictsOpen}">1</span></th:block>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_AUDIT_CASES') and hasAuthority('PERM_VIEW_AUDIT_CASES')" th:classappend="${#strings.startsWith(requestURI, '/audit-cases')} ? 'active' : ''" href="/audit-cases">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span> <span th:text="#{nav.auditCases}">Audit Cases</span>
-            <th:block th:with="waiting=${@auditCaseService.openCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.auditCasesOpen}">1</span></th:block>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')" href="/m/" target="_blank" rel="noopener">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></span> <span th:text="#{nav.mobilePos}">Mobile POS</span>
-        </a>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_POS')) or (hasAuthority('PAGE_QUOTATIONS') and hasAuthority('PERM_VIEW_QUOTATION')) or (hasAuthority('PAGE_INVOICES')) or (hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')) or (hasAuthority('PAGE_CUSTOMER_PAYMENTS') and hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT')) or (hasAuthority('PAGE_SALE_APPROVALS') and hasAuthority('PERM_VIEW_INVOICE')) or (hasAuthority('PAGE_TILL_SESSIONS')) or (hasAuthority('PAGE_CUSTOMERS')) or (hasAuthority('PAGE_PRICE_LISTS')) or (hasAuthority('PAGE_EBM')) or (hasAuthority('PAGE_SALES_REPORTS'))" th:text="#{menu.sales}">Sales</div>
         <a sec:authorize="hasAuthority('PAGE_POS')" th:classappend="${#strings.startsWith(requestURI, '/pos')} ? 'active' : ''" href="/pos">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></span> <span th:text="#{nav.pos}">Counter POS</span>
         </a>
@@ -136,19 +119,15 @@
         <a sec:authorize="hasAuthority('PAGE_INVOICES')" th:classappend="${#strings.startsWith(requestURI, '/invoices')} ? 'active' : ''" href="/invoices">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span> <span th:text="#{nav.invoices}">Invoices</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS') and hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT')" th:classappend="${#strings.startsWith(requestURI, '/customer-payments')} ? 'active' : ''" href="/customer-payments">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></span> <span th:text="#{nav.customerPayments}">Customer Payments</span>
-        </a>
         <a sec:authorize="hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')" th:classappend="${#strings.startsWith(requestURI, '/credit-notes')} ? 'active' : ''" href="/credit-notes">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span> <span th:text="#{nav.creditNotes}">Credit Notes</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS') and hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT')" th:classappend="${#strings.startsWith(requestURI, '/customer-payments')} ? 'active' : ''" href="/customer-payments">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></span> <span th:text="#{nav.customerPayments}">Customer Payments</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_SALE_APPROVALS') and hasAuthority('PERM_VIEW_INVOICE')" th:classappend="${#strings.startsWith(requestURI, '/sale-approvals')} ? 'active' : ''" href="/sale-approvals">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg></span> <span th:text="#{nav.saleApprovals}">Sale Approvals</span>
             <th:block sec:authorize="hasAuthority('PERM_APPROVE_SALE')" th:with="waiting=${@saleApprovalService.pendingCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.saleApprovalsWaiting}">2</span></th:block>
-        </a>
-        <a sec:authorize="hasAuthority('PAGE_EBM')" th:classappend="${#strings.startsWith(requestURI, '/ebm')} ? 'active' : ''" href="/ebm">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12h6M12 9v6"></path></svg></span> <span th:text="#{nav.ebm}">EBM Signing</span>
-            <th:block th:with="unsigned=${@ebmService.backlog().count()}"><span class="badge" th:if="${unsigned > 0}" th:text="${unsigned}" th:title="#{nav.ebmUnsigned}">2</span></th:block>
         </a>
         <a sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:classappend="${#strings.startsWith(requestURI, '/till-sessions')} ? 'active' : ''" href="/till-sessions">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2.5"></circle><path d="M6 12h.01M18 12h.01"></path></svg></span> <span th:text="#{nav.tillSessions}">Till Sessions</span>
@@ -159,12 +138,38 @@
         <a sec:authorize="hasAuthority('PAGE_PRICE_LISTS')" th:classappend="${#strings.startsWith(requestURI, '/price-lists')} ? 'active' : ''" href="/price-lists">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span> <span th:text="#{nav.priceLists}">Price Lists</span>
         </a>
-        <a sec:authorize="hasAuthority('PAGE_FLEET_REPORTS') and hasAuthority('PERM_VIEW_FLEET_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports/fleet')} ? 'active' : ''" href="/reports/fleet">
-            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> <span th:text="#{nav.fleetReports}">Fleet Reports</span>
+        <a sec:authorize="hasAuthority('PAGE_EBM')" th:classappend="${#strings.startsWith(requestURI, '/ebm')} ? 'active' : ''" href="/ebm">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12h6M12 9v6"></path></svg></span> <span th:text="#{nav.ebm}">EBM Signing</span>
+            <th:block th:with="unsigned=${@ebmService.backlog().count()}"><span class="badge" th:if="${unsigned > 0}" th:text="${unsigned}" th:title="#{nav.ebmUnsigned}">2</span></th:block>
         </a>
         <a sec:authorize="hasAuthority('PAGE_SALES_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports/sales')} ? 'active' : ''" href="/reports/sales">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></span> <span th:text="#{nav.salesReports}">Sales Reports</span>
         </a>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_FLEET')) or (hasAuthority('PAGE_VEHICLES') and hasAuthority('PERM_VIEW_VEHICLE')) or (hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')) or (hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')) or (hasAuthority('PAGE_SYNC_CONFLICTS') and hasAuthority('PERM_VIEW_SYNC_CONFLICTS')) or (hasAuthority('PAGE_AUDIT_CASES') and hasAuthority('PERM_VIEW_AUDIT_CASES')) or (hasAuthority('PAGE_FLEET_REPORTS') and hasAuthority('PERM_VIEW_FLEET_REPORTS'))" th:text="#{menu.fleet}">Fleet</div>
+        <a sec:authorize="hasAuthority('PAGE_FLEET')" th:classappend="${#strings.startsWith(requestURI, '/trips')} ? 'active' : ''" href="/trips">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg></span> <span th:text="#{nav.fleet}">Trips</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_VEHICLES') and hasAuthority('PERM_VIEW_VEHICLE')" th:classappend="${#strings.startsWith(requestURI, '/vehicles')} ? 'active' : ''" href="/vehicles">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></span> <span th:text="#{nav.vehicles}">Vehicles</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')" th:classappend="${#strings.startsWith(requestURI, '/drivers')} ? 'active' : ''" href="/drivers">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="2.5"></circle><line x1="13" y1="10" x2="18" y2="10"></line><line x1="13" y1="14" x2="17" y2="14"></line></svg></span> <span th:text="#{nav.drivers}">Drivers</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')" href="/m/" target="_blank" rel="noopener">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></span> <span th:text="#{nav.mobilePos}">Mobile POS</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_SYNC_CONFLICTS') and hasAuthority('PERM_VIEW_SYNC_CONFLICTS')" th:classappend="${#strings.startsWith(requestURI, '/sync-conflicts')} ? 'active' : ''" href="/sync-conflicts">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span> <span th:text="#{nav.syncConflicts}">Sync Conflicts</span>
+            <th:block th:with="waiting=${@syncConflictService.openCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.syncConflictsOpen}">1</span></th:block>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_AUDIT_CASES') and hasAuthority('PERM_VIEW_AUDIT_CASES')" th:classappend="${#strings.startsWith(requestURI, '/audit-cases')} ? 'active' : ''" href="/audit-cases">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span> <span th:text="#{nav.auditCases}">Audit Cases</span>
+            <th:block th:with="waiting=${@auditCaseService.openCount()}"><span class="badge" th:if="${waiting > 0}" th:text="${waiting}" th:title="#{nav.auditCasesOpen}">1</span></th:block>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_FLEET_REPORTS') and hasAuthority('PERM_VIEW_FLEET_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports/fleet')} ? 'active' : ''" href="/reports/fleet">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> <span th:text="#{nav.fleetReports}">Fleet Reports</span>
+        </a>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_ACCOUNTING')) or (hasAuthority('PAGE_MANUAL_JOURNALS')) or (hasAuthority('PAGE_ACCOUNTS')) or (hasAuthority('PAGE_RECEIVABLES')) or (hasAuthority('PAGE_FLOATS') and hasAuthority('PERM_VIEW_FLOATS')) or (hasAuthority('PAGE_PAYABLES')) or (hasAuthority('PAGE_FX_REVALUATIONS')) or (hasAuthority('PAGE_TRIAL_BALANCE')) or (hasAuthority('PAGE_FINANCIAL_STATEMENTS')) or (hasAuthority('PAGE_VAT_REPORT')) or (hasAuthority('PAGE_RECONCILIATIONS')) or (hasAuthority('PAGE_PERIODS')) or (hasAuthority('PAGE_CURRENCIES'))" th:text="#{menu.accounting}">Accounting</div>
         <a sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:classappend="${requestURI == '/accounting' or #strings.startsWith(requestURI, '/accounting/journals')} ? 'active' : ''" href="/accounting/journals">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span> <span th:text="#{nav.journals}">Journals</span>
         </a>

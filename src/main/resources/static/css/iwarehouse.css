@@ -9,7 +9,7 @@
   --navy: #0b2a5b;
   --success: #10b981;
   --warning: #f59e0b;
-  --danger: #ef4444;
+  --danger: #1565e0;
   --info: #6d5dfc;
   --orange: #f97316;
   --tint-blue: #e8f0fe;
@@ -560,7 +560,7 @@ html.sidebar-collapsed .sidebar-toggle .icon-collapse { display: none; }
 .lang-menu,
 .profile-menu {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 20px);
   right: 0;
   min-width: 180px;
   background: var(--surface);

@@ -4563,3 +4563,11 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
   .header-right .profile { padding: 2px; }
   .header-right .profile .profile-caret { display: none; }
 }
+
+/* The company's logo on printed documents (receipts, quotations); the A4 PDFs have it in their letterhead (reports/pdf-parts).
+   A thermal printer prints black only: the logo goes grey when printed, so it shades evenly instead of losing the green. */
+.receipt-logo { display: block; width: 34mm; height: auto; margin: 0 auto 1.5mm; }
+.print-doc-logo { display: block; height: 18mm; width: auto; margin-bottom: 2.5mm; }
+@media print {
+  .receipt-logo { filter: grayscale(1) contrast(1.15); }
+}

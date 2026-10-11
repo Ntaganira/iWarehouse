@@ -6,14 +6,18 @@ import com.ntaganira.heritier.iWarehouse.service.Excel;
 import com.ntaganira.heritier.iWarehouse.service.PdfService;
 import com.ntaganira.heritier.iWarehouse.service.PrintTable;
 import com.ntaganira.heritier.iWarehouse.service.SettingService;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,6 +54,10 @@ public class ReportFiles {
         }
     }
 
+    /** The company's logo on documents (static/images/logo.png, also served at /images/logo.png for printed pages). */
+    static final String LOGO = "static/images/logo.png";
+    private static volatile String logoDataUri;
+
     private final PdfService pdfService;
     private final SettingService settings;
     private final Clock clock;
@@ -84,9 +92,26 @@ public class ReportFiles {
         model.put("companyTin", settings.get(SettingKey.COMPANY_TIN));
         model.put("companyPhone", settings.get(SettingKey.COMPANY_PHONE));
         model.put("companyEmail", settings.get(SettingKey.COMPANY_EMAIL));
+        model.put("logoDataUri", logoDataUri());
         model.put("printedAt", LocalDateTime.now(clock));
         model.put("printedBy", AppUserPrincipal.current().map(AppUserPrincipal::getFullName).orElse(""));
         return model;
+    }
+
+    /** The logo inside the page as a data URI: the PDF renderer loads nothing from the network or the class path. Null without it. */
+    static String logoDataUri() {
+        if (logoDataUri == null) {
+            ClassPathResource logo = new ClassPathResource(LOGO);
+            if (!logo.exists()) {
+                return null;
+            }
+            try (InputStream in = logo.getInputStream()) {
+                logoDataUri = "data:image/png;base64," + Base64.getEncoder().encodeToString(in.readAllBytes());
+            } catch (IOException e) {
+                return null;
+            }
+        }
+        return logoDataUri;
     }
 
     public static ResponseEntity<byte[]> file(String filename, MediaType type, byte[] body) {

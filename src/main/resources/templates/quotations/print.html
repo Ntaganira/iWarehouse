@@ -30,6 +30,7 @@
     <div class="print-doc">
         <div class="print-doc-head">
             <div>
+                <img class="print-doc-logo" th:src="@{/images/logo.png}" th:alt="${companyName}">
                 <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
                 <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
                 <div th:if="${companyPhone != null or companyEmail != null}"

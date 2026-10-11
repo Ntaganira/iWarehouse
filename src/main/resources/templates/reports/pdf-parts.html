@@ -14,8 +14,12 @@
     #footer .pages { float: right; }
     #footer .pg::before { content: counter(page); }
     #footer .pgs::before { content: counter(pages); }
-    .letterhead { border-bottom: 2px solid #1f6f62; padding-bottom: 6px; margin-bottom: 12px; }
-    .letterhead .name { font-size: 13pt; font-weight: bold; color: #1f6f62; }
+    /* The company's colours, from its logo: navy text, a green rule */
+    .letterhead { border-bottom: 2px solid #8fc24a; padding-bottom: 6px; margin-bottom: 12px; }
+    .letterhead table, .letterhead td { width: auto; border: none; padding: 0; background: none; vertical-align: middle; }
+    .letterhead td.logo { padding-right: 4mm; }
+    .letterhead td.logo img { height: 15mm; width: auto; }
+    .letterhead .name { font-size: 13pt; font-weight: bold; color: #0b3d61; }
     .letterhead .details { color: #6b7280; margin-top: 2px; }
     .sheet.next { margin-top: 18px; }
     h1 { font-size: 12pt; margin: 0 0 2px 0; }
@@ -37,13 +41,21 @@
     <span th:text="#{report.pdf.printed(${#temporals.format(printedAt, 'dd/MM/yyyy HH:mm')}, ${printedBy})}">Printed 10/10/2026 14:05 by System Admin</span>
 </div>
 
+<!--/* The logo (ReportFiles.logoDataUri, inside the page), then the company's name and details */-->
 <div th:fragment="letterhead" class="letterhead">
-    <div class="name" th:text="${companyName}">iWarehouse</div>
-    <div class="details">
-        <span th:if="${companyAddress != null}" th:text="${companyAddress}">Kigali, Rwanda</span>
-        <span th:if="${companyTin != null}" th:text="${' · ' + #messages.msg('report.pdf.tin', companyTin)}"> · TIN 100200300</span>
-        <span th:if="${companyPhone != null}" th:text="${' · ' + companyPhone}"> · +250 788 000 000</span>
-    </div>
+    <table>
+        <tr>
+            <td class="logo" th:if="${logoDataUri != null}"><img th:src="${logoDataUri}" th:alt="${companyName}" /></td>
+            <td>
+                <div class="name" th:text="${companyName}">iWarehouse</div>
+                <div class="details">
+                    <span th:if="${companyAddress != null}" th:text="${companyAddress}">Kigali, Rwanda</span>
+                    <span th:if="${companyTin != null}" th:text="${' · ' + #messages.msg('report.pdf.tin', companyTin)}"> · TIN 100200300</span>
+                    <span th:if="${companyPhone != null}" th:text="${' · ' + companyPhone}"> · +250 788 000 000</span>
+                </div>
+            </td>
+        </tr>
+    </table>
 </div>
 </body>
 </html>

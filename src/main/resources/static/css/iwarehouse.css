@@ -4582,3 +4582,9 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
 .setting-logo-actions #logo-file-name { overflow-wrap: anywhere; }
 .setting-logo-actions > .hint { flex-basis: 100%; margin: 0; }
 .setting-logo-actions .hint { font-weight: 400; }
+
+/* A dashboard tile's figure shrinks with its tile, so a long amount (3,666,304.20) never runs out of it on a
+   four-tile row (1281-1500 px); pages with their own size for a long figure keep it. */
+.kpi-body { flex: 1 1 auto; container-type: inline-size; }
+.kpi-value { font-size: clamp(20px, 17cqi, 30px); }
+.kpi-value.is-long { font-size: clamp(16px, 12.5cqi, 30px); }

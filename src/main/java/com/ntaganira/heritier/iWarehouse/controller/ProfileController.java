@@ -8,7 +8,11 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
+import com.ntaganira.heritier.iWarehouse.service.PayRunService;
+import com.ntaganira.heritier.iWarehouse.service.PdfService;
 import com.ntaganira.heritier.iWarehouse.service.ProfileService;
+import com.ntaganira.heritier.iWarehouse.entity.PayRun;
+import com.ntaganira.heritier.iWarehouse.entity.PayRunLine;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -26,6 +30,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,6 +40,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -45,7 +53,8 @@ import java.io.InputStream;
  * - User      : Hntaganira
  * - Desc      : My profile (/profile, the header's menu): every signed-in user keeps their own details, photo and
  *               password, like signing out it needs no page or permission. Always the caller's own account. The session's
- *               user is refreshed after a change, so the header shows the new name and photo at once.
+ *               user is refreshed after a change, so the header shows the new name and photo at once. An employee linked to
+ *               their user finds their payslips here (posted and paid runs only, never another employee's).
  * </pre>
  */
 @Controller
@@ -55,12 +64,19 @@ public class ProfileController {
     static final String MODULE = "User Management";
 
     private final ProfileService profileService;
+    private final PayRunService payRunService;
+    private final PdfService pdfService;
+    private final ReportFiles reportFiles;
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final SecurityContextRepository contextRepository = new HttpSessionSecurityContextRepository();
 
-    public ProfileController(ProfileService profileService, ActivityLogService activityLogService, Messages messages) {
+    public ProfileController(ProfileService profileService, PayRunService payRunService, PdfService pdfService, ReportFiles reportFiles,
+                             ActivityLogService activityLogService, Messages messages) {
         this.profileService = profileService;
+        this.payRunService = payRunService;
+        this.pdfService = pdfService;
+        this.reportFiles = reportFiles;
         this.activityLogService = activityLogService;
         this.messages = messages;
     }
@@ -150,6 +166,18 @@ public class ProfileController {
         return "redirect:/profile";
     }
 
+    /** One of the signed-in user's own payslips (a posted or paid run), as PDF; anyone else's is not found. */
+    @GetMapping("/payslips/{lineId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> payslip(@PathVariable UUID lineId) {
+        PayRunLine line = payRunService.payslipOf(lineId, currentId());
+        PayRun run = payRunService.findDetailed(line.getPayRunId());
+        byte[] body = PayRunController.payslipPdf(run, List.of(line), pdfService, reportFiles);
+        activityLogService.record(MODULE, "EXPORT_PAYSLIPS", "Downloaded their payslip of pay run " + run.getNumber(), ActivityStatus.SUCCESS);
+        return ReportFiles.file("payslip-" + run.getPeriod().format(DateTimeFormatter.ofPattern("yyyy-MM")) + ".pdf", MediaType.APPLICATION_PDF,
+                body);
+    }
+
     /** The signed-in user's photo. Its address changes with the photo (?v=), so the browser may keep it for a day. */
     @GetMapping("/photo")
     @PreAuthorize("isAuthenticated()")
@@ -170,6 +198,7 @@ public class ProfileController {
 
     private String page(Model model, User me, String tab) {
         model.addAttribute("me", me);
+        model.addAttribute("payslips", payRunService.payslipsOf(me.getId(), 0, 12));
         model.addAttribute("tab", tab);
         return "profile/view";
     }

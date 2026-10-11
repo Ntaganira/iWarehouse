@@ -609,6 +609,69 @@ class PostingServiceTest {
     }
 
     @Test
+    void aPayRunPostsItsCostsAndWhatItOwesAndThePaymentClearsTheNetPay() {   // payroll, ACC-07, AT-10
+        UUID driver = UUID.randomUUID();
+        PayRun run = new PayRun();
+        run.setId(UUID.randomUUID());
+        run.setNumber("PAY-WH-2026-000001");
+        run.setPeriod(LocalDate.of(2026, 10, 1));
+        run.setPostingDate(LocalDate.of(2026, 10, 31));
+        // 300,000 with 20,000 of an advance recovered, paid by bank; a driver's 120,000 less 1,000 of shortage and 2,000 else, by mobile money
+        PayRunLine office = payLine("EMP-WH-0001", "250000", "50000", "20000", "0", "0", SalaryPayMethod.BANK, null);
+        PayRunLine road = payLine("EMP-WH-0002", "120000", "0", "0", "1000", "2000", SalaryPayMethod.MOBILE_MONEY, driver);
+        assertThat(office.getNetPay()).isEqualByComparingTo("205964");
+        assertThat(road.getNetPay()).isEqualByComparingTo("100918");
+
+        postings.payroll(run, List.of(office, road));
+
+        Journal payroll = last();
+        assertThat(payroll.source()).isEqualTo(JournalSource.PAYROLL);
+        assertThat(payroll.date()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(line(payroll, AccountKey.SALARIES).debit()).isEqualByComparingTo("420000");
+        assertThat(line(payroll, AccountKey.EMPLOYER_CONTRIBUTIONS).debit()).isEqualByComparingTo("34860");   // 24,900 + 9,960
+        assertThat(line(payroll, AccountKey.PAYE_PAYABLE).credit()).isEqualByComparingTo("62000");             // 54,000 + 8,000
+        assertThat(line(payroll, AccountKey.RSSB_PAYABLE).credit()).isEqualByComparingTo("62978");             // both shares + CBHI 1,658
+        assertThat(line(payroll, AccountKey.STAFF_ADVANCES).credit()).isEqualByComparingTo("20000");
+        assertThat(line(payroll, AccountKey.PAYROLL_DEDUCTIONS).credit()).isEqualByComparingTo("2000");
+        assertThat(line(payroll, AccountKey.DRIVER_SHORTAGE).credit()).isEqualByComparingTo("1000");
+        assertThat(line(payroll, AccountKey.DRIVER_SHORTAGE).driverId()).isEqualTo(driver);
+        assertThat(line(payroll, AccountKey.NET_PAY_PAYABLE).credit()).isEqualByComparingTo("306882");
+        assertThat(payroll.debits()).isEqualByComparingTo(payroll.credits());
+
+        run.setPaidOn(LocalDate.of(2026, 11, 2));
+        run.setPaymentReference("BK-SAL-1026");
+        postings.payrollPayment(run, List.of(office, road));
+
+        Journal paid = last();
+        assertThat(paid.source()).isEqualTo(JournalSource.PAYROLL_PAYMENT);
+        assertThat(paid.date()).isEqualTo(LocalDate.of(2026, 11, 2));
+        assertThat(line(paid, AccountKey.NET_PAY_PAYABLE).debit()).isEqualByComparingTo("306882");
+        assertThat(line(paid, AccountKey.BANK).credit()).isEqualByComparingTo("205964");
+        assertThat(line(paid, AccountKey.BANK).memo()).isEqualTo("BK-SAL-1026");
+        assertThat(line(paid, AccountKey.MOBILE_MONEY).credit()).isEqualByComparingTo("100918");
+        BigDecimal netOwed = posted.stream().flatMap(j -> j.lines().stream()).filter(l -> l.account() == AccountKey.NET_PAY_PAYABLE)
+                .map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(netOwed).isEqualByComparingTo("0");                                                           // all paid
+    }
+
+    /** A pay run line worked out at the rates V40 seeds. */
+    private static PayRunLine payLine(String code, String base, String transport, String advance, String shortage, String other,
+                                      SalaryPayMethod method, UUID driverId) {
+        PayRunLine line = new PayRunLine();
+        line.setEmployeeCode(code);
+        line.setEmployment(EmploymentType.PRIMARY);
+        line.setPayMethod(method);
+        line.setDriverId(driverId);
+        line.setBasePay(new BigDecimal(base));
+        line.setTransportAllowance(new BigDecimal(transport));
+        line.setAdvanceDeduction(new BigDecimal(advance));
+        line.setShortageDeduction(new BigDecimal(shortage));
+        line.setOtherDeduction(new BigDecimal(other));
+        line.apply(Payroll.calculate(line.earnings(), line.deductions(), EmploymentType.PRIMARY, PayrollTest.rates(true)));
+        return line;
+    }
+
+    @Test
     void aSupplierInvoiceMovesReceiptsFromGrniToPayablesAndAPaymentBooksTheRealisedFx() {   // ACC-08, ACC-09
         Supplier shandong = new Supplier();
         shandong.setId(UUID.randomUUID());

@@ -40,5 +40,13 @@ public enum AccountKey {
     STOCK_REVALUATION,
     CASH_OVER_SHORT,
     FX_GAIN_LOSS,
-    FX_UNREALISED
+    FX_UNREALISED,
+    /** Payroll (V40): salary advances recovered, PAYE and RSSB withheld, net pay owed, other deductions, the costs. */
+    STAFF_ADVANCES,
+    PAYE_PAYABLE,
+    RSSB_PAYABLE,
+    NET_PAY_PAYABLE,
+    PAYROLL_DEDUCTIONS,
+    SALARIES,
+    EMPLOYER_CONTRIBUTIONS
 }

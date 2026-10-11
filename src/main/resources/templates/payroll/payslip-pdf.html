@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${run.number}">PAY-WH-2026-000001</title>
+    <style th:replace="~{reports/pdf-parts :: style(false)}"></style>
+    <style>
+        .payslip.next { page-break-before: always; }
+        .doc-head { width: 100%; margin-bottom: 10px; }
+        .doc-head td { border: none; padding: 0; vertical-align: top; }
+        .doc-title { font-size: 16pt; font-weight: bold; margin: 0; color: #0b3d61; }
+        .draft-mark { font-size: 11pt; font-weight: bold; color: #b91c1c; letter-spacing: 1pt; }
+        .facts td { border: none; padding: 1px 10px 1px 0; }
+        .facts td.label { color: #6b7280; }
+        .pay { width: 100%; margin-top: 8px; }
+        .pay td.col { width: 50%; border: none; padding: 0 6px 0 0; vertical-align: top; }
+        .pay td.col.right { padding: 0 0 0 6px; }
+        h2 { color: #0b3d61; }
+        tr.total td { font-weight: bold; border-top: 1px solid #9ca3af; background: #f9fafb; }
+        .net { width: 100%; margin-top: 12px; border: 1.5px solid #0b3d61; }
+        .net td { border: none; padding: 8px 10px; font-size: 13pt; font-weight: bold; }
+        .employer { margin-top: 12px; }
+        .note { margin-top: 10px; color: #6b7280; }
+    </style>
+</head>
+<body>
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+
+<!--/* A payslip per employee (payroll): what they earned, what was kept and why, their net pay; the employer's share for information */-->
+<div class="payslip" th:each="l, st : ${lines}" th:classappend="${!st.first} ? 'next'">
+    <div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+    <table class="doc-head">
+        <tr>
+            <td>
+                <div class="doc-title" th:text="#{payslip.title}">PAYSLIP</div>
+                <div th:text="${#temporals.format(run.period, 'MMMM yyyy')}">October 2026</div>
+                <div class="muted" th:text="${run.number}">PAY-WH-2026-000001</div>
+                <div class="draft-mark" th:if="${!run.posted}" th:text="#{payslip.draft}">DRAFT: not approved</div>
+            </td>
+            <td>
+                <table class="facts">
+                    <tr><td class="label" th:text="#{payRun.employee}">Employee</td><td><strong th:text="${l.employeeName}">Jean Habimana</strong></td></tr>
+                    <tr><td class="label" th:text="#{employee.code}">Code</td><td th:text="${l.employeeCode}">EMP-WH-0001</td></tr>
+                    <tr th:if="${l.jobTitle != null}"><td class="label" th:text="#{employee.jobTitle}">Job title</td><td th:text="${l.jobTitle}">Cutter</td></tr>
+                    <tr><td class="label" th:text="#{employee.nationalId}">National ID</td><td th:text="${ids.get(l.id)}">**** 5678</td></tr>
+                    <tr th:if="${l.rssbNumber != null}"><td class="label" th:text="#{employee.rssbNumber}">RSSB number</td><td th:text="${l.rssbNumber}">RS123456</td></tr>
+                    <tr>
+                        <td class="label" th:text="#{employee.payMethod}">Paid by</td>
+                        <td th:text="#{${'employee.payMethod.' + l.payMethod}} + (${accounts.get(l.id) != null} ? ' ' + ${accounts.get(l.id)} : '')">Bank **** 5678</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <table class="pay">
+        <tr>
+            <td class="col">
+                <h2 th:text="#{payslip.earnings}">Earnings</h2>
+                <table>
+                    <tr><td th:text="#{employee.baseSalary}">Basic salary</td><td class="num" th:text="${@num.money(l.basePay)}">250,000</td></tr>
+                    <tr th:if="${l.transportAllowance.signum() > 0}"><td th:text="#{employee.transport}">Transport allowance</td><td class="num" th:text="${@num.money(l.transportAllowance)}">50,000</td></tr>
+                    <tr th:if="${l.housingAllowance.signum() > 0}"><td th:text="#{employee.housing}">Housing allowance</td><td class="num" th:text="${@num.money(l.housingAllowance)}">0</td></tr>
+                    <tr th:if="${l.otherAllowance.signum() > 0}"><td th:text="#{employee.otherAllowance}">Other allowances</td><td class="num" th:text="${@num.money(l.otherAllowance)}">0</td></tr>
+                    <tr th:if="${l.overtime.signum() > 0}"><td th:text="#{payRun.overtime}">Overtime</td><td class="num" th:text="${@num.money(l.overtime)}">0</td></tr>
+                    <tr th:if="${l.bonus.signum() > 0}"><td th:text="#{payRun.bonus}">Bonus</td><td class="num" th:text="${@num.money(l.bonus)}">0</td></tr>
+                    <tr class="total"><td th:text="#{payslip.gross}">Gross pay</td><td class="num" th:text="${@num.money(l.gross)}">300,000</td></tr>
+                </table>
+            </td>
+            <td class="col right">
+                <h2 th:text="#{payslip.deductions}">Deductions</h2>
+                <table>
+                    <tr><td th:text="#{payslip.paye}">PAYE (income tax)</td><td class="num" th:text="${@num.money(l.paye)}">54,000</td></tr>
+                    <tr><td th:text="#{payslip.pension(${@num.percent(rates.pensionEmployeeRate)})}">RSSB pension (6%)</td><td class="num" th:text="${@num.money(l.pensionEmployee)}">18,000</td></tr>
+                    <tr><td th:text="#{payslip.maternity(${@num.percent(rates.maternityEmployeeRate)})}">RSSB maternity (0.3%)</td><td class="num" th:text="${@num.money(l.maternityEmployee)}">900</td></tr>
+                    <tr><td th:text="#{payslip.cbhi(${@num.percent(rates.cbhiRate)})}">CBHI (0.5% of the net)</td><td class="num" th:text="${@num.money(l.cbhi)}">1,136</td></tr>
+                    <tr th:if="${l.advanceDeduction.signum() > 0}"><td th:text="#{payRun.advance}">Advance recovered</td><td class="num" th:text="${@num.money(l.advanceDeduction)}">0</td></tr>
+                    <tr th:if="${l.shortageDeduction.signum() > 0}"><td th:text="#{payRun.shortage}">Driver shortage</td><td class="num" th:text="${@num.money(l.shortageDeduction)}">0</td></tr>
+                    <tr th:if="${l.otherDeduction.signum() > 0}"><td th:text="#{payRun.otherDeduction}">Other deduction</td><td class="num" th:text="${@num.money(l.otherDeduction)}">0</td></tr>
+                    <tr class="total"><td th:text="#{payslip.totalDeductions}">Total deductions</td><td class="num" th:text="${@num.money(l.totalDeductions)}">74,036</td></tr>
+                </table>
+                <div class="note" th:if="${l.deductionNote != null}" th:text="${l.deductionNote}">Advance of 05/10</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="net">
+        <tr>
+            <td th:text="#{payslip.netPay}">Net pay</td>
+            <td class="num" th:text="${@num.money(l.netPay) + ' RWF'}">225,964 RWF</td>
+        </tr>
+    </table>
+
+    <div class="employer">
+        <h2 th:text="#{payslip.employerShare}">Paid by the employer, not deducted</h2>
+        <table>
+            <tr><td th:text="#{payslip.pension(${@num.percent(rates.pensionEmployerRate)})}">RSSB pension (6%)</td><td class="num" th:text="${@num.money(l.pensionEmployer)}">18,000</td></tr>
+            <tr><td th:text="#{payslip.hazards(${@num.percent(rates.occupationalHazardsRate)})}">Occupational hazards (2%)</td><td class="num" th:text="${@num.money(l.occupationalHazards)}">6,000</td></tr>
+            <tr><td th:text="#{payslip.maternity(${@num.percent(rates.maternityEmployerRate)})}">RSSB maternity (0.3%)</td><td class="num" th:text="${@num.money(l.maternityEmployer)}">900</td></tr>
+        </table>
+    </div>
+    <div class="note" th:text="#{payslip.ratesNote(${#temporals.format(rates.effectiveFrom, 'dd/MM/yyyy')})}">Rates in force from 01/01/2025. PAYE: Law 027/2022.</div>
+</div>
+</body>
+</html>

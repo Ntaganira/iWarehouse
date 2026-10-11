@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{payRun.editTitle(${run.number})}, ~{::content})}">
+<head><title>Pay run - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{payRun.editTitle(${run.number})}">The month's pay: PAY-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{payRun.editSubtitle(${#temporals.format(run.period, 'MMMM yyyy')})}">October 2026: change what each employee earned and what is kept; PAYE, RSSB, CBHI and the net pay are worked out when you save</div>
+        </div>
+        <a th:href="@{/payroll/runs/{id}(id=${run.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/payroll/runs/{id}/edit(id=${run.id})}" th:object="${linesDto}" method="post" novalidate>
+        <div th:replace="~{layout/errors :: error-summary}"></div>
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{payRun.lines}">Employees</span>
+                    <span class="section-count" th:text="${runLines.size()}">0</span>
+                </h2>
+            </div>
+            <div class="table-container">
+                <table class="line-table payrun-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{payRun.employee}">Employee</th>
+                            <th class="num" th:text="#{employee.baseSalary}">Basic salary</th>
+                            <th class="num" th:text="#{employee.transport}">Transport allowance</th>
+                            <th class="num" th:text="#{employee.housing}">Housing allowance</th>
+                            <th class="num" th:text="#{employee.otherAllowance}">Other allowances</th>
+                            <th class="num" th:text="#{payRun.overtime}">Overtime</th>
+                            <th class="num" th:text="#{payRun.bonus}">Bonus</th>
+                            <th class="num" th:text="#{payRun.advance}">Advance recovered</th>
+                            <th class="num" th:text="#{payRun.shortage}">Driver shortage</th>
+                            <th class="num" th:text="#{payRun.otherDeduction}">Other deduction</th>
+                            <th th:text="#{payRun.note}">Note</th>
+                            <th class="num" th:text="#{payRun.netNow}">Net pay now (RWF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="line-row" th:each="row, st : *{lines}" th:with="rl=${runLines.get(st.index)}">
+                            <td>
+                                <input type="hidden" th:field="*{lines[__${st.index}__].id}">
+                                <span class="strong" th:text="${rl.employeeName}">Jean Habimana</span>
+                                <div class="cell-sub mono" th:text="${rl.employeeCode}">EMP-WH-0001</div>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].basePay}" th:aria-label="#{employee.baseSalary}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].basePay')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].basePay')}" th:errors="*{lines[__${st.index}__].basePay}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].transportAllowance}" th:aria-label="#{employee.transport}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].transportAllowance')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].transportAllowance')}" th:errors="*{lines[__${st.index}__].transportAllowance}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].housingAllowance}" th:aria-label="#{employee.housing}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].housingAllowance')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].housingAllowance')}" th:errors="*{lines[__${st.index}__].housingAllowance}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].otherAllowance}" th:aria-label="#{employee.otherAllowance}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].otherAllowance')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].otherAllowance')}" th:errors="*{lines[__${st.index}__].otherAllowance}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].overtime}" th:aria-label="#{payRun.overtime}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].overtime')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].overtime')}" th:errors="*{lines[__${st.index}__].overtime}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].bonus}" th:aria-label="#{payRun.bonus}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].bonus')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].bonus')}" th:errors="*{lines[__${st.index}__].bonus}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].advanceDeduction}" th:aria-label="#{payRun.advance}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].advanceDeduction')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].advanceDeduction')}" th:errors="*{lines[__${st.index}__].advanceDeduction}"></span>
+                            </td>
+                            <td th:with="owes=${owed.get(rl.id)}">
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].shortageDeduction}"
+                                       th:disabled="${owes == null}" th:max="${owes != null} ? ${owes.longValue()}" th:aria-label="#{payRun.shortage}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].shortageDeduction')} ? 'is-invalid'">
+                                <span class="hint" th:if="${owes != null}" th:text="#{payRun.owes(${@num.money(owes)})}">Owes 1,000</span>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].shortageDeduction')}" th:errors="*{lines[__${st.index}__].shortageDeduction}"></span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" step="1" inputmode="numeric" th:field="*{lines[__${st.index}__].otherDeduction}" th:aria-label="#{payRun.otherDeduction}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].otherDeduction')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].otherDeduction')}" th:errors="*{lines[__${st.index}__].otherDeduction}"></span>
+                            </td>
+                            <td>
+                                <input type="text" maxlength="255" th:field="*{lines[__${st.index}__].deductionNote}" th:placeholder="#{payRun.notePh}" th:aria-label="#{payRun.note}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].deductionNote')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].deductionNote')}" th:errors="*{lines[__${st.index}__].deductionNote}"></span>
+                            </td>
+                            <td class="num line-amount strong" th:text="${@num.money(rl.netPay)}">225,964</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{payRun.editNote}">Amounts in whole RWF. A driver's shortage can be recovered up to what they owe; an advance recovered clears Staff Advances.</p>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{payRun.saveLines}">Work out and save</button>
+            <a th:href="@{/payroll/runs/{id}(id=${run.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

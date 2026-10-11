@@ -46,9 +46,13 @@ public enum DocumentType {
     AUDIT_CASE("AC"),
     /** A driver's float counted and cleared by the accountant (ACC-06): FC-WH-2026-000001. */
     FLOAT_CLEARANCE("FC"),
+    /** A month's pay run (payroll): PAY-WH-2026-000001. */
+    PAY_RUN("PAY"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),
+    /** An employee's code (payroll): EMP-WH-0001, never reset. */
+    EMPLOYEE("EMP"),
     /** Label code of a stock unit (INV-03): U-WH-000001, never reset. */
     STOCK_UNIT("U"),
     /** The invoice number EBM receipts are sent under (invcNo, TAX-02): a plain integer, never reset. */

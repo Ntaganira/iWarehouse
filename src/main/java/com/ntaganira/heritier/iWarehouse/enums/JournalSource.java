@@ -41,7 +41,11 @@ public enum JournalSource {
     /** A unit missing after a trip written off or charged to the driver (FLT-10, FLT-11). */
     AUDIT_CASE("/audit-cases/"),
     /** A driver's float cleared by the accountant (ACC-06, ACC-07). */
-    FLOAT_CLEARANCE("/floats/");
+    FLOAT_CLEARANCE("/floats/"),
+    /** A pay run approved: salaries and the employer's contributions, what is withheld and the net pay owed. */
+    PAYROLL("/payroll/runs/"),
+    /** A pay run's salaries paid. */
+    PAYROLL_PAYMENT("/payroll/runs/");
 
     private final String path;
 

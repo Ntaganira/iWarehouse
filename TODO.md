@@ -8,7 +8,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V40.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V41.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
 ## Where we are (2026-10-10)
@@ -35,7 +35,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats (AT-06, AT-07 pass) | Done (M9) | V37, the trip's End of day tab, `/audit-cases`, `/floats`, `/reports/fleet`, the phone's breakage and cash screens |
 | Hardening and go-live | **Next** (M10) | — |
 
-Unit tests: 528, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
+Unit tests: 538, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
 
 ## Definition of done for a module
 
@@ -162,18 +162,19 @@ Goal: every unit and every franc that left in the morning is accounted for at ni
 - [ ] Audit export to Excel/PDF (AUD-12); monthly partitioning (AUD-13); hash chain (AUD-14)
 - [ ] Multiple branches from one installation (ADM-05)
 - [ ] Automatic download of BNR daily rates when the server has internet (ACC-02)
-- [ ] Driver shortage recovery: a recovery document per driver (a salary deduction or cash paid back) that clears their part of Driver Shortage Receivable (`journal_lines.driver_id`), the account then controlled like the floats (`ManualJournals.CONTROLLED`), and a monthly "deductions to make" list per driver for whoever runs payroll (ACC-07; see the question under "Fleet and go-live") (S)
-- [ ] Payroll journal, until the payroll module below exists: the month's payroll result from the payroll tool or the accountant (gross salaries, PAYE, RSSB contributions, net pay), entered once or imported from a file, posts its journal (Dr salaries and wages / Cr PAYE payable, RSSB payable, net salaries payable) and then the salary payments; once per month, refused in a closed month (S)
+- [ ] Driver shortage recovery: the salary deduction is built (pay runs, 2026-10-11); still to build, a recovery document per driver for cash paid back that clears their part of Driver Shortage Receivable (`journal_lines.driver_id`), the account then controlled like the floats (`ManualJournals.CONTROLLED`), and a monthly "deductions to make" list per driver for whoever runs payroll (ACC-07; see the question under "Fleet and go-live") (S)
+- [x] ~~Payroll journal~~ — superseded: the payroll module was built (2026-10-11). It was: the month's payroll result from the payroll tool or the accountant (gross salaries, PAYE, RSSB contributions, net pay), entered once or imported from a file, posts its journal (Dr salaries and wages / Cr PAYE payable, RSSB payable, net salaries payable) and then the salary payments; once per month, refused in a closed month (S)
 
-## Payroll — a module of its own, after go-live (not in SRS v2.1)
+## Payroll — a module of its own (not in SRS v2.1) — built 2026-10-11 (V40), at the owner's request
 
-Scope (owner, 2026-10-11): the payroll module stores employee and salary data, calculates gross pay, deductions and net pay each period, generates payslips and statutory reports, and posts the journal entries to the accounting ledger. Build it after go-live, once the business has answered the payroll question under "Accounting"; until then the payroll journal (Phase 3) brings each month's result into the ledger.
+Scope (owner, 2026-10-11): the payroll module stores employee and salary data, calculates gross pay, deductions and net pay each period, generates payslips and statutory reports, and posts the journal entries to the accounting ledger. The owner asked for it before go-live; the accountant still confirms the rates (the payroll questions under "Accounting").
 
-- [ ] Employees and salary data: an employee record (optionally linked to a user and a driver), national ID, RSSB number, contract and start date, base salary, allowances, the bank or mobile-money account paid into. Salary and personal data get their own PAGE_/PERM_ (not every role that sees users), are masked in the change log (`@AuditMask`) and shown in full only with a view permission (NFR-12, Law 058/2021) (M)
-- [ ] Pay runs per period (monthly): gross pay (base, allowances, overtime), statutory deductions (PAYE by brackets, RSSB pension and maternity, CBHI and whatever else the accountant confirms), other deductions (salary advances, loans, driver shortages from the recovery document) and net pay. Rates and brackets live in Settings with the date they apply from, so a change in the law is a new row, never a code change; the calculation is a pure class unit-tested on the accountant's worked examples. A run is a draft, approved by another person, then posted; a posted run never changes (a correction goes into the next run) (L)
-- [ ] Payslips: an A4 PDF per employee per run (letterhead and logo, `reports/pdf-parts`), printed or emailed; each employee sees only their own, on My profile (M)
-- [ ] Statutory reports: the monthly PAYE declaration for RRA and the RSSB contributions declaration in the formats their portals accept (Excel/CSV), and the payroll summary of each run (M)
-- [ ] Ledger: a `JournalSource.PAYROLL` rule in `PostingService`: Dr salaries and wages and the employer's contributions / Cr PAYE payable, RSSB payable, other deductions (Driver Shortage Receivable for recoveries) and net salaries payable; paying salaries Dr net salaries payable / Cr bank or mobile money. New `AccountKey`s and their accounts seeded in the module's migration, the payable accounts controlled (`ManualJournals.CONTROLLED`), `PostingServiceTest` keeping AT-10 passing. Replaces the payroll journal once built (M)
+- [x] Employees and salary data (M) — 2026-10-11 (V40): Payroll → Employees (`/payroll/employees`): EMP-WH-0001, name, job, the user they sign in as, national ID (16 digits) and RSSB number, hired and left on, first or second employer (PAYE), basic salary, transport, housing and other allowances, paid by bank, mobile money or cash with the account. National ID and account in full only with VIEW_EMPLOYEE_DATA (accountant, owner, admin), masked in the change log; an employee's page has their payslips and History
+- [x] Pay runs per period (L) — 2026-10-11: Payroll → Pay Runs (`/payroll/runs`): a month (a year back to next month, one run each) gets a line per employee working in it at the rates in force on its last day (Payroll → Payroll Rates, dated sets, seeded from January 2025). While a draft the month's pay changes per employee (overtime, bonus, advance recovered, a driver's shortage up to what they owe, other deduction with a note), new employees are added, someone is taken off; every save works PAYE, RSSB, CBHI and the net out again (`Payroll`, 9 worked examples). Submitted, another person approves it (its journal posts on the month's last day) or sends it back with a reason; the preparer may cancel it with a reason. Then "Record the payment" (day, reference). Approvers are told; the submitter hears the decision
+- [x] Payslips (M) — 2026-10-11: an A4 PDF per employee (letterhead and logo, earnings, deductions with their rates, net pay, the employer's share, masked IDs), a run's all or one; DRAFT printed until approved. An employee linked to their user downloads their own on My profile
+- [x] Statutory reports (M) — 2026-10-11: the run's summary, the PAYE declaration and the RSSB declaration, Excel or PDF (national IDs in full only with VIEW_EMPLOYEE_DATA). Their layout is not RRA's or RSSB's upload template yet: see the question below
+- [x] Ledger (M) — 2026-10-11: `PostingService.payroll` (PAYROLL) and `payrollPayment` (PAYROLL_PAYMENT); accounts 1140 Staff Advances, 2060 PAYE Payable, 2070 RSSB Contributions Payable, 2080 Net Salaries Payable (controlled), 2090 Other Payroll Deductions, 6010 Salaries and Wages, 6020 Employer Social Contributions; `PostingServiceTest` balances a run and its payment (AT-10)
+- [ ] Before the first real run: the accountant checks the seeded rates on a real payslip (see the questions), then the business's employees are entered
 
 ---
 
@@ -212,7 +213,9 @@ Answers change what gets built; record each answer next to the question.
 - [ ] Import VAT paid at customs is recoverable (VAT Input), not a cost of the glass: keep it out of the shipment bills. Confirm how it is paid and declared (TAX-05)
 - [ ] Import costs reaching glass already sold or cut go to Cost of Goods Sold (built). Agree
 - [ ] Sheets broken on arrival are expensed to Glass Spoilage at receipt; a claim brings back what it recovers (built). Agree
-- [ ] Payroll: who runs it today (a payroll tool, the accountant, by hand), for how many employees, paid monthly? Which allowances and deductions besides PAYE and RSSB (advances, loans, driver shortages)? Is the payroll module wanted (scope under "Payroll"), or is the payroll journal enough? Before any calculation is built, the accountant confirms the rates and gives worked examples
+- [ ] Payroll (built, V40): the accountant confirms the rates seeded from January 2025 on a real payslip: PAYE 0% to 60,000, 10% to 100,000, 20% to 200,000, 30% above, 30% from a second employer (RRA, Law 027/2022); RSSB pension 6% + 6%, occupational hazards 2% (employer), maternity 0.3% + 0.3%; CBHI 0.5% of the net. Open: does the transport allowance count for RSSB contributions (built: yes, a switch per rate set)? Is the RSSB medical scheme (7.5% + 7.5%) used? Casual workers (15% PAYE) are not built. The pension rises from 2027 (2 points a year, to 20% in 2030): record each new set when RSSB publishes it
+- [ ] Payroll declarations: the PAYE and RSSB exports list what the declarations need; should they follow the exact upload templates of RRA's e-tax and RSSB's portal (columns, file format)?
+- [ ] Payroll: PAYE and RSSB are paid by manual journal (Dr PAYE Payable or RSSB Contributions Payable / Cr Bank). Should a payment screen do it instead, the two accounts then controlled?
 
 **Sales and money**
 - [ ] Contractor prices exclude VAT: the POS adds 18% to them; retail prices include it (V9 lists). Confirm, and whether a VAT-excluded list should print net prices on the invoice
@@ -258,6 +261,7 @@ Answers change what gets built; record each answer next to the question.
 
 ## Dev database: test data to clear before go-live
 
+- Payroll: employees EMP-WH-0001 (Aline Uwase), -0002 (Eric Nshimiyimana, linked to driver-m7: 1,000 of his shortage recovered), -0003 (Grace Mukamana, second employer); pay run PAY-WH-2026-000001 (October, approved by owner38648 and paid), -000002 (November, cancelled)
 - Purchase orders PO-WH-2026-000001 (Shandong, received), -000002 (Kigali Glass, closed short), -000003..8 (cancelled), -000009 (AT-01, received)
 - GRN-WH-2026-000004 put 20 units on the test rack WH-A-R04
 - Shipments SHP-WH-2026-000002 (AT-01, costs complete), -000003 (by value, claim settled), -000001 and -000004 (cancelled); a test CUSTOMS rate of 1,449 on 2026-10-07

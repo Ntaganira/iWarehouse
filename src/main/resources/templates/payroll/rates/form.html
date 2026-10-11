@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${rateDto.id == null} ? #{payrollRate.addTitle} : #{payrollRate.editTitle}, ~{::content})}">
+<head><title>Payroll rates - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${rateDto.id == null} ? #{payrollRate.addTitle} : #{payrollRate.editTitle}">New Payroll Rates</h1>
+            <div class="subtitle" th:text="#{payrollRate.formSubtitle}">The rates of a month's run are those in force on its last day; check them with the accountant</div>
+        </div>
+        <a th:href="${rateDto.id == null} ? @{/payroll/rates} : @{/payroll/rates/{id}(id=${rateDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${rateDto.id == null} ? @{/payroll/rates/new} : @{/payroll/rates/{id}/edit(id=${rateDto.id})}"
+              th:object="${rateDto}" method="post" class="form-container" novalidate autocomplete="off">
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="effectiveFrom" th:text="#{payrollRate.from}">In force from</label>
+                    <input type="date" id="effectiveFrom" th:field="*{effectiveFrom}" required th:classappend="${#fields.hasErrors('effectiveFrom')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('effectiveFrom')}" th:errors="*{effectiveFrom}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="note" th:text="#{payrollRate.note}">Source</label>
+                    <input type="text" id="note" th:field="*{note}" maxlength="255" th:placeholder="#{payrollRate.notePh}"
+                           th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                </div>
+            </div>
+
+            <h3 class="form-section-title" th:text="#{payrollRate.payeSection}">PAYE (RRA): monthly taxable pay</h3>
+            <div class="form-grid">
+                <th:block th:each="b : ${ {1, 2, 3} }">
+                    <div class="form-group" th:with="band=${'payeBand' + b}, rate=${'payeRate' + b}">
+                        <label th:for="${band}" th:text="#{payrollRate.bandUpTo(${b})}">Band 1 up to (RWF)</label>
+                        <input type="number" th:id="${band}" th:field="*{__${band}__}" min="0" step="1" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors(band)} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors(band)}" th:errors="*{__${band}__}"></span>
+                    </div>
+                </th:block>
+                <th:block th:each="b : ${ {1, 2, 3, 4} }">
+                    <div class="form-group" th:with="rate=${'payeRate' + b}">
+                        <label th:for="${rate}" th:text="#{payrollRate.rateOfBand(${b})}">Rate of band 1 (%)</label>
+                        <input type="number" th:id="${rate}" th:field="*{__${rate}__}" min="0" max="100" step="0.01" required inputmode="decimal"
+                               th:classappend="${#fields.hasErrors(rate)} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors(rate)}" th:errors="*{__${rate}__}"></span>
+                        <span class="hint" th:if="${b == 4}" th:text="#{payrollRate.band4Hint}">Above the third band</span>
+                    </div>
+                </th:block>
+                <div class="form-group">
+                    <label for="payeSecondaryRate" th:text="#{payrollRate.secondary}">Second employer (%)</label>
+                    <input type="number" id="payeSecondaryRate" th:field="*{payeSecondaryRate}" min="0" max="100" step="0.01" required inputmode="decimal"
+                           th:classappend="${#fields.hasErrors('payeSecondaryRate')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('payeSecondaryRate')}" th:errors="*{payeSecondaryRate}"></span>
+                    <span class="hint" th:text="#{payrollRate.secondaryHint}">On all the pay of someone the business is not the first employer of</span>
+                </div>
+            </div>
+
+            <h3 class="form-section-title" th:text="#{payrollRate.rssbSection}">RSSB and CBHI (%)</h3>
+            <div class="form-grid">
+                <th:block th:each="f : ${ {'pensionEmployeeRate', 'pensionEmployerRate', 'occupationalHazardsRate', 'maternityEmployeeRate', 'maternityEmployerRate', 'cbhiRate'} }">
+                    <div class="form-group">
+                        <label th:for="${f}" th:text="#{${'payrollRate.field.' + f}}">Pension, employee (%)</label>
+                        <input type="number" th:id="${f}" th:field="*{__${f}__}" min="0" max="100" step="0.01" required inputmode="decimal"
+                               th:classappend="${#fields.hasErrors(f)} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors(f)}" th:errors="*{__${f}__}"></span>
+                    </div>
+                </th:block>
+                <div class="form-group full-width">
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="checkbox" th:field="*{transportInRssbBase}">
+                        <span th:text="#{payrollRate.transportInBase}">The transport allowance counts for RSSB contributions</span>
+                    </label>
+                    <span class="hint" th:text="#{payrollRate.transportHint}">PAYE is always on the whole pay; CBHI is on the net pay before it</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{payrollRate.save}">Save rates</button>
+                <a th:href="${rateDto.id == null} ? @{/payroll/rates} : @{/payroll/rates/{id}(id=${rateDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

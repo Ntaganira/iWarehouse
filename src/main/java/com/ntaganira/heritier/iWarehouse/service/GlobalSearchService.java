@@ -93,6 +93,8 @@ public class GlobalSearchService {
     private final DriverService driverService;
     private final AuditCaseService auditCaseService;
     private final UserService userService;
+    private final EmployeeService employeeService;
+    private final PayRunService payRunService;
     private final Messages messages;
     private final NumberFormats num;
 
@@ -105,7 +107,7 @@ public class GlobalSearchService {
                                StockTransferService stockTransferService, StockAdjustmentService stockAdjustmentService,
                                StockCountService stockCountService, TripService tripService, VehicleService vehicleService,
                                DriverService driverService, AuditCaseService auditCaseService, UserService userService,
-                               Messages messages, NumberFormats num) {
+                               EmployeeService employeeService, PayRunService payRunService, Messages messages, NumberFormats num) {
         this.stockService = stockService;
         this.locationService = locationService;
         this.locationRepo = locationRepo;
@@ -129,6 +131,8 @@ public class GlobalSearchService {
         this.driverService = driverService;
         this.auditCaseService = auditCaseService;
         this.userService = userService;
+        this.employeeService = employeeService;
+        this.payRunService = payRunService;
         this.messages = messages;
         this.num = num;
     }
@@ -276,6 +280,12 @@ public class GlobalSearchService {
             new Source<>("nav.auditCases", "/audit-cases", null, List.of("PAGE_AUDIT_CASES", "PERM_VIEW_AUDIT_CASES"),
                 q -> auditCaseService.findPage(q, null, 0, PER_GROUP),
                 c -> new Hit(c.getNumber(), c.getTrip() == null ? null : c.getTrip().getNumber(), date(c.getOpenedAt()), "/audit-cases/" + c.getId())),
+            new Source<>("nav.employees", "/payroll/employees", null, List.of("PAGE_EMPLOYEES", "PERM_VIEW_EMPLOYEE"),
+                q -> employeeService.findPage(q, null, 0, PER_GROUP),
+                e -> new Hit(e.getCode(), e.getFullName(), e.getJobTitle(), "/payroll/employees/" + e.getId())),
+            new Source<>("nav.payRuns", "/payroll/runs", null, List.of("PAGE_PAY_RUNS", "PERM_VIEW_PAY_RUN"),
+                q -> payRunService.findPage(q, null, 0, PER_GROUP),
+                r -> new Hit(r.getNumber(), date(r.getPeriod()), null, "/payroll/runs/" + r.getId())),
             new Source<>("nav.users", "/users", null, List.of("PAGE_USERS", "PERM_VIEW_USER"),
                 q -> userService.findPage(q, null, null, 0, PER_GROUP),
                 u -> new Hit(u.getUsername(), u.getFullName(), u.getEmail(), "/users/" + u.getId()))

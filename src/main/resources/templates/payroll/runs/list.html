@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{payRun.title}, ~{::content})}">
+<head><title>Pay runs - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{payRun.title}">Pay Runs</h1>
+            <div class="subtitle" th:text="#{payRun.subtitle}">A month's salaries, deductions and net pay: prepared, approved by another person, then paid</div>
+        </div>
+        <button type="button" class="btn btn-primary" data-modal-open="new-run-modal" th:if="${!months.isEmpty()}"
+                sec:authorize="hasAuthority('PERM_PREPARE_PAY_RUN')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{payRun.add}">New pay run</span>
+        </button>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${pending > 0}" sec:authorize="hasAuthority('PERM_APPROVE_PAY_RUN')">
+        <span th:text="#{payRun.pendingNote(${pending})}">1 pay run waits for approval.</span>
+        <a th:href="@{/payroll/runs(status='SUBMITTED')}" th:text="#{manualJournal.showPending}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{payRun.sectionTitle}">Pay runs</span>
+                <span class="section-count" th:text="${runs.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/payroll/runs}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{payRun.searchPh}" th:aria-label="#{payRun.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'payRun.status.' + st}}">Posted</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{payRun.number}">Pay run</th>
+                        <th th:text="#{payRun.month}">Month</th>
+                        <th class="num" th:text="#{payRun.employees}">Employees</th>
+                        <th class="num" th:text="#{payRun.gross}">Gross (RWF)</th>
+                        <th class="num" th:text="#{payRun.net}">Net pay (RWF)</th>
+                        <th th:text="#{payRun.preparedBy}">Prepared by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${runs.content}">
+                        <td><a class="row-link strong mono" th:href="@{/payroll/runs/{id}(id=${r.id})}" th:text="${r.number}">PAY-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(r.period, 'MMMM yyyy')}">October 2026</td>
+                        <td class="num" th:text="${r.employees}">12</td>
+                        <td class="num" th:text="${@num.money(r.totalGross)}">3,600,000</td>
+                        <td class="num" th:text="${@num.money(r.totalNet)}">2,711,568</td>
+                        <td>
+                            <span th:text="${r.preparedBy}">accountant</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.preparedAt, 'dd/MM/yyyy HH:mm')}">25/10/2026 10:30</div>
+                        </td>
+                        <td><th:block th:replace="~{payroll/runs/list :: runStatus(${r.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${runs.totalElements == 0}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{payRun.empty}">No pay run yet</h3>
+                                <p th:text="#{payRun.emptyHint}">A run takes every employee working in the month, at the rates in force on its last day</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${runs}, '/payroll/runs', ${paginationQuery})}"></th:block>
+    </div>
+
+    <!--/* A new run: the month (those without a run, from a year back to next month) */-->
+    <div class="modal-overlay" id="new-run-modal" th:if="${!months.isEmpty()}" sec:authorize="hasAuthority('PERM_PREPARE_PAY_RUN')">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-run-modal-title">
+            <div class="modal-header">
+                <h3 id="new-run-modal-title" th:text="#{payRun.addTitle}">New pay run</h3>
+                <button type="button" class="modal-close" data-modal-close="new-run-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/payroll/runs/new}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{payRun.addText}">Every employee working in the month gets a line from their salary. Change the month's overtime, bonus and deductions before you submit it.</p>
+                    <div class="form-group">
+                        <label for="new-run-period" th:text="#{payRun.month}">Month</label>
+                        <select id="new-run-period" name="period" required>
+                            <option th:each="m : ${months}" th:value="${m}" th:selected="${m == suggested}" th:text="${#temporals.format(m, 'MMMM yyyy')}">October 2026</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="new-run-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{payRun.prepare}">Prepare the run</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!--/* A pay run's status as a badge */-->
+<th:block th:fragment="runStatus(s)" th:switch="${s.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{payRun.status.DRAFT}">Draft</span>
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{payRun.status.SUBMITTED}">Waiting for approval</span>
+    <span th:case="'POSTED'" class="badge badge-info" th:text="#{payRun.status.POSTED}">Approved, not paid</span>
+    <span th:case="'PAID'" class="badge badge-success" th:text="#{payRun.status.PAID}">Paid</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{payRun.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{payrollRate.title}, ~{::content})}">
+<head><title>Payroll rates - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{payrollRate.title}">Payroll Rates</h1>
+            <div class="subtitle" th:text="#{payrollRate.subtitle}">PAYE bands and the RSSB and CBHI rates in force from each date: a change in the law is a new set</div>
+        </div>
+        <a href="/payroll/rates/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_PAYROLL_RATES')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{payrollRate.add}">New rates</span>
+        </a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{payrollRate.sectionTitle}">Rate sets</span>
+                <span class="section-count" th:text="${sets.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{payrollRate.from}">In force from</th>
+                        <th th:text="#{payrollRate.payeBands}">PAYE</th>
+                        <th class="num" th:text="#{payrollRate.pension}">Pension (%)</th>
+                        <th class="num" th:text="#{payrollRate.hazards}">Occupational hazards (%)</th>
+                        <th class="num" th:text="#{payrollRate.maternity}">Maternity (%)</th>
+                        <th class="num" th:text="#{payrollRate.cbhi}">CBHI (%)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${sets.content}">
+                        <td><a class="row-link strong" th:href="@{/payroll/rates/{id}(id=${r.id})}" th:text="${#temporals.format(r.effectiveFrom, 'dd/MM/yyyy')}">01/01/2025</a></td>
+                        <td th:text="#{payrollRate.bandsShort(${@num.money(r.payeBand1)}, ${@num.money(r.payeBand2)}, ${@num.money(r.payeBand3)}, ${@num.percent(r.payeRate1)}, ${@num.percent(r.payeRate2)}, ${@num.percent(r.payeRate3)}, ${@num.percent(r.payeRate4)})}">0% to 60,000 · 10% to 100,000 · 20% to 200,000 · 30% above</td>
+                        <td class="num" th:text="${@num.percent(r.pensionEmployeeRate) + ' + ' + @num.percent(r.pensionEmployerRate)}">6 + 6</td>
+                        <td class="num" th:text="${@num.percent(r.occupationalHazardsRate)}">2</td>
+                        <td class="num" th:text="${@num.percent(r.maternityEmployeeRate) + ' + ' + @num.percent(r.maternityEmployerRate)}">0.3 + 0.3</td>
+                        <td class="num" th:text="${@num.percent(r.cbhiRate)}">0.5</td>
+                        <td>
+                            <span th:if="${r.id == inForce}" class="badge badge-success" th:text="#{payrollRate.inForce}">In force</span>
+                            <span th:if="${r.id != inForce and r.effectiveFrom.isAfter(today)}" class="badge badge-info" th:text="#{payrollRate.upcoming}">Upcoming</span>
+                            <span th:if="${r.id != inForce and !r.effectiveFrom.isAfter(today)}" class="badge badge-secondary" th:text="#{payrollRate.past}">Replaced</span>
+                            <div class="cell-sub" th:if="${used.get(r.id)}" th:text="#{payrollRate.usedShort}">Used by a pay run</div>
+                        </td>
+                    </tr>
+                    <tr th:if="${sets.totalElements == 0}">
+                        <td colspan="7"><div class="empty-state"><h3 th:text="#{payrollRate.empty}">No rates yet</h3></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${sets}, '/payroll/rates', '')}"></th:block>
+    </div>
+</div>
+</body>
+</html>

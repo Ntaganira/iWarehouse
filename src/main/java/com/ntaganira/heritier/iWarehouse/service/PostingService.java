@@ -45,6 +45,7 @@ public class PostingService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(Journal.SCALE);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter PAY_MONTH = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH);
 
     private final JournalService journalService;
     private final StockService stockService;
@@ -320,6 +321,61 @@ public class PostingService {
                 .addForDriver(AccountKey.DRIVER_FLOAT, clearance.getExpected().negate(), driverId, tripNumber)
                 .addForDriver(AccountKey.DRIVER_SHORTAGE, clearance.getShortage(), driverId, tripNumber)
                 .credit(AccountKey.CASH_OVER_SHORT, clearance.getOverage());
+        return journalService.post(journal);
+    }
+
+    // ---------------------------------------------------------------- payroll
+
+    /**
+     * A pay run approved, on its month's last day: Dr Salaries and Wages (gross) and Employer Social Contributions / Cr PAYE
+     * Payable, RSSB Contributions Payable (both shares of pension and maternity, occupational hazards, CBHI), Staff Advances
+     * and a driver's shortage recovered (naming the driver, ACC-07), Other Payroll Deductions, and the net pay owed.
+     */
+    public JournalEntry payroll(PayRun run, List<PayRunLine> lines) {
+        Journal journal = Journal.of(JournalSource.PAYROLL, run.getId(), run.getNumber(), run.getPostingDate(),
+                "Payroll of " + PAY_MONTH.format(run.getPeriod()));
+        BigDecimal gross = ZERO;
+        BigDecimal employer = ZERO;
+        BigDecimal paye = ZERO;
+        BigDecimal rssb = ZERO;
+        BigDecimal advances = ZERO;
+        BigDecimal other = ZERO;
+        BigDecimal net = ZERO;
+        for (PayRunLine l : lines) {
+            gross = gross.add(l.getGross());
+            employer = employer.add(l.getEmployerContributions());
+            paye = paye.add(l.getPaye());
+            rssb = rssb.add(l.getRssbTotal());
+            advances = advances.add(l.getAdvanceDeduction());
+            other = other.add(l.getOtherDeduction());
+            net = net.add(l.getNetPay());
+            if (l.getShortageDeduction().signum() > 0) {
+                journal.addForDriver(AccountKey.DRIVER_SHORTAGE, l.getShortageDeduction().negate(), l.getDriverId(),
+                        l.getEmployeeCode() + " " + run.getNumber());
+            }
+        }
+        journal.debit(AccountKey.SALARIES, gross)
+                .debit(AccountKey.EMPLOYER_CONTRIBUTIONS, employer)
+                .credit(AccountKey.PAYE_PAYABLE, paye)
+                .credit(AccountKey.RSSB_PAYABLE, rssb)
+                .credit(AccountKey.STAFF_ADVANCES, advances)
+                .credit(AccountKey.PAYROLL_DEDUCTIONS, other)
+                .credit(AccountKey.NET_PAY_PAYABLE, net);
+        return journalService.post(journal);
+    }
+
+    /** A pay run's salaries paid: Dr Net Salaries Payable / Cr the account each employee is paid from (bank, mobile money, vault). */
+    public JournalEntry payrollPayment(PayRun run, List<PayRunLine> lines) {
+        Journal journal = Journal.of(JournalSource.PAYROLL_PAYMENT, run.getId(), run.getNumber(), run.getPaidOn(),
+                "Salaries of " + PAY_MONTH.format(run.getPeriod()) + " paid");
+        Map<AccountKey, BigDecimal> byAccount = new LinkedHashMap<>();
+        BigDecimal net = ZERO;
+        for (PayRunLine l : lines) {
+            byAccount.merge(l.getPayMethod().account(), l.getNetPay(), BigDecimal::add);
+            net = net.add(l.getNetPay());
+        }
+        journal.debit(AccountKey.NET_PAY_PAYABLE, net);
+        byAccount.forEach((account, amount) -> journal.add(account, amount.negate(), null, null, run.getPaymentReference(), null));
         return journalService.post(journal);
     }
 

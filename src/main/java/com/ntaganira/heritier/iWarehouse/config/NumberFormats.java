@@ -29,6 +29,11 @@ public class NumberFormats {
         return rate == null ? "" : format("#,##0.00####", rate);
     }
 
+    /** A rate in percent with up to 2 decimals: 6, 0.3, 12.5 (payroll rates). */
+    public String percent(BigDecimal percent) {
+        return percent == null ? "" : format("#,##0.##", percent);
+    }
+
     /** Signed percentage with 2 decimals: +1.25 or -0.40. */
     public String signedPercent(BigDecimal percent) {
         if (percent == null) {

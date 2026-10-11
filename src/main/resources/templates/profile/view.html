@@ -121,6 +121,37 @@
         </form>
     </div>
 
+    <!-- My payslips: an employee linked to this user, posted and paid runs only -->
+    <div class="section" id="payslips" th:if="${payslips.totalElements > 0}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{payslip.mine}">My payslips</span>
+                <span class="section-count" th:text="${payslips.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{payRun.month}">Month</th>
+                        <th class="num" th:text="#{payRun.gross}">Gross (RWF)</th>
+                        <th class="num" th:text="#{payRun.net}">Net pay (RWF)</th>
+                        <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${payslips.content}">
+                        <td class="nowrap strong" th:text="${#temporals.format(p.period(), 'MMMM yyyy')}">October 2026</td>
+                        <td class="num" th:text="${@num.money(p.gross())}">300,000</td>
+                        <td class="num strong" th:text="${@num.money(p.netPay())}">225,964</td>
+                        <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/profile/payslips/{id}(id=${p.lineId()})}" th:text="#{payslip.pdf}">Payslip (PDF)</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:if="${payslips.totalElements > payslips.size}" th:text="#{payslip.latestOnly(${payslips.size})}">The latest 12 months; ask the accountant for older payslips.</p>
+    </div>
+
     <script defer src="/js/profile.js"></script>
 </div>
 </body>

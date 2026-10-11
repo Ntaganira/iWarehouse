@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${employeeDto.id == null} ? #{employee.addTitle} : #{employee.editTitle}, ~{::content})}">
+<head><title>Employee - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${employeeDto.id == null} ? #{employee.addTitle} : #{employee.editTitle}">Add an Employee</h1>
+            <div class="subtitle" th:text="#{employee.formSubtitle}">Their monthly salary and allowances in RWF; PAYE, RSSB and CBHI are worked out by each pay run</div>
+        </div>
+        <a th:href="${employeeDto.id == null} ? @{/payroll/employees} : @{/payroll/employees/{id}(id=${employeeDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="${employeeDto.id == null} ? @{/payroll/employees/new} : @{/payroll/employees/{id}/edit(id=${employeeDto.id})}"
+              th:object="${employeeDto}" method="post" class="form-container" novalidate autocomplete="off">
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-grid">
+                <div class="form-group" th:if="${employee != null}">
+                    <span class="count-at-label" th:text="#{employee.code}">Code</span>
+                    <div class="count-at mono" th:text="${employee.code}">EMP-WH-0001</div>
+                </div>
+                <div class="form-group" th:classappend="${employee == null} ? 'full-width'">
+                    <label for="fullName" th:text="#{employee.fullName}">Name</label>
+                    <input type="text" id="fullName" th:field="*{fullName}" maxlength="100" required
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="jobTitle" th:text="#{employee.jobTitle}">Job title</label>
+                    <input type="text" id="jobTitle" th:field="*{jobTitle}" maxlength="100" th:placeholder="#{employee.jobTitlePh}"
+                           th:classappend="${#fields.hasErrors('jobTitle')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('jobTitle')}" th:errors="*{jobTitle}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="userId" th:text="#{employee.user}">Signs in as</label>
+                    <select id="userId" th:field="*{userId}" data-searchable th:classappend="${#fields.hasErrors('userId')} ? 'is-invalid'">
+                        <option value="" th:text="#{employee.noUser}">Nobody (no payslips on My profile)</option>
+                        <option th:each="u : ${users}" th:value="${u.id}" th:text="${u.fullName + ' (' + u.username + ')'}">Jean Habimana (jhabimana)</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('userId')}" th:errors="*{userId}"></span>
+                    <span class="hint" th:text="#{employee.userHint}">They find their payslips on My profile; a driver's shortage can be recovered from their pay</span>
+                </div>
+                <div class="form-group">
+                    <label for="nationalId" th:text="#{employee.nationalId}">National ID</label>
+                    <input type="text" id="nationalId" th:field="*{nationalId}" class="input-code" maxlength="20" required inputmode="numeric"
+                           spellcheck="false" th:classappend="${#fields.hasErrors('nationalId')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('nationalId')}" th:errors="*{nationalId}"></span>
+                    <span class="hint" th:text="#{employee.nationalIdHint}">16 digits; personal data</span>
+                </div>
+                <div class="form-group">
+                    <label for="rssbNumber" th:text="#{employee.rssbNumber}">RSSB number</label>
+                    <input type="text" id="rssbNumber" th:field="*{rssbNumber}" class="input-code" maxlength="20" spellcheck="false"
+                           autocapitalize="characters" th:classappend="${#fields.hasErrors('rssbNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('rssbNumber')}" th:errors="*{rssbNumber}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="hiredOn" th:text="#{employee.hiredOn}">Hired on</label>
+                    <input type="date" id="hiredOn" th:field="*{hiredOn}" required th:classappend="${#fields.hasErrors('hiredOn')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('hiredOn')}" th:errors="*{hiredOn}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="leftOn" th:text="#{employee.leftOn}">Left on</label>
+                    <input type="date" id="leftOn" th:field="*{leftOn}" th:classappend="${#fields.hasErrors('leftOn')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('leftOn')}" th:errors="*{leftOn}"></span>
+                    <span class="hint" th:text="#{employee.leftOnHint}">Their last day: paid that month, not in later runs</span>
+                </div>
+                <div class="form-group">
+                    <label for="employment" th:text="#{employee.employment}">PAYE</label>
+                    <select id="employment" th:field="*{employment}" th:classappend="${#fields.hasErrors('employment')} ? 'is-invalid'">
+                        <option th:each="t : ${employments}" th:value="${t}" th:text="#{${'employee.employment.' + t}}">First employer (bands)</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('employment')}" th:errors="*{employment}"></span>
+                </div>
+            </div>
+
+            <h3 class="form-section-title" th:text="#{employee.paySection}">Monthly pay (RWF)</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="baseSalary" th:text="#{employee.baseSalary}">Basic salary</label>
+                    <input type="number" id="baseSalary" th:field="*{baseSalary}" min="0" step="1" required inputmode="numeric"
+                           th:classappend="${#fields.hasErrors('baseSalary')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('baseSalary')}" th:errors="*{baseSalary}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="transportAllowance" th:text="#{employee.transport}">Transport allowance</label>
+                    <input type="number" id="transportAllowance" th:field="*{transportAllowance}" min="0" step="1" inputmode="numeric"
+                           th:classappend="${#fields.hasErrors('transportAllowance')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('transportAllowance')}" th:errors="*{transportAllowance}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="housingAllowance" th:text="#{employee.housing}">Housing allowance</label>
+                    <input type="number" id="housingAllowance" th:field="*{housingAllowance}" min="0" step="1" inputmode="numeric"
+                           th:classappend="${#fields.hasErrors('housingAllowance')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('housingAllowance')}" th:errors="*{housingAllowance}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="otherAllowance" th:text="#{employee.otherAllowance}">Other allowances</label>
+                    <input type="number" id="otherAllowance" th:field="*{otherAllowance}" min="0" step="1" inputmode="numeric"
+                           th:classappend="${#fields.hasErrors('otherAllowance')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('otherAllowance')}" th:errors="*{otherAllowance}"></span>
+                </div>
+            </div>
+
+            <h3 class="form-section-title" th:text="#{employee.paidSection}">How they are paid</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="payMethod" th:text="#{employee.payMethod}">Paid by</label>
+                    <select id="payMethod" th:field="*{payMethod}" th:classappend="${#fields.hasErrors('payMethod')} ? 'is-invalid'">
+                        <option th:each="p : ${payMethods}" th:value="${p}" th:text="#{${'employee.payMethod.' + p}}">Bank</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('payMethod')}" th:errors="*{payMethod}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bankName" th:text="#{employee.bankName}">Bank</label>
+                    <input type="text" id="bankName" th:field="*{bankName}" maxlength="60" th:placeholder="#{employee.bankNamePh}"
+                           th:classappend="${#fields.hasErrors('bankName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('bankName')}" th:errors="*{bankName}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="accountNumber" th:text="#{employee.accountNumber}">Account or mobile-money number</label>
+                    <input type="text" id="accountNumber" th:field="*{accountNumber}" class="input-code" maxlength="40" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('accountNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('accountNumber')}" th:errors="*{accountNumber}"></span>
+                    <span class="hint" th:text="#{employee.accountHint}">Needed for bank and mobile money; personal data</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{employee.save}">Save employee</button>
+                <a th:href="${employeeDto.id == null} ? @{/payroll/employees} : @{/payroll/employees/{id}(id=${employeeDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

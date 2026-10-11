@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{payrollRate.viewTitle(${#temporals.format(set.effectiveFrom, 'dd/MM/yyyy')})}, ~{::content})}">
+<head><title>Payroll rates - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{payrollRate.viewTitle(${#temporals.format(set.effectiveFrom, 'dd/MM/yyyy')})}">Payroll rates from 01/01/2025</h1>
+            <div class="subtitle" th:text="${set.note != null} ? ${set.note} : #{payrollRate.subtitle}">PAYE Law 027/2022</div>
+        </div>
+        <div class="btn-group">
+            <a href="/payroll/rates" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${!used}" sec:authorize="hasAuthority('PERM_MANAGE_PAYROLL_RATES')" th:href="@{/payroll/rates/{id}/edit(id=${set.id})}"
+               class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${used}" th:text="#{payrollRate.usedNote}">A pay run waiting for approval, posted or paid uses these rates: they never change. Record a new set from a later date instead.</div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{payrollRate.payeSection}">PAYE (RRA): monthly taxable pay</h2></div>
+        <div class="section-body">
+            <div class="table-container">
+                <table data-cards="off">
+                    <thead>
+                        <tr>
+                            <th th:text="#{payrollRate.band}">Taxable pay a month (RWF)</th>
+                            <th class="num" th:text="#{payrollRate.rate}">Rate (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td th:text="#{payrollRate.bandRange('0', ${@num.money(set.payeBand1)})}">0 to 60,000</td>
+                            <td class="num" th:text="${@num.percent(set.payeRate1)}">0</td>
+                        </tr>
+                        <tr>
+                            <td th:text="#{payrollRate.bandRange(${@num.money(set.payeBand1)}, ${@num.money(set.payeBand2)})}">60,000 to 100,000</td>
+                            <td class="num" th:text="${@num.percent(set.payeRate2)}">10</td>
+                        </tr>
+                        <tr>
+                            <td th:text="#{payrollRate.bandRange(${@num.money(set.payeBand2)}, ${@num.money(set.payeBand3)})}">100,000 to 200,000</td>
+                            <td class="num" th:text="${@num.percent(set.payeRate3)}">20</td>
+                        </tr>
+                        <tr>
+                            <td th:text="#{payrollRate.bandAbove(${@num.money(set.payeBand3)})}">Above 200,000</td>
+                            <td class="num" th:text="${@num.percent(set.payeRate4)}">30</td>
+                        </tr>
+                        <tr>
+                            <td th:text="#{payrollRate.secondary}">Second employer (%)</td>
+                            <td class="num" th:text="${@num.percent(set.payeSecondaryRate)}">30</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{payrollRate.rssbSection}">RSSB and CBHI (%)</h2></div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{payrollRate.field.pensionEmployeeRate}">Pension, employee (%)</label>
+                    <div class="value" th:text="${@num.percent(set.pensionEmployeeRate)}">6</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payrollRate.field.pensionEmployerRate}">Pension, employer (%)</label>
+                    <div class="value" th:text="${@num.percent(set.pensionEmployerRate)}">6</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payrollRate.field.occupationalHazardsRate}">Occupational hazards, employer (%)</label>
+                    <div class="value" th:text="${@num.percent(set.occupationalHazardsRate)}">2</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payrollRate.field.maternityEmployeeRate}">Maternity, employee (%)</label>
+                    <div class="value" th:text="${@num.percent(set.maternityEmployeeRate)}">0.3</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payrollRate.field.maternityEmployerRate}">Maternity, employer (%)</label>
+                    <div class="value" th:text="${@num.percent(set.maternityEmployerRate)}">0.3</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payrollRate.field.cbhiRate}">CBHI, of the net pay (%)</label>
+                    <div class="value" th:text="${@num.percent(set.cbhiRate)}">0.5</div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{payrollRate.rssbBase}">RSSB contributions on</label>
+                    <div class="value" th:text="${set.transportInRssbBase} ? #{payrollRate.base.withTransport} : #{payrollRate.base.withoutTransport}">The whole pay, transport allowance included</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/payroll/rates/' + set.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

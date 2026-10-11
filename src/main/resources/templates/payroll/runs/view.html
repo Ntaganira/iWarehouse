@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${run.number}, ~{::content})}">
+<head><title>Pay run - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${run.status.name()}, base=${'/payroll/runs/' + run.id},
+        canPrepare=${#authorization.expression('hasAuthority(''PERM_PREPARE_PAY_RUN'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_PAY_RUN'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${run.number}">PAY-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="${#temporals.format(run.period, 'MMMM yyyy')}">October 2026</span> &middot;
+                <span th:text="#{payRun.preparedByOn(${run.preparedBy}, ${#temporals.format(run.preparedAt, 'dd/MM/yyyy HH:mm')})}">prepared by accountant on 25/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{payroll/runs/list :: runStatus(${run.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/payroll/runs" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'DRAFT' and canPrepare}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{payRun.cancel}">Cancel</button>
+                <form th:action="@{/payroll/runs/{id}/add-missing(id=${run.id})}" method="post" class="row-action-form">
+                    <button type="submit" class="btn btn-outline" th:text="#{payRun.addMissing}">Add new employees</button>
+                </form>
+                <a th:href="@{/payroll/runs/{id}/edit(id=${run.id})}" class="btn btn-outline" th:text="#{payRun.edit}">Change the month's pay</a>
+                <form th:action="@{/payroll/runs/{id}/submit(id=${run.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{payRun.submitConfirm(${run.number}, ${@num.money(run.totalNet)})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{payRun.submit}">Submit for approval</button>
+                </form>
+            </th:block>
+            <th:block th:if="${s == 'SUBMITTED'}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:if="${canPrepare and own}"
+                        th:text="#{payRun.cancel}">Cancel</button>
+                <th:block th:if="${canApprove and !own}">
+                    <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="return-modal" th:text="#{payRun.sendBack}">Send back</button>
+                    <form th:action="@{/payroll/runs/{id}/approve(id=${run.id})}" method="post" class="row-action-form confirm-submit"
+                          th:attr="data-confirm=#{payRun.approveConfirm(${run.number}, ${@num.money(run.totalCost)}, ${#temporals.format(run.periodEnd, 'dd/MM/yyyy')})}">
+                        <button type="submit" class="btn btn-primary" th:text="#{payRun.approve}">Approve and post</button>
+                    </form>
+                </th:block>
+            </th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="pay-modal" th:if="${s == 'POSTED' and canPrepare}" th:text="#{payRun.pay}">Record the payment</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'DRAFT' and run.returnedNote != null}">
+        <strong th:text="#{payRun.returnedBy(${run.returnedBy}, ${#temporals.format(run.returnedAt, 'dd/MM/yyyy HH:mm')})}">Sent back by owner on 26/10/2026 09:00:</strong>
+        <span th:text="${run.returnedNote}">Overtime of EMP-WH-0003 missing</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{payRun.draftNote}">A draft: change the month's overtime, bonus and deductions, then submit it. Nothing is posted yet.</div>
+    <div class="doc-note is-warning" th:if="${s == 'SUBMITTED'}">
+        <span th:text="#{payRun.waitingNote(${run.submittedBy})}">Submitted by accountant: nothing is posted until another person with approval rights approves it.</span>
+        <span th:if="${own}" th:text="#{payRun.notYourOwn}">You prepared or submitted it, so you cannot approve it.</span>
+    </div>
+    <div class="doc-note" th:if="${run.posted}">
+        <strong th:text="#{payRun.approvedBy(${run.approvedBy}, ${#temporals.format(run.approvedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 27/10/2026 11:00</strong>
+        <span th:text="#{payRun.postedOn(${#temporals.format(run.postingDate, 'dd/MM/yyyy')})}">· posted on 31/10/2026</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'POSTED'}" th:text="#{payRun.toPayNote(${@num.money(run.totalNet)})}">2,711,568 RWF of net pay is owed until the payment is recorded.</div>
+    <div class="doc-note" th:if="${s == 'PAID'}">
+        <strong th:text="#{payRun.paidBy(${run.paidBy}, ${#temporals.format(run.paidOn, 'dd/MM/yyyy')})}">Salaries paid by accountant on 02/11/2026</strong>
+        <span th:if="${run.paymentReference != null}" th:text="${'· ' + run.paymentReference}">· BK-SAL-1026</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{payRun.cancelledBy(${run.cancelledBy})}">Cancelled by accountant:</strong>
+        <span th:text="${run.cancelReason}">Prepared for the wrong month</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{payRun.employees}">Employees</label>
+                    <div class="value" th:text="${run.employees}">12</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.gross}">Gross (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(run.totalGross)}">3,600,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.paye}">PAYE (RWF)</label>
+                    <div class="value" th:text="${@num.money(run.totalPaye)}">648,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.rssbEmployee}">RSSB, employees' shares (RWF)</label>
+                    <div class="value" th:text="${@num.money(run.totalRssbEmployee)}">226,800</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.cbhi}">CBHI (RWF)</label>
+                    <div class="value" th:text="${@num.money(run.totalCbhi)}">13,632</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.otherDeductions}">Other deductions (RWF)</label>
+                    <div class="value" th:text="${@num.money(run.totalOther)}">0</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.net}">Net pay (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(run.totalNet)}">2,711,568</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.employerContributions}">Employer's contributions (RWF)</label>
+                    <div class="value" th:text="${@num.money(run.totalEmployer)}">298,800</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.cost}">Cost to the business (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(run.totalCost)}">3,898,800</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.rssbOwed}">Owed to RSSB (RWF)</label>
+                    <div class="value" th:text="${@num.money(run.totalRssb)}">539,232</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{payRun.rates}">Rates</label>
+                    <div class="value">
+                        <a sec:authorize="hasAuthority('PAGE_PAYROLL_RATES')" th:href="@{/payroll/rates/{id}(id=${run.rateSet.id})}"
+                           th:text="#{payRun.ratesFrom(${#temporals.format(run.rateSet.effectiveFrom, 'dd/MM/yyyy')})}">In force from 01/01/2025</a>
+                        <span sec:authorize="!hasAuthority('PAGE_PAYROLL_RATES')" th:text="#{payRun.ratesFrom(${#temporals.format(run.rateSet.effectiveFrom, 'dd/MM/yyyy')})}">In force from 01/01/2025</span>
+                    </div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" th:if="${run.employees > 0}">
+        <div class="section-header">
+            <h2 th:text="#{payRun.documents}">Payslips and declarations</h2>
+        </div>
+        <div class="section-body">
+            <div class="table-container">
+                <table data-cards="off" class="payrun-docs">
+                    <thead>
+                        <tr>
+                            <th th:text="#{payRun.document}">Document</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Download</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <span class="strong" th:text="#{payslip.all}">Payslips</span>
+                                <div class="cell-sub" th:text="${run.posted} ? #{payslip.allHint} : #{payslip.draftHint}">One employee a page, to print or send</div>
+                            </td>
+                            <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/payslips(id=${run.id})}" th:text="#{export.pdf}">PDF</a></td>
+                        </tr>
+                        <tr th:each="r : ${reports}">
+                            <td>
+                                <span class="strong" th:text="#{${'payRun.report.' + r}}">PAYE declaration</span>
+                                <div class="cell-sub" th:text="#{${'payRun.reportHint.' + r}}">What each employee earned and the PAYE kept, for the RRA declaration</div>
+                            </td>
+                            <td class="actions nowrap">
+                                <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/export(id=${run.id}, report=${r}, format='XLSX')}" th:text="#{export.excel}">Excel</a>
+                                <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{id}/export(id=${run.id}, report=${r}, format='PDF')}" th:text="#{export.pdf}">PDF</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{payRun.lines}">Employees</span>
+                <span class="section-count" th:text="${lines.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{payRun.employee}">Employee</th>
+                                <th class="num" th:text="#{payRun.col.gross}">Gross</th>
+                                <th class="num" th:text="#{payRun.col.paye}">PAYE</th>
+                                <th class="num" th:text="#{payRun.col.rssb}">RSSB</th>
+                                <th class="num" th:text="#{payRun.col.cbhi}">CBHI</th>
+                                <th class="num" th:text="#{payRun.col.other}">Other</th>
+                                <th class="num" th:text="#{payRun.col.net}">Net pay</th>
+                                <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines.content}">
+                                <td>
+                                    <a class="nowrap" sec:authorize="hasAuthority('PAGE_EMPLOYEES')" th:href="@{/payroll/employees/{id}(id=${l.employee.id})}" th:text="${l.employeeName}">Jean Habimana</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_EMPLOYEES')" th:text="${l.employeeName}">Jean Habimana</span>
+                                    <div class="cell-sub mono" th:text="${l.employeeCode}">EMP-WH-0001</div>
+                                    <div class="cell-sub" th:if="${l.deductionNote != null}" th:text="${l.deductionNote}">Advance of 05/10</div>
+                                </td>
+                                <td class="num" th:text="${@num.money(l.gross)}">300,000</td>
+                                <td class="num" th:text="${@num.money(l.paye)}">54,000</td>
+                                <td class="num" th:text="${@num.money(l.employeeContributions)}">18,900</td>
+                                <td class="num" th:text="${@num.money(l.cbhi)}">1,136</td>
+                                <td class="num" th:text="${@num.money(l.otherDeductions)}">0</td>
+                                <td class="num strong" th:text="${@num.money(l.netPay)}">225,964</td>
+                                <td class="actions nowrap">
+                                    <a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{r}/payslips/{l}(r=${run.id}, l=${l.id})}" th:text="#{payslip.short}">Payslip</a>
+                                    <form th:if="${s == 'DRAFT' and canPrepare}" th:action="@{/payroll/runs/{r}/lines/{l}/remove(r=${run.id}, l=${l.id})}"
+                                          method="post" class="row-action-form confirm-submit danger" th:attr="data-confirm=#{payRun.removeConfirm(${l.employeeName})}">
+                                        <button type="submit" class="btn btn-outline btn-sm btn-danger-outline" th:text="#{payRun.remove}">Take off</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${lines.totalElements == 0}">
+                                <td colspan="8"><div class="empty-state"><h3 th:text="#{payRun.noLines}">Nobody on this run</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{payRun.linesNote}">Amounts in RWF. RSSB: the employee’s pension and maternity; Other: advances, a driver’s shortage and other deductions.</p>
+                <th:block th:replace="~{layout/pagination :: pager(${lines}, ${base}, 'tab=lines')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'DRAFT' or s == 'SUBMITTED'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{payRun.cancelTitle(${run.number})},
+                @{/payroll/runs/{id}/cancel(id=${run.id})}, #{payRun.cancelText}, #{payRun.cancel})}"></div>
+    </th:block>
+    <th:block th:if="${s == 'SUBMITTED'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('return-modal', #{payRun.sendBackTitle(${run.number})},
+                @{/payroll/runs/{id}/send-back(id=${run.id})}, #{payRun.sendBackText}, #{payRun.sendBack})}"></div>
+    </th:block>
+
+    <!--/* The salaries paid: the day (from the month's first day to today) and the bank or transfer reference */-->
+    <div class="modal-overlay" id="pay-modal" th:if="${s == 'POSTED' and canPrepare}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-modal-title">
+            <div class="modal-header">
+                <h3 id="pay-modal-title" th:text="#{payRun.payTitle(${run.number})}">Pay the salaries of PAY-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="pay-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/payroll/runs/{id}/pay(id=${run.id})}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{payRun.payText(${@num.money(run.totalNet)})}">2,711,568 RWF leave the bank, mobile money or the vault, as each employee is paid.</p>
+                    <div class="form-group">
+                        <label for="pay-modal-date" th:text="#{payRun.paidOn}">Paid on</label>
+                        <input type="date" id="pay-modal-date" name="paidOn" required th:value="${today}" th:min="${run.period}" th:max="${today}">
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-modal-reference" th:text="#{payRun.reference}">Reference</label>
+                        <input type="text" id="pay-modal-reference" name="reference" maxlength="60" autocomplete="off" th:placeholder="#{payRun.referencePh}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="pay-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{payRun.pay}">Record the payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

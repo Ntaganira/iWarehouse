@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${employee.fullName}, ~{::content})}">
+<head><title>Employee - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/payroll/employees/' + employee.id}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${employee.fullName}">Jean Habimana</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${employee.code}">EMP-WH-0001</span>
+                <th:block th:if="${employee.jobTitle != null}">&middot; <span th:text="${employee.jobTitle}">Cutter</span></th:block>
+                &middot; <th:block th:replace="~{payroll/employees/list :: employeeStatus(${employee})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/payroll/employees" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${personal}" sec:authorize="hasAuthority('PERM_MANAGE_EMPLOYEE')" th:href="@{/payroll/employees/{id}/edit(id=${employee.id})}"
+               class="btn btn-primary" th:text="#{common.edit}">Edit</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{employee.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-payslips" th:classappend="${tab == 'payslips'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_PAY_RUN')">
+                <span th:text="#{payslip.tab}">Payslips</span>
+                <span class="section-count" th:text="${payslips.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{employee.monthlyPay}">Monthly pay (RWF)</label>
+                        <div class="value strong" th:text="${@num.money(employee.monthlyPay)}">300,000</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.baseSalary}">Basic salary</label>
+                        <div class="value" th:text="${@num.money(employee.baseSalary)}">250,000</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.transport}">Transport allowance</label>
+                        <div class="value" th:text="${@num.money(employee.transportAllowance)}">50,000</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.housing}">Housing allowance</label>
+                        <div class="value" th:text="${@num.money(employee.housingAllowance)}">0</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.otherAllowance}">Other allowances</label>
+                        <div class="value" th:text="${@num.money(employee.otherAllowance)}">0</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.employment}">PAYE</label>
+                        <div class="value" th:text="#{${'employee.employment.' + employee.employment}}">First employer (bands)</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.nationalId}">National ID</label>
+                        <div class="value mono" th:text="${nationalIdShown}">1199080012345678</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.rssbNumber}">RSSB number</label>
+                        <div class="value mono" th:text="${employee.rssbNumber != null} ? ${employee.rssbNumber} : '—'">RS123456</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.payMethod}">Paid by</label>
+                        <div class="value">
+                            <span th:text="#{${'employee.payMethod.' + employee.payMethod}}">Bank</span>
+                            <div class="cell-sub" th:if="${employee.bankName != null}" th:text="${employee.bankName}">Bank of Kigali</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.accountNumber}">Account or mobile-money number</label>
+                        <div class="value mono" th:text="${accountShown != null} ? ${accountShown} : '—'">00040-0123456-78</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.hiredOn}">Hired on</label>
+                        <div class="value" th:text="${#temporals.format(employee.hiredOn, 'dd/MM/yyyy')}">01/02/2025</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.leftOn}">Left on</label>
+                        <div class="value" th:text="${employee.leftOn != null} ? ${#temporals.format(employee.leftOn, 'dd/MM/yyyy')} : '—'">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{employee.user}">Signs in as</label>
+                        <div class="value">
+                            <th:block th:if="${employee.user != null}">
+                                <a sec:authorize="hasAuthority('PAGE_USERS')" th:href="@{/users/{id}(id=${employee.user.id})}" th:text="${employee.user.username}">jhabimana</a>
+                                <span sec:authorize="!hasAuthority('PAGE_USERS')" th:text="${employee.user.username}">jhabimana</span>
+                            </th:block>
+                            <span th:if="${employee.user == null}">—</span>
+                            <div class="cell-sub" th:if="${driver != null}" th:text="#{employee.isDriver}">Drives: a shortage can be recovered from their pay</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{user.createdAt}">Created</label>
+                        <div class="value" th:text="${#temporals.format(employee.createdAt, 'dd/MM/yyyy HH:mm') + (employee.createdBy != null ? ' · ' + employee.createdBy : '')}">11/10/2026 12:00 · admin</div>
+                    </div>
+                </div>
+                <p class="form-note" th:unless="${personal}" th:text="#{employee.personalNote}">The national ID and account number are personal data: only the last four characters are shown to you.</p>
+            </div>
+
+            <div class="tab-content" id="tab-payslips" th:classappend="${tab == 'payslips'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_PAY_RUN')">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{payRun.month}">Month</th>
+                                <th th:text="#{payRun.number}">Pay run</th>
+                                <th class="num" th:text="#{payRun.gross}">Gross (RWF)</th>
+                                <th class="num" th:text="#{payRun.net}">Net pay (RWF)</th>
+                                <th th:text="#{common.status}">Status</th>
+                                <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="p : ${payslips.content}">
+                                <td class="nowrap" th:text="${#temporals.format(p.period(), 'MMMM yyyy')}">October 2026</td>
+                                <td><a class="mono" th:href="@{/payroll/runs/{id}(id=${p.runId()})}" th:text="${p.runNumber()}">PAY-WH-2026-000001</a></td>
+                                <td class="num" th:text="${@num.money(p.gross())}">300,000</td>
+                                <td class="num strong" th:text="${@num.money(p.netPay())}">225,964</td>
+                                <td><th:block th:replace="~{payroll/runs/list :: runStatus(${p.status()})}"></th:block></td>
+                                <td class="actions"><a class="btn btn-outline btn-sm" th:href="@{/payroll/runs/{r}/payslips/{l}(r=${p.runId()}, l=${p.lineId()})}"
+                                       th:text="#{payslip.pdf}">Payslip (PDF)</a></td>
+                            </tr>
+                            <tr th:if="${payslips.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state"><h3 th:text="#{payslip.none}">No payslip yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${payslips}, ${base}, 'tab=payslips')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

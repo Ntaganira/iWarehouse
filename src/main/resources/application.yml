@@ -1,6 +1,10 @@
 server:
   port: 8080
   forward-headers-strategy: native   # real client IP behind a trusted reverse proxy (audit IP addresses)
+  tomcat:
+    # A file over the upload limit is refused before it is read (OversizedUploads); reading the rest lets the browser
+    # receive the "file too big" answer for files up to about 50 MB instead of a reset connection
+    max-swallow-size: 50MB
   servlet:
     session:
       timeout: 15m          # NFR-09: 15-minute idle session expiry (as iVura)

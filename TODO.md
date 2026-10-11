@@ -35,7 +35,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats (AT-06, AT-07 pass) | Done (M9) | V37, the trip's End of day tab, `/audit-cases`, `/floats`, `/reports/fleet`, the phone's breakage and cash screens |
 | Hardening and go-live | **Next** (M10) | — |
 
-Unit tests: 522, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
+Unit tests: 528, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
 
 ## Definition of done for a module
 

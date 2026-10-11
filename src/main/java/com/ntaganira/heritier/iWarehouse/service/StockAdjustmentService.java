@@ -201,7 +201,7 @@ public class StockAdjustmentService {
         if (adjustment.getValueMoved().compareTo(approvalLimit()) <= 0) {
             post(adjustment);
         } else {
-            notifier.holders("APPROVE_STOCK_ADJUSTMENT", adjustment.getRequestedById(), NotificationKind.APPROVAL, "notify.adjustment.waiting",
+            notifier.holders("APPROVE_ADJUSTMENT", adjustment.getRequestedById(), NotificationKind.APPROVAL, "notify.adjustment.waiting",
                     "notify.adjustment.waitingText", "/stock-adjustments/" + adjustment.getId(), adjustment.getNumber(), adjustment.getRequestedBy(),
                     adjustment.getReason());
         }

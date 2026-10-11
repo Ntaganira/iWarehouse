@@ -38,5 +38,11 @@ public enum MovementType {
     /** Brought back by the customer on a credit note (POS-09): back in stock, or cullet. */
     RETURN,
     /** Loaded on a vehicle when its trip departed (FLT-07): off its rack, ON_VEHICLE in the driver's charge. */
-    LOAD
+    LOAD,
+    /** Back off a vehicle onto a rack at the end of the day, or found after it (FLT-09, FLT-10): AVAILABLE again. */
+    UNLOAD,
+    /** Broken on the road, the breakage accepted by the supervisor (FLT-08): BROKEN. */
+    BREAKAGE,
+    /** Missing after a trip and written off or charged to the driver (FLT-10, FLT-11): LOST. */
+    LOSS
 }

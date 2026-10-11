@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${auditCase.number}, ~{::content})}">
+<head><title>Audit Case - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="c=${auditCase}, t=${auditCase.trip}, base=${'/audit-cases/' + auditCase.id},
+        canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_AUDIT_CASE'')')},
+        canCharge=${#authorization.expression('hasAuthority(''PERM_CHARGE_DRIVER'')')},
+        canStock=${#authorization.expression('hasAuthority(''PAGE_STOCK'') and hasAuthority(''PERM_VIEW_STOCK'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${c.number}">AC-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${t.number}">TRP-WH-2026-000002</span>
+                &middot; <span class="mono" th:text="${t.vehicle.plate}">RAC123A</span>
+                &middot; <span th:text="${t.driver.user.fullName}">Jean Driver</span>
+                &middot; <th:block th:replace="~{fragments/fleet :: caseStatus(${c.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/audit-cases" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" th:if="${c.open and canManage}" data-modal-open="escalate-modal"
+                    th:text="#{auditCase.escalate}">Escalate to the owner</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${c.open}" th:text="#{auditCase.openText(${c.openLineCount})}">2 units to settle: find each missing unit, write it off or charge it to the driver; explain each unexpected one. Escalated to the owner, the trip may close meanwhile.</div>
+    <div class="doc-note is-danger" th:if="${c.escalatedAt != null}">
+        <strong th:text="#{auditCase.escalatedBy(${c.escalatedBy}, ${#temporals.format(c.escalatedAt, 'dd/MM/yyyy HH:mm')})}">Escalated to the owner by supervisor1 on 10/10/2026 19:00:</strong>
+        <span th:text="${c.escalationNote}">The driver says the sheet was handed over at Musanze</span>
+    </div>
+    <div class="doc-note is-success" th:if="${c.resolved}" th:text="#{auditCase.resolvedOn(${#temporals.format(c.resolvedAt, 'dd/MM/yyyy HH:mm')})}">Resolved on 11/10/2026 09:00: every unit settled.</div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{sync.details}">Details</button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{auditCase.trip}">Trip</label>
+                        <div class="value">
+                            <a class="mono" sec:authorize="hasAuthority('PAGE_FLEET')" th:href="@{/trips/{id}(id=${t.id}, tab='return')}" th:text="${t.number}">TRP-WH-2026-000002</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="${t.number}">TRP-WH-2026-000002</span>
+                            <div class="cell-sub" th:text="${t.vehicle.plate + ' · ' + t.driver.user.fullName}">RAC123A · Jean Driver</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{auditCase.openedAt}">Opened</label>
+                        <div class="value" th:text="${#temporals.format(c.openedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 18:30</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{auditCase.missing}">Missing</label>
+                        <div class="value" th:text="${c.missingCount}">1</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{auditCase.unexpected}">Unexpected</label>
+                        <div class="value" th:text="${c.unexpectedCount}">0</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{auditCase.value}">Value (RWF)</label>
+                        <div class="value strong" th:text="${@num.money(c.missingValue)}">145,879</div>
+                    </div>
+                </div>
+
+                <h3 class="detail-heading" th:text="#{auditCase.units}">Units</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{trip.label}">Label</th>
+                                <th th:text="#{auditCase.kind}">What</th>
+                                <th th:text="#{sync.glass}">Glass</th>
+                                <th th:text="#{sync.now}">Now</th>
+                                <th class="num" th:text="#{auditCase.value}">Value (RWF)</th>
+                                <th th:text="#{auditCase.settled}">Settled</th>
+                                <th th:if="${canManage or canCharge}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines}" th:with="u=${l.stockUnitId != null} ? ${units.get(l.stockUnitId)} : null">
+                                <td>
+                                    <a class="mono strong nowrap" th:if="${canStock and u != null}" th:href="@{/stock/{id}(id=${u.id})}" th:text="${l.unitCode}">U-WH-000046</a>
+                                    <span class="mono strong nowrap" th:unless="${canStock and u != null}" th:text="${l.unitCode}">U-WH-000046</span>
+                                </td>
+                                <td th:text="#{${'auditCase.kind.' + l.kind}}">Missing</td>
+                                <td>
+                                    <th:block th:if="${u != null}">
+                                        <span class="mono" th:text="${u.product.code}">CLR-6</span>
+                                        <div class="cell-sub" th:text="${u.widthMm + ' × ' + u.heightMm + ' mm'}">3210 × 2250 mm</div>
+                                    </th:block>
+                                    <span th:if="${u == null}" class="text-muted" th:text="#{sync.unitUnknown}">Unknown unit</span>
+                                </td>
+                                <td>
+                                    <th:block th:if="${u != null}">
+                                        <th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block>
+                                        <div class="cell-sub mono" th:text="${u.location != null} ? ${u.location.code} : '—'">VEH-RAC123A</div>
+                                    </th:block>
+                                    <span th:if="${u == null}">—</span>
+                                </td>
+                                <td class="num" th:text="${l.missing} ? ${@num.money(l.unitValue)} : '—'">145,879</td>
+                                <td>
+                                    <th:block th:replace="~{fragments/fleet :: lineSettled(${l.outcome})}"></th:block>
+                                    <div class="cell-sub" th:if="${l.settled}"
+                                         th:text="${l.outcomeBy + ' · ' + #temporals.format(l.outcomeAt, 'dd/MM/yyyy HH:mm') + (l.note != null ? ' · ' + l.note : '')}">supervisor1 · 11/10/2026 09:00 · WH-A-R04</div>
+                                </td>
+                                <td class="actions" th:if="${canManage or canCharge}">
+                                    <th:block th:if="${!l.settled and l.missing}">
+                                        <button type="button" class="btn btn-outline btn-sm" th:if="${canManage}" th:attr="data-modal-open=${'found-' + l.id}" th:text="#{auditCase.found.action}">Found</button>
+                                        <button type="button" class="btn btn-outline btn-sm" th:if="${canManage}" th:attr="data-modal-open=${'write-off-' + l.id}" th:text="#{auditCase.writeOff}">Write off</button>
+                                        <button type="button" class="btn btn-outline btn-sm" th:if="${canCharge}" th:attr="data-modal-open=${'charge-' + l.id}" th:text="#{auditCase.charge}">Charge the driver</button>
+                                    </th:block>
+                                    <button type="button" class="btn btn-outline btn-sm" th:if="${!l.settled and !l.missing and canManage}" th:attr="data-modal-open=${'explain-' + l.id}" th:text="#{auditCase.explain}">Explain</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{auditCase.note}">A missing unit stays on the vehicle in the books until it is settled. Found: back on a rack. Written off: the business's loss. Charged: the driver's shortage account, with the owner's approval. A sale of it synced late from the phone settles it as sold.</p>
+            </div>
+
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialogs -->
+    <th:block th:if="${c.open and canManage}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('escalate-modal', #{auditCase.escalateTitle}, @{/audit-cases/{id}/escalate(id=${c.id})}, #{auditCase.escalateText}, #{auditCase.escalate})}"></div>
+    </th:block>
+    <th:block th:each="l : ${lines}" th:if="${!l.settled}">
+        <th:block th:if="${l.missing and canManage}">
+            <div class="modal-overlay" th:id="${'found-' + l.id}">
+                <div class="modal" role="dialog" aria-modal="true" th:attr="aria-labelledby=${'found-' + l.id + '-title'}">
+                    <div class="modal-header">
+                        <h3 th:id="${'found-' + l.id + '-title'}" th:text="#{auditCase.foundTitle(${l.unitCode})}">U-WH-000046 found</h3>
+                        <button type="button" class="modal-close" th:attr="data-modal-close=${'found-' + l.id}" th:aria-label="#{common.cancel}">&times;</button>
+                    </div>
+                    <form method="post" th:action="@{/audit-cases/{id}/lines/{l}/found(id=${c.id}, l=${l.id})}" class="reason-form">
+                        <div class="modal-body">
+                            <p class="text-muted" th:text="#{auditCase.foundText}">The unit was on the vehicle after all, or came back later: it goes on the rack or slot scanned, available again.</p>
+                            <div class="form-group">
+                                <label th:for="${'found-place-' + l.id}" th:text="#{trip.return.place}">Put back on</label>
+                                <input type="text" th:id="${'found-place-' + l.id}" name="place" maxlength="30" class="input-code" required autocomplete="off"
+                                       autocapitalize="characters" spellcheck="false" th:placeholder="#{trip.return.placePh}">
+                            </div>
+                            <div class="form-group">
+                                <label th:for="${'found-note-' + l.id}" th:text="#{attachment.note}">Note</label>
+                                <input type="text" th:id="${'found-note-' + l.id}" name="note" maxlength="255" autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline" th:attr="data-modal-close=${'found-' + l.id}" th:text="#{common.confirmCancel}">Not now</button>
+                            <button type="submit" class="btn btn-primary" th:text="#{auditCase.found.action}">Found</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div th:replace="~{fragments/reason-modal :: reasonModal(${'write-off-' + l.id}, #{auditCase.writeOffTitle(${l.unitCode})}, @{/audit-cases/{id}/lines/{l}/write-off(id=${c.id}, l=${l.id})}, #{auditCase.writeOffText(${@num.money(l.unitValue)})}, #{auditCase.writeOff})}"></div>
+        </th:block>
+        <th:block th:if="${l.missing and canCharge}">
+            <div th:replace="~{fragments/reason-modal :: reasonModal(${'charge-' + l.id}, #{auditCase.chargeTitle(${l.unitCode})}, @{/audit-cases/{id}/lines/{l}/charge(id=${c.id}, l=${l.id})}, #{auditCase.chargeText(${@num.money(l.unitValue)}, ${t.driver.user.fullName})}, #{auditCase.charge})}"></div>
+        </th:block>
+        <th:block th:if="${!l.missing and canManage}">
+            <div th:replace="~{fragments/reason-modal :: reasonModal(${'explain-' + l.id}, #{auditCase.explainTitle(${l.unitCode})}, @{/audit-cases/{id}/lines/{l}/explain(id=${c.id}, l=${l.id})}, #{auditCase.explainText}, #{auditCase.explain})}"></div>
+        </th:block>
+    </th:block>
+</div>
+</body>
+</html>

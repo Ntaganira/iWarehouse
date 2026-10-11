@@ -64,6 +64,8 @@ public class MobileSaleService {
     private final LinePricing pricing;
     private final Notifier notifier;
     private final ObjectMapper mapper;
+    private final TripBreakageRepository breakageRepo;
+    private final AuditCaseService auditCaseService;
     private final Clock clock;
 
     public MobileSaleService(SalesInvoiceRepository invoiceRepo, SalesPaymentRepository paymentRepo, SyncConflictRepository conflictRepo,
@@ -71,7 +73,8 @@ public class MobileSaleService {
                              ApiDeviceRepository deviceRepo, StockUnitRepository unitRepo, ProductRepository productRepo,
                              CustomerRepository customerRepo, PriceListRepository priceListRepo, MobileTripService tripService,
                              StockService stockService, PostingService postingService, EbmService ebmService, LinePricing pricing,
-                             Notifier notifier, ObjectMapper mapper, Clock clock) {
+                             Notifier notifier, ObjectMapper mapper, TripBreakageRepository breakageRepo, AuditCaseService auditCaseService,
+                             Clock clock) {
         this.invoiceRepo = invoiceRepo;
         this.paymentRepo = paymentRepo;
         this.conflictRepo = conflictRepo;
@@ -90,6 +93,8 @@ public class MobileSaleService {
         this.pricing = pricing;
         this.notifier = notifier;
         this.mapper = mapper;
+        this.breakageRepo = breakageRepo;
+        this.auditCaseService = auditCaseService;
         this.clock = clock;
     }
 
@@ -157,7 +162,10 @@ public class MobileSaleService {
         }
         ApiDevice device = deviceRepo.findById(deviceId).orElseThrow(() -> new NotFoundException("ApiDevice", deviceId));
         Driver driver = driverRepo.findByUser_Id(user.getId()).orElse(null);
-        Trip trip = driver == null ? null : tripRepo.findFirstByDriver_IdAndStatus(driver.getId(), TripStatus.DEPARTED).orElse(null);
+        Trip named = driver == null || req.tripId() == null ? null : tripRepo.findById(req.tripId())
+                .filter(t -> t.getDriver().getId().equals(driver.getId()) && t.isOpenForPhone()).orElse(null);
+        Trip trip = named != null ? named
+                : driver == null ? null : tripRepo.findFirstByDriver_IdAndStatus(driver.getId(), TripStatus.DEPARTED).orElse(null);
         try {
             if (trip == null) {
                 throw new Refused(SyncConflictReason.NO_TRIP, user.getUsername() + " is on no trip on the road");
@@ -195,6 +203,12 @@ public class MobileSaleService {
         }).map(l -> units.containsKey(l.unitId()) ? units.get(l.unitId()).getCode() : String.valueOf(l.unitId())).toList();
         if (!gone.isEmpty()) {
             throw new Refused(SyncConflictReason.UNIT_NOT_ON_VEHICLE, String.join(", ", gone) + " no longer on " + trip.getVehicle().getPlate());
+        }
+        // A unit the phone reported broken on the road is not sold (FLT-08)
+        List<UUID> broken = breakageRepo.findStandingUnitIds(trip.getId(), units.keySet());
+        if (!broken.isEmpty()) {
+            throw new Refused(SyncConflictReason.UNIT_REPORTED_BROKEN, broken.stream().map(id -> units.get(id).getCode()).sorted()
+                    .collect(Collectors.joining(", ")) + " reported broken on the road");
         }
         // The number given to this phone for this trip, unused
         TripInvoiceNumber number = StringUtils.hasText(req.number()) ? numberRepo.lockByNumber(req.number().trim()).orElse(null) : null;
@@ -320,9 +334,29 @@ public class MobileSaleService {
         }
         number.setInvoiceId(sale.getId());
         number.setUsedAt(now);
+        if (trip.isReturned()) {
+            soldAfterReturn(trip, priced, sale.getNumber());
+        }
         postingService.mobileSale(sale, taken, before, driver.getId());
         ebmService.queueSale(sale);                                 // signed after the commit, or when EBM answers (SYNC-06)
         return new Result(Outcome.ACCEPTED, sale, null);
+    }
+
+    /**
+     * A sale synced after its trip came back (FLT-10): its units were missing at the reconciliation and still on the vehicle;
+     * their trip lines and audit case lines say sold now.
+     */
+    private void soldAfterReturn(Trip trip, List<Priced> priced, String invoiceNumber) {
+        for (Priced p : priced) {
+            UUID unitId = p.unit().getId();
+            trip.getLines().stream().filter(l -> l.getStockUnitId().equals(unitId) && l.getOutcome() == TripLineOutcome.MISSING).findFirst()
+                    .ifPresent(l -> {
+                        l.setOutcome(TripLineOutcome.SOLD);
+                        trip.setMissingPieces(trip.getMissingPieces() - 1);
+                        trip.setSoldPieces(trip.getSoldPieces() + 1);
+                    });
+            auditCaseService.unitSold(unitId, invoiceNumber);
+        }
     }
 
     /** Keeps a sale the server cannot take as it was made, and tells the supervisors (SYNC-05). */

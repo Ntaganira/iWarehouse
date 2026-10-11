@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{float.title}, ~{::content})}">
+<head><title>Driver Floats - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canClear=${#authorization.expression('hasAuthority(''PERM_CLEAR_FLOAT'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{float.title}">Driver Floats</h1>
+            <div class="subtitle" th:text="#{float.subtitle}">The cash drivers take on the road, counted by the accountant once their trip is back</div>
+        </div>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{float.kpi.toClear}">To count</div>
+                <div class="kpi-value" th:with="v=${@num.money(toClearTotal)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">45,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{float.kpi.toClearSub(${toClear.totalElements})}">RWF on 2 trips back</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{float.kpi.held}">Held by drivers</div>
+                <div class="kpi-value" th:with="v=${@num.money(floatTotal)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">295,008</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{float.kpi.heldSub}">RWF on the Driver Float account</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{float.kpi.shortages}">Shortages owed</div>
+                <div class="kpi-value" th:with="v=${@num.money(shortageTotal)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">1,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{float.kpi.shortagesSub}">RWF on Driver Shortage Receivable</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{float.kpi.cleared}">Clearances</div>
+                <div class="kpi-value" th:text="${clearances.totalElements}">12</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{float.kpi.clearedSub}">floats counted so far</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-clear" th:classappend="${tab == 'clear'} ? 'active'">
+                <span th:text="#{float.tab.clear}">To count</span>
+                <span class="section-count" th:text="${toClear.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-clearances" th:classappend="${tab == 'clearances'} ? 'active'">
+                <span th:text="#{float.tab.clearances}">Clearances</span>
+                <span class="section-count" th:text="${clearances.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-drivers" th:classappend="${tab == 'drivers'} ? 'active'">
+                <span th:text="#{float.tab.drivers}">Drivers</span>
+                <span class="section-count" th:text="${drivers.totalElements}">0</span>
+            </button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-clear" th:classappend="${tab == 'clear'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{float.trip}">Trip</th>
+                                <th th:text="#{float.driver}">Driver</th>
+                                <th th:text="#{float.back}">Back</th>
+                                <th class="num" th:text="#{float.expected}">Cash sales (RWF)</th>
+                                <th class="num" th:text="#{float.declared}">Declared (RWF)</th>
+                                <th th:if="${canClear}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="x : ${toClear.content}" th:with="t=${x.trip}">
+                                <td>
+                                    <a class="row-link strong mono nowrap" sec:authorize="hasAuthority('PAGE_FLEET')" th:href="@{/trips/{id}(id=${t.id}, tab='return')}" th:text="${t.number}">TRP-WH-2026-000002</a>
+                                    <span class="mono strong nowrap" sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="${t.number}">TRP-WH-2026-000002</span>
+                                    <div class="cell-sub mono" th:text="${t.vehicle.plate}">RAC123A</div>
+                                </td>
+                                <td th:text="${t.driver.user.fullName}">Jean Driver</td>
+                                <td class="nowrap" th:text="${#temporals.format(t.returnedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 18:30</td>
+                                <td class="num strong" th:text="${@num.money(x.expected)}">295,008</td>
+                                <td class="num">
+                                    <span th:if="${t.cashDeclaredAt != null}" th:text="${@num.money(t.cashDeclared)}">295,008</span>
+                                    <span th:unless="${t.cashDeclaredAt != null}" class="badge badge-warning" th:text="#{float.notDeclaredShort}">Not declared</span>
+                                </td>
+                                <td class="actions" th:if="${canClear}">
+                                    <a th:if="${t.cashDeclaredAt != null}" class="btn btn-outline btn-sm" th:href="@{/floats/clear/{id}(id=${t.id})}" th:text="#{float.clear}">Clear the float</a>
+                                </td>
+                            </tr>
+                            <tr th:if="${toClear.totalElements == 0}">
+                                <td th:attr="colspan=${canClear} ? 6 : 5"><div class="empty-state"><p th:text="#{float.noneToClear}">No float waits: every trip back has been counted.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${toClear}, '/floats', 'tab=clear')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-clearances" th:classappend="${tab == 'clearances'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{float.clearance}">Clearance</th>
+                                <th th:text="#{float.trip}">Trip</th>
+                                <th th:text="#{float.driver}">Driver</th>
+                                <th class="num" th:text="#{float.expected}">Cash sales (RWF)</th>
+                                <th class="num" th:text="#{float.counted}">Counted (RWF)</th>
+                                <th class="num" th:text="#{float.difference}">Difference (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="f : ${clearances.content}">
+                                <td>
+                                    <a class="row-link strong mono nowrap" th:href="@{/floats/{id}(id=${f.id})}" th:text="${f.number}">FC-WH-2026-000001</a>
+                                    <div class="cell-sub" th:text="${#temporals.format(f.clearedAt, 'dd/MM/yyyy HH:mm') + ' · ' + f.clearedBy}">10/10/2026 19:00 · accountant</div>
+                                </td>
+                                <td class="mono nowrap" th:text="${f.trip.number}">TRP-WH-2026-000002</td>
+                                <td th:text="${f.driver.user.fullName}">Jean Driver</td>
+                                <td class="num" th:text="${@num.money(f.expected)}">295,008</td>
+                                <td class="num" th:text="${@num.money(f.counted)}">294,008</td>
+                                <td class="num">
+                                    <span th:if="${f.shortage.signum() > 0}" class="text-danger" th:text="${'−' + @num.money(f.shortage)}">−1,000</span>
+                                    <span th:if="${f.overage.signum() > 0}" th:text="${'+' + @num.money(f.overage)}">+500</span>
+                                    <span th:if="${f.shortage.signum() == 0 and f.overage.signum() == 0}">0</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${clearances.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state"><p th:text="#{float.noClearances}">No float cleared yet.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${clearances}, '/floats', 'tab=clearances')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-drivers" th:classappend="${tab == 'drivers'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{float.driver}">Driver</th>
+                                <th class="num" th:text="#{float.held}">Float held (RWF)</th>
+                                <th class="num" th:text="#{float.shortage}">Shortages owed (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${drivers.content}">
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_DRIVERS')" th:href="@{/drivers/{id}(id=${d.driverId})}" th:text="${d.name}">Jean Driver</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_DRIVERS')" th:text="${d.name}">Jean Driver</span>
+                                    <div class="cell-sub" th:text="${d.username}">driver-m7</div>
+                                </td>
+                                <td class="num" th:text="${@num.money(d.floatBalance)}">295,008</td>
+                                <td class="num" th:classappend="${d.shortage.signum() > 0} ? 'text-danger'" th:text="${@num.money(d.shortage)}">1,000</td>
+                            </tr>
+                            <tr th:if="${drivers.totalElements == 0}">
+                                <td colspan="3"><div class="empty-state"><p th:text="#{float.noDrivers}">No driver holds cash or owes a shortage.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${drivers}, '/floats', 'tab=drivers')}"></th:block>
+                <p class="form-note" th:text="#{float.driversNote}">From the ledger: each driver's lines on Driver Float (cash sales less clearances) and on Driver Shortage Receivable (cash short and units charged).</p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

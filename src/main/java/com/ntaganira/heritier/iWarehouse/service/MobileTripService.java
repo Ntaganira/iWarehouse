@@ -51,13 +51,14 @@ public class MobileTripService {
     private final DocumentNumberService numbers;
     private final SettingService settings;
     private final LinePricing pricing;
+    private final TripBreakageRepository breakageRepo;
     private final Clock clock;
 
     public MobileTripService(TripRepository tripRepo, DriverRepository driverRepo, StockUnitRepository unitRepo,
                              CustomerRepository customerRepo, UserRepository userRepo, TripPriceListRepository priceListSnapshotRepo,
                              TripPriceRepository priceSnapshotRepo, TripInvoiceNumberRepository numberRepo, PriceListItemRepository itemRepo,
                              PriceListService priceListService, DocumentNumberService numbers, SettingService settings, LinePricing pricing,
-                             Clock clock) {
+                             TripBreakageRepository breakageRepo, Clock clock) {
         this.tripRepo = tripRepo;
         this.driverRepo = driverRepo;
         this.unitRepo = unitRepo;
@@ -71,6 +72,7 @@ public class MobileTripService {
         this.numbers = numbers;
         this.settings = settings;
         this.pricing = pricing;
+        this.breakageRepo = breakageRepo;
         this.clock = clock;
     }
 
@@ -81,7 +83,7 @@ public class MobileTripService {
     /** Everything a phone needs to sell offline for a trip. */
     public record Bundle(Trip trip, List<StockUnit> units, List<TripPriceList> lists, List<TripPrice> prices, List<Customer> customers,
                          List<String> numbers, BigDecimal discountLimit, int decimals, Company company, EbmMode ebmMode,
-                         LocalDateTime downloadedAt) {
+                         LocalDateTime downloadedAt, List<UUID> reportedBroken, BigDecimal cashDeclared) {
     }
 
     /** The driver's trip on the road, or why there is none. */
@@ -117,7 +119,25 @@ public class MobileTripService {
                 settings.get(SettingKey.COMPANY_ADDRESS), settings.get(SettingKey.COMPANY_PHONE));
         return new Bundle(trip, units, priceListSnapshotRepo.findByTripId(trip.getId()), priceSnapshotRepo.findByTripId(trip.getId()),
                 customerRepo.findByEnabledTrueOrderByNameAsc(), unused, discountLimit(user.getId()), pricing.baseDecimals(), company,
-                EbmMode.valueOf(settings.get(SettingKey.EBM_MODE)), now);
+                EbmMode.valueOf(settings.get(SettingKey.EBM_MODE)), now,
+                units.isEmpty() ? List.of() : breakageRepo.findStandingUnitIds(trip.getId(), units.stream().map(StockUnit::getId).toList()),
+                trip.getCashDeclared());
+    }
+
+    /**
+     * The driver's trip a phone still works for (MPOS-07, SYNC-03): the one it names, theirs, on the road or back and not
+     * closed, for a breakage report or the cash declaration.
+     */
+    public Trip openTrip(Long userId, UUID tripId) {
+        Driver driver = driverRepo.findByUser_Id(userId).orElseThrow(() -> BusinessException.of("mobile.trip.notDriver"));
+        Trip trip = tripId == null ? null : tripRepo.findDetailedById(tripId).orElse(null);
+        if (trip == null || !trip.getDriver().getId().equals(driver.getId())) {
+            throw BusinessException.of("mobile.trip.none");
+        }
+        if (!trip.isOpenForPhone()) {
+            throw BusinessException.of("mobile.trip.closed", trip.getNumber());
+        }
+        return trip;
     }
 
     /** The units on the trip's vehicle, by code. */

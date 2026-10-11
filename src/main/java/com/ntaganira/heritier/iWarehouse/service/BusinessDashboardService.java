@@ -57,6 +57,8 @@ public class BusinessDashboardService {
     private final EbmService ebmService;
     private final FleetAlertService fleetAlerts;
     private final TripRepository tripRepo;
+    private final AuditCaseService auditCases;
+    private final FloatService floats;
     private final Clock clock;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
@@ -64,7 +66,7 @@ public class BusinessDashboardService {
                                     SupplierAccountService supplierAccounts, SaleApprovalRepository saleApprovalRepo,
                                     StockAdjustmentRepository adjustmentRepo, ManualJournalRepository manualJournalRepo,
                                     TillSessionRepository tillRepo, EbmService ebmService, FleetAlertService fleetAlerts,
-                                    TripRepository tripRepo, Clock clock) {
+                                    TripRepository tripRepo, AuditCaseService auditCases, FloatService floats, Clock clock) {
         this.invoiceRepo = invoiceRepo;
         this.salesReports = salesReports;
         this.stockSummary = stockSummary;
@@ -78,6 +80,8 @@ public class BusinessDashboardService {
         this.ebmService = ebmService;
         this.fleetAlerts = fleetAlerts;
         this.tripRepo = tripRepo;
+        this.auditCases = auditCases;
+        this.floats = floats;
         this.clock = clock;
     }
 
@@ -93,7 +97,8 @@ public class BusinessDashboardService {
                        List<SalesAnalysis.Row> bySalesperson, StockSummary.Row stock, List<CashLine> cash, BigDecimal cashTotal,
                        BigDecimal receivable, BigDecimal overdue, long customersOwing, BigDecimal payable, long suppliersOwed,
                        List<StockSummary.Reorder> reorder, long saleApprovals, long adjustments, long manualJournals, long openTills,
-                       EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, List<String> chartDays, List<BigDecimal> chartNet) {
+                       EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, long auditCases, long floatsToClear,
+                       BigDecimal floatsToClearAmount, List<String> chartDays, List<BigDecimal> chartNet) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
@@ -135,6 +140,7 @@ public class BusinessDashboardService {
                 .map(Map.Entry::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
         SupplierAccountService.PayablesReport payables = supplierAccounts.payables();
 
+        List<FloatService.ToClear> toClear = floats.toClear();
         LocalDate first = today.minusDays(CHART_DAYS - 1);
         Map<LocalDate, BigDecimal> perDay = salesReports.netPerDay(first, today);
 
@@ -145,7 +151,8 @@ public class BusinessDashboardService {
                 stockSummary.reorder(), saleApprovalRepo.countByStatus(SaleApprovalStatus.PENDING),
                 adjustmentRepo.countByStatus(AdjustmentStatus.PENDING_APPROVAL), manualJournalRepo.countByStatus(ManualJournalStatus.PENDING_APPROVAL),
                 tillRepo.countByStatus(TillStatus.OPEN), ebmService.backlog(), fleetAlerts.dueCount(),
-                tripRepo.countByStatus(TripStatus.DEPARTED),
+                tripRepo.countByStatus(TripStatus.DEPARTED), auditCases.unresolvedCount(), toClear.size(),
+                toClear.stream().map(FloatService.ToClear::expected).reduce(BigDecimal.ZERO, BigDecimal::add),
                 perDay.keySet().stream().map(LocalDate::toString).toList(), new ArrayList<>(perDay.values()));
     }
 

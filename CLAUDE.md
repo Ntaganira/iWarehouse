@@ -182,6 +182,25 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
   - The PWA keeps its data in IndexedDB (`iwarehouse-pos`) and syncs oldest first with backoff. Signing out or closing the trip is refused while sales wait.
   - The service worker (`sw.js`) loads the shell from the network, falling back to its cache after 3 s or offline. Bump its `VERSION` when the shell's file list changes.
   - Check the PWA at 360–1024 px, offline (CDP network emulation, then a reload) and in both themes (`prefers-color-scheme`).
+- **The end of the day (FLT-08..FLT-11, MPOS-06, MPOS-07, ACC-06, ACC-07, RPT-04)** goes through `BreakageService`, `TripReturnService`, `AuditCaseService`, `TripCloseService` and `FloatService`; `TripReconciliation`, `FloatClearances` and `FleetAnalysis` are pure and tested.
+  - A trip is PLANNED, DEPARTED, RETURNED (reconciled), CLOSED, or CANCELLED. Only DEPARTED holds the vehicle and the driver (`uk_trips_..._on_road`). The phone keeps working for a RETURNED trip: a sale synced late, the cash declaration (`Trip.isOpenForPhone`, `MobileTripService.openTrip`).
+  - Breakage (`trip_breakages`) is reported on a DEPARTED trip, from the phone (idempotent on its `clientId`) or at the warehouse, always with a photo kept as a trip document (`AttachmentOwner.TRIP`). Another person decides it (VALIDATE_BREAKAGE, never the reporter); a rejection takes a note. A unit with a standing report is not sold (`SyncConflictReason.UNIT_REPORTED_BROKEN`).
+  - The return scan marks manifest lines (`trip_lines.returned_at`); any other label is kept in `trip_return_extras`. `TripReturnService.reconcile` refuses while a breakage waits or a unit is neither on the vehicle nor sold. It locks the trip, then the broken units' products, and reads the stock before changing it:
+    - units scanned back: `StockService.unload` onto the rack they left from, or the place given (rack limits, no sheet on an off-cut rack);
+    - accepted breakage: `breakOnVehicle`, with `StockLeaving` (own cost, the MAC moves) and `PostingService.tripReturn` (Dr Spoilage);
+    - missing units stay ON_VEHICLE at the vehicle's location until their audit case settles them;
+    - each line gets its `outcome`; the trip's counts and RETURNED are set together.
+  - Differences open one `AuditCase` per trip (AC number; ALERT_EOD holders told). `AuditCaseService` settles each line once:
+    - found: `unload`, back on a rack;
+    - written off: `loseFromVehicle`, then `auditLoss` with Dr Stock Adjustment;
+    - charged to the driver: CHARGE_DRIVER, then `auditLoss` with Dr Driver Shortage naming the driver;
+    - explained (an unexpected label);
+    - sold: `unitSold`, from `MobileSaleService` when a sale of a missing unit syncs after the return (the trip line becomes SOLD).
+  - The case is RESOLVED once every line is settled. ESCALATED (with a note) lets the trip close.
+  - The cash is declared once (`TripCloseService.declareCash`, PHONE by the trip's driver, or OFFICE). In templates test `cashDeclaredAt != null`: `trip.cashDeclared` is the amount, not the boolean.
+  - A float is cleared per trip (`FloatService.clear`: RETURNED, declared, not cleared before): expected = the trip's CASH payments; `FloatClearances.split` gives the shortage or overage; `PostingService.floatClearance` posts it. `float_clearances` never change (trigger).
+  - What a driver holds or owes is `JournalService.driverBalances(DRIVER_FLOAT / DRIVER_SHORTAGE)`: never a second balance. `FloatService.checkFloats` tells ALERT_FLOAT holders once per trip not cleared after the Settings' hours.
+  - `TripCloseService.close` needs the trip RETURNED, its case settled or escalated, its cash declared, and its float cleared when it took cash. `settlement(trip)` drives the page's checks.
 - **Set a status and the fields its CHECK needs in one step, after the operation's queries.** A query flushes pending changes, so an entity left POSTED without its `posted_at` while the service still reads stock breaks the constraint (a 500 the unit tests cannot see). See `StockAdjustmentService.post`.
 - **Optimistic lock failures** (`@Version`) are answered by `StaleDataAdvice`: back to the page with "changed by someone else, reload". Controllers do not catch them.
 - **Labels (INV-03, MD-02):** `Labels.qrSvg(code)` for pages, `Labels.zpl(...)` (units) and `Labels.placeZpl(...)` (racks and slots) for label printers (50 x 30 mm, 203 dpi). Print units through `/stock/labels?receipt=|crate=|job=|unit=`, places through `/locations/{id}/labels` (its active racks and slots). A scanned code that is no unit's but a location's is a place: a transfer takes it as the destination, a count as where the next labels were found, the stock search as its location filter, a trip's manifest as every available unit there. Look units up first, then places.

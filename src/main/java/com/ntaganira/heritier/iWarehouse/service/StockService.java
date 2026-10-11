@@ -87,6 +87,8 @@ public class StockService {
     public static final String REF_CREDIT_NOTE = "CREDIT_NOTE";
     /** Movements of units loaded on a vehicle, referring to their trip (FLT-07). */
     public static final String REF_TRIP = "TRIP";
+    /** A unit missing after a trip, settled on its audit case (FLT-10). */
+    public static final String REF_AUDIT_CASE = "AUDIT_CASE";
     /** Status filter value for every status; empty means "in stock". */
     public static final String ALL_STATUSES = "all";
 
@@ -517,6 +519,39 @@ public class StockService {
         unit.setStatus(StockStatus.ON_VEHICLE);
         unit.setLocation(vehicle);
         record(unit, MovementType.LOAD, from, fromStatus, LocalDateTime.now(clock), null, REF_TRIP, tripId, tripNumber);
+    }
+
+    /**
+     * A unit back off its vehicle at the end of the day (FLT-09), or found after it on its audit case (FLT-10): available
+     * again on the rack or slot chosen, at its own cost; the stock value does not change. The caller checked rack limits.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void unload(StockUnit unit, Location location, String refType, UUID refId, String refNumber) {
+        requireAllowed(unit, StockAction.UNLOAD);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setStatus(StockStatus.AVAILABLE);
+        unit.setLocation(location);
+        record(unit, MovementType.UNLOAD, from, StockStatus.ON_VEHICLE, LocalDateTime.now(clock), null, refType, refId, refNumber);
+    }
+
+    /** A unit broken on the road, its breakage accepted (FLT-08): BROKEN, off the vehicle; it leaves stock. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void breakOnVehicle(StockUnit unit, String reason, UUID tripId, String tripNumber) {
+        requireAllowed(unit, StockAction.UNLOAD);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setStatus(StockStatus.BROKEN);
+        unit.setLocation(null);
+        record(unit, MovementType.BREAKAGE, from, StockStatus.ON_VEHICLE, LocalDateTime.now(clock), reason, REF_TRIP, tripId, tripNumber);
+    }
+
+    /** A unit missing after its trip, written off or charged to the driver (FLT-10, FLT-11): LOST; it leaves stock. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void loseFromVehicle(StockUnit unit, String reason, UUID caseId, String caseNumber) {
+        requireAllowed(unit, StockAction.UNLOAD);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setStatus(StockStatus.LOST);
+        unit.setLocation(null);
+        record(unit, MovementType.LOSS, from, StockStatus.ON_VEHICLE, LocalDateTime.now(clock), reason, REF_AUDIT_CASE, caseId, caseNumber);
     }
 
     // ---------------------------------------------------------------- transfers and adjustments (INV-07)

@@ -35,7 +35,9 @@ public enum StockAction {
     /** Planned on a trip's manifest and loaded on its vehicle (FLT-05..07): available only. */
     LOAD(EnumSet.of(StockStatus.AVAILABLE)),
     /** Sold from the vehicle on the mobile POS (MPOS-02): on the vehicle only. */
-    SELL_FROM_VEHICLE(EnumSet.of(StockStatus.ON_VEHICLE));
+    SELL_FROM_VEHICLE(EnumSet.of(StockStatus.ON_VEHICLE)),
+    /** Off the vehicle at the end of the day: back on a rack, broken on the road, or lost (FLT-08..11). */
+    UNLOAD(EnumSet.of(StockStatus.ON_VEHICLE));
 
     private final Set<StockStatus> allowed;
 

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${clearance.number}, ~{::content})}">
+<head><title>Float clearance - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="c=${clearance}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${c.number}">FC-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{float.viewSubtitle(${c.driver.user.fullName}, ${#temporals.format(c.clearedAt, 'dd/MM/yyyy HH:mm')}, ${c.clearedBy})}">Jean Driver · 10/10/2026 19:00 · accountant</div>
+        </div>
+        <div class="btn-group">
+            <a href="/floats?tab=clearances" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${c.shortage.signum() > 0}" th:text="#{float.shortNote(${@num.money(c.shortage)}, ${c.driver.user.fullName})}">1,000 RWF short: on Jean Driver's shortage account.</div>
+    <div class="doc-note is-warning" th:if="${c.overage.signum() > 0}" th:text="#{float.overNote(${@num.money(c.overage)})}">500 RWF over: to Cash Over/Short.</div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{float.trip}">Trip</label>
+                    <div class="value">
+                        <a class="mono" sec:authorize="hasAuthority('PAGE_FLEET')" th:href="@{/trips/{id}(id=${c.trip.id}, tab='return')}" th:text="${c.trip.number}">TRP-WH-2026-000002</a>
+                        <span class="mono" sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="${c.trip.number}">TRP-WH-2026-000002</span>
+                        <div class="cell-sub mono" th:text="${c.trip.vehicle.plate}">RAC123A</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{float.expected}">Cash sales (RWF)</label>
+                    <div class="value" th:text="${@num.money(c.expected)}">295,008</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{float.declared}">Declared (RWF)</label>
+                    <div class="value" th:text="${@num.money(c.declared)}">295,008</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{float.counted}">Counted (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(c.counted)}">294,008</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{float.account}">Paid into</label>
+                    <div class="value">
+                        <span th:text="#{${'float.account.' + c.depositAccount}}">Main cash vault</span>
+                        <span class="mono" th:if="${c.reference != null}" th:text="${' · ' + c.reference}">· SLIP-4471</span>
+                    </div>
+                </div>
+                <div class="item item-full" th:if="${c.note != null}">
+                    <label th:text="#{float.note}">Note</label>
+                    <div class="value" th:text="${c.note}">Counted with the driver</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header">
+            <h2 th:text="#{user.history}">History</h2>
+        </div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/floats/' + c.id}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

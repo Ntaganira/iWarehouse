@@ -210,6 +210,16 @@
                     <span class="field-error" th:if="${#fields.hasErrors('fleetExpiryAlertDays')}" th:errors="*{fleetExpiryAlertDays}"></span>
                     <span class="hint" th:text="#{settings.fleetExpiryAlertDaysHint}">Before a licence, insurance or inspection expires (FLT-04)</span>
                 </div>
+                <div class="form-group">
+                    <label for="floatAlertHours" th:text="#{settings.floatAlertHours}">Float alert</label>
+                    <div class="input-unit">
+                        <input type="number" id="floatAlertHours" th:field="*{floatAlertHours}" step="1" min="1" max="168" required
+                               th:classappend="${#fields.hasErrors('floatAlertHours')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.hours}">hours</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('floatAlertHours')}" th:errors="*{floatAlertHours}"></span>
+                    <span class="hint" th:text="#{settings.floatAlertHoursHint}">After a trip came back, a driver's float not cleared is reported (RPT-06)</span>
+                </div>
             </div>
 
             <div class="form-divider"><h3 th:text="#{settings.group.ebm}">EBM fiscal signing</h3>

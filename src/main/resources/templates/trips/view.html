@@ -9,6 +9,11 @@
         canDepart=${#authorization.expression('hasAuthority(''PERM_DEPART_TRIP'')')},
         canRecord=${#authorization.expression('hasAuthority(''PERM_RECORD_TRIP_READINGS'')')},
         canStock=${#authorization.expression('hasAuthority(''PAGE_STOCK'')')},
+        canReturn=${#authorization.expression('hasAuthority(''PERM_RETURN_TRIP'')')},
+        canValidate=${#authorization.expression('hasAuthority(''PERM_VALIDATE_BREAKAGE'')')},
+        canClose=${#authorization.expression('hasAuthority(''PERM_CLOSE_TRIP'')')},
+        canClearFloat=${#authorization.expression('hasAuthority(''PAGE_FLOATS'') and hasAuthority(''PERM_CLEAR_FLOAT'')')},
+        canCases=${#authorization.expression('hasAuthority(''PAGE_AUDIT_CASES'') and hasAuthority(''PERM_VIEW_AUDIT_CASES'')')},
         v=${trip.vehicle}, base=${'/trips/' + trip.id}">
     <div class="page-header">
         <div>
@@ -29,8 +34,18 @@
             </th:block>
             <button type="button" class="btn btn-outline" th:if="${s == 'DEPARTED' and canRecord}" data-modal-open="readings-modal"
                     th:text="#{trip.readings}">Odometer</button>
+            <button type="button" class="btn btn-outline" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canReturn and trip.cashDeclaredAt == null}"
+                    data-modal-open="cash-modal" th:text="#{trip.cash.record}">Cash declared</button>
+            <a class="btn btn-outline" th:if="${s == 'RETURNED' and canClearFloat and settlement.floatNeeded() and settlement.clearance() == null and trip.cashDeclaredAt != null}"
+               th:href="@{/floats/clear/{id}(id=${trip.id})}" th:text="#{float.clear}">Clear the float</a>
             <button type="button" class="btn btn-primary" th:if="${s == 'PLANNED' and canDepart}" data-modal-open="depart-modal"
                     th:text="#{trip.depart}">Confirm departure</button>
+            <button type="button" class="btn btn-primary" th:if="${s == 'DEPARTED' and canReturn}" data-modal-open="reconcile-modal"
+                    th:text="#{trip.return.reconcile}">Reconcile the return</button>
+            <form th:if="${s == 'RETURNED' and canClose and settlement.canClose()}" th:action="@{/trips/{id}/close(id=${trip.id})}" method="post"
+                  class="row-action-form confirm-submit" th:attr="data-confirm=#{trip.closeConfirm(${trip.number})}">
+                <button type="submit" class="btn btn-primary" th:text="#{trip.close}">Close the trip</button>
+            </form>
         </div>
     </div>
 
@@ -42,6 +57,16 @@
     <div class="doc-note is-success" th:if="${s == 'DEPARTED'}">
         <span th:text="#{trip.departedNote(${#temporals.format(trip.departedAt, 'dd/MM/yyyy HH:mm')}, ${trip.departedBy}, ${trip.loadedPieces}, ${@num.kg(trip.loadedKg)}, ${v.plate}, ${trip.driver.user.fullName})}">Departed on 10/10/2026 08:30 (confirmed by supervisor1): 35 units, 420 kg on RAC123A, in the charge of Jean Driver.</span>
         <span th:if="${trip.note != null}" th:text="${'· ' + trip.note}">· Deliver Musanze first</span>
+    </div>
+    <div class="doc-note is-success" th:if="${s == 'RETURNED' or s == 'CLOSED'}">
+        <span th:text="#{trip.returnedNote(${#temporals.format(trip.returnedAt, 'dd/MM/yyyy HH:mm')}, ${trip.returnedBy}, ${trip.returnedPieces}, ${trip.soldPieces}, ${trip.brokenPieces}, ${trip.missingPieces})}">Back on 10/10/2026 18:30 (reconciled by supervisor1): 30 back on their racks, 4 sold, 1 broken, 0 missing.</span>
+        <span th:if="${s == 'CLOSED'}" th:text="#{trip.closedNote(${trip.closedBy}, ${#temporals.format(trip.closedAt, 'dd/MM/yyyy HH:mm')})}">Closed by supervisor1 on 10/10/2026 19:00.</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${s == 'RETURNED' and !settlement.canClose()}"
+         th:text="${#messages.msg('trip.closeWaits') + ' ' + #strings.listJoin(closeWaits, #messages.msg('trip.waits.separator')) + '.'}">The trip closes once its stock and cash are settled: audit case AC-WH-2026-000001 to resolve or escalate; the driver's cash declaration.</div>
+    <div class="doc-note is-warning" th:if="${s == 'DEPARTED' and undecided > 0}">
+        <span th:text="#{trip.breakagesWait(${undecided})}">2 breakages reported on the road wait for the supervisor's decision.</span>
+        <a th:href="@{/trips/{id}(id=${trip.id}, tab='return')} + '#breakages'" th:text="#{trip.breakagesShow}">See them</a>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
         <strong th:text="#{trip.cancelledBy(${trip.cancelledBy}, ${#temporals.format(trip.cancelledAt, 'dd/MM/yyyy HH:mm')})}">Cancelled by supervisor1 on 10/10/2026 09:00:</strong>
@@ -167,11 +192,50 @@
         </div>
     </div>
 
+    <div class="kpi-grid doc-kpis" th:if="${s == 'RETURNED' or s == 'CLOSED'}">
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.back}">Back on racks</div>
+                <div class="kpi-value" th:text="${trip.returnedPieces}">30</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.backSub(${trip.loadedPieces})}">of 35 loaded</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.sold}">Sold</div>
+                <div class="kpi-value" th:text="${trip.soldPieces}">4</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.soldSub(${@num.money(salesTotal)})}">45,000 RWF of sales</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.broken}">Broken on the road</div>
+                <div class="kpi-value" th:text="${trip.brokenPieces}">1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.brokenSub}">breakage accepted</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${trip.missingPieces > 0} ? 'red' : 'purple'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{trip.kpi.missing}">Missing</div>
+                <div class="kpi-value" th:classappend="${trip.missingPieces > 0} ? 'text-danger'" th:text="${trip.missingPieces}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${settlement.auditCase() != null} ? #{trip.kpi.missingCase(${settlement.auditCase().number})} : #{trip.kpi.missingNone}">no audit case</span></div>
+            </div>
+        </div>
+    </div>
+
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-manifest" th:classappend="${tab == 'manifest'} ? 'active'">
                 <span th:text="#{trip.tab.manifest}">Manifest</span>
                 <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-return" th:if="${away}" th:classappend="${tab == 'return'} ? 'active'">
+                <span th:text="#{trip.tab.return}">End of day</span>
+                <span class="section-count" th:if="${s == 'DEPARTED'}" th:text="${scannedBack + ' / ' + trip.lines.size()}">0 / 4</span>
             </button>
             <button type="button" class="tab" data-tab="tab-sales" th:classappend="${tab == 'sales'} ? 'active'">
                 <span th:text="#{trip.tab.sales}">Sales</span>
@@ -180,6 +244,10 @@
             <button type="button" class="tab" data-tab="tab-fuel" th:classappend="${tab == 'fuel'} ? 'active'">
                 <span th:text="#{trip.tab.fuel}">Fuel</span>
                 <span class="section-count" th:text="${fuel.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
@@ -196,7 +264,9 @@
                                 <th class="num" th:text="#{trip.kg}">kg</th>
                                 <th th:text="${s == 'PLANNED'} ? #{trip.place} : #{trip.from}">Place</th>
                                 <th th:text="#{trip.scanned}">Scanned</th>
-                                <th th:if="${s == 'PLANNED' and canPlan}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                                <th th:if="${s == 'DEPARTED'}" th:text="#{trip.back}">Back</th>
+                                <th th:if="${s == 'RETURNED' or s == 'CLOSED'}" th:text="#{trip.outcome}">At the end of the day</th>
+                                <th th:if="${(s == 'PLANNED' and canPlan) or (s == 'DEPARTED' and canReturn)}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -222,6 +292,28 @@
                                     </th:block>
                                     <span th:unless="${l.loaded}" class="badge badge-secondary" th:text="#{trip.notYet}">Not yet</span>
                                 </td>
+                                <td th:if="${s == 'DEPARTED'}">
+                                    <th:block th:if="${l.scannedBack}">
+                                        <span class="badge badge-success" th:text="#{trip.backBadge}">Back</span>
+                                        <div class="cell-sub" th:text="${#temporals.format(l.returnedAt, 'dd/MM/yyyy HH:mm') + ' · ' + l.returnedBy}">10/10/2026 18:10 · supervisor1</div>
+                                    </th:block>
+                                    <span th:unless="${l.scannedBack}" class="badge badge-secondary" th:text="#{trip.notYet}">Not yet</span>
+                                </td>
+                                <td th:if="${s == 'RETURNED' or s == 'CLOSED'}">
+                                    <th:block th:if="${l.outcome != null}">
+                                        <th:block th:replace="~{fragments/fleet :: lineOutcome(${l.outcome})}"></th:block>
+                                        <div class="cell-sub mono" th:if="${l.returnedToLocationId != null and locations.get(l.returnedToLocationId) != null}"
+                                             th:text="${locations.get(l.returnedToLocationId).code}">WH-A-R04</div>
+                                    </th:block>
+                                </td>
+                                <td th:if="${s == 'DEPARTED' and canReturn}">
+                                    <form th:if="${l.scannedBack}" th:action="@{/trips/{id}/return/lines/{line}/clear(id=${trip.id}, line=${l.id})}" method="post"
+                                          class="row-action-form confirm-submit" th:attr="data-confirm=#{trip.return.clearConfirm(${l.unitCode})}">
+                                        <button type="submit" class="action-icon delete" th:title="#{trip.return.clear}" th:aria-label="#{trip.return.clear}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                                        </button>
+                                    </form>
+                                </td>
                                 <td th:if="${s == 'PLANNED' and canPlan}">
                                     <form th:action="@{/trips/{id}/lines/{line}/remove(id=${trip.id}, line=${l.id})}" method="post"
                                           class="row-action-form confirm-submit danger" th:attr="data-confirm=#{trip.removeConfirm(${l.unitCode})}">
@@ -232,7 +324,7 @@
                                 </td>
                             </tr>
                             <tr th:if="${rows.totalElements == 0}">
-                                <td th:attr="colspan=${s == 'PLANNED' and canPlan} ? 6 : 5">
+                                <td th:attr="colspan=${(s == 'PLANNED' and canPlan) or (s == 'DEPARTED' and canReturn)} ? 7 : (${away} ? 6 : 5)">
                                     <div class="empty-state"><p th:text="${s == 'PLANNED'} ? #{trip.noUnits} : #{trip.noUnitsLeft}">Nothing on the manifest yet.</p></div>
                                 </td>
                             </tr>
@@ -240,6 +332,215 @@
                     </table>
                 </div>
                 <th:block th:replace="~{layout/pagination :: pager(${rows}, ${base}, 'tab=manifest')}"></th:block>
+            </div>
+
+            <!-- The end of the day (FLT-08..FLT-10, MPOS-07): the return scan, breakage on the road, the reconciliation, the closing checks -->
+            <div class="tab-content" id="tab-return" th:if="${away}" th:classappend="${tab == 'return'} ? 'active'">
+                <th:block th:if="${s == 'DEPARTED'}">
+                    <p class="form-note" th:text="#{trip.return.note}">When the vehicle is back: check the driver's phone shows everything synced, scan each unit off the vehicle, decide on the breakage reported, then reconcile.</p>
+                    <!-- A scanner types the label and presses Enter; the page comes back here after each scan -->
+                    <form th:if="${canReturn}" id="return-scan" th:action="@{/trips/{id}/return/scan(id=${trip.id})}" method="post"
+                          class="form-container count-scan-form" novalidate>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="return-codes" th:text="#{trip.return.scanLabel}">Label</label>
+                                <div class="scan-row">
+                                    <textarea id="return-codes" name="codes" rows="1" maxlength="4000" class="input-code scan-codes" autocomplete="off"
+                                              autocapitalize="characters" spellcheck="false" enterkeyhint="go" data-enter-submits
+                                              th:attr="autofocus=${tab == 'return'} ? 'autofocus' : null" th:placeholder="#{count.labelPh}"></textarea>
+                                    <button type="submit" class="btn btn-primary" th:text="#{trip.return.scanBack}">Scan back</button>
+                                </div>
+                                <span class="hint" th:text="#{trip.return.scanHint}">Scan each unit as it comes off the vehicle; a label that is no unit of the trip is kept as unexpected</span>
+                            </div>
+                        </div>
+                    </form>
+                    <h3 class="detail-heading" th:text="#{trip.return.expected}">Expected back</h3>
+                    <div class="detail-list">
+                        <div class="item">
+                            <label th:text="#{trip.return.loaded}">Loaded</label>
+                            <div class="value" th:text="${trip.loadedPieces}">4</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.return.sold}">Sold from the vehicle</label>
+                            <div class="value" th:text="${preview.countSold()}">2</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.return.broken}">Broken (breakage accepted)</label>
+                            <div class="value" th:text="${preview.countBroken()}">0</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.return.expectedBack}">Expected back</label>
+                            <div class="value strong" th:text="${preview.expectedBack()}">2</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.return.scannedBack}">Scanned back</label>
+                            <div class="value" th:text="${preview.countReturned()}">1</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.return.missingNow}">Not scanned yet</label>
+                            <div class="value" th:classappend="${preview.countMissing() > 0} ? 'text-danger'" th:text="${preview.countMissing()}">1</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.return.unexpected}">Unexpected</label>
+                            <div class="value" th:classappend="${!preview.unexpected().isEmpty()} ? 'text-danger'" th:text="${preview.unexpected().size()}">0</div>
+                        </div>
+                    </div>
+                    <p class="doc-note is-danger" th:if="${!preview.canReconcile()}"
+                       th:text="#{trip.return.elsewhereNote(${#strings.listJoin(preview.elsewhere(), ', ')})}">U-WH-000045 is no longer on the vehicle nor sold from it: the trip cannot be reconciled until it is put right.</p>
+                </th:block>
+
+                <th:block th:if="${s != 'DEPARTED'}" th:with="st=${settlement}">
+                    <h3 class="detail-heading" th:text="#{trip.close.checks}">Closing the trip</h3>
+                    <div class="detail-list">
+                        <div class="item">
+                            <label th:text="#{trip.check.stock}">Stock</label>
+                            <div class="value">
+                                <span class="badge badge-success" th:text="#{trip.check.done}">Done</span>
+                                <div class="cell-sub" th:text="#{trip.check.reconciled(${#temporals.format(trip.returnedAt, 'dd/MM/yyyy HH:mm')}, ${trip.returnedBy})}">Reconciled on 10/10/2026 18:30 by supervisor1</div>
+                            </div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.check.case}">Differences</label>
+                            <div class="value">
+                                <th:block th:if="${st.auditCase() == null}">
+                                    <span class="badge badge-success" th:text="#{trip.check.done}">Done</span>
+                                    <div class="cell-sub" th:text="#{trip.check.noDifference}">Every unit accounted for</div>
+                                </th:block>
+                                <th:block th:if="${st.auditCase() != null}">
+                                    <th:block th:replace="~{fragments/fleet :: caseStatus(${st.auditCase().status})}"></th:block>
+                                    <div class="cell-sub">
+                                        <a class="mono" th:if="${canCases}" th:href="@{/audit-cases/{id}(id=${st.auditCase().id})}" th:text="${st.auditCase().number}">AC-WH-2026-000001</a>
+                                        <span class="mono" th:unless="${canCases}" th:text="${st.auditCase().number}">AC-WH-2026-000001</span>
+                                    </div>
+                                </th:block>
+                            </div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.check.declared}">Cash declared</label>
+                            <div class="value">
+                                <th:block th:if="${trip.cashDeclaredAt != null}">
+                                    <span class="badge badge-success" th:text="#{trip.check.done}">Done</span>
+                                    <div class="cell-sub" th:text="#{trip.check.declaredBy(${@num.money(trip.cashDeclared)}, ${trip.cashDeclaredBy}, ${#messages.msg('trip.cash.via.' + trip.cashDeclaredVia)}, ${#temporals.format(trip.cashDeclaredAt, 'dd/MM/yyyy HH:mm')})}">45,000 RWF, by driver-m7 on the phone, 10/10/2026 18:05</div>
+                                </th:block>
+                                <th:block th:unless="${trip.cashDeclaredAt != null}">
+                                    <span class="badge badge-warning" th:text="#{trip.check.todo}">To do</span>
+                                    <div class="cell-sub" th:text="#{trip.check.notDeclared}">The driver declares on the phone, or the warehouse records it</div>
+                                </th:block>
+                            </div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{trip.check.float}">Float</label>
+                            <div class="value">
+                                <th:block th:if="${!st.floatNeeded()}">
+                                    <span class="badge badge-success" th:text="#{trip.check.done}">Done</span>
+                                    <div class="cell-sub" th:text="#{trip.check.noCash}">No cash sales on this trip</div>
+                                </th:block>
+                                <th:block th:if="${st.floatNeeded() and st.clearance() != null}">
+                                    <span class="badge badge-success" th:text="#{trip.check.done}">Done</span>
+                                    <div class="cell-sub">
+                                        <a class="mono" sec:authorize="hasAuthority('PAGE_FLOATS')" th:href="@{/floats/{id}(id=${st.clearance().id})}" th:text="${st.clearance().number}">FC-WH-2026-000001</a>
+                                        <span class="mono" sec:authorize="!hasAuthority('PAGE_FLOATS')" th:text="${st.clearance().number}">FC-WH-2026-000001</span>
+                                        <span th:text="#{trip.check.counted(${@num.money(st.clearance().counted)}, ${@num.money(st.clearance().expected)})}">· 44,000 counted of 45,000 RWF</span>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${st.floatNeeded() and st.clearance() == null}">
+                                    <span class="badge badge-warning" th:text="#{trip.check.todo}">To do</span>
+                                    <div class="cell-sub" th:text="#{trip.check.floatWaits(${@num.money(st.cash())})}">The accountant counts 45,000 RWF of cash sales</div>
+                                </th:block>
+                            </div>
+                        </div>
+                    </div>
+                </th:block>
+
+                <h3 class="detail-heading" id="breakages" th:text="#{trip.breakages}">Breakage on the road</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{trip.label}">Label</th>
+                                <th th:text="#{breakage.whyWhere}">Why and where</th>
+                                <th th:text="#{breakage.reported}">Reported</th>
+                                <th th:text="#{breakage.photo}">Photo</th>
+                                <th th:text="#{breakage.decision}">Decision</th>
+                                <th th:if="${s == 'DEPARTED' and canValidate}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="b : ${breakages}">
+                                <td class="mono strong" th:text="${b.unitCode}">U-WH-000046</td>
+                                <td>
+                                    <span th:text="${b.reason}">Fell when braking</span>
+                                    <div class="cell-sub" th:text="${b.place}">Nyabugogo roundabout</div>
+                                </td>
+                                <td>
+                                    <span class="nowrap" th:text="${#temporals.format(b.happenedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 11:40</span>
+                                    <div class="cell-sub" th:text="${b.device != null} ? ${b.reportedBy + ' · ' + b.device.name} : ${b.reportedBy}">driver-m7 · Jean's phone</div>
+                                </td>
+                                <td>
+                                    <a th:if="${b.photoId != null}" th:href="@{/attachments/{id}(id=${b.photoId})}" target="_blank" rel="noopener"
+                                       class="doc-thumb-link" th:aria-label="#{breakage.photoOf(${b.unitCode})}">
+                                        <img class="doc-thumb" th:src="@{/attachments/{id}(id=${b.photoId})}" alt="" loading="lazy">
+                                    </a>
+                                    <span th:if="${b.photoId == null}">—</span>
+                                </td>
+                                <td>
+                                    <th:block th:replace="~{fragments/fleet :: breakageStatus(${b.status})}"></th:block>
+                                    <div class="cell-sub" th:if="${b.decidedAt != null}"
+                                         th:text="${b.decidedBy + ' · ' + #temporals.format(b.decidedAt, 'dd/MM/yyyy HH:mm') + (b.decisionNote != null ? ' · ' + b.decisionNote : '')}">supervisor1 · 10/10/2026 18:20</div>
+                                </td>
+                                <td class="actions" th:if="${s == 'DEPARTED' and canValidate}">
+                                    <th:block th:if="${b.reported}">
+                                        <form th:action="@{/trips/{id}/breakages/{b}/accept(id=${trip.id}, b=${b.id})}" method="post" class="row-action-form confirm-submit"
+                                              th:attr="data-confirm=#{breakage.acceptConfirm(${b.unitCode})}">
+                                            <button type="submit" class="btn btn-outline btn-sm" th:text="#{breakage.accept}">Accept</button>
+                                        </form>
+                                        <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'reject-breakage-' + b.id}" th:text="#{breakage.reject}">Reject</button>
+                                    </th:block>
+                                </td>
+                            </tr>
+                            <tr th:if="${breakages.isEmpty()}">
+                                <td th:attr="colspan=${s == 'DEPARTED' and canValidate} ? 6 : 5"><div class="empty-state"><p th:text="#{breakage.none}">No breakage reported on this trip.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="form-actions" th:if="${s == 'DEPARTED' and canReturn and !breakable.isEmpty()}">
+                    <button type="button" class="btn btn-outline" data-modal-open="breakage-modal" th:text="#{breakage.record}">Record a breakage</button>
+                </div>
+
+                <th:block th:if="${s == 'DEPARTED' and !extras.isEmpty()}">
+                    <h3 class="detail-heading" th:text="#{trip.return.extras}">Unexpected labels</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{trip.label}">Label</th>
+                                    <th th:text="#{trip.return.extraWhat}">What it is</th>
+                                    <th th:text="#{trip.scanned}">Scanned</th>
+                                    <th th:if="${canReturn}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="x : ${extras}">
+                                    <td class="mono strong" th:text="${x.code}">U-WH-000052</td>
+                                    <td th:text="${x.stockUnitId != null} ? #{trip.return.extraUnit} : #{trip.return.extraUnknown}">A unit of another place</td>
+                                    <td>
+                                        <span class="nowrap" th:text="${#temporals.format(x.scannedAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 18:12</span>
+                                        <div class="cell-sub" th:text="${x.scannedBy}">supervisor1</div>
+                                    </td>
+                                    <td class="actions" th:if="${canReturn}">
+                                        <form th:action="@{/trips/{id}/return/extras/{x}/remove(id=${trip.id}, x=${x.id})}" method="post"
+                                              class="row-action-form confirm-submit danger" th:attr="data-confirm=#{trip.return.extraRemoveConfirm(${x.code})}">
+                                            <button type="submit" class="action-icon delete" th:title="#{trip.remove}" th:aria-label="#{trip.remove}">
+                                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
             </div>
 
             <!-- Sales from the vehicle on the mobile POS (MPOS): the invoice numbers its phones hold, the sales in conflict (SYNC-05) -->
@@ -375,6 +676,11 @@
                 <th:block th:replace="~{layout/pagination :: pager(${fuel}, ${base}, 'tab=fuel')}"></th:block>
             </div>
 
+            <!-- The photos of breakage on the road and any paper of the trip -->
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('TRIP', ${trip.id}, ${documents}, ${base})}"></th:block>
+            </div>
+
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
                 <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
@@ -454,6 +760,104 @@
             </form>
         </div>
     </div>
+    <!-- The end of the day (FLT-08..FLT-10, MPOS-07) -->
+    <div class="modal-overlay" id="reconcile-modal" th:if="${s == 'DEPARTED' and canReturn}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reconcile-modal-title">
+            <div class="modal-header">
+                <h3 id="reconcile-modal-title" th:text="#{trip.return.reconcileTitle}">Reconcile the return</h3>
+                <button type="button" class="modal-close" data-modal-close="reconcile-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/trips/{id}/return/reconcile(id=${trip.id})}" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{trip.return.reconcileText(${preview.countReturned()}, ${preview.countSold()}, ${preview.countBroken()}, ${preview.countMissing()}, ${preview.unexpected().size()})}">1 back on a rack, 2 sold, 0 broken, 1 missing, 0 unexpected.</p>
+                    <p class="text-muted" th:if="${preview.hasDifference()}" th:text="#{trip.return.reconcileCase}">The differences open an audit case for the supervisor, and the owner is told.</p>
+                    <p class="text-muted" th:if="${undecided > 0}" th:text="#{trip.return.reconcileUndecided(${undecided})}">Decide on the 2 breakages reported first: the reconciliation will be refused.</p>
+                    <div class="form-group">
+                        <label for="return-place" th:text="#{trip.return.place}">Put back on</label>
+                        <input type="text" id="return-place" name="place" maxlength="30" class="input-code" autocomplete="off" autocapitalize="characters"
+                               spellcheck="false" th:placeholder="#{trip.return.placePh}">
+                        <span class="hint" th:text="#{trip.return.placeHint}">Empty: each unit goes back on the rack or slot it left from</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="reconcile-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{trip.return.reconcile}">Reconcile the return</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="breakage-modal" th:if="${s == 'DEPARTED' and canReturn and !breakable.isEmpty()}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="breakage-modal-title">
+            <div class="modal-header">
+                <h3 id="breakage-modal-title" th:text="#{breakage.recordTitle}">Record a breakage</h3>
+                <button type="button" class="modal-close" data-modal-close="breakage-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/trips/{id}/breakages(id=${trip.id})}" enctype="multipart/form-data" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{breakage.recordText}">A unit found broken on the vehicle: another supervisor decides on it before the trip is reconciled.</p>
+                    <div class="form-group">
+                        <label for="breakage-unit" th:text="#{breakage.unit}">Unit</label>
+                        <select id="breakage-unit" name="unitId" required>
+                            <option th:each="r : ${breakable}" th:value="${r.unit.id}"
+                                    th:text="${r.line.unitCode + ' · ' + r.unit.product.code}">U-WH-000046 · CLR-6</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="breakage-reason" th:text="#{breakage.reason}">Why</label>
+                        <input type="text" id="breakage-reason" name="reason" maxlength="255" required autocomplete="off" th:placeholder="#{breakage.reasonPh}">
+                    </div>
+                    <div class="form-group">
+                        <label for="breakage-place" th:text="#{breakage.place}">Where</label>
+                        <input type="text" id="breakage-place" name="place" maxlength="255" required autocomplete="off" th:placeholder="#{breakage.placePh}">
+                    </div>
+                    <div class="form-group">
+                        <label for="breakage-file" th:text="#{breakage.photo}">Photo</label>
+                        <input type="file" id="breakage-file" name="file" accept="image/jpeg,image/png,image/webp" capture="environment" required>
+                        <span class="hint" th:text="#{breakage.photoHint}">A photo of the broken glass (JPEG, PNG, WebP), at most 5 MB</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="breakage-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{breakage.recordSave}">Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'DEPARTED' and canValidate}">
+        <th:block th:each="b : ${breakages}">
+            <th:block th:if="${b.reported}">
+                <div th:replace="~{fragments/reason-modal :: reasonModal(${'reject-breakage-' + b.id}, #{breakage.rejectTitle}, @{/trips/{id}/breakages/{b}/reject(id=${trip.id}, b=${b.id})}, #{breakage.rejectText(${b.unitCode})}, #{breakage.reject})}"></div>
+            </th:block>
+        </th:block>
+    </th:block>
+
+    <div class="modal-overlay" id="cash-modal" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canReturn and trip.cashDeclaredAt == null}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cash-modal-title">
+            <div class="modal-header">
+                <h3 id="cash-modal-title" th:text="#{trip.cash.title}">Cash the driver declares</h3>
+                <button type="button" class="modal-close" data-modal-close="cash-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/trips/{id}/cash(id=${trip.id})}" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{trip.cash.text(${trip.driver.user.fullName})}">What Jean Driver says they hold in cash, before the accountant counts it. Recorded once.</p>
+                    <div class="form-group">
+                        <label for="cash-amount" th:text="#{trip.cash.amount}">Cash declared</label>
+                        <div class="input-unit">
+                            <input type="number" id="cash-amount" name="amount" step="1" min="0" required inputmode="numeric">
+                            <span>RWF</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="cash-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{trip.cash.save}">Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script defer src="/js/stock-ops.js"></script>
 </div>
 </body>

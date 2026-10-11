@@ -53,6 +53,8 @@ public enum SettingKey {
     ALERT_EMAIL("alerts.email", "alertEmail", "false"),
     /** Days before a driving licence, insurance or inspection expires that the fleet is told (FLT-04). */
     FLEET_EXPIRY_ALERT_DAYS("fleet.expiry-alert-days", "fleetExpiryAlertDays", "30"),
+    /** Hours after a trip came back that a float not cleared is reported to the accountant (RPT-06). */
+    FLOAT_ALERT_HOURS("fleet.float-alert-hours", "floatAlertHours", "24"),
 
     /** How receipts are signed (TAX-02): SIMULATOR (development: receipts marked not fiscal) or VSDC. An EbmMode name. */
     EBM_MODE("ebm.mode", "ebmMode", "SIMULATOR"),

@@ -303,6 +303,15 @@ public class JournalService {
                 : lineRepo.findOfSources(account(AccountKey.GRNI).getId(), JournalSource.GOODS_RECEIPT, receiptIds);
     }
 
+    /** What each driver holds on an account that names drivers: their float, or their shortages (ACC-06, ACC-07). */
+    public Map<UUID, BigDecimal> driverBalances(AccountKey key) {
+        Map<UUID, BigDecimal> balances = new HashMap<>();
+        for (Object[] row : lineRepo.balanceByDriver(account(key).getId())) {
+            balances.put((UUID) row[0], (BigDecimal) row[1]);
+        }
+        return balances;
+    }
+
     private Account account(AccountKey key) {
         return accountRepo.findBySystemKey(key).orElseThrow(() -> new IllegalStateException("No account " + key));
     }

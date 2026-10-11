@@ -72,4 +72,20 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     Page<Trip> findByDriver_Id(UUID driverId, Pageable pageable);
 
     long countByStatus(TripStatus status);
+
+    /** The driver's trip the phone still works for: on the road, or back and not closed (latest first). */
+    @EntityGraph(attributePaths = {"vehicle", "vehicle.location", "driver", "driver.user"})
+    List<Trip> findByDriver_IdAndStatusInOrderByDepartedAtDesc(UUID driverId, Collection<TripStatus> statuses);
+
+    /** Trips back from the road whose float is not cleared yet (ACC-06), the oldest return first. */
+    @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
+    @Query("select t from Trip t where t.status in :statuses and not exists (select f.id from FloatClearance f where f.trip = t)"
+            + " order by t.returnedAt, t.number")
+    List<Trip> findNotCleared(@Param("statuses") Collection<TripStatus> statuses);
+
+    /** Trips back from the road in a period, for the fleet reports. */
+    @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
+    @Query("select t from Trip t where t.status in :statuses and t.returnedAt >= :from and t.returnedAt < :to order by t.returnedAt, t.number")
+    List<Trip> findReturnedBetween(@Param("statuses") Collection<TripStatus> statuses, @Param("from") java.time.LocalDateTime from,
+                                   @Param("to") java.time.LocalDateTime to);
 }

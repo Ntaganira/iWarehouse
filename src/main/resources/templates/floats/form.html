@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{float.clearTitle(${trip.number})}, ~{::content})}">
+<head><title>Clear a float - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{float.clearTitle(${trip.number})}">Clear the float of TRP-WH-2026-000002</h1>
+            <div class="subtitle" th:text="#{float.clearSubtitle(${trip.driver.user.fullName}, ${trip.vehicle.plate})}">Count the cash Jean Driver hands over for RAC123A</div>
+        </div>
+        <a href="/floats" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/floats/clear/{id}(id=${trip.id})}" th:object="${floatDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{float.expected}">Cash sales (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(expected)}">295,008</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{float.declared}">Declared (RWF)</label>
+                    <div class="value">
+                        <span th:if="${trip.cashDeclaredAt != null}" th:text="${@num.money(trip.cashDeclared)}">295,008</span>
+                        <span th:if="${trip.cashDeclaredAt == null}" class="badge badge-warning" th:text="#{float.notDeclaredShort}">Not declared</span>
+                        <div class="cell-sub" th:if="${trip.cashDeclaredAt != null}" th:text="${trip.cashDeclaredBy + ' · ' + #temporals.format(trip.cashDeclaredAt, 'dd/MM/yyyy HH:mm')}">driver-m7 · 10/10/2026 18:05</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{float.back}">Back</label>
+                    <div class="value" th:text="${trip.returnedAt != null} ? ${#temporals.format(trip.returnedAt, 'dd/MM/yyyy HH:mm')} : '—'">10/10/2026 18:30</div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="counted" th:text="#{float.counted}">Counted (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="counted" th:field="*{counted}" step="1" min="0" required inputmode="numeric" autofocus
+                               th:classappend="${#fields.hasErrors('counted')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('counted')}" th:errors="*{counted}"></span>
+                    <span class="hint" th:text="#{float.countedHint}">Less than the cash sales: the difference goes on the driver's shortage account; more: to Cash Over/Short</span>
+                </div>
+                <div class="form-group">
+                    <label for="depositAccount" th:text="#{float.account}">Paid into</label>
+                    <select id="depositAccount" th:field="*{depositAccount}" required th:classappend="${#fields.hasErrors('depositAccount')} ? 'is-invalid'">
+                        <option th:each="a : ${accounts}" th:value="${a}" th:text="#{${'float.account.' + a}}">Main cash vault</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('depositAccount')}" th:errors="*{depositAccount}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="reference" th:text="#{float.reference}">Deposit slip</label>
+                    <input type="text" id="reference" th:field="*{reference}" maxlength="60" class="input-code" autocapitalize="characters"
+                           th:classappend="${#fields.hasErrors('reference')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('reference')}" th:errors="*{reference}"></span>
+                    <span class="hint" th:text="#{float.referenceHint}">Needed for a bank deposit</span>
+                </div>
+                <div class="form-group">
+                    <label for="note" th:text="#{float.note}">Note</label>
+                    <input type="text" id="note" th:field="*{note}" maxlength="255" th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{float.clearSave}">Clear the float</button>
+                <a href="/floats" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

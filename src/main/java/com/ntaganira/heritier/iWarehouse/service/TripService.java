@@ -600,7 +600,7 @@ public class TripService {
         }
     }
 
-    private static BusinessException notState(Trip trip) {
+    static BusinessException notState(Trip trip) {
         return BusinessException.of("trip.notAllowed", trip.getNumber(),
                 new DefaultMessageSourceResolvable("trip.status." + trip.getStatus().name()));
     }

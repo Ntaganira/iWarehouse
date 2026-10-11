@@ -29,6 +29,13 @@ import com.ntaganira.heritier.iWarehouse.service.StockService;
 import com.ntaganira.heritier.iWarehouse.service.TripLoading;
 import com.ntaganira.heritier.iWarehouse.service.TripService;
 import com.ntaganira.heritier.iWarehouse.service.VehicleService;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
+import com.ntaganira.heritier.iWarehouse.service.BreakageService;
+import com.ntaganira.heritier.iWarehouse.service.TripCloseService;
+import com.ntaganira.heritier.iWarehouse.service.TripReturnService;
+import com.ntaganira.heritier.iWarehouse.entity.TripBreakage;
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.enums.StockStatus;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.AccessDeniedException;
@@ -78,12 +85,17 @@ public class TripController {
     private final ActivityLogService activityLogService;
     private final NumberFormats num;
     private final Messages messages;
+    private final TripReturnService returnService;
+    private final BreakageService breakageService;
+    private final TripCloseService closeService;
+    private final AttachmentService attachmentService;
     private final Clock clock;
 
     public TripController(TripService tripService, VehicleService vehicleService, DriverService driverService, StockService stockService,
                           MobileSaleService mobileSaleService, MobileTripService mobileTripService, SyncConflictService syncConflictService,
                           DataChangeService dataChangeService, ActivityLogService activityLogService, NumberFormats num, Messages messages,
-                          Clock clock) {
+                          TripReturnService returnService, BreakageService breakageService, TripCloseService closeService,
+                          AttachmentService attachmentService, Clock clock) {
         this.tripService = tripService;
         this.vehicleService = vehicleService;
         this.driverService = driverService;
@@ -95,6 +107,10 @@ public class TripController {
         this.activityLogService = activityLogService;
         this.num = num;
         this.messages = messages;
+        this.returnService = returnService;
+        this.breakageService = breakageService;
+        this.closeService = closeService;
+        this.attachmentService = attachmentService;
         this.clock = clock;
     }
 
@@ -130,7 +146,9 @@ public class TripController {
     public String view(@PathVariable UUID id, @RequestParam(required = false) String tab, @RequestParam(defaultValue = "0") int page,
                        Model model) {
         Trip trip = visible(id);
-        String open = tab != null && List.of("manifest", "sales", "fuel", "history").contains(tab) ? tab : "manifest";
+        boolean away = trip.getStatus() != TripStatus.PLANNED && trip.getStatus() != TripStatus.CANCELLED;
+        String open = tab != null && List.of("manifest", "return", "sales", "fuel", "documents", "history").contains(tab)
+                && (away || !"return".equals(tab)) ? tab : "manifest";
         Map<UUID, StockUnit> units = tripService.units(trip);
         List<Row> rows = TripService.sortedLines(trip).stream().map(l -> new Row(l, units.get(l.getStockUnitId()))).toList();
         List<TripFuel> fuel = trip.getFuel().stream()
@@ -167,8 +185,39 @@ public class TripController {
         model.addAttribute("numbersGiven", numbers.size());
         model.addAttribute("numbersUsed", numbers.stream().filter(TripInvoiceNumber::isUsed).count());
         model.addAttribute("openConflicts", syncConflictService.openOfTrip(id));
-        model.addAttribute("history", dataChangeService.historyWithChildren("Trip", id.toString(), List.of("TripLine", "TripFuel"), "trip",
-                Paging.pageOf("history", open, page), Paging.SIZE));
+        // The end of the day (FLT-08..FLT-10, MPOS-07): breakage, the return scan and its reconciliation, the closing checks
+        model.addAttribute("away", away);
+        if (away) {
+            List<TripBreakage> breakages = breakageService.ofTrip(id);
+            model.addAttribute("breakages", breakages);
+            model.addAttribute("scannedBack", trip.getLines().stream().filter(TripLine::isScannedBack).count());
+            if (trip.isDeparted()) {
+                Set<UUID> reported = breakages.stream().filter(b -> !b.getStatus().name().equals("REJECTED"))
+                        .map(TripBreakage::getStockUnitId).collect(Collectors.toSet());
+                model.addAttribute("preview", returnService.preview(trip));
+                model.addAttribute("extras", returnService.extras(id));
+                model.addAttribute("breakable", rows.stream().filter(r -> r.unit() != null && r.unit().getStatus() == StockStatus.ON_VEHICLE
+                        && !reported.contains(r.unit().getId())).toList());
+                model.addAttribute("undecided", breakages.stream().filter(TripBreakage::isReported).count());
+            } else {
+                TripCloseService.Settlement settlement = closeService.settlement(trip);
+                List<String> waits = new ArrayList<>();
+                if (!settlement.caseSettled()) {
+                    waits.add(messages.get("trip.waits.case", settlement.auditCase().getNumber()));
+                }
+                if (!settlement.declared()) {
+                    waits.add(messages.get("trip.waits.declaration"));
+                }
+                if (!settlement.floatCleared()) {
+                    waits.add(messages.get("trip.waits.float", num.money(settlement.cash())));
+                }
+                model.addAttribute("settlement", settlement);
+                model.addAttribute("closeWaits", waits);
+            }
+        }
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.TRIP, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        model.addAttribute("history", dataChangeService.historyWithChildren("Trip", id.toString(),
+                List.of("TripLine", "TripFuel", "TripBreakage", "TripReturnExtra"), "trip", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "trips/view";
     }

@@ -6,7 +6,8 @@
  * stock, at the trip's prices or lower within their limit, for cash and/or mobile money. Every sale is saved on the phone
  * first (IndexedDB) with its own UUID and invoice number, its receipt shown at once ("pending signature"), then sent to
  * the server when there is network, oldest first, retrying with backoff; the server takes it once, or keeps it for the
- * supervisor. The signed receipt (EBM) is fetched afterwards. Amounts are worked out with integers exactly as the server
+ * supervisor. The signed receipt (EBM) is fetched afterwards. At the end of the day the driver reports breakage on the
+ * road (a photo, the reason, the place; queued offline like the sales) and declares the cash they hold (MPOS-06, MPOS-07). Amounts are worked out with integers exactly as the server
  * does (MobileSales, Vat.lineAmount, Vat.totals), so both always agree. Every text comes from the server's mobile.* keys.
  */
 (function () {
@@ -24,11 +25,12 @@
     function db() {
         if (!dbPromise) {
             dbPromise = new Promise((resolve, reject) => {
-                const open = indexedDB.open(DB_NAME, 1);
+                const open = indexedDB.open(DB_NAME, 2);
                 open.onupgradeneeded = () => {
                     const d = open.result;
-                    d.createObjectStore('kv');
-                    d.createObjectStore('sales', { keyPath: 'clientId' });
+                    if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
+                    if (!d.objectStoreNames.contains('sales')) d.createObjectStore('sales', { keyPath: 'clientId' });
+                    if (!d.objectStoreNames.contains('breakages')) d.createObjectStore('breakages', { keyPath: 'clientId' });
                 };
                 open.onsuccess = () => resolve(open.result);
                 open.onerror = () => reject(open.error);
@@ -50,6 +52,9 @@
     const salesAll = () => tx('sales', 'readonly', (s) => s.getAll()).then((all) => (all || []).sort((a, b) => a.seq - b.seq));
     const salePut = (sale) => tx('sales', 'readwrite', (s) => s.put(sale));
     const salesClear = () => tx('sales', 'readwrite', (s) => s.clear());
+    const breakagesAll = () => tx('breakages', 'readonly', (s) => s.getAll()).then((all) => (all || []).sort((a, b) => a.seq - b.seq));
+    const breakagePut = (b) => tx('breakages', 'readwrite', (s) => s.put(b));
+    const breakagesClear = () => tx('breakages', 'readwrite', (s) => s.clear());
 
     // ================================================================ state
 
@@ -71,8 +76,14 @@
         syncing: false,
         retryDelay: 2000,
         retryTimer: null,
-        camera: null
+        camera: null,
+        breakages: [],          // the breakage reports made on this phone for the trip (MPOS-06)
+        breakage: emptyBreakage(),
+        declareAmount: ''
     };
+    function emptyBreakage() {
+        return { unitId: '', reason: '', place: '', photo: null };
+    }
     function emptyCart() {
         return { lines: [], customerId: null, buyerName: '', buyerTin: '', cash: '', tendered: '', momo: '', momoRef: '' };
     }
@@ -234,11 +245,18 @@
     const defaultCustomer = () => customers().find((c) => c.defaultCustomer) || customers()[0];
     const customerOf = (id) => customers().find((c) => c.id === id) || defaultCustomer();
     const soldHere = () => new Set(state.sales.flatMap((s) => s.lines.map((l) => l.unitId)));
-    /** The units still on the vehicle as far as this phone knows (MPOS-02). */
+    /** Units reported broken on the road (FLT-08): by this phone (not refused or rejected) or known to the server. */
+    function reportedBroken() {
+        const broken = new Set(state.bundle && state.bundle.reportedBroken ? state.bundle.reportedBroken : []);
+        state.breakages.filter((b) => b.status !== 'refused' && !(b.result && b.result.status === 'REJECTED')).forEach((b) => broken.add(b.unitId));
+        return broken;
+    }
+    /** The units still on the vehicle and for sale as far as this phone knows (MPOS-02). */
     function unitsOnBoard() {
         if (!state.bundle) return [];
         const sold = soldHere();
-        return state.bundle.units.filter((u) => !sold.has(u.id));
+        const broken = reportedBroken();
+        return state.bundle.units.filter((u) => !sold.has(u.id) && !broken.has(u.id));
     }
     /** The glass's price for a customer (MobileSales.Snapshot.resolve): their list, then the default list. */
     function priceFor(customer, unit) {
@@ -259,6 +277,9 @@
         return (state.bundle ? state.bundle.numbers : []).find((n) => !used.has(n)) || null;
     }
     const pending = () => state.sales.filter((s) => s.status === 'pending');
+    const pendingBreakages = () => state.breakages.filter((b) => b.status === 'pending');
+    /** Everything this phone still has to send: sales and breakage reports. */
+    const pendingCount = () => pending().length + pendingBreakages().length;
 
     async function downloadTrip() {
         if (!navigator.onLine) return notice('warn', t('mobile.offline.needed'));
@@ -266,12 +287,14 @@
         try {
             const bundle = await api('GET', '/trip');
             if (state.bundle && state.bundle.trip.id !== bundle.trip.id) {
-                if (pending().length) {
+                if (pendingCount()) {
                     notice('danger', t('mobile.trip.otherPending'));
                     return;
                 }
                 await salesClear();
+                await breakagesClear();
                 state.sales = [];
+                state.breakages = [];
             }
             state.bundle = bundle;
             await kvSet('bundle', bundle);
@@ -311,6 +334,22 @@
                 await salePut(sale);
                 render();
             }
+            for (const b of pendingBreakages()) {
+                try {
+                    b.result = await api('POST', '/breakages', {
+                        clientId: b.clientId, tripId: b.tripId, unitId: b.unitId, reason: b.reason, place: b.place,
+                        happenedAt: b.happenedAt, photo: b.photo, photoName: b.code + '.jpg'
+                    });
+                    b.status = 'sent';
+                } catch (e) {
+                    if (e.offline || e.unauthorized || !e.status || e.status >= 500) throw e;
+                    b.status = 'refused';
+                    b.error = e.message;
+                }
+                b.photo = null;                                         // sent or refused: the phone keeps no copy
+                await breakagePut(b);
+                render();
+            }
             state.retryDelay = 2000;
             await refreshSignatures();
         } catch (e) {
@@ -331,7 +370,13 @@
             applyResult(sale, result);
             await salePut(sale);
         }
-        if (waiting.length) render();
+        // The supervisor's decision on the breakage reported (FLT-08)
+        const deciding = state.breakages.filter((b) => b.status === 'sent' && b.result && b.result.status === 'REPORTED').slice(-30);
+        for (const b of deciding) {
+            b.result = await api('GET', '/breakages/' + b.clientId);
+            await breakagePut(b);
+        }
+        if (waiting.length || deciding.length) render();
     }
 
     // ================================================================ selling (MPOS-02..05)
@@ -357,6 +402,7 @@
         const unit = state.bundle.units.find((u) => u.code === code);
         if (!unit) return notice('danger', t('mobile.sell.notOnVehicle', code));
         if (soldHere().has(unit.id)) return notice('warn', t('mobile.sell.alreadySold', code));
+        if (reportedBroken().has(unit.id)) return notice('warn', t('mobile.sell.reportedBroken', code));
         if (inCart(unit.id)) return notice('info', t('mobile.sell.alreadyInCart', code));
         addUnit(unit);
         render();
@@ -443,6 +489,82 @@
         sync();
     }
 
+    // ================================================================ the end of the day (MPOS-06, MPOS-07)
+
+    /** A photo shrunk to 1600 px at most, as a JPEG data URL: small enough to queue offline and send on a slow network. */
+    function shrink(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.naturalWidth * scale);
+                canvas.height = Math.round(img.naturalHeight * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(url);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('photo')); };
+            img.src = url;
+        });
+    }
+    /** The phone's position added to the place, when it gives one. */
+    function addPosition() {
+        if (!navigator.geolocation) return notice('warn', t('mobile.breakage.noPosition'));
+        navigator.geolocation.getCurrentPosition((pos) => {
+            const at = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+            state.breakage.place = (state.breakage.place.trim() ? state.breakage.place.trim() + ' ' : '') + '(' + at + ')';
+            render();
+        }, () => notice('warn', t('mobile.breakage.noPosition')), { enableHighAccuracy: true, timeout: 10000 });
+    }
+    /** Saves a breakage report on the phone (MPOS-06): it syncs when it can, like a sale. */
+    async function saveBreakage() {
+        const f = state.breakage;
+        const errors = {};
+        const unit = state.bundle.units.find((u) => u.id === f.unitId);
+        if (!unit) errors.unit = t('mobile.breakage.unitNeeded');
+        if (!f.reason.trim()) errors.reason = t('mobile.breakage.reasonNeeded');
+        if (!f.place.trim()) errors.place = t('mobile.breakage.placeNeeded');
+        if (!f.photo) errors.photo = t('mobile.breakage.photoNeeded');
+        state.errors = errors;
+        if (Object.keys(errors).length) return render();
+        const b = {
+            clientId: uuid(), seq: Date.now(), tripId: state.bundle.trip.id, unitId: unit.id, code: unit.code, productName: unit.productName,
+            reason: f.reason.trim().slice(0, 255), place: f.place.trim().slice(0, 255), happenedAt: new Date().toISOString(), photo: f.photo,
+            status: 'pending', result: null
+        };
+        await breakagePut(b);
+        state.breakages.push(b);
+        state.cart.lines = state.cart.lines.filter((l) => l.unitId !== unit.id);
+        state.breakage = emptyBreakage();
+        notice('ok', t('mobile.breakage.saved', unit.code));
+        sync();
+    }
+    /** Declares the cash the driver holds (MPOS-07), once, with network. */
+    async function declareCash() {
+        const value = state.declareAmount.trim();
+        if (!/^\d+$/.test(value)) {
+            state.errors = { declare: t('mobile.declare.invalid') };
+            return render();
+        }
+        if (!navigator.onLine) return notice('warn', t('mobile.offline.needed'));
+        state.busy = true; render();
+        try {
+            const r = await api('POST', '/trip/declaration', { tripId: state.bundle.trip.id, amount: Number(value) });
+            state.bundle.cashDeclared = r.cashDeclared;
+            state.bundle.cashDeclaredAt = r.declaredAt;
+            await kvSet('bundle', state.bundle);
+            state.declareAmount = '';
+            state.errors = {};
+            notice('ok', t('mobile.declare.saved', money(scaled(r.cashDeclared, state.bundle.decimals))));
+        } catch (e) {
+            handleError(e);
+        } finally {
+            state.busy = false; render();
+        }
+    }
+
     // ================================================================ camera (labels are QR codes)
 
     async function startCamera() {
@@ -505,28 +627,32 @@
     }
     /** The phone's data for the trip is cleared, once nothing waits to sync (SYNC-07, SYNC-08). */
     async function closeTrip() {
-        if (pending().length) return notice('danger', tn('mobile.close.pending', pending().length, pending().length));
+        if (pendingCount()) return notice('danger', tn('mobile.close.pending', pendingCount(), pendingCount()));
         await salesClear();
+        await breakagesClear();
         await kvDel('bundle');
         state.sales = [];
+        state.breakages = [];
         state.bundle = null;
         state.cart = emptyCart();
         state.view = 'sell';
         notice('ok', t('mobile.close.done'));
     }
     async function signOut() {
-        if (pending().length) return notice('danger', tn('mobile.signOut.pending', pending().length, pending().length));
+        if (pendingCount()) return notice('danger', tn('mobile.signOut.pending', pendingCount(), pendingCount()));
         try { await api('POST', '/auth/logout'); } catch (e) { /* offline or revoked already: the data goes anyway */ }
         await forget();
         notice('ok', t('mobile.signOut.done'));
     }
     async function forget() {
         await salesClear();
+        await breakagesClear();
         await kvDel('bundle');
         await kvDel('session');
         state.session = null;
         state.bundle = null;
         state.sales = [];
+        state.breakages = [];
         state.cart = emptyCart();
         state.view = 'sell';
     }
@@ -582,7 +708,7 @@
     /** "Online · all synced" / "Offline · 3 pending" (SYNC-02). */
     function netbar() {
         if (!state.session) return '';
-        const waiting = pending().length;
+        const waiting = pendingCount();
         const online = navigator.onLine;
         const kind = !online ? 'offline' : waiting ? 'pending' : 'online';
         const label = !online ? (waiting ? t('mobile.net.offlinePending', waiting) : t('mobile.net.offline'))
@@ -804,12 +930,74 @@
             + '<div class="list">' + (rows || '<div class="empty">' + esc(t('mobile.sales.none')) + '</div>') + '</div></main>';
     }
 
+    /** Where a breakage report stands: waiting to sync, sent (the supervisor decides), accepted, rejected or refused. */
+    function breakageBadge(b) {
+        const status = b.status === 'pending' ? 'pending' : b.status === 'refused' ? 'refused'
+            : b.result && b.result.status === 'ACCEPTED' ? 'accepted' : b.result && b.result.status === 'REJECTED' ? 'rejected' : 'sent';
+        const css = { pending: 'pending', sent: 'accepted', accepted: 'signed', rejected: 'conflict', refused: 'conflict' }[status];
+        return '<span class="badge ' + css + '">' + esc(t('mobile.breakage.status.' + status)) + '</span>';
+    }
+    /** Breakage on the road (MPOS-06): the unit, why, where, a photo; the phone keeps it until it syncs. */
+    function breakageView() {
+        const f = state.breakage;
+        const e = state.errors;
+        const units = unitsOnBoard();
+        const options = '<option value="">' + esc(t('mobile.breakage.unitPick')) + '</option>' + units.map((u) => '<option value="' + u.id + '"'
+            + (u.id === f.unitId ? ' selected' : '') + '>' + esc(u.code) + '</option>').join('');
+        const chosen = units.find((u) => u.id === f.unitId);
+        const rows = state.breakages.slice().reverse().map((b) => '<div class="item static"><div class="grow"><div class="code">' + esc(b.code) + '</div>'
+            + '<div class="what">' + esc(b.reason) + ' · ' + esc(b.place) + '</div>'
+            + (b.status === 'refused' && b.error ? '<div class="what error">' + esc(b.error) + '</div>' : '')
+            + (b.result && b.result.decisionNote ? '<div class="what">' + esc(b.result.decisionNote) + '</div>' : '')
+            + '</div><div>' + breakageBadge(b) + '</div></div>').join('');
+        return topbar(t('mobile.breakage.title'), state.bundle.trip.number, 'sell')
+            + '<main class="screen">' + noticeHtml()
+            + '<form class="card" data-form="breakage" novalidate><p class="muted" style="margin-bottom:12px">' + esc(t('mobile.breakage.hint')) + '</p>'
+            + '<div class="field"><label for="b-unit">' + esc(t('mobile.breakage.unit')) + '</label><select class="select" id="b-unit" data-action="b-unit">' + options + '</select>'
+            + (chosen ? '<span class="hint">' + esc(chosen.productName + ' · ' + chosen.widthMm + ' × ' + chosen.heightMm + ' mm') + '</span>' : '')
+            + (e.unit ? '<span class="error">' + esc(e.unit) + '</span>' : '') + '</div>'
+            + '<div class="field"><label for="b-reason">' + esc(t('mobile.breakage.reason')) + '</label><input class="input' + (e.reason ? ' is-invalid' : '') + '" id="b-reason" maxlength="255" data-action="b-field" data-field="reason" value="' + esc(f.reason) + '" placeholder="' + esc(t('mobile.breakage.reasonPh')) + '">'
+            + (e.reason ? '<span class="error">' + esc(e.reason) + '</span>' : '') + '</div>'
+            + '<div class="field"><label for="b-place">' + esc(t('mobile.breakage.place')) + '</label><input class="input' + (e.place ? ' is-invalid' : '') + '" id="b-place" maxlength="255" data-action="b-field" data-field="place" value="' + esc(f.place) + '" placeholder="' + esc(t('mobile.breakage.placePh')) + '">'
+            + '<button class="btn btn-outline btn-block" type="button" data-action="b-position">' + esc(t('mobile.breakage.position')) + '</button>'
+            + (e.place ? '<span class="error">' + esc(e.place) + '</span>' : '') + '</div>'
+            + '<div class="field"><span class="label">' + esc(t('mobile.breakage.photo')) + '</span>'
+            + (f.photo ? '<img class="photo-preview" src="' + f.photo + '" alt="' + esc(t('mobile.breakage.photo')) + '">'
+                + '<button class="btn btn-outline btn-block" type="button" data-action="b-photo-clear">' + esc(t('mobile.breakage.photoAgain')) + '</button>'
+                : '<label class="btn btn-outline btn-block" for="b-photo">' + esc(t('mobile.breakage.photoTake')) + '</label>')
+            + '<input class="file-input" type="file" id="b-photo" accept="image/*" capture="environment" data-action="b-photo">'
+            + (e.photo ? '<span class="error">' + esc(e.photo) + '</span>' : '') + '</div>'
+            + '<div class="field"><button class="btn btn-primary btn-block" type="submit">' + esc(t('mobile.breakage.save')) + '</button></div>'
+            + '</form>'
+            + '<h2 class="list-title">' + esc(t('mobile.breakage.list')) + '</h2>'
+            + '<div class="list">' + (rows || '<div class="empty">' + esc(t('mobile.breakage.none')) + '</div>') + '</div>'
+            + '</main>';
+    }
+    /** The cash the driver declares at the end of the day (MPOS-07): once, with network. */
+    function declareView() {
+        const b = state.bundle;
+        const e = state.errors;
+        const done = b.cashDeclared != null;
+        const body = done
+            ? '<div class="note ok">' + esc(t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : '')) + '</div>'
+            : '<form class="card" data-form="declare" novalidate><p class="muted" style="margin-bottom:12px">' + esc(t('mobile.declare.hint')) + '</p>'
+                + '<div class="field"><label for="declare-amount">' + esc(t('mobile.declare.amount')) + '</label>'
+                + '<input class="input' + (e.declare ? ' is-invalid' : '') + '" id="declare-amount" inputmode="numeric" data-action="declare-field" value="' + esc(state.declareAmount) + '">'
+                + (e.declare ? '<span class="error">' + esc(e.declare) + '</span>' : '') + '</div>'
+                + (pendingCount() ? '<div class="note warn" style="margin-top:12px">' + esc(tn('mobile.declare.pending', pendingCount(), pendingCount())) + '</div>' : '')
+                + '<div class="field"><button class="btn btn-primary btn-block" type="button" data-action="ask-declare"' + (state.busy ? ' disabled' : '') + '>'
+                + esc(state.busy ? t('mobile.wait') : t('mobile.declare.save')) + '</button></div></form>';
+        return topbar(t('mobile.declare.title'), b.trip.number, 'sell')
+            + '<main class="screen">' + noticeHtml() + body + '</main>';
+    }
+
     function menuHtml() {
         if (!state.menu) return '';
         const items = [
-            ['go', 'sell', t('mobile.menu.sell')], ['go', 'sales', t('mobile.menu.sales')], ['download', '', t('mobile.menu.refresh')],
+            ['go', 'sell', t('mobile.menu.sell')], ['go', 'sales', t('mobile.menu.sales')], ['go', 'breakage', t('mobile.menu.breakage')],
+            ['go', 'declare', t('mobile.menu.declare')], ['download', '', t('mobile.menu.refresh')],
             ['lang-toggle', '', t('mobile.menu.language')], ['ask-close', '', t('mobile.menu.closeTrip')], ['ask-signout', '', t('mobile.menu.signOut')]
-        ].filter((i) => state.bundle || !['sell', 'sales'].includes(i[1]) && i[0] !== 'ask-close');
+        ].filter((i) => state.bundle || !['sell', 'sales', 'breakage', 'declare'].includes(i[1]) && i[0] !== 'ask-close');
         return '<div class="sheet-backdrop" data-action="menu-close"></div><div class="sheet" role="menu">'
             + items.map((i) => '<button class="item' + (i[0] === 'ask-signout' || i[0] === 'ask-close' ? ' danger' : '') + '" role="menuitem" data-action="' + i[0]
                 + '" data-view="' + i[1] + '">' + esc(i[2]) + '</button>').join('') + '</div>';
@@ -831,6 +1019,8 @@
         else if (state.view === 'cart') html = cartView();
         else if (state.view === 'receipt') html = receiptView();
         else if (state.view === 'sales') html = salesView();
+        else if (state.view === 'breakage') html = breakageView();
+        else if (state.view === 'declare') html = declareView();
         else html = sellView();
         app.innerHTML = html + menuHtml() + confirmHtml();
         if (state.camera) {
@@ -866,6 +1056,14 @@
                 return render();
             }
             case 'remove': return removeLine(el.dataset.unit);
+            case 'b-position': return addPosition();
+            case 'b-photo-clear': state.breakage.photo = null; return render();
+            case 'ask-declare': {
+                const value = state.declareAmount.trim();
+                if (!/^\d+$/.test(value)) { state.errors = { declare: t('mobile.declare.invalid') }; return render(); }
+                state.confirm = { text: t('mobile.declare.confirm', money(scaled(value, state.bundle.decimals))), label: t('mobile.declare.save'), action: declareCash };
+                return render();
+            }
             case 'complete': return completeSale();
             case 'receipt': state.receiptId = el.dataset.sale; state.view = 'receipt'; render();
                 if (navigator.onLine) refreshSignatures().catch(() => {});
@@ -895,6 +1093,7 @@
         event.preventDefault();
         const form = event.target;
         if (form.dataset.form === 'login') return signIn(form);
+        if (form.dataset.form === 'breakage') return saveBreakage();
         if (form.dataset.form === 'scan') {
             const code = form.code.value;
             form.code.value = '';
@@ -907,6 +1106,8 @@
         const el = event.target;
         const action = el.dataset.action;
         if (action === 'search') { state.search = el.value; return render(); }
+        if (action === 'b-field') { state.breakage[el.dataset.field] = el.value; delete state.errors[el.dataset.field]; return undefined; }
+        if (action === 'declare-field') { state.declareAmount = el.value; delete state.errors.declare; return undefined; }
         // A field being corrected drops its error, so what it shows (the change, the amount) is current
         if (action === 'cart-field') {
             state.cart[el.dataset.field] = el.value;
@@ -921,6 +1122,16 @@
     app.addEventListener('change', async (event) => {
         const el = event.target;
         if (el.dataset.action === 'customer') { setCustomer(el.value); return render(); }
+        if (el.dataset.action === 'b-unit') { state.breakage.unitId = el.value; delete state.errors.unit; return render(); }
+        if (el.dataset.action === 'b-photo' && el.files && el.files[0]) {
+            try {
+                state.breakage.photo = await shrink(el.files[0]);
+                delete state.errors.photo;
+            } catch (e) {
+                state.errors.photo = t('mobile.breakage.photoBad');
+            }
+            return render();
+        }
         if (el.dataset.action === 'lang') {
             state.lang = el.value;
             await kvSet('lang', state.lang);
@@ -940,7 +1151,8 @@
     window.addEventListener('offline', render);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
     setInterval(() => {
-        if (pending().length || state.sales.some((s) => s.status === 'accepted')) sync();
+        if (pendingCount() || state.sales.some((s) => s.status === 'accepted')
+            || state.breakages.some((b) => b.status === 'sent' && b.result && b.result.status === 'REPORTED')) sync();
     }, SYNC_EVERY);
 
     // ================================================================ start
@@ -953,6 +1165,7 @@
         state.session = (await kvGet('session')) || null;
         state.bundle = (await kvGet('bundle')) || null;
         state.sales = await salesAll();
+        state.breakages = await breakagesAll();
         render();
         if (state.session && navigator.onLine) {
             if (state.bundle) downloadTrip().then(sync); else downloadTrip();

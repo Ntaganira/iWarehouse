@@ -258,6 +258,22 @@
                             </tr>
                             <tr>
                                 <td>
+                                    <a sec:authorize="hasAuthority('PAGE_AUDIT_CASES')" href="/audit-cases" th:text="#{dash.biz.auditCases}">Audit cases to settle</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_AUDIT_CASES')" th:text="#{dash.biz.auditCases}">Audit cases to settle</span>
+                                    <div class="cell-sub" th:text="#{dash.biz.auditCasesSub}">units missing or unexpected after a trip</div>
+                                </td>
+                                <td class="num" th:classappend="${biz.auditCases > 0} ? 'strong text-danger'" th:text="${biz.auditCases}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_FLOATS')" href="/floats" th:text="#{dash.biz.floats}">Driver floats to count</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_FLOATS')" th:text="#{dash.biz.floats}">Driver floats to count</span>
+                                    <div class="cell-sub" th:text="#{dash.biz.floatsSub(${@num.money(biz.floatsToClearAmount)})}">45,000 RWF of cash sales</div>
+                                </td>
+                                <td class="num" th:classappend="${biz.floatsToClear > 0} ? 'strong'" th:text="${biz.floatsToClear}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
                                     <a sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" href="/till-sessions" th:text="#{dash.biz.openTills}">Tills open</a>
                                     <span sec:authorize="!hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{dash.biz.openTills}">Tills open</span>
                                 </td>

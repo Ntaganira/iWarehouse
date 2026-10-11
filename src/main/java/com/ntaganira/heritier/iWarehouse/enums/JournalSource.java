@@ -35,7 +35,13 @@ public enum JournalSource {
     FX_REVALUATION("/accounting/fx-revaluations/"),
     MANUAL_JOURNAL("/accounting/manual-journals/"),
     /** A sale from a vehicle (ACC-06): cash to the driver's float. */
-    MOBILE_SALE("/invoices/");
+    MOBILE_SALE("/invoices/"),
+    /** A trip reconciled at the end of the day (FLT-09): its accepted breakage to spoilage. */
+    TRIP_RETURN("/trips/"),
+    /** A unit missing after a trip written off or charged to the driver (FLT-10, FLT-11). */
+    AUDIT_CASE("/audit-cases/"),
+    /** A driver's float cleared by the accountant (ACC-06, ACC-07). */
+    FLOAT_CLEARANCE("/floats/");
 
     private final String path;
 

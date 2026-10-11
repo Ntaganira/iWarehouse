@@ -42,6 +42,10 @@ public enum DocumentType {
     MANUAL_JOURNAL("MJ"),
     /** A bank or mobile-money statement reconciled with the ledger (ACC-12): REC-WH-2026-000001. */
     BANK_RECONCILIATION("REC"),
+    /** Units missing or unexpected when a trip came back (FLT-10): AC-WH-2026-000001. */
+    AUDIT_CASE("AC"),
+    /** A driver's float counted and cleared by the accountant (ACC-06): FC-WH-2026-000001. */
+    FLOAT_CLEARANCE("FC"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

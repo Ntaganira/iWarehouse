@@ -360,6 +360,107 @@ class PostingServiceTest {
     }
 
     @Test
+    void theEndOfTheDayKeepsTheInventoryAccountEqualToTheValuation() {   // FLT-08..FLT-11, ACC-06, ACC-07, AT-07, AT-10
+        held.put(clear6.getId(), new BigDecimal("100.0000"));
+        clear6.setMacPerM2(new BigDecimal("5000.0000"));
+        postings.openingStock();
+        UUID driver = UUID.randomUUID();
+        Trip trip = new Trip();
+        trip.setId(UUID.randomUUID());
+        trip.setNumber("TRP-WH-2026-000009");
+
+        // A sheet broken on the road, its breakage accepted: it leaves stock at its own cost (36,000), the MAC moves
+        leave(sheet("36000.00"), before -> postings.tripReturn(trip, new BigDecimal("36000.00"), before));
+        Journal broken = last();
+        assertThat(broken.source()).isEqualTo(JournalSource.TRIP_RETURN);
+        assertThat(line(broken, AccountKey.SPOILAGE).debit()).isEqualByComparingTo("36000.00");
+        assertThat(line(broken, AccountKey.INVENTORY).credit()).isPositive();
+        assertInventoryEqualsValuation();
+
+        // Two units missing after the trip: one written off, one charged to the driver with the owner's approval
+        AuditCase auditCase = new AuditCase();
+        auditCase.setId(UUID.randomUUID());
+        auditCase.setNumber("AC-WH-2026-000001");
+        leave(sheet("36500.00"), before -> postings.auditLoss(auditCase, "U-WH-000010", new BigDecimal("36500.00"), null, before));
+        Journal writtenOff = last();
+        assertThat(writtenOff.source()).isEqualTo(JournalSource.AUDIT_CASE);
+        assertThat(line(writtenOff, AccountKey.STOCK_ADJUSTMENT).debit()).isEqualByComparingTo("36500.00");
+        assertInventoryEqualsValuation();
+        leave(sheet("35800.00"), before -> postings.auditLoss(auditCase, "U-WH-000011", new BigDecimal("35800.00"), driver, before));
+        Journal charged = last();
+        assertThat(line(charged, AccountKey.DRIVER_SHORTAGE).debit()).isEqualByComparingTo("35800.00");
+        assertThat(line(charged, AccountKey.DRIVER_SHORTAGE).driverId()).isEqualTo(driver);
+        assertThat(line(charged, AccountKey.DRIVER_SHORTAGE).memo()).isEqualTo("U-WH-000011");
+        assertThat(lines(AccountKey.STOCK_ADJUSTMENT)).hasSize(1);                     // the charge is the driver's, not a loss
+        assertInventoryEqualsValuation();
+
+        // AT-07: the accountant counts 1,000 RWF less than the float: cleared, the shortage on the driver's receivable
+        postings.floatClearance(clearance(driver, "295008", "294008", AccountKey.CASH_VAULT, null), trip.getNumber());
+        Journal cleared = last();
+        assertThat(cleared.source()).isEqualTo(JournalSource.FLOAT_CLEARANCE);
+        assertThat(line(cleared, AccountKey.CASH_VAULT).debit()).isEqualByComparingTo("294008");
+        assertThat(line(cleared, AccountKey.DRIVER_FLOAT).credit()).isEqualByComparingTo("295008");
+        assertThat(line(cleared, AccountKey.DRIVER_FLOAT).driverId()).isEqualTo(driver);
+        assertThat(cleared.lines().stream().filter(l -> l.account() == AccountKey.DRIVER_SHORTAGE).findFirst().orElseThrow().debit())
+                .isEqualByComparingTo("1000");
+        assertThat(cleared.lines().stream().filter(l -> l.account() == AccountKey.DRIVER_SHORTAGE).findFirst().orElseThrow().driverId())
+                .isEqualTo(driver);
+        assertThat(cleared.lines().stream().noneMatch(l -> l.account() == AccountKey.CASH_OVER_SHORT)).isTrue();
+
+        // More cash than the float, paid into the bank with its slip: the overage to Cash Over/Short
+        postings.floatClearance(clearance(driver, "10000", "10500", AccountKey.BANK, "SLIP-4471"), "TRP-WH-2026-000010");
+        Journal over = last();
+        assertThat(line(over, AccountKey.BANK).debit()).isEqualByComparingTo("10500");
+        assertThat(line(over, AccountKey.BANK).memo()).isEqualTo("SLIP-4471");
+        assertThat(line(over, AccountKey.CASH_OVER_SHORT).credit()).isEqualByComparingTo("500");
+        assertThat(over.lines().stream().noneMatch(l -> l.account() == AccountKey.DRIVER_SHORTAGE)).isTrue();
+
+        BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debits).isEqualByComparingTo(credits);
+        assertInventoryEqualsValuation();
+    }
+
+    /** A 3210 x 2250 sheet of CLR-6 at its own cost. */
+    private StockUnit sheet(String cost) {
+        StockUnit unit = new StockUnit();
+        unit.setId(UUID.randomUUID());
+        unit.setProduct(clear6);
+        unit.setAreaM2(new BigDecimal("7.2225"));
+        unit.setUnitCost(new BigDecimal(cost));
+        return unit;
+    }
+
+    /** A unit leaves stock at its own cost as the services do it: the stock taken, the m² go, the MAC moves (StockLeaving), then the journal. */
+    private void leave(StockUnit unit, java.util.function.Consumer<PostingService.StockValues> post) {
+        PostingService.StockValues before = postings.stockValues(List.of(clear6));
+        Map<UUID, BigDecimal> heldBefore = Map.of(clear6.getId(), held());
+        StockLeaving leaving = new StockLeaving();
+        leaving.add(unit);
+        held.put(clear6.getId(), held().subtract(unit.getAreaM2()));
+        leaving.moveMacs(Map.of(clear6.getId(), clear6), heldBefore);
+        post.accept(before);
+    }
+
+    private static FloatClearance clearance(UUID driverId, String expected, String counted, AccountKey account, String reference) {
+        Driver driver = new Driver();
+        driver.setId(driverId);
+        FloatClearances.Split split = FloatClearances.split(new BigDecimal(expected), new BigDecimal(counted));
+        FloatClearance c = new FloatClearance();
+        c.setId(UUID.randomUUID());
+        c.setNumber("FC-WH-2026-000001");
+        c.setDriver(driver);
+        c.setExpected(new BigDecimal(expected));
+        c.setDeclared(new BigDecimal(counted));
+        c.setCounted(new BigDecimal(counted));
+        c.setShortage(split.shortage());
+        c.setOverage(split.overage());
+        c.setDepositAccount(account);
+        c.setReference(reference);
+        return c;
+    }
+
+    @Test
     void aSaleFromAVehiclePutsItsCashOnTheDriversFloat() {   // ACC-06, AT-04, AT-10
         held.put(clear6.getId(), new BigDecimal("100.0000"));
         clear6.setMacPerM2(new BigDecimal("5000.0000"));

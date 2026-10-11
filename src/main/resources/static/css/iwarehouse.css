@@ -4507,3 +4507,6 @@ button.notif-item:hover { background: var(--gray-100); }
 .form-grid > .form-group { min-width: 0; }
 .form-group select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
 .doc-kpis .kpi-value { overflow-wrap: anywhere; }
+
+/* A form that shows the record's figures first (clearing a float): the fields keep their distance */
+.detail-list + .form-grid { margin-top: 20px; }

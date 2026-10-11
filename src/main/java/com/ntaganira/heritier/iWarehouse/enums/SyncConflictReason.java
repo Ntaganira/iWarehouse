@@ -19,6 +19,8 @@ public enum SyncConflictReason {
     NOT_YOUR_TRIP,
     /** A unit is no longer on the vehicle: sold, moved or written off since. */
     UNIT_NOT_ON_VEHICLE,
+    /** A unit the phone reported broken on the road (FLT-08): it is not sold. */
+    UNIT_REPORTED_BROKEN,
     /** The invoice number was not given to this phone for this trip. */
     NUMBER_NOT_ISSUED,
     /** The invoice number is on another sale already. */

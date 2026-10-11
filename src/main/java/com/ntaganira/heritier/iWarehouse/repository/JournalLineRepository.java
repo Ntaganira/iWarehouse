@@ -117,6 +117,11 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " where l.account.id = :accountId group by l.product.id")
     List<Object[]> balanceByProduct(@Param("accountId") UUID accountId);
 
+    /** Rows of (driver id, debits less credits) of an account: each driver's float or shortage (ACC-06, ACC-07). */
+    @Query("select l.driver.id, coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"
+            + " where l.account.id = :accountId and l.driver is not null group by l.driver.id")
+    List<Object[]> balanceByDriver(@Param("accountId") UUID accountId);
+
     /**
      * Cost of Goods Sold and Inventory posted for documents, as (source, source id, account key, product id, debits less credits),
      * from journals dated on or after a day: what each sale, hand-over and credit note cost, and the stock value of each glass

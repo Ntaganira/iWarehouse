@@ -14,7 +14,42 @@
 <th:block th:fragment="tripStatus(s)" th:switch="${s.name()}">
     <span th:case="'PLANNED'" class="badge badge-info" th:text="#{trip.status.PLANNED}">Planned</span>
     <span th:case="'DEPARTED'" class="badge badge-success" th:text="#{trip.status.DEPARTED}">On the road</span>
+    <span th:case="'RETURNED'" class="badge badge-warning" th:text="#{trip.status.RETURNED}">Back</span>
+    <span th:case="'CLOSED'" class="badge badge-secondary" th:text="#{trip.status.CLOSED}">Closed</span>
     <span th:case="*" class="badge badge-danger" th:text="#{trip.status.CANCELLED}">Cancelled</span>
+</th:block>
+
+<!--/* What became of a unit of a trip at the end of the day (FLT-09). */-->
+<th:block th:fragment="lineOutcome(o)" th:switch="${o.name()}">
+    <span th:case="'SOLD'" class="badge badge-info" th:text="#{trip.outcome.SOLD}">Sold</span>
+    <span th:case="'RETURNED'" class="badge badge-success" th:text="#{trip.outcome.RETURNED}">Back on a rack</span>
+    <span th:case="'BROKEN'" class="badge badge-danger" th:text="#{trip.outcome.BROKEN}">Broken</span>
+    <span th:case="*" class="badge badge-warning" th:text="#{trip.outcome.MISSING}">Missing</span>
+</th:block>
+
+<!--/* A breakage reported on the road (FLT-08). */-->
+<th:block th:fragment="breakageStatus(s)" th:switch="${s.name()}">
+    <span th:case="'REPORTED'" class="badge badge-warning" th:text="#{breakage.status.REPORTED}">To decide</span>
+    <span th:case="'ACCEPTED'" class="badge badge-danger" th:text="#{breakage.status.ACCEPTED}">Accepted</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{breakage.status.REJECTED}">Rejected</span>
+</th:block>
+
+<!--/* An audit case (FLT-10). */-->
+<th:block th:fragment="caseStatus(s)" th:switch="${s.name()}">
+    <span th:case="'OPEN'" class="badge badge-warning" th:text="#{auditCase.status.OPEN}">Open</span>
+    <span th:case="'ESCALATED'" class="badge badge-danger" th:text="#{auditCase.status.ESCALATED}">Escalated</span>
+    <span th:case="*" class="badge badge-success" th:text="#{auditCase.status.RESOLVED}">Resolved</span>
+</th:block>
+
+<!--/* How a unit of an audit case was settled (FLT-10, FLT-11); none: still open. */-->
+<th:block th:fragment="lineSettled(o)">
+    <span th:if="${o == null}" class="badge badge-warning" th:text="#{auditCase.line.open}">To settle</span>
+    <th:block th:if="${o != null}" th:switch="${o.name()}">
+        <span th:case="'FOUND'" class="badge badge-success" th:text="#{auditCase.outcome.FOUND}">Found</span>
+        <span th:case="'SOLD'" class="badge badge-info" th:text="#{auditCase.outcome.SOLD}">Sold</span>
+        <span th:case="'CHARGED'" class="badge badge-danger" th:text="#{auditCase.outcome.CHARGED}">Charged to the driver</span>
+        <span th:case="*" class="badge badge-secondary" th:text="#{${'auditCase.outcome.' + o}}">Written off</span>
+    </th:block>
 </th:block>
 
 <!--/* Active or inactive. */-->

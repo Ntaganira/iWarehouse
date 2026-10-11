@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{fleetReport.title}, ~{::content})}">
+<head><title>Fleet reports - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${report.total}, v=${view.name()}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{fleetReport.title}">Fleet reports</h1>
+            <div class="subtitle" th:text="#{fleetReport.subtitle(${#temporals.format(from, 'dd/MM/yyyy')}, ${#temporals.format(to, 'dd/MM/yyyy')})}">Trips back from 01/10/2026 to 11/10/2026: sales, breakage, end-of-day differences and floats</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_REPORTS')" th:text="#{nav.reports}">Reports</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/fleet/export(from=${from}, to=${to}, view=${view}, driver=${driver}, vehicle=${vehicle})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <!--/* The period, then the view and the filters with the button: the bar wraps between the two groups */-->
+        <form th:action="@{/reports/fleet}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{fin.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${from}" th:max="${today}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{fin.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${to}" th:max="${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="view" class="toolbar-filter" th:aria-label="#{fleetReport.viewLabel}">
+                    <option th:each="vw : ${views}" th:value="${vw}" th:selected="${vw == view}" th:text="#{${'fleetReport.view.' + vw}}">Per trip</option>
+                </select>
+                <select name="driver" class="toolbar-filter" th:aria-label="#{fleetReport.driver}">
+                    <option value="" th:text="#{fleetReport.allDrivers}">All drivers</option>
+                    <option th:each="o : ${report.driverOptions}" th:value="${o.value}" th:selected="${o.value == driver}" th:text="${o.label}">Jean Driver</option>
+                </select>
+                <select name="vehicle" class="toolbar-filter" th:aria-label="#{fleetReport.vehicle}">
+                    <option value="" th:text="#{fleetReport.allVehicles}">All vehicles</option>
+                    <option th:each="o : ${report.vehicleOptions}" th:value="${o.value}" th:selected="${o.value == vehicle}" th:text="${o.label}">RAC123A</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fleetReport.kpi.sales}">Sales from the vehicles (RWF)</div>
+                <div class="kpi-value" th:with="val=${@num.money(t.sales)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">593,907</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{fleetReport.kpi.salesSub(${t.trips}, ${@num.money(t.cash)})}">3 trips · 493,627 in cash</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fleetReport.kpi.units}">Units sold</div>
+                <div class="kpi-value" th:text="${t.sold}">3</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{fleetReport.kpi.unitsSub(${t.loaded})}">of 4 loaded</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fleetReport.kpi.breakage}">Breakage rate</div>
+                <div class="kpi-value" th:text="${t.breakageRate != null} ? ${#numbers.formatDecimal(t.breakageRate, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">0.0 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{fleetReport.kpi.breakageSub(${t.broken}, ${t.missing})}">0 broken · 1 missing</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${report.floatsOutstanding.signum() > 0} ? 'red' : 'purple'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fleetReport.kpi.floats}">Floats outstanding (RWF)</div>
+                <div class="kpi-value" th:with="val=${@num.money(report.floatsOutstanding)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">0</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{fleetReport.kpi.floatsSub(${report.openDiscrepancies})}">today · 1 difference to settle</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{${'fleetReport.view.' + v}}">Per trip</h2>
+        </div>
+        <div class="table-container">
+            <table th:if="${v == 'TRIPS'}">
+                <thead>
+                    <tr>
+                        <th th:text="#{fleetReport.trip}">Trip</th>
+                        <th th:text="#{fleetReport.driver}">Driver</th>
+                        <th class="num" th:text="#{fleetReport.loaded}">Loaded</th>
+                        <th class="num" th:text="#{fleetReport.sold}">Sold</th>
+                        <th class="num" th:text="#{fleetReport.broken}">Broken</th>
+                        <th class="num" th:text="#{fleetReport.missing}">Missing</th>
+                        <th class="num" th:text="#{fleetReport.sales}">Sales (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.cash}">Cash (RWF)</th>
+                        <th th:text="#{fleetReport.float}">Float</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td>
+                            <a class="row-link mono nowrap" sec:authorize="hasAuthority('PAGE_FLEET')" th:href="@{/trips/{id}(id=${r.tripId}, tab='return')}" th:text="${r.number}">TRP-WH-2026-000002</a>
+                            <span class="mono nowrap" sec:authorize="!hasAuthority('PAGE_FLEET')" th:text="${r.number}">TRP-WH-2026-000002</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.date, 'dd/MM/yyyy') + ' · ' + r.vehicle + ' · ' + #messages.msg('trip.status.' + r.status)}">11/10/2026 · RAC123A · Closed</div>
+                        </td>
+                        <td th:text="${r.driver}">Jean Driver</td>
+                        <td class="num" th:text="${r.loaded}">4</td>
+                        <td class="num" th:text="${r.sold}">3</td>
+                        <td class="num" th:text="${r.broken}">0</td>
+                        <td class="num" th:classappend="${r.missing > 0} ? 'text-danger'" th:text="${r.missing}">1</td>
+                        <td class="num strong" th:text="${@num.money(r.sales)}">593,907</td>
+                        <td class="num" th:text="${@num.money(r.cash)}">493,627</td>
+                        <td>
+                            <span th:if="${r.cleared}" class="badge badge-success" th:text="#{fleetReport.clearedBadge}">Cleared</span>
+                            <span th:unless="${r.cleared}" class="badge badge-warning" th:text="#{fleetReport.notClearedBadge}">To count</span>
+                            <div class="cell-sub text-danger" th:if="${r.shortage.signum() > 0}" th:text="#{fleetReport.short(${@num.money(r.shortage)})}">1,000 RWF short</div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th></th>
+                        <th class="num" th:text="${t.loaded}">4</th>
+                        <th class="num" th:text="${t.sold}">3</th>
+                        <th class="num" th:text="${t.broken}">0</th>
+                        <th class="num" th:text="${t.missing}">1</th>
+                        <th class="num" th:text="${@num.money(t.sales)}">593,907</th>
+                        <th class="num" th:text="${@num.money(t.cash)}">493,627</th>
+                        <th th:text="${t.shortage.signum() > 0} ? #{fleetReport.short(${@num.money(t.shortage)})} : ''">1,000 RWF short</th>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <table th:if="${v == 'DRIVERS'}">
+                <thead>
+                    <tr>
+                        <th th:text="#{fleetReport.driver}">Driver</th>
+                        <th class="num" th:text="#{fleetReport.trips}">Trips</th>
+                        <th class="num" th:text="#{fleetReport.loaded}">Loaded</th>
+                        <th class="num" th:text="#{fleetReport.sold}">Sold</th>
+                        <th class="num" th:text="#{fleetReport.broken}">Broken</th>
+                        <th class="num" th:text="#{fleetReport.breakageRate}">Breakage rate</th>
+                        <th class="num" th:text="#{fleetReport.missing}">Missing</th>
+                        <th class="num" th:text="#{fleetReport.sales}">Sales (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.shortage}">Short (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td>
+                            <a th:href="@{/reports/fleet(from=${from}, to=${to}, view='TRIPS', driver=${r.driverId}, vehicle=${vehicle})}" th:text="${r.driver}">Jean Driver</a>
+                        </td>
+                        <td class="num" th:text="${r.trips}">3</td>
+                        <td class="num" th:text="${r.loaded}">12</td>
+                        <td class="num" th:text="${r.sold}">9</td>
+                        <td class="num" th:text="${r.broken}">1</td>
+                        <td class="num" th:text="${r.breakageRate != null} ? ${#numbers.formatDecimal(r.breakageRate, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">8.3 %</td>
+                        <td class="num" th:classappend="${r.missing > 0} ? 'text-danger'" th:text="${r.missing}">0</td>
+                        <td class="num strong" th:text="${@num.money(r.sales)}">1,200,000</td>
+                        <td class="num" th:classappend="${r.shortage.signum() > 0} ? 'text-danger'" th:text="${r.shortage.signum() > 0} ? ${@num.money(r.shortage)} : '—'">1,000</td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${t.trips}">3</th>
+                        <th class="num" th:text="${t.loaded}">12</th>
+                        <th class="num" th:text="${t.sold}">9</th>
+                        <th class="num" th:text="${t.broken}">1</th>
+                        <th class="num" th:text="${t.breakageRate != null} ? ${#numbers.formatDecimal(t.breakageRate, 1, 'COMMA', 1, 'POINT') + ' %'} : '—'">8.3 %</th>
+                        <th class="num" th:text="${t.missing}">0</th>
+                        <th class="num" th:text="${@num.money(t.sales)}">1,200,000</th>
+                        <th class="num" th:text="${t.shortage.signum() > 0} ? ${@num.money(t.shortage)} : '—'">1,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <table th:if="${v == 'DISCREPANCIES'}">
+                <thead>
+                    <tr>
+                        <th th:text="#{fleetReport.case}">Case</th>
+                        <th th:text="#{fleetReport.driver}">Driver</th>
+                        <th th:text="#{fleetReport.unit}">Unit</th>
+                        <th th:text="#{fleetReport.kind}">What</th>
+                        <th class="num" th:text="#{fleetReport.value}">Value (RWF)</th>
+                        <th th:text="#{fleetReport.outcome}">Settled</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td>
+                            <a class="row-link mono nowrap" sec:authorize="hasAuthority('PAGE_AUDIT_CASES')" th:href="@{/audit-cases/{id}(id=${r.caseId})}" th:text="${r.caseNumber}">AC-WH-2026-000001</a>
+                            <span class="mono nowrap" sec:authorize="!hasAuthority('PAGE_AUDIT_CASES')" th:text="${r.caseNumber}">AC-WH-2026-000001</span>
+                            <div class="cell-sub" th:text="${r.trip + ' · ' + #temporals.format(r.date, 'dd/MM/yyyy')}">TRP-WH-2026-000002 · 11/10/2026</div>
+                        </td>
+                        <td th:text="${r.driver}">Jean Driver</td>
+                        <td class="mono" th:text="${r.unitCode}">U-WH-000001</td>
+                        <td th:text="#{${'auditCase.kind.' + r.kind}}">Missing</td>
+                        <td class="num" th:text="${r.value != null} ? ${@num.money(r.value)} : '—'">145,879</td>
+                        <td>
+                            <span th:if="${r.outcome == null}" class="badge badge-warning" th:text="#{auditCase.line.open}">To settle</span>
+                            <span th:if="${r.outcome != null}" th:text="#{${'auditCase.outcome.' + r.outcome}}">Written off</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table th:if="${v == 'FLOATS'}">
+                <thead>
+                    <tr>
+                        <th th:text="#{fleetReport.driver}">Driver</th>
+                        <th class="num" th:text="#{fleetReport.trips}">Trips</th>
+                        <th class="num" th:text="#{fleetReport.outstanding}">Outstanding (RWF)</th>
+                        <th th:text="#{fleetReport.oldest}">Oldest</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td th:text="${r.driver}">Jean Driver</td>
+                        <td class="num" th:text="${r.trips}">1</td>
+                        <td class="num strong" th:text="${@num.money(r.amount)}">295,008</td>
+                        <td>
+                            <span class="mono nowrap" th:text="${r.oldestTrip}">TRP-WH-2026-000002</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.oldestReturn, 'dd/MM/yyyy HH:mm')}">11/10/2026 08:30</div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th></th>
+                        <th class="num" th:text="${@num.money(report.floatsOutstanding)}">295,008</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+            <div class="empty-state" th:if="${rows.totalElements == 0}">
+                <h3 th:text="#{${'fleetReport.empty.' + v}}">No trips back in this period</h3>
+                <p th:text="#{fleetReport.emptyHint}">Choose other dates or clear the filters</p>
+            </div>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/reports/fleet', ${query})}"></th:block>
+        <p class="form-note" th:text="#{${'fleetReport.note.' + v}}">Trips count on the day they came back. Sales are what their phones took, cash and mobile money; short is what the accountant counted less than the cash sales.</p>
+    </div>
+</div>
+</body>
+</html>

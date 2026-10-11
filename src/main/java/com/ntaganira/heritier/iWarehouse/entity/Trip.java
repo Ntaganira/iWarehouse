@@ -23,8 +23,10 @@ import java.util.Set;
  * - Desc      : A moving-shop trip (FLT-05): a vehicle, its driver, a date and the area it covers, with its loading
  *               manifest (the units planned, each confirmed by a scan) and the fuel bought for it. Departing moves the
  *               units loaded to the vehicle, in the driver's charge (FLT-07), and keeps what left (pieces and kg) and
- *               the odometer (FLT-12). A planned trip can be cancelled with a reason. Two sets, so one entity graph
- *               fetches both without repeating rows.
+ *               the odometer (FLT-12). A planned trip can be cancelled with a reason. At the end of the day the trip
+ *               comes back: what became of its units (FLT-09), the cash its driver declares (MPOS-07), then it closes
+ *               once its stock and cash are settled (SRS 5.1). Two sets, so one entity graph fetches both without
+ *               repeating rows.
  * </pre>
  */
 @Entity
@@ -88,6 +90,45 @@ public class Trip extends BaseEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    /** Scanned back and reconciled (FLT-09): what became of the units loaded. */
+    @Column(name = "returned_at")
+    private LocalDateTime returnedAt;
+
+    @Column(name = "returned_by", length = 50)
+    private String returnedBy;
+
+    @Column(name = "returned_pieces")
+    private Integer returnedPieces;
+
+    @Column(name = "sold_pieces")
+    private Integer soldPieces;
+
+    @Column(name = "broken_pieces")
+    private Integer brokenPieces;
+
+    @Column(name = "missing_pieces")
+    private Integer missingPieces;
+
+    /** What the driver says they hold at the end of the day (MPOS-07). */
+    @Column(name = "cash_declared", precision = 18, scale = 2)
+    private BigDecimal cashDeclared;
+
+    @Column(name = "cash_declared_at")
+    private LocalDateTime cashDeclaredAt;
+
+    @Column(name = "cash_declared_by", length = 50)
+    private String cashDeclaredBy;
+
+    /** PHONE (the driver on the mobile POS) or OFFICE (recorded at the warehouse). */
+    @Column(name = "cash_declared_via", length = 10)
+    private String cashDeclaredVia;
+
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
+    @Column(name = "closed_by", length = 50)
+    private String closedBy;
+
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<TripLine> lines = new LinkedHashSet<>();
 
@@ -104,6 +145,23 @@ public class Trip extends BaseEntity {
 
     public boolean isCancelled() {
         return status == TripStatus.CANCELLED;
+    }
+
+    public boolean isReturned() {
+        return status == TripStatus.RETURNED;
+    }
+
+    public boolean isClosed() {
+        return status == TripStatus.CLOSED;
+    }
+
+    /** On the road or back and not closed: its phone may still sync sales, report breakage and declare cash. */
+    public boolean isOpenForPhone() {
+        return status == TripStatus.DEPARTED || status == TripStatus.RETURNED;
+    }
+
+    public boolean isCashDeclared() {
+        return cashDeclaredAt != null;
     }
 
     /** Km driven, once both readings are in. */

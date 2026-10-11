@@ -273,6 +273,56 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    // ---------------------------------------------------------------- the end of the day (FLT-08..FLT-11, ACC-06, ACC-07)
+
+    /**
+     * A trip reconciled (FLT-09; SRS 4.9.1 "Breakage (warehouse or en route)"): the units broken on the road, their
+     * breakage accepted, leave stock at their own cost: Dr Glass Spoilage / Cr Inventory, the change of each glass's value,
+     * the moving-average rounding to Stock Revaluation. Units back on their racks or missing do not change the stock value.
+     */
+    public JournalEntry tripReturn(Trip trip, BigDecimal brokenCost, StockValues before) {
+        Journal journal = Journal.of(JournalSource.TRIP_RETURN, trip.getId(), trip.getNumber(), today(),
+                "Breakage on the road, trip " + trip.getNumber());
+        journal.debit(AccountKey.SPOILAGE, brokenCost)
+                .stockChange(before.values(), valuesNow(before))
+                .balanceOn(AccountKey.STOCK_REVALUATION);
+        return journalService.post(journal);
+    }
+
+    /**
+     * A unit missing after a trip settled on its audit case (FLT-10, FLT-11): written off, Dr Stock Adjustment, or charged
+     * to the driver with the owner's approval, Dr Driver Shortage Receivable naming them, at its own cost / Cr Inventory,
+     * the change of its glass's value, the moving-average rounding to Stock Revaluation.
+     */
+    public JournalEntry auditLoss(AuditCase auditCase, String unitCode, BigDecimal cost, UUID chargedDriverId, StockValues before) {
+        Journal journal = Journal.of(JournalSource.AUDIT_CASE, auditCase.getId(), auditCase.getNumber(), today(),
+                (chargedDriverId == null ? "Written off: " : "Charged to the driver: ") + unitCode + ", audit case " + auditCase.getNumber());
+        if (chargedDriverId == null) {
+            journal.debit(AccountKey.STOCK_ADJUSTMENT, cost);
+        } else {
+            journal.addForDriver(AccountKey.DRIVER_SHORTAGE, cost, chargedDriverId, unitCode);
+        }
+        journal.stockChange(before.values(), valuesNow(before))
+                .balanceOn(AccountKey.STOCK_REVALUATION);
+        return journalService.post(journal);
+    }
+
+    /**
+     * A driver's float cleared by the accountant (ACC-06, ACC-07; SRS 4.9.1 "Float cleared by accountant", "Float
+     * shortage"): Dr the vault or the bank what was counted / Cr Driver Float the trip's cash sales, naming the driver; less
+     * cash than that, Dr Driver Shortage Receivable naming them; more, Cr Cash Over/Short.
+     */
+    public JournalEntry floatClearance(FloatClearance clearance, String tripNumber) {
+        UUID driverId = clearance.getDriver().getId();
+        Journal journal = Journal.of(JournalSource.FLOAT_CLEARANCE, clearance.getId(), clearance.getNumber(), today(),
+                "Float of trip " + tripNumber + " cleared");
+        journal.add(clearance.getDepositAccount(), clearance.getCounted(), null, null, clearance.getReference(), null)
+                .addForDriver(AccountKey.DRIVER_FLOAT, clearance.getExpected().negate(), driverId, tripNumber)
+                .addForDriver(AccountKey.DRIVER_SHORTAGE, clearance.getShortage(), driverId, tripNumber)
+                .credit(AccountKey.CASH_OVER_SHORT, clearance.getOverage());
+        return journalService.post(journal);
+    }
+
     /**
      * Pieces of a paid sale's custom sizes handed over (SRS 5.3 step 5): Dr Cost of Goods Sold / Cr Inventory, the
      * change of each glass's value (the sale itself was posted when it was paid).

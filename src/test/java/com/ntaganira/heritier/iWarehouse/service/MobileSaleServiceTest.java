@@ -60,6 +60,8 @@ class MobileSaleServiceTest {
     private PostingService postingService;
     private EbmService ebmService;
     private Notifier notifier;
+    private TripBreakageRepository breakageRepo;
+    private AuditCaseService auditCaseService;
     private StockMovementRepository movementRepo;
     private TripRepository tripRepo;
     private MobileSaleService service;
@@ -83,6 +85,8 @@ class MobileSaleServiceTest {
         postingService = mock(PostingService.class);
         ebmService = mock(EbmService.class);
         notifier = mock(Notifier.class);
+        breakageRepo = mock(TripBreakageRepository.class);
+        auditCaseService = mock(AuditCaseService.class);
 
         Vehicle truck = new Vehicle();
         truck.setId(UUID.randomUUID());
@@ -183,7 +187,7 @@ class MobileSaleServiceTest {
                 mock(DocumentNumberService.class), CLOCK);
         service = new MobileSaleService(invoiceRepo, paymentRepo, conflictRepo, numberRepo, tripRepo, driverRepo, deviceRepo, unitRepo,
                 productRepo, customerRepo, priceListRepo, tripService, stockService, postingService, ebmService, pricing, notifier,
-                new ObjectMapper().findAndRegisterModules(), CLOCK);
+                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK);
     }
 
     @AfterEach
@@ -347,6 +351,51 @@ class MobileSaleServiceTest {
         assertThat(r.conflict().getTrip()).isNull();
         assertThatThrownBy(() -> service.submit(jean, phone.getId(), new MobileSaleService.SaleRequest(null, null, null, null, null, null,
                 null, null, null, null, null))).isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "mobile.sale.noClientId");
+    }
+
+    @Test
+    void aSaleSyncedAfterTheReturnIsTakenForAUnitStillMissing() {   // FLT-10, SYNC-03
+        // The trip came back and was reconciled: U-WH-000101 missing, still on the vehicle in the books
+        trip.setStatus(TripStatus.RETURNED);
+        trip.setReturnedAt(LocalDateTime.of(2026, 10, 10, 18, 0));
+        trip.setReturnedPieces(4);
+        trip.setSoldPieces(0);
+        trip.setBrokenPieces(0);
+        trip.setMissingPieces(1);
+        TripLine missing = new TripLine();
+        missing.setTrip(trip);
+        missing.setStockUnitId(units.get(0).getId());
+        missing.setUnitCode(units.get(0).getCode());
+        missing.setOutcome(TripLineOutcome.MISSING);
+        trip.getLines().add(missing);
+        when(tripRepo.findFirstByDriver_IdAndStatus(driver.getId(), TripStatus.DEPARTED)).thenReturn(Optional.empty());
+        when(tripRepo.findById(trip.getId())).thenReturn(Optional.of(trip));
+
+        MobileSaleService.Result r = service.submit(jean, phone.getId(), sale(1, cash("25920", null), units.get(0)));
+        assertThat(r.outcome()).isEqualTo(MobileSaleService.Outcome.ACCEPTED);
+        assertThat(missing.getOutcome()).isEqualTo(TripLineOutcome.SOLD);
+        assertThat(trip.getMissingPieces()).isZero();
+        assertThat(trip.getSoldPieces()).isEqualTo(1);
+        verify(auditCaseService).unitSold(units.get(0).getId(), "MINV-WH-2026-000001");
+    }
+
+    @Test
+    void aClosedTripTakesNoMoreSales() {
+        trip.setStatus(TripStatus.CLOSED);
+        when(tripRepo.findFirstByDriver_IdAndStatus(driver.getId(), TripStatus.DEPARTED)).thenReturn(Optional.empty());
+        when(tripRepo.findById(trip.getId())).thenReturn(Optional.of(trip));
+        MobileSaleService.Result r = service.submit(jean, phone.getId(), sale(1, cash("25920", null), units.get(0)));
+        assertThat(r.conflict().getReason()).isEqualTo(SyncConflictReason.NO_TRIP);
+    }
+
+    @Test
+    void aUnitReportedBrokenOnTheRoadIsNotSold() {   // FLT-08
+        when(breakageRepo.findStandingUnitIds(eq(trip.getId()), any())).thenReturn(List.of(units.get(0).getId()));
+        MobileSaleService.Result r = service.submit(jean, phone.getId(), sale(1, cash("25920", null), units.get(0)));
+        assertThat(r.outcome()).isEqualTo(MobileSaleService.Outcome.CONFLICT);
+        assertThat(r.conflict().getReason()).isEqualTo(SyncConflictReason.UNIT_REPORTED_BROKEN);
+        assertThat(r.conflict().getDetail()).contains(units.get(0).getCode()).contains("reported broken");
+        assertThat(units.get(0).getStatus()).isEqualTo(StockStatus.ON_VEHICLE);
     }
 
     // ---------------------------------------------------------------- helpers

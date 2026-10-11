@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.TripLineOutcome;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,8 @@ import java.util.UUID;
  * - User      : Hntaganira
  * - Desc      : A unit on a trip's loading manifest (FLT-05): who planned it and when it was scanned onto the vehicle
  *               (FLT-06). While the trip is planned the line holds the unit and can be taken off; at departure it keeps
- *               the rack the unit left from.
+ *               the rack the unit left from. At the end of the day it is scanned back (FLT-09) and keeps what became of
+ *               the unit: sold, back on a rack (which), broken or missing.
  * </pre>
  */
 @Entity
@@ -56,7 +58,27 @@ public class TripLine extends BaseEntity {
     @Column(name = "from_location_id")
     private UUID fromLocationId;
 
+    /** Scanned back off the vehicle at the end of the day. */
+    @Column(name = "returned_at")
+    private LocalDateTime returnedAt;
+
+    @Column(name = "returned_by", length = 50)
+    private String returnedBy;
+
+    /** What became of the unit, set when the trip is reconciled (FLT-09). */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 12)
+    private TripLineOutcome outcome;
+
+    /** The rack or slot it went back on. */
+    @Column(name = "returned_to_location_id")
+    private UUID returnedToLocationId;
+
     public boolean isLoaded() {
         return loadedAt != null;
+    }
+
+    public boolean isScannedBack() {
+        return returnedAt != null;
     }
 }

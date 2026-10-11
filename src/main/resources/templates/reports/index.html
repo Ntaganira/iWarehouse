@@ -18,6 +18,13 @@
         </div>
     </div>
 
+    <div class="section" sec:authorize="hasAuthority('PAGE_FLEET_REPORTS') and hasAuthority('PERM_VIEW_FLEET_REPORTS')">
+        <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.fleet}">Fleet</h2></div></div>
+        <div class="quick-grid">
+            <a th:replace="~{reports/index :: tile('/reports/fleet', 'blue', #{fleetReport.title}, 'fleet')}">Fleet reports</a>
+        </div>
+    </div>
+
     <div class="section" sec:authorize="hasAnyAuthority('PAGE_STOCK_SUMMARY', 'PAGE_CUTTING_YIELD')">
         <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.stock}">Stock and production</h2></div></div>
         <div class="quick-grid">
@@ -52,6 +59,7 @@
     <span class="qt-icon" th:switch="${icon}">
         <svg th:case="'sales'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
         <svg th:case="'stock'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <svg th:case="'fleet'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
         <svg th:case="'clock'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         <svg th:case="'cut'" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
         <svg th:case="*" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>

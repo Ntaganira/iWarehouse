@@ -128,6 +128,12 @@ public class SettingsDto {
     @Max(value = 180, message = "{settings.fleetExpiryAlertDays.range}")
     private Integer fleetExpiryAlertDays;
 
+    /** Hours after a trip came back that a float not cleared is reported (RPT-06). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.floatAlertHours.range}")
+    @Max(value = 168, message = "{settings.floatAlertHours.range}")
+    private Integer floatAlertHours;
+
     // --- EBM fiscal signing (TAX-02) ---
 
     @NotNull(message = "{settings.value.required}")

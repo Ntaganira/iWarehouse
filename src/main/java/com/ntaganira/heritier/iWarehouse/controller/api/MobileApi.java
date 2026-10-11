@@ -70,7 +70,8 @@ public final class MobileApi {
 
     public record TripBundle(TripView trip, List<UnitView> units, List<PriceListView> priceLists, List<PriceView> prices,
                              List<CustomerView> customers, List<String> numbers, BigDecimal discountLimit, int decimals,
-                             CompanyView company, String ebmMode, LocalDateTime downloadedAt) {
+                             CompanyView company, String ebmMode, LocalDateTime downloadedAt, List<UUID> reportedBroken,
+                             BigDecimal cashDeclared) {
     }
 
     static TripBundle bundle(MobileTripService.Bundle b, Messages messages) {
@@ -90,7 +91,8 @@ public final class MobileApi {
                 c.isDefaultCustomer())).toList();
         MobileTripService.Company co = b.company();
         return new TripBundle(trip, units, lists, prices, customers, b.numbers(), b.discountLimit(), b.decimals(),
-                new CompanyView(co.name(), co.tin(), co.address(), co.phone()), b.ebmMode().name(), b.downloadedAt());
+                new CompanyView(co.name(), co.tin(), co.address(), co.phone()), b.ebmMode().name(), b.downloadedAt(), b.reportedBroken(),
+                b.cashDeclared());
     }
 
     /** "Tinted Bronze 6 mm": the type in the phone's language, colour or finish as entered, thickness. */
@@ -132,6 +134,31 @@ public final class MobileApi {
         LocalDateTime at = e.getVsdcDate() != null ? e.getVsdcDate() : e.getSignedAt();
         return new EbmView(e.getStatus().name(), true, e.isSimulated(), e.getInvcNo(), e.getReceiptLabel(), e.getSdcId(), e.getMrcNo(),
                 e.getIntrlDataGroups(), e.getRcptSignGroups(), at == null ? null : at.format(DAY_TIME), Labels.qrSvg(ebmService.qrData(e)));
+    }
+
+    // ---------------------------------------------------------------- the end of the day (MPOS-06, MPOS-07)
+
+    /**
+     * A breakage report as the phone sends it (MPOS-06): its own id, the trip and unit, why and where, when it happened, and
+     * the photo as a data URL ("data:image/jpeg;base64,...").
+     */
+    public record BreakageRequest(UUID clientId, UUID tripId, UUID unitId, String reason, String place, java.time.OffsetDateTime happenedAt,
+                                  String photo, String photoName) {
+    }
+
+    /** What the server did with a report: RECORDED (now) or ALREADY (before), and where it stands. */
+    public record BreakageResult(UUID clientId, String outcome, String unitCode, String status, String decisionNote) {
+    }
+
+    static BreakageResult breakage(UUID clientId, String outcome, TripBreakage b) {
+        return new BreakageResult(clientId, outcome, b.getUnitCode(), b.getStatus().name(), b.getDecisionNote());
+    }
+
+    /** The cash the driver declares at the end of the day (MPOS-07). */
+    public record DeclarationRequest(UUID tripId, BigDecimal amount) {
+    }
+
+    public record DeclarationResult(UUID tripId, String tripNumber, BigDecimal cashDeclared, LocalDateTime declaredAt) {
     }
 
     /** An API error: a message key and its text in the phone's language. */

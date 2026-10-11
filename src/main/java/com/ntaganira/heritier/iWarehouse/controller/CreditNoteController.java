@@ -54,6 +54,7 @@ public class CreditNoteController {
     private final JournalService journalService;
     private final DataChangeService dataChangeService;
     private final SettingService settingService;
+    private final CompanyLogoService companyLogoService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
@@ -62,7 +63,8 @@ public class CreditNoteController {
     public CreditNoteController(CreditNoteService creditNoteService, SalesService salesService, TillService tillService,
                                 StockService stockService, JournalService journalService, DataChangeService dataChangeService,
                                 SettingService settingService, ActivityLogService activityLogService, Messages messages,
-                                NumberFormats num, EbmService ebmService) {
+                                NumberFormats num, EbmService ebmService,
+            CompanyLogoService companyLogoService) {
         this.ebmService = ebmService;
         this.creditNoteService = creditNoteService;
         this.salesService = salesService;
@@ -71,6 +73,7 @@ public class CreditNoteController {
         this.journalService = journalService;
         this.dataChangeService = dataChangeService;
         this.settingService = settingService;
+        this.companyLogoService = companyLogoService;
         this.activityLogService = activityLogService;
         this.messages = messages;
         this.num = num;
@@ -116,6 +119,7 @@ public class CreditNoteController {
         model.addAttribute("copy", printing != null ? EbmService.Print.COPY.name().equals(printing) : ebm != null && ebm.getPrintedAt() != null);
         model.addAttribute("printNow", printing != null);
         model.addAttribute("companyName", settingService.get(SettingKey.COMPANY_NAME));
+        model.addAttribute("companyLogoUrl", companyLogoService.url());
         model.addAttribute("companyTin", settingService.get(SettingKey.COMPANY_TIN));
         model.addAttribute("companyAddress", settingService.get(SettingKey.COMPANY_ADDRESS));
         model.addAttribute("companyPhone", settingService.get(SettingKey.COMPANY_PHONE));

@@ -45,6 +45,31 @@
                             </div>
                         </div>
                         <dl class="setting-list">
+                            <!-- The logo on documents (CompanyLogoService): uploaded and removed here, not on the settings form -->
+                            <div class="setting-row setting-logo">
+                                <dt>
+                                    <span th:text="#{settings.companyLogo}">Logo</span>
+                                    <span class="setting-hint" th:text="#{settings.companyLogoHint}">On invoices, receipts, quotations and report PDFs</span>
+                                </dt>
+                                <dd>
+                                    <img th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" class="setting-logo-img" th:alt="#{settings.companyLogo}">
+                                    <span th:if="${companyLogoUrl == null}" th:text="#{settings.notSet}">Not set</span>
+                                    <div class="setting-logo-actions" sec:authorize="hasAuthority('PERM_EDIT_SETTINGS')">
+                                        <form th:action="@{/settings/logo}" method="post" enctype="multipart/form-data" id="logo-form">
+                                            <label class="btn btn-outline btn-sm" for="logo-file" tabindex="0"
+                                                   th:text="${companyLogoUrl != null} ? #{settings.logo.replace} : #{settings.logo.choose}">Upload a logo</label>
+                                            <input type="file" id="logo-file" name="logo" accept="image/png,image/jpeg" class="sr-only">
+                                            <span class="hint" id="logo-file-name"></span>
+                                            <button type="submit" class="btn btn-primary btn-sm" id="logo-save" th:text="#{settings.logo.save}">Save the logo</button>
+                                        </form>
+                                        <form th:if="${companyLogoUrl != null}" th:action="@{/settings/logo/remove}" method="post"
+                                              class="confirm-submit danger" th:attr="data-confirm=#{settings.logo.removeConfirm}">
+                                            <button type="submit" class="btn btn-outline btn-sm btn-danger-outline" th:text="#{settings.logo.remove}">Remove</button>
+                                        </form>
+                                        <p class="hint" th:text="#{settings.logo.hint}">A PNG or JPEG of up to 5 MB. A PNG with a transparent background, at least 600 px wide, prints best.</p>
+                                    </div>
+                                </dd>
+                            </div>
                             <div class="setting-row">
                                 <dt th:text="#{settings.companyName}">Company name</dt>
                                 <dd th:text="*{companyName}">iWarehouse</dd>
@@ -421,6 +446,22 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function () {
+            var input = document.getElementById('logo-file'), save = document.getElementById('logo-save'), name = document.getElementById('logo-file-name');
+            var label = document.querySelector('label[for="logo-file"]');
+            if (!input || !save) return;
+            save.hidden = true;
+            if (label) label.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+            input.addEventListener('change', function () {
+                var f = input.files && input.files[0];
+                name.textContent = f ? f.name : '';
+                save.hidden = !f;
+                if (f) save.focus();
+            });
+        })();
+    </script>
 </div>
 </body>
 </html>

@@ -52,6 +52,21 @@ class SettingsRulesTest {
     }
 
     @Test
+    void savingTheFormNeverTouchesTheLogo() {
+        // The logo is a file uploaded on its own: the form has no field for it, so saving the form must leave it alone
+        Map<SettingKey, Setting> rows = seededRows();
+        rows.get(SettingKey.COMPANY_LOGO).setSettingValue("company/logo-1.png");
+        SettingService service = settingService(rows);
+        SettingsDto dto = service.load();
+        dto.setCompanyName("HIGH BYTES LTD");
+
+        List<String> changes = service.update(dto);
+
+        assertThat(changes).containsExactly("company.name: iWarehouse -> HIGH BYTES LTD");
+        assertThat(rows.get(SettingKey.COMPANY_LOGO).getSettingValue()).isEqualTo("company/logo-1.png");
+    }
+
+    @Test
     void branchWithoutSequencesIsRefused() {
         SettingService service = settingService(seededRows());
         SettingsDto dto = service.load();

@@ -32,7 +32,7 @@
     <!-- The credit note (POS-09) and its EBM refund receipt (TAX-02) -->
     <div class="receipt">
         <div class="receipt-head">
-            <img class="receipt-logo" th:src="@{/images/logo.png}" th:alt="${companyName}">
+            <img class="receipt-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
             <div class="receipt-company" th:text="${companyName}">iWarehouse</div>
             <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
             <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>

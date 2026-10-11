@@ -11,12 +11,18 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.*;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.io.IOException;
 
 import java.util.*;
 
@@ -47,16 +53,19 @@ public class SettingsController {
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
+    private final CompanyLogoService companyLogoService;
 
     public SettingsController(SettingService settingService, TaxCategoryService taxCategoryService,
                               DocumentNumberService documentNumberService, DataChangeService dataChangeService,
-                              ActivityLogService activityLogService, Messages messages) {
+                              ActivityLogService activityLogService, Messages messages,
+                              CompanyLogoService companyLogoService) {
         this.settingService = settingService;
         this.taxCategoryService = taxCategoryService;
         this.documentNumberService = documentNumberService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.messages = messages;
+        this.companyLogoService = companyLogoService;
     }
 
     @GetMapping
@@ -72,6 +81,7 @@ public class SettingsController {
             nextValues.put(s.getId(), documentNumberService.nextValue(s));
         }
         model.addAttribute("settings", settingService.load());
+        model.addAttribute("companyLogoUrl", companyLogoService.url());
         // The open tab shows the page asked for; the others start at their first page.
         model.addAttribute("taxCategories", Paging.of(taxCategoryService.findAll(), Paging.pageOf("tax", open, page)));
         model.addAttribute("sequences", Paging.of(sequences, Paging.pageOf("numbering", open, page)));
@@ -82,6 +92,50 @@ public class SettingsController {
         }
         model.addAttribute("tab", open);
         return "settings/view";
+    }
+
+    // ---------------------------------------------------------------- the company's logo (on documents)
+
+    @PostMapping("/logo")
+    @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_EDIT_SETTINGS')")
+    public String uploadLogo(@RequestParam(required = false) MultipartFile logo, RedirectAttributes redirect) {
+        String name = logo == null ? null : logo.getOriginalFilename();
+        try {
+            String key = companyLogoService.upload(logo == null ? new byte[0] : logo.getBytes());
+            activityLogService.record(MODULE, "UPDATE_SETTINGS", "Changed the company logo (" + name + ", kept as " + key + ")",
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("settings.logo.saved"));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "UPDATE_SETTINGS", "Failed to change the company logo (" + name + "): " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        } catch (IOException e) {
+            redirect.addFlashAttribute("flashError", messages.get("settings.logo.unreadable"));
+        }
+        return "redirect:/settings";
+    }
+
+    @PostMapping("/logo/remove")
+    @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_EDIT_SETTINGS')")
+    public String removeLogo(RedirectAttributes redirect) {
+        if (companyLogoService.remove()) {
+            activityLogService.record(MODULE, "UPDATE_SETTINGS", "Removed the company logo", ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("settings.logo.removed"));
+        }
+        return "redirect:/settings";
+    }
+
+    /** The logo itself, for the documents printed from the browser (receipts, quotations): anyone who prints them. */
+    @GetMapping("/logo")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<byte[]> logo() {
+        return companyLogoService.png()
+                .map(png -> ResponseEntity.ok()
+                        .header(HttpHeaders.CACHE_CONTROL, "private, max-age=86400") // its address changes with the logo
+                        .contentType(MediaType.IMAGE_PNG)
+                        .body(png))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/edit")

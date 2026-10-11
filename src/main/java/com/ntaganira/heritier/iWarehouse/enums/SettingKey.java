@@ -19,6 +19,11 @@ public enum SettingKey {
     COMPANY_ADDRESS("company.address", "companyAddress", null),
     COMPANY_PHONE("company.phone", "companyPhone", null),
     COMPANY_EMAIL("company.email", "companyEmail", null),
+    /**
+     * The company's logo on documents: its storage key (CompanyLogoService). A file, not a form value: it has no SettingsDto
+     * property (null), so the settings form neither shows nor saves it; it is uploaded and removed on its own.
+     */
+    COMPANY_LOGO("company.logo", null, null),
     /** Branch used when a document is numbered without an explicit branch (MD-07). */
     BRANCH_CODE("company.branch-code", "branchCode", "WH"),
 

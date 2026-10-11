@@ -50,6 +50,7 @@ public class QuotationController {
     private final SalesService salesService;
     private final DataChangeService dataChangeService;
     private final SettingService settingService;
+    private final CompanyLogoService companyLogoService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
@@ -57,11 +58,13 @@ public class QuotationController {
 
     public QuotationController(QuotationService quotationService, SalesService salesService, DataChangeService dataChangeService,
                                SettingService settingService, ActivityLogService activityLogService, Messages messages,
-                               NumberFormats num, Validator validator) {
+                               NumberFormats num, Validator validator,
+            CompanyLogoService companyLogoService) {
         this.quotationService = quotationService;
         this.salesService = salesService;
         this.dataChangeService = dataChangeService;
         this.settingService = settingService;
+        this.companyLogoService = companyLogoService;
         this.activityLogService = activityLogService;
         this.messages = messages;
         this.num = num;
@@ -106,6 +109,7 @@ public class QuotationController {
         model.addAttribute("quotation", q);
         model.addAttribute("totals", quotationService.totals(q));
         model.addAttribute("companyName", settingService.get(SettingKey.COMPANY_NAME));
+        model.addAttribute("companyLogoUrl", companyLogoService.url());
         model.addAttribute("companyTin", settingService.get(SettingKey.COMPANY_TIN));
         model.addAttribute("companyAddress", settingService.get(SettingKey.COMPANY_ADDRESS));
         model.addAttribute("companyPhone", settingService.get(SettingKey.COMPANY_PHONE));

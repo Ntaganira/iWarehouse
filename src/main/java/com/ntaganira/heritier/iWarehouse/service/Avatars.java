@@ -51,7 +51,7 @@ public final class Avatars {
         if (!"image/jpeg".equals(type) && !"image/png".equals(type)) {
             throw BusinessException.of("profile.photo.type");
         }
-        BufferedImage source = read(image, maxPixels);
+        BufferedImage source = read(image, maxPixels, "profile.photo");
         int side = Math.min(source.getWidth(), source.getHeight());
         BufferedImage current = source.getSubimage((source.getWidth() - side) / 2, (source.getHeight() - side) / 2, side, side);
         // Halve while it stays at least the target size, then the last step: one bicubic step from a camera photo would alias
@@ -66,22 +66,23 @@ public final class Avatars {
         return jpeg(current);
     }
 
-    private static BufferedImage read(byte[] image, long maxPixels) {
+    /** Decodes a JPEG or PNG, refused before decoding when larger than maxPixels; refusals are {prefix}.unreadable / .tooLarge. */
+    static BufferedImage read(byte[] image, long maxPixels, String prefix) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(image))) {
             Iterator<ImageReader> readers = in == null ? null : ImageIO.getImageReaders(in);
             if (readers == null || !readers.hasNext()) {
-                throw BusinessException.of("profile.photo.unreadable");
+                throw BusinessException.of(prefix + ".unreadable");
             }
             ImageReader reader = readers.next();
             try {
                 reader.setInput(in, true, true);
                 long pixels = (long) reader.getWidth(0) * reader.getHeight(0);
                 if (pixels > maxPixels) {
-                    throw BusinessException.of("profile.photo.tooLarge", maxPixels / 1_000_000);
+                    throw BusinessException.of(prefix + ".tooLarge", maxPixels / 1_000_000);
                 }
                 BufferedImage picture = reader.read(0);
                 if (picture.getWidth() < 1 || picture.getHeight() < 1) {
-                    throw BusinessException.of("profile.photo.unreadable");
+                    throw BusinessException.of(prefix + ".unreadable");
                 }
                 return picture;
             } finally {
@@ -91,7 +92,7 @@ public final class Avatars {
             if (e instanceof BusinessException b) {
                 throw b;
             }
-            throw BusinessException.of("profile.photo.unreadable");
+            throw BusinessException.of(prefix + ".unreadable");
         }
     }
 

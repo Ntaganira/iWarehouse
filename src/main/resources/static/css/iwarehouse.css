@@ -4571,3 +4571,14 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
 @media print {
   .receipt-logo { filter: grayscale(1) contrast(1.15); }
 }
+
+/* Settings: the company's logo row, its picture on white (it is printed on paper) and its buttons under it */
+.setting-row.setting-logo { flex-direction: column; align-items: flex-start; gap: 8px; }
+.setting-row.setting-logo dd { text-align: left; white-space: normal; max-width: 100%; min-width: 0; }
+.setting-logo-img { display: block; max-width: min(220px, 100%); max-height: 64px; width: auto; height: auto; padding: 6px;
+  background: #fff; border: 1px solid var(--gray-200); border-radius: 8px; }
+.setting-logo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.setting-logo-actions form { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.setting-logo-actions #logo-file-name { overflow-wrap: anywhere; }
+.setting-logo-actions > .hint { flex-basis: 100%; margin: 0; }
+.setting-logo-actions .hint { font-weight: 400; }

@@ -73,6 +73,9 @@ public class SettingService {
         SettingsDto dto = new SettingsDto();
         BeanWrapper form = PropertyAccessorFactory.forBeanPropertyAccess(dto);
         for (SettingKey key : SettingKey.values()) {
+            if (key.property() == null) {
+                continue; // a file (the logo): not on the form
+            }
             Setting row = rows.get(key.key());
             form.setPropertyValue(key.property(), row != null ? row.getSettingValue() : key.defaultValue());
         }
@@ -93,6 +96,9 @@ public class SettingService {
         BeanWrapper form = PropertyAccessorFactory.forBeanPropertyAccess(dto);
         List<String> changes = new ArrayList<>();
         for (SettingKey key : SettingKey.values()) {
+            if (key.property() == null) {
+                continue; // a file (the logo) is changed on its own, never by the form
+            }
             String value = normalize(form.getPropertyValue(key.property()));
             Setting row = rows.get(key.key());
             if (row == null) {

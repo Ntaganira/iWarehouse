@@ -187,7 +187,7 @@
                         <tbody>
                             <tr th:each="l : ${lines.content}">
                                 <td>
-                                    <a class="nowrap" sec:authorize="hasAuthority('PAGE_EMPLOYEES')" th:href="@{/payroll/employees/{id}(id=${l.employee.id})}" th:text="${l.employeeName}">Jean Habimana</a>
+                                    <a sec:authorize="hasAuthority('PAGE_EMPLOYEES')" th:href="@{/payroll/employees/{id}(id=${l.employee.id})}" th:text="${l.employeeName}">Jean Habimana</a>
                                     <span sec:authorize="!hasAuthority('PAGE_EMPLOYEES')" th:text="${l.employeeName}">Jean Habimana</span>
                                     <div class="cell-sub mono" th:text="${l.employeeCode}">EMP-WH-0001</div>
                                     <div class="cell-sub" th:if="${l.deductionNote != null}" th:text="${l.deductionNote}">Advance of 05/10</div>

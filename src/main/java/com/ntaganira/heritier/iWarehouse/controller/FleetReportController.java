@@ -65,6 +65,7 @@ public class FleetReportController {
         List<?> rows = switch (view) {
             case TRIPS -> report.trips();
             case DRIVERS -> report.drivers();
+            case VEHICLES -> report.vehicles();
             case DISCREPANCIES -> report.discrepancies();
             case FLOATS -> report.floats();
         };
@@ -119,6 +120,16 @@ public class FleetReportController {
                 s.bold(driverCells(report.total(), m("cutting.total")));
                 yield s;
             }
+            case VEHICLES -> {
+                Excel.Builder s = Excel.sheet(title, m("fleetReport.title"), covers, m("fleetReport.vehicle"), m("fleetReport.trips"),
+                        m("fleetReport.km"), m("fleetReport.sales"), m("fleetReport.fuel"), m("fleetReport.litres"), m("fleetReport.maintenance"),
+                        m("fleetReport.otherCosts"), m("fleetReport.totalCost"), m("fleetReport.costPerKm"));
+                for (FleetAnalysis.VehicleRow r : report.vehicles()) {
+                    s.row(vehicleCells(r, r.plate()));
+                }
+                s.bold(vehicleCells(report.vehicleTotal(), m("cutting.total")));
+                yield s;
+            }
             case DISCREPANCIES -> {
                 Excel.Builder s = Excel.sheet(title, m("fleetReport.title"), covers, m("fleetReport.case"), m("fleetReport.trip"), m("fleetReport.date"),
                         m("fleetReport.driver"), m("fleetReport.unit"), m("fleetReport.kind"), m("fleetReport.value"), m("fleetReport.outcome"));
@@ -141,6 +152,10 @@ public class FleetReportController {
         activityLogService.record(ReportController.MODULE, "EXPORT_FLEET_REPORT", "Exported the fleet report (" + view + ") from " + p.from()
                 + " to " + p.to() + " to " + format.label(), ActivityStatus.SUCCESS);
         return reportFiles.download(format, "fleet-" + view.name().toLowerCase() + "-" + p.from() + "-" + p.to(), sheet.build());
+    }
+
+    private static Object[] vehicleCells(FleetAnalysis.VehicleRow r, String first) {
+        return new Object[]{first, r.trips(), r.km(), r.sales(), r.fuel(), r.litres(), r.maintenance(), r.other(), r.getTotalCost(), r.getCostPerKm()};
     }
 
     private Object[] driverCells(FleetAnalysis.DriverRow r, String label) {

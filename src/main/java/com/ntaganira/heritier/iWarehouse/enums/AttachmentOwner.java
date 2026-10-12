@@ -24,7 +24,9 @@ public enum AttachmentOwner {
     /** A copy of the licence: personal data (NFR-12), opened only by those who see it. */
     DRIVER("PERM_VIEW_DRIVER_DATA", "/drivers/"),
     /** The photos of breakage on the road (FLT-08) and any paper of the trip. */
-    TRIP("PAGE_FLEET", "/trips/");
+    TRIP("PAGE_FLEET", "/trips/"),
+    /** The receipt or invoice of a vehicle cost. */
+    VEHICLE_COST("PAGE_VEHICLE_COSTS", "/vehicle-costs/");
 
     private final String page;
     private final String path;

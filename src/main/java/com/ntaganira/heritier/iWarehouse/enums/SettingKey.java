@@ -46,6 +46,8 @@ public enum SettingKey {
 
     /** Stock adjustments worth more than this (RWF) need supervisor approval (INV-07). */
     ADJUSTMENT_APPROVAL_LIMIT("approval.adjustment-limit", "adjustmentApprovalLimit", "0"),
+    /** RWF above which a vehicle cost waits for another person's approval before it posts. */
+    VEHICLE_COST_APPROVAL_LIMIT("approval.vehicle-cost-limit", "vehicleCostApprovalLimit", "100000"),
     /** Discounts and price overrides above this percentage need manager approval (POS-06). */
     DISCOUNT_APPROVAL_PERCENT("approval.discount-limit-percent", "discountApprovalPercent", "0"),
 
@@ -60,6 +62,8 @@ public enum SettingKey {
     FLEET_EXPIRY_ALERT_DAYS("fleet.expiry-alert-days", "fleetExpiryAlertDays", "30"),
     /** Hours after a trip came back that a float not cleared is reported to the accountant (RPT-06). */
     FLOAT_ALERT_HOURS("fleet.float-alert-hours", "floatAlertHours", "24"),
+    /** Km before a vehicle's service falls due that the fleet is told (the days are FLEET_EXPIRY_ALERT_DAYS). */
+    SERVICE_ALERT_KM("fleet.service-alert-km", "serviceAlertKm", "500"),
 
     /** How receipts are signed (TAX-02): SIMULATOR (development: receipts marked not fiscal) or VSDC. An EbmMode name. */
     EBM_MODE("ebm.mode", "ebmMode", "SIMULATOR"),

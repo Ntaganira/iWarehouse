@@ -6,6 +6,9 @@ import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.MovementType;
 import com.ntaganira.heritier.iWarehouse.enums.StockStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SyncConflictReason;
+import com.ntaganira.heritier.iWarehouse.enums.VehicleCostCategory;
+import com.ntaganira.heritier.iWarehouse.enums.VehicleCostPayment;
+import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -30,7 +33,10 @@ class MessageCoverageTest {
             "account.key.", AccountKey.class,
             "doc.type.", DocumentType.class,
             "stock.status.", StockStatus.class,
-            "sync.reason.", SyncConflictReason.class);
+            "sync.reason.", SyncConflictReason.class,
+            "vehicleCost.category.", VehicleCostCategory.class,
+            "vehicleCost.payment.", VehicleCostPayment.class,
+            "vehicleCost.status.", VehicleCostStatus.class);
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

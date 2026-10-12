@@ -228,6 +228,7 @@
                                         <a sec:authorize="hasAuthority('PAGE_SALE_APPROVALS')" href="/sale-approvals" th:text="#{dash.biz.saleApprovals(${biz.saleApprovals})}">0 at the counter</a>
                                         <span sec:authorize="hasAuthority('PAGE_STOCK_ADJUSTMENTS')"> · <a href="/stock-adjustments" th:text="#{dash.biz.adjustments(${biz.adjustments})}">0 stock adjustments</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_MANUAL_JOURNALS')"> · <a href="/accounting/manual-journals" th:text="#{dash.biz.manualJournals(${biz.manualJournals})}">0 manual journals</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_VEHICLE_COSTS')"> · <a href="/vehicle-costs?status=PENDING_APPROVAL" th:text="#{dash.biz.vehicleCosts(${biz.vehicleCosts})}">0 vehicle costs</a></span>
                                     </div>
                                 </td>
                                 <td class="num" th:classappend="${biz.waiting > 0} ? 'strong'" th:text="${biz.waiting}">0</td>
@@ -248,6 +249,14 @@
                                     <div class="cell-sub" th:text="#{dash.biz.fleetPapersSub}">expired or expiring soon</div>
                                 </td>
                                 <td class="num" th:classappend="${biz.fleetPapers > 0} ? 'strong text-danger'" th:text="${biz.fleetPapers}">0</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <a sec:authorize="hasAuthority('PAGE_VEHICLES')" href="/vehicles" th:text="#{dash.biz.servicesDue}">Vehicle services due</a>
+                                    <span sec:authorize="!hasAuthority('PAGE_VEHICLES')" th:text="#{dash.biz.servicesDue}">Vehicle services due</span>
+                                    <div class="cell-sub" th:text="#{dash.biz.servicesDueSub}">due or due soon, by km or date</div>
+                                </td>
+                                <td class="num" th:classappend="${biz.servicesDue > 0} ? 'strong text-danger'" th:text="${biz.servicesDue}">0</td>
                             </tr>
                             <tr>
                                 <td>

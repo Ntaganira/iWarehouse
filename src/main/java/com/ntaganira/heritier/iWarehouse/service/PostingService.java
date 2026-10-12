@@ -324,6 +324,30 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    // ---------------------------------------------------------------- vehicle costs
+
+    /**
+     * A vehicle's running cost, on its day: Dr its category's expense account the amount without VAT (fuel; repairs and
+     * maintenance; other vehicle costs) and VAT Input the VAT of a registered garage's receipt / Cr what paid it: the main
+     * cash vault, the bank or mobile money (with the reference), Accounts Payable naming the garage (owed to it), or the
+     * driver's float naming the driver (they paid it from the trip's cash, so the float to hand back is that much less).
+     */
+    public JournalEntry vehicleCost(VehicleCost cost) {
+        String plate = cost.getVehicle().getPlate();
+        String trip = cost.getTrip() == null ? null : cost.getTrip().getNumber();
+        Journal journal = Journal.of(JournalSource.VEHICLE_COST, cost.getId(), cost.getNumber(), cost.getCostDate(),
+                "Vehicle cost " + cost.getNumber() + " of " + plate + ": " + cost.getDescription());
+        journal.add(cost.getCategory().account(), cost.getNetAmount(), null, null, trip == null ? plate : plate + " · " + trip, null)
+                .debit(AccountKey.VAT_INPUT, cost.getVatAmount());
+        switch (cost.getPayment()) {
+            case CREDIT -> journal.add(AccountKey.PAYABLE, cost.getAmount().negate(), null, cost.getSupplier().getId(),
+                    StringUtils.hasText(cost.getSupplierRef()) ? cost.getSupplierRef() + " · " + plate : plate, null);
+            case DRIVER_FLOAT -> journal.addForDriver(AccountKey.DRIVER_FLOAT, cost.getAmount().negate(), cost.getDriver().getId(), trip);
+            default -> journal.add(cost.getPayment().account(), cost.getAmount().negate(), null, null, cost.getPaymentRef(), null);
+        }
+        return journalService.post(journal);
+    }
+
     // ---------------------------------------------------------------- payroll
 
     /**

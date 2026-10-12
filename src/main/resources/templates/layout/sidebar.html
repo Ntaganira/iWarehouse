@@ -145,7 +145,7 @@
         <a sec:authorize="hasAuthority('PAGE_SALES_REPORTS')" th:classappend="${#strings.startsWith(requestURI, '/reports/sales')} ? 'active' : ''" href="/reports/sales">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></span> <span th:text="#{nav.salesReports}">Sales Reports</span>
         </a>
-        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_FLEET')) or (hasAuthority('PAGE_VEHICLES') and hasAuthority('PERM_VIEW_VEHICLE')) or (hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')) or (hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')) or (hasAuthority('PAGE_SYNC_CONFLICTS') and hasAuthority('PERM_VIEW_SYNC_CONFLICTS')) or (hasAuthority('PAGE_AUDIT_CASES') and hasAuthority('PERM_VIEW_AUDIT_CASES')) or (hasAuthority('PAGE_FLEET_REPORTS') and hasAuthority('PERM_VIEW_FLEET_REPORTS'))" th:text="#{menu.fleet}">Fleet</div>
+        <div class="menu-label" style="margin-top:16px;" sec:authorize="(hasAuthority('PAGE_FLEET')) or (hasAuthority('PAGE_VEHICLES') and hasAuthority('PERM_VIEW_VEHICLE')) or (hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')) or (hasAuthority('PAGE_VEHICLE_COSTS') and hasAuthority('PERM_VIEW_VEHICLE_COST')) or (hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')) or (hasAuthority('PAGE_SYNC_CONFLICTS') and hasAuthority('PERM_VIEW_SYNC_CONFLICTS')) or (hasAuthority('PAGE_AUDIT_CASES') and hasAuthority('PERM_VIEW_AUDIT_CASES')) or (hasAuthority('PAGE_FLEET_REPORTS') and hasAuthority('PERM_VIEW_FLEET_REPORTS'))" th:text="#{menu.fleet}">Fleet</div>
         <a sec:authorize="hasAuthority('PAGE_FLEET')" th:classappend="${#strings.startsWith(requestURI, '/trips')} ? 'active' : ''" href="/trips">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg></span> <span th:text="#{nav.fleet}">Trips</span>
         </a>
@@ -154,6 +154,9 @@
         </a>
         <a sec:authorize="hasAuthority('PAGE_DRIVERS') and hasAuthority('PERM_VIEW_DRIVER')" th:classappend="${#strings.startsWith(requestURI, '/drivers')} ? 'active' : ''" href="/drivers">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2"></rect><circle cx="8" cy="12" r="2.5"></circle><line x1="13" y1="10" x2="18" y2="10"></line><line x1="13" y1="14" x2="17" y2="14"></line></svg></span> <span th:text="#{nav.drivers}">Drivers</span>
+        </a>
+        <a sec:authorize="hasAuthority('PAGE_VEHICLE_COSTS') and hasAuthority('PERM_VIEW_VEHICLE_COST')" th:classappend="${#strings.startsWith(requestURI, '/vehicle-costs')} ? 'active' : ''" href="/vehicle-costs">
+            <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></span> <span th:text="#{nav.vehicleCosts}">Vehicle Costs</span>
         </a>
         <a sec:authorize="hasAuthority('PAGE_MOBILE_POS') and hasAuthority('PERM_USE_MOBILE_POS')" href="/m/" target="_blank" rel="noopener">
             <span class="icon"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></span> <span th:text="#{nav.mobilePos}">Mobile POS</span>

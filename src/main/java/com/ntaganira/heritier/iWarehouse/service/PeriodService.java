@@ -4,11 +4,13 @@ import com.ntaganira.heritier.iWarehouse.entity.AccountingPeriod;
 import com.ntaganira.heritier.iWarehouse.entity.FxRevaluation;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PeriodStatus;
+import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.AccountingPeriodRepository;
 import com.ntaganira.heritier.iWarehouse.repository.JournalEntryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ManualJournalRepository;
+import com.ntaganira.heritier.iWarehouse.repository.VehicleCostRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
@@ -49,22 +51,24 @@ public class PeriodService {
     private final AccountingPeriodRepository repo;
     private final JournalEntryRepository entryRepo;
     private final ManualJournalRepository manualJournalRepo;
+    private final VehicleCostRepository vehicleCostRepo;
     private final FxRevaluationService fxRevaluationService;
     private final EntityManager em;
     private final Clock clock;
 
     public PeriodService(AccountingPeriodRepository repo, JournalEntryRepository entryRepo, ManualJournalRepository manualJournalRepo,
-                         FxRevaluationService fxRevaluationService, EntityManager em, Clock clock) {
+                         VehicleCostRepository vehicleCostRepo, FxRevaluationService fxRevaluationService, EntityManager em, Clock clock) {
         this.repo = repo;
         this.entryRepo = entryRepo;
         this.manualJournalRepo = manualJournalRepo;
+        this.vehicleCostRepo = vehicleCostRepo;
         this.fxRevaluationService = fxRevaluationService;
         this.em = em;
         this.clock = clock;
     }
 
-    /** What closing a month waits for: the manual journals still to decide and the FX revaluation. */
-    public record Checklist(YearMonth month, long manualJournalsWaiting, FxRevaluationService.MonthState revaluation,
+    /** What closing a month waits for: the manual journals and vehicle costs still to decide, and the FX revaluation. */
+    public record Checklist(YearMonth month, long manualJournalsWaiting, long vehicleCostsWaiting, FxRevaluationService.MonthState revaluation,
                             FxRevaluation revaluationDone) {
 
         public LocalDate getPeriodEnd() {
@@ -72,7 +76,7 @@ public class PeriodService {
         }
 
         public boolean isReady() {
-            return manualJournalsWaiting == 0 && revaluation != FxRevaluationService.MonthState.DUE;
+            return manualJournalsWaiting == 0 && vehicleCostsWaiting == 0 && revaluation != FxRevaluationService.MonthState.DUE;
         }
     }
 
@@ -104,7 +108,8 @@ public class PeriodService {
     public Checklist checklist(YearMonth month) {
         LocalDate end = month.atEndOfMonth();
         long waiting = manualJournalRepo.countByStatusAndEntryDateLessThanEqual(ManualJournalStatus.PENDING_APPROVAL, end);
-        return new Checklist(month, waiting, fxRevaluationService.state(month), fxRevaluationService.ofMonth(month).orElse(null));
+        long costs = vehicleCostRepo.countByStatusAndCostDateLessThanEqual(VehicleCostStatus.PENDING_APPROVAL, end);
+        return new Checklist(month, waiting, costs, fxRevaluationService.state(month), fxRevaluationService.ofMonth(month).orElse(null));
     }
 
     public Page<AccountingPeriod> findPage(int page, int size) {
@@ -140,6 +145,9 @@ public class PeriodService {
         Checklist checklist = checklist(month);
         if (checklist.manualJournalsWaiting() > 0) {
             throw BusinessException.of("period.journalsWaiting", checklist.manualJournalsWaiting());
+        }
+        if (checklist.vehicleCostsWaiting() > 0) {
+            throw BusinessException.of("period.vehicleCostsWaiting", checklist.vehicleCostsWaiting());
         }
         if (checklist.revaluation() == FxRevaluationService.MonthState.DUE) {
             throw BusinessException.of("period.revaluationDue", month.atEndOfMonth().format(DAY));

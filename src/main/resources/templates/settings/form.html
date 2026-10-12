@@ -153,6 +153,16 @@
                     <span class="hint" th:text="#{settings.adjustmentApprovalLimitHint}">Value above which an adjustment needs approval (INV-07)</span>
                 </div>
                 <div class="form-group">
+                    <label for="vehicleCostApprovalLimit" th:text="#{settings.vehicleCostApprovalLimit}">Vehicle cost</label>
+                    <div class="input-unit">
+                        <input type="number" id="vehicleCostApprovalLimit" th:field="*{vehicleCostApprovalLimit}" step="1" min="0" required
+                               th:classappend="${#fields.hasErrors('vehicleCostApprovalLimit')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('vehicleCostApprovalLimit')}" th:errors="*{vehicleCostApprovalLimit}"></span>
+                    <span class="hint" th:text="#{settings.vehicleCostApprovalLimitHint}">Above it, another person approves a vehicle cost before it is posted</span>
+                </div>
+                <div class="form-group">
                     <label for="discountApprovalPercent" th:text="#{settings.discountApprovalPercent}">Discount or price override</label>
                     <div class="input-unit">
                         <input type="number" id="discountApprovalPercent" th:field="*{discountApprovalPercent}" step="0.01" min="0" max="100" required
@@ -219,6 +229,16 @@
                     </div>
                     <span class="field-error" th:if="${#fields.hasErrors('floatAlertHours')}" th:errors="*{floatAlertHours}"></span>
                     <span class="hint" th:text="#{settings.floatAlertHoursHint}">After a trip came back, a driver's float not cleared is reported (RPT-06)</span>
+                </div>
+                <div class="form-group">
+                    <label for="serviceAlertKm" th:text="#{settings.serviceAlertKm}">Service reminder</label>
+                    <div class="input-unit">
+                        <input type="number" id="serviceAlertKm" th:field="*{serviceAlertKm}" step="1" min="0" max="20000" required
+                               th:classappend="${#fields.hasErrors('serviceAlertKm')} ? 'is-invalid'">
+                        <span>km</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('serviceAlertKm')}" th:errors="*{serviceAlertKm}"></span>
+                    <span class="hint" th:text="#{settings.serviceAlertKmHint}">Before a vehicle's service falls due (or within the papers alert days)</span>
                 </div>
             </div>
 

@@ -33,8 +33,8 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
     Page<Trip> findAll(Specification<Trip> spec, Pageable pageable);
 
-    /** A trip with its vehicle (and location), driver, manifest and fuel. */
-    @EntityGraph(attributePaths = {"vehicle", "vehicle.location", "driver", "driver.user", "lines", "fuel"})
+    /** A trip with its vehicle (and location), driver and manifest. */
+    @EntityGraph(attributePaths = {"vehicle", "vehicle.location", "driver", "driver.user", "lines"})
     Optional<Trip> findDetailedById(UUID id);
 
     /** Every change to a trip and its manifest takes this lock first, so it departs once. */
@@ -64,6 +64,9 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     boolean existsByDriver_IdAndStatusIn(UUID driverId, Collection<TripStatus> statuses);
 
     boolean existsByVehicle_Id(UUID vehicleId);
+
+    /** A vehicle's trips that recorded an odometer (its mileage log, the km it drove). */
+    List<Trip> findByVehicle_IdAndOdometerStartIsNotNull(UUID vehicleId);
 
     @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
     Page<Trip> findByVehicle_Id(UUID vehicleId, Pageable pageable);

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{vehicleCost.title}, ~{::content})}">
+<head><title>Vehicle costs - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{vehicleCost.title}">Vehicle costs</h1>
+            <div class="subtitle" th:text="#{vehicleCost.subtitle}">Fuel, services, repairs, spare parts and other running costs of the vehicles</div>
+        </div>
+        <a href="/vehicle-costs/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_RECORD_VEHICLE_COST')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{vehicleCost.add}">Record a cost</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${pending > 0}" sec:authorize="hasAuthority('PERM_APPROVE_VEHICLE_COST')">
+        <span th:text="#{vehicleCost.pendingNote(${pending})}">2 vehicle costs wait for approval.</span>
+        <a th:href="@{/vehicle-costs(status='PENDING_APPROVAL')}" th:text="#{vehicleCost.showPending}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{vehicleCost.sectionTitle}">Costs</span>
+                <span class="section-count" th:text="${costs.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/vehicle-costs}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{vehicleCost.searchPh}" th:aria-label="#{vehicleCost.searchPh}">
+                </div>
+                <select name="vehicle" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{vehicleCost.vehicle}">
+                    <option value="" th:selected="${vehicle == null}" th:text="#{vehicleCost.allVehicles}">All vehicles</option>
+                    <option th:each="v : ${vehicles}" th:value="${v.id}" th:selected="${v.id.toString() == vehicle}" th:text="${v.plate}">RAC123A</option>
+                </select>
+                <select name="category" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{vehicleCost.category}">
+                    <option value="" th:selected="${category == null or category == ''}" th:text="#{vehicleCost.allCategories}">All kinds</option>
+                    <option th:each="c : ${categories}" th:value="${c}" th:selected="${c.name() == category}" th:text="#{${'vehicleCost.category.' + c}}">Fuel</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'vehicleCost.status.' + st}}">Posted</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{vehicleCost.number}">Cost</th>
+                        <th th:text="#{vehicleCost.date}">Date</th>
+                        <th th:text="#{vehicleCost.vehicle}">Vehicle</th>
+                        <th th:text="#{vehicleCost.category}">Kind</th>
+                        <th th:text="#{vehicleCost.description}">Description</th>
+                        <th class="num" th:text="#{vehicleCost.amount}">Amount (RWF)</th>
+                        <th th:text="#{vehicleCost.payment}">Paid by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${costs.content}">
+                        <td><a class="row-link strong mono" th:href="@{/vehicle-costs/{id}(id=${c.id})}" th:text="${c.number}">VC-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(c.costDate, 'dd/MM/yyyy')}">12/10/2026</td>
+                        <td>
+                            <span class="mono" th:text="${c.vehicle.plate}">RAC123A</span>
+                            <div class="cell-sub mono" th:if="${c.trip != null}" th:text="${c.trip.number}">TRP-WH-2026-000012</div>
+                        </td>
+                        <td th:text="#{${'vehicleCost.category.' + c.category}}">Fuel</td>
+                        <td>
+                            <span th:text="${c.description}">Diesel, full tank</span>
+                            <div class="cell-sub" th:if="${c.supplier != null}" th:text="${c.supplier.name}">Kigali Motors Garage</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(c.amount)}">80,000</td>
+                        <td th:text="#{${'vehicleCost.payment.' + c.payment}}">Main cash vault</td>
+                        <td><th:block th:replace="~{vehicle-costs/list :: costStatus(${c.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${costs.totalElements == 0}">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3 th:text="#{vehicleCost.empty}">No vehicle costs yet</h3>
+                                <p th:text="#{vehicleCost.emptyHint}">Record fuel, services, repairs and parts as they are paid: each posts to the accounts.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${costs}, '/vehicle-costs', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A vehicle cost's status as a badge */-->
+<th:block th:fragment="costStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{vehicleCost.status.PENDING_APPROVAL}">Waiting for approval</span>
+    <span th:case="'POSTED'" class="badge badge-success" th:text="#{vehicleCost.status.POSTED}">Posted</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{vehicleCost.status.REJECTED}">Rejected</span>
+    <span th:case="'REVERSED'" class="badge badge-info" th:text="#{vehicleCost.status.REVERSED}">Reversed</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{vehicleCost.status.CANCELLED}">Withdrawn</span>
+</th:block>
+</body>
+</html>

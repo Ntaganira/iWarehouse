@@ -135,6 +135,55 @@
                 </tfoot>
             </table>
 
+            <table th:if="${v == 'VEHICLES'}" th:with="vt=${report.vehicleTotal}">
+                <thead>
+                    <tr>
+                        <th th:text="#{fleetReport.vehicle}">Vehicle</th>
+                        <th class="num" th:text="#{fleetReport.trips}">Trips</th>
+                        <th class="num" th:text="#{fleetReport.km}">Km</th>
+                        <th class="num" th:text="#{fleetReport.sales}">Sales (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.fuel}">Fuel (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.maintenance}">Repairs and maintenance (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.otherCosts}">Other (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.totalCost}">Running costs (RWF)</th>
+                        <th class="num" th:text="#{fleetReport.costPerKm}">Per km (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td>
+                            <a class="mono" sec:authorize="hasAuthority('PAGE_VEHICLE_COSTS') and hasAuthority('PERM_VIEW_VEHICLE_COST')"
+                               th:href="@{/vehicle-costs(vehicle=${r.vehicleId})}" th:text="${r.plate}">RAC123A</a>
+                            <span class="mono" sec:authorize="!(hasAuthority('PAGE_VEHICLE_COSTS') and hasAuthority('PERM_VIEW_VEHICLE_COST'))" th:text="${r.plate}">RAC123A</span>
+                        </td>
+                        <td class="num" th:text="${r.trips}">3</td>
+                        <td class="num" th:text="${@num.whole(r.km)}">420</td>
+                        <td class="num" th:text="${@num.money(r.sales)}">1,200,000</td>
+                        <td class="num">
+                            <span th:text="${@num.money(r.fuel)}">95,000</span>
+                            <div class="cell-sub" th:if="${r.litres.signum() > 0}" th:text="${@num.litres(r.litres) + ' l'}">60 l</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(r.maintenance)}">50,000</td>
+                        <td class="num" th:text="${@num.money(r.other)}">3,000</td>
+                        <td class="num strong" th:text="${@num.money(r.totalCost)}">148,000</td>
+                        <td class="num" th:text="${r.costPerKm != null} ? ${@num.money(r.costPerKm)} : '—'">352</td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${vt.trips}">3</th>
+                        <th class="num" th:text="${@num.whole(vt.km)}">420</th>
+                        <th class="num" th:text="${@num.money(vt.sales)}">1,200,000</th>
+                        <th class="num" th:text="${@num.money(vt.fuel)}">95,000</th>
+                        <th class="num" th:text="${@num.money(vt.maintenance)}">50,000</th>
+                        <th class="num" th:text="${@num.money(vt.other)}">3,000</th>
+                        <th class="num" th:text="${@num.money(vt.totalCost)}">148,000</th>
+                        <th class="num" th:text="${vt.costPerKm != null} ? ${@num.money(vt.costPerKm)} : '—'">352</th>
+                    </tr>
+                </tfoot>
+            </table>
+
             <table th:if="${v == 'DRIVERS'}">
                 <thead>
                     <tr>

@@ -8,10 +8,10 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V41.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V42.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
-## Where we are (2026-10-10)
+## Where we are (2026-10-12)
 
 | Area | State | Where |
 |---|---|---|
@@ -33,9 +33,11 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Fleet: vehicles, drivers, trips, loading (AT-03 passes) | Done (M7) | V35, `/vehicles`, `/drivers`, `/trips` |
 | Mobile POS app (PWA) with offline sync (AT-04, AT-05 pass) | Done (M8) | V36, `/m/` on the phones, `/api/v1`, `/sync-conflicts`, `/devices` |
 | End of day: return scan, reconciliation, audit cases, driver floats (AT-06, AT-07 pass) | Done (M9) | V37, the trip's End of day tab, `/audit-cases`, `/floats`, `/reports/fleet`, the phone's breakage and cash screens |
+| Payroll (owner's request, not in SRS v2.1) | Done | V40, `/payroll/*` |
+| Vehicle costs and service plans (owner's request, not in SRS v2.1) | Done | V41, `/vehicle-costs`, the vehicle's Costs, Mileage and Service plans tabs, the trip's Costs tab, the fleet report's per-vehicle view |
 | Hardening and go-live | **Next** (M10) | — |
 
-Unit tests: 538, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
+Unit tests: 547, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
 
 ## Definition of done for a module
 
@@ -176,6 +178,16 @@ Scope (owner, 2026-10-11): the payroll module stores employee and salary data, c
 - [x] Ledger (M) — 2026-10-11: `PostingService.payroll` (PAYROLL) and `payrollPayment` (PAYROLL_PAYMENT); accounts 1140 Staff Advances, 2060 PAYE Payable, 2070 RSSB Contributions Payable, 2080 Net Salaries Payable (controlled), 2090 Other Payroll Deductions, 6010 Salaries and Wages, 6020 Employer Social Contributions; `PostingServiceTest` balances a run and its payment (AT-10)
 - [ ] Before the first real run: the accountant checks the seeded rates on a real payslip (see the questions), then the business's employees are entered
 
+## Vehicle costs — a module of its own (not in SRS v2.1) — built 2026-10-12 (V41), at the owner's request
+
+Scope (owner, 2026-10-12): mileage, oil changes, garage costs and spare parts. Parts are bought when needed (expensed, no parts store); a garage may be paid at once or give credit; costs above a limit in Settings are approved by another person; fuel bought on the road may be paid from the driver's float.
+
+- [x] Vehicle costs (M) — 2026-10-12: Fleet → Vehicle Costs (`/vehicle-costs`): VC-WH-2026-000001, a vehicle (and a trip of it), the day, the kind (fuel with litres, service or oil change, repair, spare parts, tyres, washing, parking, other), the odometer, the amount with the VAT of an EBM receipt (claimed back), paid from the vault, the bank or mobile money (with a reference), owed to the garage (an RWF supplier: it shows on their account and is paid like any supplier) or from the trip's float (only what is left of its cash sales). Posted at once up to the Settings' limit (100,000 RWF), above it approved or rejected by another person (APPROVE_VEHICLE_COST, the owner); reversed with a reason, never edited. Each has Documents (the receipt) and History
+- [x] Mileage and service plans (M) — 2026-10-12: on the vehicle's page: Costs (this year's costs, km and cost per km), Mileage (every reading of its trips and costs) and Service plans (every so many km or months, whichever comes first; a service cost that names its plan marks it done). The Fleet alert tells the fleet manager once when a service is due soon (Settings: 500 km, or the fleet alert days) and once when it is due
+- [x] Driver floats (M) — 2026-10-12: a cost paid from a trip's float is taken off what the driver hands back (the float form shows the cash sales, the costs paid from it and what to hand back); the float is not cleared while such a cost waits for approval
+- [x] Ledger and reports (M) — 2026-10-12: `PostingService.vehicleCost` (VEHICLE_COST): Dr 6110 Vehicle Fuel, 6120 Vehicle Repairs and Maintenance or 6130 Other Vehicle Costs and VAT Input / Cr what paid it (`PostingServiceTest`, AT-10); the fleet report's "Per vehicle: running costs" view (Excel and PDF); the dashboard's "Waiting for approval" and "Vehicle services due"; a month does not close while a cost dated in it waits
+- [ ] Before go-live: the accountant confirms the three expense accounts and the approval limit; the business's service plans are entered per vehicle
+
 ---
 
 ## Questions for the business
@@ -260,6 +272,8 @@ Answers change what gets built; record each answer next to the question.
 - [ ] Is opening stock migrated from an existing system or counted fresh? (SRS 8.3)
 
 ## Dev database: test data to clear before go-live
+
+- Vehicle costs on 2026-10-12 (qa-admin, RAC123A): VC-WH-2026-000001 (62,000 fuel from the vault, reversed "Recorded on the wrong vehicle (test)": JV-WH-2026-000118 and its reversal), -000002 (150,000 oil and filter change owed to Kigali Glass Traders, INV-2231, VAT 22,881, approved by owner38648: JV-WH-2026-000119; the garage's account owes it), -000003 (20,000 diesel paid from the float of TRP-WH-2026-000014: JV-WH-2026-000122), -000004 (120,000 from that float, rejected by owner38648 "Paid by the garage warranty (test)"); service plans "Oil change" (made as "Oil change (test)", done at 45,360 km by -000002) and "Tyre rotation" (made as "Tyre rotation (test)", due: alert_states SERVICE:*, notifications to admin, owner38648, qa-admin and manual-admin), renamed for the manual; trip TRP-WH-2026-000014 (Huye, float test: U-WH-000079 sold on MINV-WH-2026-000041, U-WH-000083 back on WH-A-R01, FC-WH-2026-000006 exact at 175,008, closed); phone "Float test phone" (driver-m7, two live tokens). Manual screenshots the same day (manual-admin): supplier Kigali Auto Garage Ltd (RWF, 30 days); trip TRP-WH-2026-000015 (Musanze, Rubavu: U-WH-000052..55 from WH-A-R04, odometer 45,400 at departure, one sold on MINV-WH-2026-000043, three back on WH-A-R04, 170,008 declared at the office, FC-WH-2026-000007 exact, closed; phone "Jean’s phone" signed in again); VC-WH-2026-000005 (25,000 diesel paid from its float) and -000006 (180,000 front brake pads owed to Kigali Auto Garage Ltd, KAG-0912, recorded by qa-admin and approved by manual-admin)
 
 - Payroll: employees EMP-WH-0001 (Aline Uwase), -0002 (Eric Nshimiyimana, linked to driver-m7: 1,000 of his shortage recovered), -0003 (Grace Mukamana, second employer); pay run PAY-WH-2026-000001 (October, approved by owner38648 and paid), -000002 (November, cancelled)
 - Purchase orders PO-WH-2026-000001 (Shandong, received), -000002 (Kigali Glass, closed short), -000003..8 (cancelled), -000009 (AT-01, received)

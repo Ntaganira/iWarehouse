@@ -13,6 +13,8 @@ import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.FleetPapers;
+import com.ntaganira.heritier.iWarehouse.service.ServicePlanService;
+import com.ntaganira.heritier.iWarehouse.service.VehicleCostService;
 import com.ntaganira.heritier.iWarehouse.service.VehicleService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -51,14 +53,19 @@ public class VehicleController {
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
+    private final VehicleCostService costService;
+    private final ServicePlanService planService;
 
     public VehicleController(VehicleService vehicleService, AttachmentService attachmentService, DataChangeService dataChangeService,
-                             ActivityLogService activityLogService, Messages messages) {
+                             ActivityLogService activityLogService, Messages messages, VehicleCostService costService,
+                             ServicePlanService planService) {
         this.vehicleService = vehicleService;
         this.attachmentService = attachmentService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.messages = messages;
+        this.costService = costService;
+        this.planService = planService;
     }
 
     @GetMapping
@@ -81,7 +88,7 @@ public class VehicleController {
     @PreAuthorize("hasAuthority('PAGE_VEHICLES') and hasAuthority('PERM_VIEW_VEHICLE')")
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
-        String open = List.of("details", "trips", "stock", "documents", "history").contains(tab) ? tab : "details";
+        String open = List.of("details", "trips", "stock", "costs", "mileage", "service", "documents", "history").contains(tab) ? tab : "details";
         Vehicle vehicle = vehicleService.findDetailed(id);
         List<StockUnit> onBoard = vehicleService.unitsOnBoard(vehicle);
         model.addAttribute("vehicle", vehicle);
@@ -91,6 +98,11 @@ public class VehicleController {
         model.addAttribute("load", vehicleService.onBoard(onBoard));
         model.addAttribute("units", Paging.of(onBoard, Paging.pageOf("stock", open, page)));
         model.addAttribute("trips", vehicleService.trips(id, Paging.pageOf("trips", open, page), Paging.SIZE));
+        // What it costs to run, its odometer readings and its service plans
+        model.addAttribute("costs", costService.ofVehicle(id, Paging.pageOf("costs", open, page), Paging.SIZE));
+        model.addAttribute("costSummary", planService.summary(vehicle));
+        model.addAttribute("mileage", Paging.of(planService.mileage(vehicle), Paging.pageOf("mileage", open, page)));
+        model.addAttribute("plans", planService.plansOf(vehicle));
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.VEHICLE, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         model.addAttribute("history", dataChangeService.history("Vehicle", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

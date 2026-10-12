@@ -8,6 +8,7 @@ import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TillStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TripStatus;
+import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,6 +60,8 @@ public class BusinessDashboardService {
     private final TripRepository tripRepo;
     private final AuditCaseService auditCases;
     private final FloatService floats;
+    private final VehicleCostRepository vehicleCostRepo;
+    private final ServicePlanService servicePlans;
     private final Clock clock;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
@@ -66,7 +69,8 @@ public class BusinessDashboardService {
                                     SupplierAccountService supplierAccounts, SaleApprovalRepository saleApprovalRepo,
                                     StockAdjustmentRepository adjustmentRepo, ManualJournalRepository manualJournalRepo,
                                     TillSessionRepository tillRepo, EbmService ebmService, FleetAlertService fleetAlerts,
-                                    TripRepository tripRepo, AuditCaseService auditCases, FloatService floats, Clock clock) {
+                                    TripRepository tripRepo, AuditCaseService auditCases, FloatService floats,
+                                    VehicleCostRepository vehicleCostRepo, ServicePlanService servicePlans, Clock clock) {
         this.invoiceRepo = invoiceRepo;
         this.salesReports = salesReports;
         this.stockSummary = stockSummary;
@@ -82,6 +86,8 @@ public class BusinessDashboardService {
         this.tripRepo = tripRepo;
         this.auditCases = auditCases;
         this.floats = floats;
+        this.vehicleCostRepo = vehicleCostRepo;
+        this.servicePlans = servicePlans;
         this.clock = clock;
     }
 
@@ -98,14 +104,14 @@ public class BusinessDashboardService {
                        BigDecimal receivable, BigDecimal overdue, long customersOwing, BigDecimal payable, long suppliersOwed,
                        List<StockSummary.Reorder> reorder, long saleApprovals, long adjustments, long manualJournals, long openTills,
                        EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, long auditCases, long floatsToClear,
-                       BigDecimal floatsToClearAmount, List<String> chartDays, List<BigDecimal> chartNet) {
+                       BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
         }
 
         public long getWaiting() {
-            return saleApprovals + adjustments + manualJournals;
+            return saleApprovals + adjustments + manualJournals + vehicleCosts;
         }
     }
 
@@ -153,6 +159,7 @@ public class BusinessDashboardService {
                 tillRepo.countByStatus(TillStatus.OPEN), ebmService.backlog(), fleetAlerts.dueCount(),
                 tripRepo.countByStatus(TripStatus.DEPARTED), auditCases.unresolvedCount(), toClear.size(),
                 toClear.stream().map(FloatService.ToClear::expected).reduce(BigDecimal.ZERO, BigDecimal::add),
+                vehicleCostRepo.countByStatus(VehicleCostStatus.PENDING_APPROVAL), servicePlans.dueCount(),
                 perDay.keySet().stream().map(LocalDate::toString).toList(), new ArrayList<>(perDay.values()));
     }
 

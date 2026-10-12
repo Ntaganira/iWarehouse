@@ -48,6 +48,8 @@ public enum DocumentType {
     FLOAT_CLEARANCE("FC"),
     /** A month's pay run (payroll): PAY-WH-2026-000001. */
     PAY_RUN("PAY"),
+    /** A vehicle's running cost: VC-WH-2026-000001. */
+    VEHICLE_COST("VC"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

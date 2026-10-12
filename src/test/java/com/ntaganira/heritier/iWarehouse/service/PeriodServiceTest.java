@@ -3,10 +3,12 @@ package com.ntaganira.heritier.iWarehouse.service;
 import com.ntaganira.heritier.iWarehouse.entity.AccountingPeriod;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PeriodStatus;
+import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.AccountingPeriodRepository;
 import com.ntaganira.heritier.iWarehouse.repository.JournalEntryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ManualJournalRepository;
+import com.ntaganira.heritier.iWarehouse.repository.VehicleCostRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
@@ -40,6 +42,7 @@ class PeriodServiceTest {
 
     private final Map<LocalDate, AccountingPeriod> periods = new TreeMap<>();
     private long waiting;
+    private long costsWaiting;
     private FxRevaluationService.MonthState revaluation = FxRevaluationService.MonthState.NOT_NEEDED;
     private Query lock;
     private PeriodService service;
@@ -65,13 +68,15 @@ class PeriodServiceTest {
         when(entryRepo.firstEntryDate()).thenReturn(LocalDate.of(2026, 9, 14));
         ManualJournalRepository manualJournalRepo = mock(ManualJournalRepository.class);
         when(manualJournalRepo.countByStatusAndEntryDateLessThanEqual(eq(ManualJournalStatus.PENDING_APPROVAL), any())).thenAnswer(a -> waiting);
+        VehicleCostRepository costRepo = mock(VehicleCostRepository.class);
+        when(costRepo.countByStatusAndCostDateLessThanEqual(eq(VehicleCostStatus.PENDING_APPROVAL), any())).thenAnswer(a -> costsWaiting);
         FxRevaluationService fx = mock(FxRevaluationService.class);
         when(fx.state(any())).thenAnswer(a -> revaluation);
         when(fx.ofMonth(any())).thenReturn(Optional.empty());
         EntityManager em = mock(EntityManager.class);
         lock = mock(Query.class);
         when(em.createNativeQuery(anyString())).thenReturn(lock);
-        service = new PeriodService(repo, entryRepo, manualJournalRepo, fx, em, CLOCK);
+        service = new PeriodService(repo, entryRepo, manualJournalRepo, costRepo, fx, em, CLOCK);
     }
 
     @AfterEach
@@ -89,6 +94,11 @@ class PeriodServiceTest {
         assertThatThrownBy(() -> service.close(YearMonth.of(2026, 9)))
                 .isInstanceOf(BusinessException.class).extracting("messageKey").isEqualTo("period.journalsWaiting");
         waiting = 0;
+        costsWaiting = 1;                                                             // a vehicle cost would post into a closed month
+        assertThat(service.checklist(YearMonth.of(2026, 9)).isReady()).isFalse();
+        assertThatThrownBy(() -> service.close(YearMonth.of(2026, 9)))
+                .isInstanceOf(BusinessException.class).extracting("messageKey").isEqualTo("period.vehicleCostsWaiting");
+        costsWaiting = 0;
         revaluation = FxRevaluationService.MonthState.DUE;
         assertThat(service.checklist(YearMonth.of(2026, 9)).isReady()).isFalse();
         assertThatThrownBy(() -> service.close(YearMonth.of(2026, 9)))

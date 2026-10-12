@@ -151,9 +151,9 @@
         <div class="kpi-card">
             <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17"></path><path d="M3 22h12"></path><path d="M15 9h2a2 2 0 0 1 2 2v6a2 2 0 0 0 4 0V8l-3-3"></path></svg></div>
             <div class="kpi-body">
-                <div class="kpi-label" th:text="#{trip.kpi.fuel}">Fuel</div>
-                <div class="kpi-value" th:text="${@num.money(fuelTotal)}">0</div>
-                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.fuelSub(${@num.litres(litresTotal)})}">RWF · 0 litres</span></div>
+                <div class="kpi-label" th:text="#{trip.kpi.costs}">Vehicle costs</div>
+                <div class="kpi-value" th:text="${@num.money(costTotals.amount)}">45,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.costsSub(${@num.litres(costTotals.litres)})}">RWF · 30 litres of fuel</span></div>
             </div>
         </div>
     </div>
@@ -185,9 +185,9 @@
         <div class="kpi-card">
             <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17"></path><path d="M3 22h12"></path><path d="M15 9h2a2 2 0 0 1 2 2v6a2 2 0 0 0 4 0V8l-3-3"></path></svg></div>
             <div class="kpi-body">
-                <div class="kpi-label" th:text="#{trip.kpi.fuel}">Fuel</div>
-                <div class="kpi-value" th:text="${@num.money(fuelTotal)}">45,000</div>
-                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.fuelSub(${@num.litres(litresTotal)})}">RWF · 30 litres</span></div>
+                <div class="kpi-label" th:text="#{trip.kpi.costs}">Vehicle costs</div>
+                <div class="kpi-value" th:text="${@num.money(costTotals.amount)}">45,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{trip.kpi.costsSub(${@num.litres(costTotals.litres)})}">RWF · 30 litres of fuel</span></div>
             </div>
         </div>
     </div>
@@ -241,9 +241,9 @@
                 <span th:text="#{trip.tab.sales}">Sales</span>
                 <span class="section-count" th:text="${sales.totalElements}">0</span>
             </button>
-            <button type="button" class="tab" data-tab="tab-fuel" th:classappend="${tab == 'fuel'} ? 'active'">
-                <span th:text="#{trip.tab.fuel}">Fuel</span>
-                <span class="section-count" th:text="${fuel.totalElements}">0</span>
+            <button type="button" class="tab" data-tab="tab-costs" th:classappend="${tab == 'costs'} ? 'active'">
+                <span th:text="#{trip.tab.costs}">Costs</span>
+                <span class="section-count" th:text="${costs.totalElements}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
                 <span th:text="#{attachment.tab}">Documents</span>
@@ -584,96 +584,63 @@
                 <th:block th:replace="~{layout/pagination :: pager(${sales}, ${base}, 'tab=sales')}"></th:block>
             </div>
 
-            <!-- Fuel bought for the trip (FLT-12) -->
-            <div class="tab-content" id="tab-fuel" th:classappend="${tab == 'fuel'} ? 'active'">
-                <form th:if="${canRecord and s != 'CANCELLED'}" th:action="@{/trips/{id}/fuel(id=${trip.id})}" th:object="${fuelDto}" method="post"
-                      class="attach-form" novalidate>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="filledOn" th:text="#{tripFuel.date}">Day</label>
-                            <input type="date" id="filledOn" th:field="*{filledOn}" required th:attr="max=${today}"
-                                   th:classappend="${#fields.hasErrors('filledOn')} ? 'is-invalid'">
-                            <span class="field-error" th:if="${#fields.hasErrors('filledOn')}" th:errors="*{filledOn}"></span>
-                        </div>
-                        <div class="form-group">
-                            <label for="litres" th:text="#{tripFuel.litres}">Litres</label>
-                            <div class="input-unit">
-                                <input type="number" id="litres" th:field="*{litres}" step="0.01" min="0.01" required inputmode="decimal"
-                                       th:classappend="${#fields.hasErrors('litres')} ? 'is-invalid'">
-                                <span>l</span>
-                            </div>
-                            <span class="field-error" th:if="${#fields.hasErrors('litres')}" th:errors="*{litres}"></span>
-                        </div>
-                        <div class="form-group">
-                            <label for="amount" th:text="#{tripFuel.amount}">Paid</label>
-                            <div class="input-unit">
-                                <input type="number" id="amount" th:field="*{amount}" step="1" min="0" required inputmode="numeric"
-                                       th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
-                                <span>RWF</span>
-                            </div>
-                            <span class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
-                        </div>
-                        <div class="form-group">
-                            <label for="station" th:text="#{tripFuel.station}">Station</label>
-                            <input type="text" id="station" th:field="*{station}" maxlength="80" th:classappend="${#fields.hasErrors('station')} ? 'is-invalid'">
-                            <span class="field-error" th:if="${#fields.hasErrors('station')}" th:errors="*{station}"></span>
-                        </div>
-                        <div class="form-group full-width">
-                            <label for="fuel-note" th:text="#{tripFuel.note}">Receipt or note</label>
-                            <input type="text" id="fuel-note" th:field="*{note}" maxlength="255" th:classappend="${#fields.hasErrors('note')} ? 'is-invalid'">
-                            <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" th:text="#{tripFuel.add}">Record fuel</button>
-                    </div>
-                </form>
+            <!-- The trip's fuel and other vehicle costs: they post to the accounts (FLT-12) -->
+            <div class="tab-content" id="tab-costs" th:classappend="${tab == 'costs'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{trip.costs.note}">Fuel and other costs of the vehicle for this trip. What the driver paid from the trip's cash is taken off the float to hand back.</p>
+                    <a class="btn btn-primary" th:if="${s != 'CANCELLED' and s != 'CLOSED'}"
+                       sec:authorize="hasAuthority('PAGE_VEHICLE_COSTS') and hasAuthority('PERM_RECORD_VEHICLE_COST')" th:href="@{/vehicle-costs/new(trip=${trip.id})}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span th:text="#{vehicleCost.add}">Record a cost</span>
+                    </a>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
-                                <th th:text="#{tripFuel.date}">Day</th>
-                                <th class="num" th:text="#{tripFuel.litres}">Litres</th>
-                                <th class="num" th:text="#{tripFuel.amountRwf}">Paid (RWF)</th>
-                                <th th:text="#{tripFuel.station}">Station</th>
-                                <th th:text="#{tripFuel.recordedBy}">Recorded</th>
-                                <th th:if="${canRecord and s != 'CANCELLED'}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                                <th th:text="#{vehicleCost.number}">Cost</th>
+                                <th th:text="#{vehicleCost.date}">Date</th>
+                                <th th:text="#{vehicleCost.category}">Kind</th>
+                                <th th:text="#{vehicleCost.description}">Description</th>
+                                <th class="num" th:text="#{vehicleCost.litres}">Litres</th>
+                                <th class="num" th:text="#{vehicleCost.amount}">Amount (RWF)</th>
+                                <th th:text="#{vehicleCost.payment}">Paid by</th>
+                                <th th:text="#{common.status}">Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="f : ${fuel.content}">
-                                <td class="nowrap">
-                                    <span th:text="${#temporals.format(f.filledOn, 'dd/MM/yyyy')}">10/10/2026</span>
-                                    <div class="cell-sub" th:if="${f.note != null}" th:text="${f.note}">Receipt 4521</div>
-                                </td>
-                                <td class="num" th:text="${@num.litres(f.litres)}">30</td>
-                                <td class="num" th:text="${@num.money(f.amount)}">45,000</td>
-                                <td th:text="${f.station ?: '—'}">SP Musanze</td>
+                            <tr th:each="c : ${costs.content}">
                                 <td>
-                                    <span th:text="${f.createdBy}">jdriver</span>
-                                    <div class="cell-sub" th:text="${#temporals.format(f.createdAt, 'dd/MM/yyyy HH:mm')}">10/10/2026 10:00</div>
+                                    <a class="row-link strong mono" sec:authorize="hasAuthority('PAGE_VEHICLE_COSTS')" th:href="@{/vehicle-costs/{id}(id=${c.id})}" th:text="${c.number}">VC-WH-2026-000001</a>
+                                    <span class="strong mono" sec:authorize="!hasAuthority('PAGE_VEHICLE_COSTS')" th:text="${c.number}">VC-WH-2026-000001</span>
                                 </td>
-                                <td class="actions" th:if="${canRecord and s != 'CANCELLED'}">
-                                    <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'remove-fuel-' + f.id}" th:text="#{tripFuel.remove}">Remove</button>
+                                <td class="nowrap" th:text="${#temporals.format(c.costDate, 'dd/MM/yyyy')}">12/10/2026</td>
+                                <td th:text="#{${'vehicleCost.category.' + c.category}}">Fuel</td>
+                                <td>
+                                    <span th:text="${c.description}">Diesel, full tank</span>
+                                    <div class="cell-sub" th:if="${c.supplier != null}" th:text="${c.supplier.name}">SP Musanze</div>
                                 </td>
+                                <td class="num" th:text="${c.litres != null} ? ${@num.litres(c.litres)} : ''">30</td>
+                                <td class="num" th:text="${@num.money(c.amount)}">45,000</td>
+                                <td th:text="#{${'vehicleCost.payment.' + c.payment}}">Driver's float</td>
+                                <td><th:block th:replace="~{vehicle-costs/list :: costStatus(${c.status})}"></th:block></td>
                             </tr>
-                            <tr th:if="${fuel.totalElements == 0}">
-                                <td th:attr="colspan=${canRecord and s != 'CANCELLED'} ? 6 : 5"><div class="empty-state"><p th:text="#{tripFuel.none}">No fuel recorded.</p></div></td>
+                            <tr th:if="${costs.totalElements == 0}">
+                                <td colspan="8"><div class="empty-state"><p th:text="#{trip.costs.none}">No cost recorded for this trip.</p></div></td>
                             </tr>
                         </tbody>
-                        <tfoot th:if="${fuel.totalElements > 0}">
+                        <tfoot th:if="${costTotals.count > 0}">
                             <tr>
-                                <td class="strong" th:text="#{tripFuel.total}">Total</td>
-                                <td class="num strong" th:text="${@num.litres(litresTotal)}">30</td>
-                                <td class="num strong" th:text="${@num.money(fuelTotal)}">45,000</td>
-                                <td></td>
-                                <td></td>
-                                <td th:if="${canRecord and s != 'CANCELLED'}"></td>
+                                <th colspan="4" th:text="#{trip.costs.totalPosted}">Total posted</th>
+                                <th class="num" th:text="${@num.litres(costTotals.litres)}">30</th>
+                                <th class="num" th:text="${@num.money(costTotals.amount)}">45,000</th>
+                                <th></th>
+                                <th></th>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-                <th:block th:replace="~{layout/pagination :: pager(${fuel}, ${base}, 'tab=fuel')}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${costs}, ${base}, 'tab=costs')}"></th:block>
             </div>
 
             <!-- The photos of breakage on the road and any paper of the trip -->
@@ -691,11 +658,6 @@
     <!-- Dialogs -->
     <th:block th:if="${s == 'PLANNED' and canPlan}">
         <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{trip.cancelTitle}, @{/trips/{id}/cancel(id=${trip.id})}, #{trip.cancelText}, #{trip.cancel})}"></div>
-    </th:block>
-    <th:block th:if="${canRecord and s != 'CANCELLED'}">
-        <th:block th:each="f : ${fuel.content}">
-            <div th:replace="~{fragments/reason-modal :: reasonModal(${'remove-fuel-' + f.id}, #{tripFuel.removeTitle}, @{/trips/{id}/fuel/{fuel}/remove(id=${trip.id}, fuel=${f.id})}, #{tripFuel.removeText}, #{tripFuel.remove})}"></div>
-        </th:block>
     </th:block>
 
     <!-- Departure (FLT-06, FLT-07): the supervisor approves the loading -->

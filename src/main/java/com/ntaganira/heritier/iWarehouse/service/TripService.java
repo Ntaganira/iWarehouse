@@ -2,12 +2,10 @@ package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.dto.TripDto;
-import com.ntaganira.heritier.iWarehouse.dto.TripFuelDto;
 import com.ntaganira.heritier.iWarehouse.entity.Driver;
 import com.ntaganira.heritier.iWarehouse.entity.Location;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.entity.Trip;
-import com.ntaganira.heritier.iWarehouse.entity.TripFuel;
 import com.ntaganira.heritier.iWarehouse.entity.TripLine;
 import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.entity.Vehicle;
@@ -469,7 +467,7 @@ public class TripService {
         return trip;
     }
 
-    // ---------------------------------------------------------------- readings and fuel (FLT-12)
+    // ---------------------------------------------------------------- readings (FLT-12)
 
     /** The odometer of a trip on the road: its start when departure did not take it, and its end. */
     @Transactional
@@ -502,47 +500,6 @@ public class TripService {
             vehicle.setOdometerKm(last);
         }
         return trip;
-    }
-
-    @Transactional
-    public TripFuel addFuel(UUID id, TripFuelDto dto) {
-        Trip trip = lock(id);
-        if (trip.isCancelled()) {
-            throw notState(trip);
-        }
-        if (dto.getFilledOn().isAfter(LocalDate.now(clock))) {
-            throw BusinessException.onField("filledOn", "tripFuel.date.future");
-        }
-        TripFuel fuel = new TripFuel();
-        fuel.setTrip(trip);
-        fuel.setFilledOn(dto.getFilledOn());
-        fuel.setLitres(dto.getLitres());
-        fuel.setAmount(dto.getAmount());
-        fuel.setStation(PartyRules.clean(dto.getStation()));
-        fuel.setNote(PartyRules.clean(dto.getNote()));
-        trip.getFuel().add(fuel);
-        return fuel;
-    }
-
-    /** Takes off a fuel entry made by mistake (the caller gives the reason to the change log). */
-    @Transactional
-    public TripFuel removeFuel(UUID id, UUID fuelId) {
-        Trip trip = lock(id);
-        if (trip.isCancelled()) {
-            throw notState(trip);
-        }
-        TripFuel fuel = trip.getFuel().stream().filter(f -> f.getId().equals(fuelId)).findFirst()
-                .orElseThrow(() -> new NotFoundException("TripFuel", fuelId));
-        trip.getFuel().remove(fuel);
-        return fuel;
-    }
-
-    public static BigDecimal fuelTotal(Trip trip) {
-        return trip.getFuel().stream().map(TripFuel::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    public static BigDecimal litresTotal(Trip trip) {
-        return trip.getFuel().stream().map(TripFuel::getLitres).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     // ---------------------------------------------------------------- rules

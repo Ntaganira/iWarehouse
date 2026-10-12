@@ -21,7 +21,7 @@ import java.util.Set;
  * - Date      : 2026. 10. 10.
  * - User      : Hntaganira
  * - Desc      : A moving-shop trip (FLT-05): a vehicle, its driver, a date and the area it covers, with its loading
- *               manifest (the units planned, each confirmed by a scan) and the fuel bought for it. Departing moves the
+ *               manifest (the units planned, each confirmed by a scan); its fuel and other costs are vehicle costs naming it. Departing moves the
  *               units loaded to the vehicle, in the driver's charge (FLT-07), and keeps what left (pieces and kg) and
  *               the odometer (FLT-12). A planned trip can be cancelled with a reason. At the end of the day the trip
  *               comes back: what became of its units (FLT-09), the cash its driver declares (MPOS-07), then it closes
@@ -131,9 +131,6 @@ public class Trip extends BaseEntity {
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<TripLine> lines = new LinkedHashSet<>();
-
-    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<TripFuel> fuel = new LinkedHashSet<>();
 
     public boolean isPlanned() {
         return status == TripStatus.PLANNED;

@@ -95,6 +95,7 @@ public class GlobalSearchService {
     private final UserService userService;
     private final EmployeeService employeeService;
     private final PayRunService payRunService;
+    private final VehicleCostService vehicleCostService;
     private final Messages messages;
     private final NumberFormats num;
 
@@ -107,7 +108,8 @@ public class GlobalSearchService {
                                StockTransferService stockTransferService, StockAdjustmentService stockAdjustmentService,
                                StockCountService stockCountService, TripService tripService, VehicleService vehicleService,
                                DriverService driverService, AuditCaseService auditCaseService, UserService userService,
-                               EmployeeService employeeService, PayRunService payRunService, Messages messages, NumberFormats num) {
+                               EmployeeService employeeService, PayRunService payRunService, VehicleCostService vehicleCostService,
+                               Messages messages, NumberFormats num) {
         this.stockService = stockService;
         this.locationService = locationService;
         this.locationRepo = locationRepo;
@@ -133,6 +135,7 @@ public class GlobalSearchService {
         this.userService = userService;
         this.employeeService = employeeService;
         this.payRunService = payRunService;
+        this.vehicleCostService = vehicleCostService;
         this.messages = messages;
         this.num = num;
     }
@@ -274,6 +277,10 @@ public class GlobalSearchService {
             new Source<>("nav.vehicles", "/vehicles", null, List.of("PAGE_VEHICLES", "PERM_VIEW_VEHICLE"),
                 q -> vehicleService.findPage(q, null, 0, PER_GROUP),
                 v -> new Hit(v.getPlate(), v.getModel(), null, "/vehicles/" + v.getId())),
+            new Source<>("nav.vehicleCosts", "/vehicle-costs", null, List.of("PAGE_VEHICLE_COSTS", "PERM_VIEW_VEHICLE_COST"),
+                q -> vehicleCostService.findPage(q, null, null, null, 0, PER_GROUP),
+                c -> new Hit(c.getNumber(), join(c.getVehicle() == null ? null : c.getVehicle().getPlate(), c.getDescription()),
+                        join(date(c.getCostDate()), rwf(c.getAmount())), "/vehicle-costs/" + c.getId())),
             new Source<>("nav.drivers", "/drivers", null, List.of("PAGE_DRIVERS", "PERM_VIEW_DRIVER"),
                 q -> driverService.findPage(q, null, 0, PER_GROUP),
                 d -> new Hit(d.getUsername(), d.getUser() == null ? null : d.getUser().getFullName(), null, "/drivers/" + d.getId())),

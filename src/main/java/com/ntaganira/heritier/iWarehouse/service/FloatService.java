@@ -13,6 +13,7 @@ import com.ntaganira.heritier.iWarehouse.repository.DriverRepository;
 import com.ntaganira.heritier.iWarehouse.repository.FloatClearanceRepository;
 import com.ntaganira.heritier.iWarehouse.repository.SalesPaymentRepository;
 import com.ntaganira.heritier.iWarehouse.repository.TripRepository;
+import com.ntaganira.heritier.iWarehouse.repository.VehicleCostRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -54,6 +55,7 @@ public class FloatService {
     private final DriverRepository driverRepo;
     private final FloatClearanceRepository repo;
     private final SalesPaymentRepository paymentRepo;
+    private final VehicleCostRepository costRepo;
     private final JournalService journalService;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
@@ -64,13 +66,15 @@ public class FloatService {
     private final NumberFormats num;
     private final Clock clock;
 
-    public FloatService(TripRepository tripRepo, DriverRepository driverRepo, FloatClearanceRepository repo, SalesPaymentRepository paymentRepo, JournalService journalService,
+    public FloatService(TripRepository tripRepo, DriverRepository driverRepo, FloatClearanceRepository repo, SalesPaymentRepository paymentRepo,
+                        VehicleCostRepository costRepo, JournalService journalService,
                         PostingService postingService, DocumentNumberService numbers, LinePricing pricing, AlertStateRepository stateRepo,
                         SettingService settings, Notifier notifier, NumberFormats num, Clock clock) {
         this.tripRepo = tripRepo;
         this.driverRepo = driverRepo;
         this.repo = repo;
         this.paymentRepo = paymentRepo;
+        this.costRepo = costRepo;
         this.journalService = journalService;
         this.postingService = postingService;
         this.numbers = numbers;
@@ -82,16 +86,34 @@ public class FloatService {
         this.clock = clock;
     }
 
-    /** A trip back whose float is not cleared, with the cash its sales put on the float. */
+    /** A trip back whose float is not cleared: the cash it should hand back (its cash sales less what it paid vehicle costs with). */
     public record ToClear(Trip trip, BigDecimal expected) {
     }
 
     /** Trips back from the road with cash on the float not cleared yet, the oldest return first. */
     public List<ToClear> toClear() {
         List<Trip> trips = tripRepo.findNotCleared(BACK);
-        Map<UUID, BigDecimal> cash = cashOf(trips.stream().map(Trip::getId).toList());
+        List<UUID> ids = trips.stream().map(Trip::getId).toList();
+        Map<UUID, BigDecimal> cash = cashOf(ids);
+        Map<UUID, BigDecimal> paid = paidFromFloat(ids);
         return trips.stream().filter(t -> cash.getOrDefault(t.getId(), BigDecimal.ZERO).signum() > 0)
-                .map(t -> new ToClear(t, cash.get(t.getId()))).toList();
+                .map(t -> new ToClear(t, cash.get(t.getId()).subtract(paid.getOrDefault(t.getId(), BigDecimal.ZERO)))).toList();
+    }
+
+    /** What the drivers paid vehicle costs with from some trips' cash, posted (VehicleCostService): no longer on the float. */
+    public Map<UUID, BigDecimal> paidFromFloat(Collection<UUID> tripIds) {
+        Map<UUID, BigDecimal> paid = new HashMap<>();
+        if (!tripIds.isEmpty()) {
+            for (Object[] row : costRepo.paidFromFloat(tripIds, VehicleCostPayment.DRIVER_FLOAT, List.of(VehicleCostStatus.POSTED))) {
+                paid.put((UUID) row[0], (BigDecimal) row[1]);
+            }
+        }
+        return paid;
+    }
+
+    /** The cash a trip's driver should hand back: its cash sales less the vehicle costs paid from them. */
+    public BigDecimal expectedOf(UUID tripId) {
+        return cashOf(tripId).subtract(paidFromFloat(List.of(tripId)).getOrDefault(tripId, BigDecimal.ZERO));
     }
 
     /** The cash each trip's sales took: what they put on the driver's float. */
@@ -165,6 +187,9 @@ public class FloatService {
         if (!trip.isCashDeclared()) {
             throw BusinessException.of("float.notDeclared", trip.getNumber(), trip.getDriver().getUser().getFullName());
         }
+        if (costRepo.existsByTrip_IdAndPaymentAndStatus(tripId, VehicleCostPayment.DRIVER_FLOAT, VehicleCostStatus.PENDING_APPROVAL)) {
+            throw BusinessException.of("float.costWaiting", trip.getNumber());
+        }
         int decimals = pricing.baseDecimals();
         if (dto.getCounted().stripTrailingZeros().scale() > decimals) {
             throw BusinessException.onField("counted", "float.counted.decimals", decimals);
@@ -176,7 +201,7 @@ public class FloatService {
         if (dto.getDepositAccount() == AccountKey.BANK && reference == null) {
             throw BusinessException.onField("reference", "float.reference.bank");
         }
-        BigDecimal expected = cashOf(tripId);
+        BigDecimal expected = expectedOf(tripId);
         BigDecimal counted = dto.getCounted();
         FloatClearances.Split split = FloatClearances.split(expected, counted);
 

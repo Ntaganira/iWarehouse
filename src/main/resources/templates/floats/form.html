@@ -19,8 +19,20 @@
             <div class="detail-list">
                 <div class="item">
                     <label th:text="#{float.expected}">Cash sales (RWF)</label>
-                    <div class="value strong" th:text="${@num.money(expected)}">295,008</div>
+                    <div class="value" th:classappend="${paidFromFloat.signum() == 0} ? 'strong'" th:text="${@num.money(cashSales)}">295,008</div>
                 </div>
+                <th:block th:if="${paidFromFloat.signum() > 0}">
+                    <div class="item">
+                        <label th:text="#{float.paidFromFloat}">Vehicle costs paid from it (RWF)</label>
+                        <div class="value">
+                            <a th:href="@{/trips/{id}(id=${trip.id}, tab='costs')}" th:text="${'− ' + @num.money(paidFromFloat)}">− 45,000</a>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{float.toHandBack}">To hand back (RWF)</label>
+                        <div class="value strong" th:text="${@num.money(expected)}">250,008</div>
+                    </div>
+                </th:block>
                 <div class="item">
                     <label th:text="#{float.declared}">Declared (RWF)</label>
                     <div class="value">

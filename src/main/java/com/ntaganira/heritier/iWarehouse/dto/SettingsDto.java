@@ -101,6 +101,12 @@ public class SettingsDto {
     @Digits(integer = 16, fraction = 0, message = "{settings.amount.digits}")
     private BigDecimal adjustmentApprovalLimit;
 
+    /** RWF above which a vehicle cost waits for another person's approval. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.amount.range}")
+    @Digits(integer = 16, fraction = 0, message = "{settings.amount.digits}")
+    private BigDecimal vehicleCostApprovalLimit;
+
     @NotNull(message = "{settings.value.required}")
     @DecimalMin(value = "0", message = "{settings.discountApprovalPercent.range}")
     @DecimalMax(value = "100", message = "{settings.discountApprovalPercent.range}")
@@ -133,6 +139,12 @@ public class SettingsDto {
     @Min(value = 1, message = "{settings.floatAlertHours.range}")
     @Max(value = 168, message = "{settings.floatAlertHours.range}")
     private Integer floatAlertHours;
+
+    /** Km before a vehicle's service falls due that the fleet is told. */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 0, message = "{settings.serviceAlertKm.range}")
+    @Max(value = 20000, message = "{settings.serviceAlertKm.range}")
+    private Integer serviceAlertKm;
 
     // --- EBM fiscal signing (TAX-02) ---
 

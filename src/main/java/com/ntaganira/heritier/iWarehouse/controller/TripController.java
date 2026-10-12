@@ -5,7 +5,6 @@ import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.TripDto;
-import com.ntaganira.heritier.iWarehouse.dto.TripFuelDto;
 import com.ntaganira.heritier.iWarehouse.entity.Driver;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.service.SyncConflictService;
@@ -14,9 +13,10 @@ import com.ntaganira.heritier.iWarehouse.service.MobileSaleService;
 import com.ntaganira.heritier.iWarehouse.entity.TripInvoiceNumber;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.Trip;
-import com.ntaganira.heritier.iWarehouse.entity.TripFuel;
 import com.ntaganira.heritier.iWarehouse.entity.TripLine;
 import com.ntaganira.heritier.iWarehouse.entity.Vehicle;
+import com.ntaganira.heritier.iWarehouse.entity.VehicleCost;
+import com.ntaganira.heritier.iWarehouse.service.VehicleCostService;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TripStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
@@ -89,13 +89,14 @@ public class TripController {
     private final BreakageService breakageService;
     private final TripCloseService closeService;
     private final AttachmentService attachmentService;
+    private final VehicleCostService vehicleCostService;
     private final Clock clock;
 
     public TripController(TripService tripService, VehicleService vehicleService, DriverService driverService, StockService stockService,
                           MobileSaleService mobileSaleService, MobileTripService mobileTripService, SyncConflictService syncConflictService,
                           DataChangeService dataChangeService, ActivityLogService activityLogService, NumberFormats num, Messages messages,
                           TripReturnService returnService, BreakageService breakageService, TripCloseService closeService,
-                          AttachmentService attachmentService, Clock clock) {
+                          AttachmentService attachmentService, VehicleCostService vehicleCostService, Clock clock) {
         this.tripService = tripService;
         this.vehicleService = vehicleService;
         this.driverService = driverService;
@@ -111,6 +112,7 @@ public class TripController {
         this.breakageService = breakageService;
         this.closeService = closeService;
         this.attachmentService = attachmentService;
+        this.vehicleCostService = vehicleCostService;
         this.clock = clock;
     }
 
@@ -147,13 +149,11 @@ public class TripController {
                        Model model) {
         Trip trip = visible(id);
         boolean away = trip.getStatus() != TripStatus.PLANNED && trip.getStatus() != TripStatus.CANCELLED;
-        String open = tab != null && List.of("manifest", "return", "sales", "fuel", "documents", "history").contains(tab)
+        String open = tab != null && List.of("manifest", "return", "sales", "costs", "documents", "history").contains(tab)
                 && (away || !"return".equals(tab)) ? tab : "manifest";
         Map<UUID, StockUnit> units = tripService.units(trip);
         List<Row> rows = TripService.sortedLines(trip).stream().map(l -> new Row(l, units.get(l.getStockUnitId()))).toList();
-        List<TripFuel> fuel = trip.getFuel().stream()
-                .sorted(Comparator.comparing(TripFuel::getFilledOn).reversed().thenComparing(TripFuel::getCreatedAt, Comparator.reverseOrder()))
-                .toList();
+        List<VehicleCost> costs = vehicleCostService.ofTrip(id);
         LocalDate today = LocalDate.now(clock);
         int days = vehicleService.alertDays();
         Map<String, FleetPapers.Stage> papers = new LinkedHashMap<>();
@@ -165,17 +165,11 @@ public class TripController {
         model.addAttribute("planned", TripService.check(trip, units, false));
         model.addAttribute("loaded", TripService.check(trip, units, true));
         model.addAttribute("loadedCount", trip.getLines().stream().filter(TripLine::isLoaded).count());
-        model.addAttribute("fuel", Paging.of(fuel, Paging.pageOf("fuel", open, page)));
-        model.addAttribute("fuelTotal", TripService.fuelTotal(trip));
-        model.addAttribute("litresTotal", TripService.litresTotal(trip));
+        model.addAttribute("costs", Paging.of(costs, Paging.pageOf("costs", open, page)));
+        model.addAttribute("costTotals", vehicleCostService.tripTotals(costs));
         model.addAttribute("papers", papers);
         model.addAttribute("locations", stockService.locationsById());
         model.addAttribute("isDriver", isDriver(trip));
-        if (!model.containsAttribute("fuelDto")) {
-            TripFuelDto fuelDto = new TripFuelDto();
-            fuelDto.setFilledOn(today);
-            model.addAttribute("fuelDto", fuelDto);
-        }
         model.addAttribute("today", today);
         // Sales from the vehicle on the mobile POS (MPOS), the numbers its phones hold, the sales in conflict (SYNC-05)
         List<SalesInvoice> sales = mobileSaleService.salesOf(id);
@@ -217,7 +211,7 @@ public class TripController {
         }
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.TRIP, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         model.addAttribute("history", dataChangeService.historyWithChildren("Trip", id.toString(),
-                List.of("TripLine", "TripFuel", "TripBreakage", "TripReturnExtra"), "trip", Paging.pageOf("history", open, page), Paging.SIZE));
+                List.of("TripLine", "TripFuel", "TripBreakage", "TripReturnExtra", "VehicleCost"), "trip", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "trips/view";
     }
@@ -441,7 +435,7 @@ public class TripController {
         return "redirect:/trips/" + id;
     }
 
-    // ---------------------------------------------------------------- readings and fuel (FLT-12)
+    // ---------------------------------------------------------------- readings (FLT-12)
 
     @PostMapping("/{id}/readings")
     @PreAuthorize("hasAuthority('PAGE_FLEET') and hasAuthority('PERM_RECORD_TRIP_READINGS')")
@@ -460,59 +454,6 @@ public class TripController {
             redirect.addFlashAttribute("flashError", error);
         }
         return "redirect:/trips/" + id;
-    }
-
-    @PostMapping("/{id}/fuel")
-    @PreAuthorize("hasAuthority('PAGE_FLEET') and hasAuthority('PERM_RECORD_TRIP_READINGS')")
-    public String addFuel(@PathVariable UUID id, @Valid @ModelAttribute("fuelDto") TripFuelDto dto, BindingResult result,
-                          RedirectAttributes redirect) {
-        visible(id);
-        String back = "redirect:/trips/" + id + "?tab=fuel";
-        if (result.hasErrors()) {
-            redirect.addFlashAttribute("org.springframework.validation.BindingResult.fuelDto", result);
-            redirect.addFlashAttribute("fuelDto", dto);
-            return back;
-        }
-        try {
-            TripFuel fuel = tripService.addFuel(id, dto);
-            activityLogService.record(MODULE, "UPDATE_TRIP", "Recorded fuel on trip " + numberOf(id) + ": " + fuel.getLitres().toPlainString()
-                    + " l, " + fuel.getAmount().toPlainString() + " RWF on " + fuel.getFilledOn(), ActivityStatus.SUCCESS);
-            redirect.addFlashAttribute("flashSuccess", messages.get("tripFuel.added", num.litres(fuel.getLitres()), num.money(fuel.getAmount())));
-        } catch (BusinessException e) {
-            String error = messages.get(e.getMessageKey(), e.getArgs());
-            activityLogService.record(MODULE, "UPDATE_TRIP", "Failed to record fuel on trip " + numberOf(id) + ": " + error, ActivityStatus.FAILED);
-            if (e.getField() != null) {
-                result.rejectValue(e.getField(), e.getMessageKey(), e.getArgs(), error);
-                redirect.addFlashAttribute("org.springframework.validation.BindingResult.fuelDto", result);
-                redirect.addFlashAttribute("fuelDto", dto);
-            } else {
-                redirect.addFlashAttribute("flashError", error);
-            }
-        }
-        return back;
-    }
-
-    @PostMapping("/{id}/fuel/{fuelId}/remove")
-    @PreAuthorize("hasAuthority('PAGE_FLEET') and hasAuthority('PERM_RECORD_TRIP_READINGS')")
-    public String removeFuel(@PathVariable UUID id, @PathVariable UUID fuelId, @RequestParam(required = false) String reason,
-                             RedirectAttributes redirect) {
-        visible(id);
-        String back = "redirect:/trips/" + id + "?tab=fuel";
-        if (!StringUtils.hasText(reason) || reason.trim().length() > REASON_MAX) {
-            redirect.addFlashAttribute("flashError", messages.get("po.reason.required"));
-            return back;
-        }
-        try {
-            TripFuel fuel = AuditContext.withReason(reason.trim(), () -> tripService.removeFuel(id, fuelId));
-            activityLogService.record(MODULE, "UPDATE_TRIP", "Took off the fuel of " + fuel.getFilledOn() + " (" + fuel.getAmount().toPlainString()
-                    + " RWF) from trip " + numberOf(id) + ": " + reason.trim(), ActivityStatus.SUCCESS);
-            redirect.addFlashAttribute("flashSuccess", messages.get("tripFuel.removed"));
-        } catch (BusinessException e) {
-            String error = messages.get(e.getMessageKey(), e.getArgs());
-            activityLogService.record(MODULE, "UPDATE_TRIP", "Failed to take fuel off trip " + numberOf(id) + ": " + error, ActivityStatus.FAILED);
-            redirect.addFlashAttribute("flashError", error);
-        }
-        return back;
     }
 
     // ---------------------------------------------------------------- helpers

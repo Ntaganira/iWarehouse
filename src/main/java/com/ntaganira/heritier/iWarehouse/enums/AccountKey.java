@@ -48,5 +48,9 @@ public enum AccountKey {
     NET_PAY_PAYABLE,
     PAYROLL_DEDUCTIONS,
     SALARIES,
-    EMPLOYER_CONTRIBUTIONS
+    EMPLOYER_CONTRIBUTIONS,
+    /** Vehicle costs (V41): fuel; services, repairs, parts and tyres; washing, parking, tolls and the rest. */
+    VEHICLE_FUEL,
+    VEHICLE_MAINTENANCE,
+    VEHICLE_OTHER
 }

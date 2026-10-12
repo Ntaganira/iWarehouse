@@ -45,7 +45,9 @@ public enum JournalSource {
     /** A pay run approved: salaries and the employer's contributions, what is withheld and the net pay owed. */
     PAYROLL("/payroll/runs/"),
     /** A pay run's salaries paid. */
-    PAYROLL_PAYMENT("/payroll/runs/");
+    PAYROLL_PAYMENT("/payroll/runs/"),
+    /** A vehicle's running cost (fuel, a service, a repair, parts...), paid, owed to the garage or paid from a driver's float. */
+    VEHICLE_COST("/vehicle-costs/");
 
     private final String path;
 

@@ -188,6 +188,13 @@
                             </div>
                             <div class="setting-row">
                                 <dt>
+                                    <span th:text="#{settings.vehicleCostApprovalLimit}">Vehicle cost</span>
+                                    <span class="setting-hint" th:text="#{settings.vehicleCostApprovalLimitHint}">Above it, another person approves a vehicle cost before it is posted</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.vehicleCostApprovalLimit)}">100,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
                                     <span th:text="#{settings.discountApprovalPercent}">Discount or price override</span>
                                     <span class="setting-hint" th:text="#{settings.discountApprovalPercentHint}">Percentage above which a discount needs approval (POS-06)</span>
                                 </dt>
@@ -250,6 +257,20 @@
                                     <span class="setting-hint" th:text="#{settings.fleetExpiryAlertDaysHint}">Before a licence, insurance or inspection expires (FLT-04)</span>
                                 </dt>
                                 <dd><span th:text="${settings.fleetExpiryAlertDays}">30</span> <span class="unit" th:text="#{settings.unit.days}">days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.floatAlertHours}">Float alert</span>
+                                    <span class="setting-hint" th:text="#{settings.floatAlertHoursHint}">After a trip came back, a driver's float not cleared is reported (RPT-06)</span>
+                                </dt>
+                                <dd><span th:text="${settings.floatAlertHours}">24</span> <span class="unit" th:text="#{settings.unit.hours}">hours</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.serviceAlertKm}">Service reminder</span>
+                                    <span class="setting-hint" th:text="#{settings.serviceAlertKmHint}">Before a vehicle's service falls due (or within the papers alert days)</span>
+                                </dt>
+                                <dd><span th:text="${@num.whole(settings.serviceAlertKm)}">500</span> <span class="unit">km</span></dd>
                             </div>
                         </dl>
                     </div>

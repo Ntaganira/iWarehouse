@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${cost.number}, ~{::content})}">
+<head><title>Vehicle cost - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${cost.status.name()}, base=${'/vehicle-costs/' + cost.id},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_VEHICLE_COST'')')},
+        canRecord=${#authorization.expression('hasAuthority(''PERM_RECORD_VEHICLE_COST'')')},
+        canReverse=${#authorization.expression('hasAuthority(''PERM_REVERSE_VEHICLE_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${cost.number}">VC-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{vehicleCost.recordedBy(${cost.requestedBy}, ${#temporals.format(cost.requestedAt, 'dd/MM/yyyy HH:mm')})}">recorded by fleet on 12/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{vehicle-costs/list :: costStatus(${cost.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/vehicle-costs" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'PENDING_APPROVAL'}">
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canRecord and mine}" th:text="#{vehicleCost.cancel}">Withdraw</button>
+                <th:block th:if="${canApprove and !mine}">
+                    <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{vehicleCost.reject}">Reject</button>
+                    <form th:action="@{/vehicle-costs/{id}/approve(id=${cost.id})}" method="post" class="row-action-form confirm-submit"
+                          th:attr="data-confirm=#{vehicleCost.approveConfirm(${cost.number}, ${@num.money(cost.amount)}, ${cost.vehicle.plate})}">
+                        <button type="submit" class="btn btn-primary" th:text="#{vehicleCost.approve}">Approve and post</button>
+                    </form>
+                </th:block>
+            </th:block>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reverse-modal" th:if="${s == 'POSTED' and canReverse}"
+                    th:text="#{vehicleCost.reverse}">Reverse</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
+        <span th:text="#{vehicleCost.waitingNote(${@num.money(limit)})}">Above the 100,000 RWF limit: nothing is posted until another person with approval rights approves it.</span>
+        <span th:if="${mine}" th:text="#{vehicleCost.notYourOwn}">You cannot approve a cost you recorded.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{vehicleCost.rejectedBy(${cost.decidedBy})} : #{vehicleCost.cancelledBy(${cost.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${cost.decisionNote}">Not our vehicle</span>
+    </div>
+    <div class="doc-note" th:if="${(s == 'POSTED' or s == 'REVERSED') and cost.decidedBy != null}">
+        <strong th:text="#{vehicleCost.approvedBy(${cost.decidedBy}, ${#temporals.format(cost.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 12/10/2026 11:00</strong>
+        <span th:if="${cost.decisionNote != null}" th:text="${'· ' + cost.decisionNote}">· ok</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REVERSED'}">
+        <strong th:text="#{vehicleCost.reversedBy(${cost.reversedBy}, ${#temporals.format(cost.reversalDate, 'dd/MM/yyyy')})}">Reversed by accountant on 13/10/2026:</strong>
+        <span th:text="${cost.reversalReason}">Recorded twice</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{vehicleCost.vehicle}">Vehicle</label>
+                    <div class="value">
+                        <a class="mono" sec:authorize="hasAuthority('PAGE_VEHICLES')" th:href="@{/vehicles/{id}(id=${cost.vehicle.id}, tab='costs')}" th:text="${cost.vehicle.plate}">RAC123A</a>
+                        <span class="mono" sec:authorize="!hasAuthority('PAGE_VEHICLES')" th:text="${cost.vehicle.plate}">RAC123A</span>
+                        <div class="cell-sub" th:text="${cost.vehicle.model}">Isuzu NPR</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vehicleCost.trip}">Trip</label>
+                    <div class="value">
+                        <a class="mono" th:if="${cost.trip != null}" th:href="@{/trips/{id}(id=${cost.trip.id}, tab='costs')}" th:text="${cost.trip.number}">TRP-WH-2026-000012</a>
+                        <span th:if="${cost.trip == null}">—</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vehicleCost.date}">Date</label>
+                    <div class="value" th:text="${#temporals.format(cost.costDate, 'dd/MM/yyyy')}">12/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vehicleCost.category}">Kind</label>
+                    <div class="value" th:text="#{${'vehicleCost.category.' + cost.category}}">Fuel</div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{vehicleCost.description}">Description</label>
+                    <div class="value" th:text="${cost.description}">Diesel, full tank</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vehicleCost.odometer}">Odometer</label>
+                    <div class="value" th:text="${cost.odometerKm != null} ? ${@num.whole(cost.odometerKm) + ' km'} : '—'">45,400 km</div>
+                </div>
+                <div class="item" th:if="${cost.litres != null}">
+                    <label th:text="#{vehicleCost.litres}">Litres</label>
+                    <div class="value" th:text="${@num.litres(cost.litres) + ' l'}">50 l</div>
+                </div>
+                <div class="item" th:if="${cost.servicePlan != null}">
+                    <label th:text="#{vehicleCost.servicePlan}">Service plan</label>
+                    <div class="value">
+                        <a sec:authorize="hasAuthority('PAGE_VEHICLES')" th:href="@{/vehicles/{id}(id=${cost.vehicle.id}, tab='service')}" th:text="${cost.servicePlan.name}">Oil change</a>
+                        <span sec:authorize="!hasAuthority('PAGE_VEHICLES')" th:text="${cost.servicePlan.name}">Oil change</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vehicleCost.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(cost.amount)}">80,000</div>
+                </div>
+                <div class="item" th:if="${cost.vatAmount.signum() > 0}">
+                    <label th:text="#{vehicleCost.vatClaimed}">VAT claimed back (RWF)</label>
+                    <div class="value" th:text="${@num.money(cost.vatAmount)}">12,203</div>
+                    <div class="cell-sub" th:text="#{vehicleCost.netSub(${@num.money(cost.netAmount)})}">cost without VAT 67,797</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{vehicleCost.payment}">Paid by</label>
+                    <div class="value">
+                        <span th:text="#{${'vehicleCost.payment.' + cost.payment}}">Main cash vault</span>
+                        <div class="cell-sub mono" th:if="${cost.paymentRef != null}" th:text="${cost.paymentRef}">MP-778812</div>
+                        <div class="cell-sub" th:if="${cost.driver != null}" th:text="#{vehicleCost.paidByDriver(${cost.driver.user.fullName})}">from Jean Driver's float</div>
+                    </div>
+                </div>
+                <div class="item" th:if="${cost.supplier != null}">
+                    <label th:text="#{vehicleCost.supplier}">Garage or station</label>
+                    <div class="value">
+                        <a sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:href="@{/suppliers/{id}(id=${cost.supplier.id}, tab='account')}" th:text="${cost.supplier.name}">Kigali Motors Garage</a>
+                        <span sec:authorize="!hasAuthority('PAGE_SUPPLIERS')" th:text="${cost.supplier.name}">Kigali Motors Garage</span>
+                        <div class="cell-sub mono" th:if="${cost.supplierRef != null}" th:text="${cost.supplierRef}">INV-2231</div>
+                    </div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('VEHICLE_COST', ${cost.id}, ${documents}, ${base})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'PENDING_APPROVAL'}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{vehicleCost.rejectTitle(${cost.number})},
+                @{/vehicle-costs/{id}/reject(id=${cost.id})}, #{vehicleCost.rejectText}, #{vehicleCost.reject})}"></div>
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{vehicleCost.cancelTitle(${cost.number})},
+                @{/vehicle-costs/{id}/cancel(id=${cost.id})}, #{vehicleCost.cancelText}, #{vehicleCost.cancel})}"></div>
+    </th:block>
+
+    <!--/* Reversing: the day of the opposite journal (from the cost's day to today) and the reason */-->
+    <div class="modal-overlay" id="reverse-modal" th:if="${s == 'POSTED' and canReverse}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reverse-modal-title">
+            <div class="modal-header">
+                <h3 id="reverse-modal-title" th:text="#{vehicleCost.reverseTitle(${cost.number})}">Reverse VC-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="reverse-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/vehicle-costs/{id}/reverse(id=${cost.id})}" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{vehicleCost.reverseText}">A new journal posts every line the other way. The cost and its journal stay as they are.</p>
+                    <div class="form-group">
+                        <label for="reverse-modal-date" th:text="#{vehicleCost.reversalDate}">Reversal date</label>
+                        <input type="date" id="reverse-modal-date" name="reversalDate" required th:value="${today}" th:min="${cost.costDate}" th:max="${today}">
+                    </div>
+                    <div class="form-group">
+                        <label for="reverse-modal-reason" th:text="#{reason.label}">Reason</label>
+                        <input type="text" id="reverse-modal-reason" name="reason" maxlength="255" required autocomplete="off" th:placeholder="#{reason.placeholder}">
+                        <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="reverse-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-danger" th:text="#{vehicleCost.reverse}">Reverse</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

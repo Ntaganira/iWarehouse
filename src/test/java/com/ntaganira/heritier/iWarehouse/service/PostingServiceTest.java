@@ -654,6 +654,76 @@ class PostingServiceTest {
         assertThat(netOwed).isEqualByComparingTo("0");                                                           // all paid
     }
 
+    @Test
+    void aVehicleCostPostsItsExpenseAndWhatPaidIt() {   // vehicle costs (V41), AT-10
+        Vehicle rac = new Vehicle();
+        rac.setId(UUID.randomUUID());
+        rac.setPlate("RAC123A");
+        Trip trip = new Trip();
+        trip.setId(UUID.randomUUID());
+        trip.setNumber("TRP-WH-2026-000012");
+        Driver driver = new Driver();
+        driver.setId(UUID.randomUUID());
+        Supplier garage = supplier("Kigali Motors Garage");
+
+        // An oil change of 118,000 with 18,000 of VAT, owed to the garage
+        VehicleCost service = vehicleCost(rac, null, VehicleCostCategory.SERVICE, "118000", "18000", VehicleCostPayment.CREDIT);
+        service.setSupplier(garage);
+        service.setSupplierRef("INV-2231");
+        postings.vehicleCost(service);
+        Journal owed = last();
+        assertThat(owed.source()).isEqualTo(JournalSource.VEHICLE_COST);
+        assertThat(owed.date()).isEqualTo(LocalDate.of(2026, 10, 12));
+        assertThat(line(owed, AccountKey.VEHICLE_MAINTENANCE).debit()).isEqualByComparingTo("100000");
+        assertThat(line(owed, AccountKey.VAT_INPUT).debit()).isEqualByComparingTo("18000");
+        assertThat(line(owed, AccountKey.PAYABLE).credit()).isEqualByComparingTo("118000");
+        assertThat(line(owed, AccountKey.PAYABLE).supplierId()).isEqualTo(garage.getId());
+        assertThat(line(owed, AccountKey.PAYABLE).memo()).isEqualTo("INV-2231 · RAC123A");
+
+        // Diesel the driver paid from the trip's cash: their float falls by it, naming them
+        VehicleCost fuel = vehicleCost(rac, trip, VehicleCostCategory.FUEL, "45000", "0", VehicleCostPayment.DRIVER_FLOAT);
+        fuel.setDriver(driver);
+        postings.vehicleCost(fuel);
+        Journal fromFloat = last();
+        assertThat(line(fromFloat, AccountKey.VEHICLE_FUEL).debit()).isEqualByComparingTo("45000");
+        assertThat(line(fromFloat, AccountKey.VEHICLE_FUEL).memo()).isEqualTo("RAC123A · TRP-WH-2026-000012");
+        assertThat(line(fromFloat, AccountKey.DRIVER_FLOAT).credit()).isEqualByComparingTo("45000");
+        assertThat(line(fromFloat, AccountKey.DRIVER_FLOAT).driverId()).isEqualTo(driver.getId());
+        assertThat(fromFloat.lines()).noneMatch(l -> l.account() == AccountKey.VAT_INPUT);
+
+        // Washing paid by mobile money, with its reference
+        VehicleCost washing = vehicleCost(rac, null, VehicleCostCategory.WASHING, "5000", "0", VehicleCostPayment.MOBILE_MONEY);
+        washing.setPaymentRef("MP-4471");
+        postings.vehicleCost(washing);
+        assertThat(line(last(), AccountKey.VEHICLE_OTHER).debit()).isEqualByComparingTo("5000");
+        assertThat(line(last(), AccountKey.MOBILE_MONEY).credit()).isEqualByComparingTo("5000");
+        assertThat(line(last(), AccountKey.MOBILE_MONEY).memo()).isEqualTo("MP-4471");
+
+        // Tyres from the vault and parts by bank: every category reaches its account, every journal balances
+        postings.vehicleCost(vehicleCost(rac, null, VehicleCostCategory.TYRES, "240000", "0", VehicleCostPayment.CASH_VAULT));
+        assertThat(line(last(), AccountKey.CASH_VAULT).credit()).isEqualByComparingTo("240000");
+        postings.vehicleCost(vehicleCost(rac, null, VehicleCostCategory.PARTS, "30000", "0", VehicleCostPayment.BANK));
+        assertThat(line(last(), AccountKey.BANK).credit()).isEqualByComparingTo("30000");
+        assertThat(balance(AccountKey.VEHICLE_MAINTENANCE)).isEqualByComparingTo("370000");          // 100,000 + 240,000 + 30,000
+        assertThat(posted).allMatch(Journal::isBalanced);
+    }
+
+    private static VehicleCost vehicleCost(Vehicle vehicle, Trip trip, VehicleCostCategory category, String amount, String vat,
+                                           VehicleCostPayment payment) {
+        VehicleCost c = new VehicleCost();
+        c.setId(UUID.randomUUID());
+        c.setNumber("VC-WH-2026-" + UUID.randomUUID().toString().substring(0, 6));
+        c.setVehicle(vehicle);
+        c.setTrip(trip);
+        c.setCostDate(LocalDate.of(2026, 10, 12));
+        c.setCategory(category);
+        c.setDescription(category.name());
+        c.setAmount(new BigDecimal(amount));
+        c.setVatAmount(new BigDecimal(vat));
+        c.setPayment(payment);
+        return c;
+    }
+
     /** A pay run line worked out at the rates V40 seeds. */
     private static PayRunLine payLine(String code, String base, String transport, String advance, String shortage, String other,
                                       SalaryPayMethod method, UUID driverId) {

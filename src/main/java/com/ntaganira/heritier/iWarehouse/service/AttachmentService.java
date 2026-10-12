@@ -42,12 +42,13 @@ public class AttachmentService {
     private final VehicleRepository vehicleRepo;
     private final DriverRepository driverRepo;
     private final TripRepository tripRepo;
+    private final VehicleCostRepository vehicleCostRepo;
     private final Clock clock;
 
     public AttachmentService(AttachmentRepository repo, FileStorageService storage, GoodsReceiptRepository receiptRepo,
                              ShipmentRepository shipmentRepo, SupplierInvoiceRepository supplierInvoiceRepo,
                              StockAdjustmentRepository adjustmentRepo, VehicleRepository vehicleRepo, DriverRepository driverRepo,
-                             TripRepository tripRepo, Clock clock) {
+                             TripRepository tripRepo, VehicleCostRepository vehicleCostRepo, Clock clock) {
         this.repo = repo;
         this.storage = storage;
         this.receiptRepo = receiptRepo;
@@ -57,6 +58,7 @@ public class AttachmentService {
         this.vehicleRepo = vehicleRepo;
         this.driverRepo = driverRepo;
         this.tripRepo = tripRepo;
+        this.vehicleCostRepo = vehicleCostRepo;
         this.clock = clock;
     }
 
@@ -127,6 +129,7 @@ public class AttachmentService {
             case VEHICLE -> vehicleRepo.existsById(id);
             case DRIVER -> driverRepo.existsById(id);
             case TRIP -> tripRepo.existsById(id);
+            case VEHICLE_COST -> vehicleCostRepo.existsById(id);
         };
         if (!exists) {
             throw new NotFoundException(owner.name(), id);

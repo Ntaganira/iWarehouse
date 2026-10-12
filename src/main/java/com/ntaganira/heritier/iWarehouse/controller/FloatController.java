@@ -130,7 +130,9 @@ public class FloatController {
     private String form(UUID tripId, Model model, Trip known) {
         Trip trip = known != null ? known : tripService.findDetailed(tripId);
         model.addAttribute("trip", trip);
-        model.addAttribute("expected", floatService.cashOf(tripId));
+        model.addAttribute("cashSales", floatService.cashOf(tripId));
+        model.addAttribute("paidFromFloat", floatService.paidFromFloat(List.of(tripId)).getOrDefault(tripId, java.math.BigDecimal.ZERO));
+        model.addAttribute("expected", floatService.expectedOf(tripId));
         model.addAttribute("accounts", List.of(AccountKey.CASH_VAULT, AccountKey.BANK));
         return "floats/form";
     }

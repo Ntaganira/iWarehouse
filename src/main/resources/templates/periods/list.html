@@ -37,6 +37,14 @@
                     </div>
                 </div>
                 <div class="item">
+                    <label th:text="#{period.waitingVehicleCosts}">Vehicle costs waiting</label>
+                    <div class="value">
+                        <span th:if="${checklist.vehicleCostsWaiting == 0}" class="badge badge-success" th:text="#{period.none}">None</span>
+                        <a th:if="${checklist.vehicleCostsWaiting > 0}" th:href="@{/vehicle-costs(status='PENDING_APPROVAL')}"
+                           th:text="#{period.waitingCount(${checklist.vehicleCostsWaiting})}">1 to decide</a>
+                    </div>
+                </div>
+                <div class="item">
                     <label th:text="#{period.revaluation}">FX revaluation</label>
                     <div class="value" th:switch="${checklist.revaluation.name()}">
                         <th:block th:case="'DONE'">

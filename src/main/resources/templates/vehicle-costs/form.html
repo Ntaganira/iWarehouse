@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{vehicleCost.new}, ~{::content})}">
+<head><title>Record a vehicle cost - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{vehicleCost.new}">Record a vehicle cost</h1>
+            <div class="subtitle" th:text="#{vehicleCost.newSubtitle(${@num.money(limit)})}">Posted when saved up to 100,000 RWF; above that, another person approves it first.</div>
+        </div>
+        <a href="/vehicle-costs" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/vehicle-costs/new}" th:object="${costDto}" method="post" class="form-container vehicle-cost-form" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+
+            <div class="form-divider"><h3 th:text="#{vehicleCost.group.what}">What it was for</h3></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="vehicleId" th:text="#{vehicleCost.vehicle}">Vehicle</label>
+                    <select id="vehicleId" th:field="*{vehicleId}" required th:classappend="${#fields.hasErrors('vehicleId')} ? 'is-invalid'">
+                        <option value="" th:text="#{vehicleCost.chooseVehicle}">Choose the vehicle</option>
+                        <option th:each="v : ${vehicles}" th:value="${v.id}" th:text="${v.plate + ' · ' + v.model}">RAC123A · Isuzu NPR</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('vehicleId')}" th:errors="*{vehicleId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="tripId" th:text="#{vehicleCost.trip}">Trip</label>
+                    <select id="tripId" th:field="*{tripId}" th:classappend="${#fields.hasErrors('tripId')} ? 'is-invalid'">
+                        <option value="" th:text="#{vehicleCost.noTrip}">No trip</option>
+                        <option th:each="t : ${trips}" th:value="${t.id}" th:attr="data-vehicle=${t.vehicle.id}"
+                                th:text="${t.number + ' · ' + t.vehicle.plate + ' · ' + #temporals.format(t.tripDate, 'dd/MM/yyyy') + ' · ' + #messages.msg('trip.status.' + t.status)}">TRP-WH-2026-000012 · RAC123A · 12/10/2026 · On the road</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('tripId')}" th:errors="*{tripId}"></span>
+                    <span class="hint" th:text="#{vehicleCost.tripHint}">The trip it was for; needed when the driver paid it from the trip's cash</span>
+                </div>
+                <div class="form-group">
+                    <label for="costDate" th:text="#{vehicleCost.date}">Date</label>
+                    <input type="date" id="costDate" th:field="*{costDate}" required th:attr="max=${today}"
+                           th:classappend="${#fields.hasErrors('costDate')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('costDate')}" th:errors="*{costDate}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="category" th:text="#{vehicleCost.category}">Kind</label>
+                    <select id="category" th:field="*{category}" required th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'">
+                        <option value="" th:text="#{vehicleCost.chooseCategory}">Choose what it was for</option>
+                        <option th:each="c : ${categories}" th:value="${c}" th:attr="data-service=${c.canDoService()}"
+                                th:text="#{${'vehicleCost.category.' + c}}">Fuel</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description" th:text="#{vehicleCost.description}">Description</label>
+                    <input type="text" id="description" th:field="*{description}" maxlength="255" required th:placeholder="#{vehicleCost.descriptionPh}"
+                           th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="odometerKm" th:text="#{vehicleCost.odometer}">Odometer</label>
+                    <div class="input-unit">
+                        <input type="number" id="odometerKm" th:field="*{odometerKm}" step="1" min="0" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('odometerKm')} ? 'is-invalid'">
+                        <span>km</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('odometerKm')}" th:errors="*{odometerKm}"></span>
+                    <span class="hint" th:text="#{vehicleCost.odometerHint}">The reading on the day, if known: it keeps the service plans up to date</span>
+                </div>
+                <div class="form-group" data-show-for="FUEL">
+                    <label for="litres" th:text="#{vehicleCost.litres}">Litres</label>
+                    <div class="input-unit">
+                        <input type="number" id="litres" th:field="*{litres}" step="0.01" min="0.01" inputmode="decimal"
+                               th:classappend="${#fields.hasErrors('litres')} ? 'is-invalid'">
+                        <span>l</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('litres')}" th:errors="*{litres}"></span>
+                </div>
+                <div class="form-group" data-show-for="service">
+                    <label for="servicePlanId" th:text="#{vehicleCost.servicePlan}">Service plan</label>
+                    <select id="servicePlanId" th:field="*{servicePlanId}" th:classappend="${#fields.hasErrors('servicePlanId')} ? 'is-invalid'">
+                        <option value="" th:text="#{vehicleCost.noPlan}">Not a planned service</option>
+                        <option th:each="p : ${plans}" th:value="${p.id}" th:attr="data-vehicle=${p.vehicleId}" th:text="${p.name}">Oil change</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('servicePlanId')}" th:errors="*{servicePlanId}"></span>
+                    <span class="hint" th:text="#{vehicleCost.servicePlanHint}">The plan this work does: once posted, it counts from this day and odometer</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{vehicleCost.group.paid}">What it cost and how it was paid</h3></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="amount" th:text="#{vehicleCost.amount}">Amount (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="amount" th:field="*{amount}" step="1" min="1" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+                    <span class="hint" th:text="#{vehicleCost.amountHint}">What was paid, VAT included</span>
+                </div>
+                <div class="form-group">
+                    <label for="vatAmount" th:text="#{vehicleCost.vat}">VAT on the receipt</label>
+                    <div class="input-unit">
+                        <input type="number" id="vatAmount" th:field="*{vatAmount}" step="1" min="0" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('vatAmount')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('vatAmount')}" th:errors="*{vatAmount}"></span>
+                    <span class="hint" th:text="#{vehicleCost.vatHint}">Only from a VAT-registered garage's EBM receipt: it is claimed back</span>
+                </div>
+                <div class="form-group">
+                    <label for="payment" th:text="#{vehicleCost.payment}">Paid by</label>
+                    <select id="payment" th:field="*{payment}" required th:classappend="${#fields.hasErrors('payment')} ? 'is-invalid'">
+                        <option th:each="p : ${payments}" th:value="${p}" th:text="#{${'vehicleCost.payment.' + p}}">Main cash vault</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('payment')}" th:errors="*{payment}"></span>
+                    <span class="hint" data-show-for="DRIVER_FLOAT" th:text="#{vehicleCost.floatHint}">The driver paid it from the trip's cash: they hand back that much less</span>
+                    <span class="hint" data-show-for="CREDIT" th:text="#{vehicleCost.creditHint}">Owed to the garage: it shows on its supplier account until paid</span>
+                </div>
+                <div class="form-group" data-show-for="BANK MOBILE_MONEY">
+                    <label for="paymentRef" th:text="#{vehicleCost.paymentRef}">Transaction reference</label>
+                    <input type="text" id="paymentRef" th:field="*{paymentRef}" maxlength="60" class="input-code" autocapitalize="characters"
+                           th:classappend="${#fields.hasErrors('paymentRef')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('paymentRef')}" th:errors="*{paymentRef}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="supplierId" th:text="#{vehicleCost.supplier}">Garage or station</label>
+                    <select id="supplierId" th:field="*{supplierId}" data-searchable th:classappend="${#fields.hasErrors('supplierId')} ? 'is-invalid'">
+                        <option value="" th:text="#{vehicleCost.noSupplier}">Not a supplier</option>
+                        <option th:each="g : ${garages}" th:value="${g.id}" th:text="${g.name}">Kigali Motors Garage</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('supplierId')}" th:errors="*{supplierId}"></span>
+                    <span class="hint" th:text="#{vehicleCost.supplierHint}">Needed when it is owed; add a garage on the Suppliers screen (RWF)</span>
+                </div>
+                <div class="form-group">
+                    <label for="supplierRef" th:text="#{vehicleCost.supplierRef}">Its invoice or receipt number</label>
+                    <input type="text" id="supplierRef" th:field="*{supplierRef}" maxlength="60" class="input-code"
+                           th:classappend="${#fields.hasErrors('supplierRef')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('supplierRef')}" th:errors="*{supplierRef}"></span>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{vehicleCost.receiptNote}">Add a photo or PDF of the receipt on the cost's page once it is saved.</p>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{vehicleCost.save}">Record the cost</button>
+                <a href="/vehicle-costs" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script src="/js/vehicle-cost-form.js" defer></script>
+</div>
+</body>
+</html>

@@ -4588,3 +4588,19 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
 .kpi-body { flex: 1 1 auto; container-type: inline-size; }
 .kpi-value { font-size: clamp(20px, 17cqi, 30px); }
 .kpi-value.is-long { font-size: clamp(16px, 12.5cqi, 30px); }
+
+/* A list's search keeps room to type in: a toolbar that does not fit beside the title goes under it (vehicle costs,
+   products, suppliers, users at 1024 px), and its filters wrap when even that row is too narrow (900 px). */
+.table-toolbar .toolbar-search { min-width: 180px; }
+@media (min-width: 641px) {
+  .section-header > .table-toolbar:not(.report-filters):not(.location-toolbar) { flex: 1 1 auto; flex-wrap: wrap; }
+}
+
+/* Tab bars scroll sideways above phone width too, so a long bar (the vehicle's eight tabs, longer in French) never
+   widens the page or wraps a tab; the open tab is scrolled into view and the mouse wheel scrolls the bar (iwarehouse.js).
+   The bottom line is a shadow, so the open tab's underline still covers it inside the scrolling bar. */
+@media (min-width: 641px) {
+  .tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 0; box-shadow: inset 0 -1px 0 var(--gray-200); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0; }
+}

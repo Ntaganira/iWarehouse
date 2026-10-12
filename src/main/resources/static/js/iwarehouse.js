@@ -262,6 +262,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (target) target.classList.add('active');
             });
         });
+        // A bar too long for its box scrolls sideways (no scrollbar): a page opened on a later tab (?tab=service) shows it,
+        // and the mouse wheel scrolls the bar until its end, then the page
+        const active = tabs.querySelector('.tab.active');
+        if (active && tabs.scrollWidth > tabs.clientWidth) {
+            const r = active.getBoundingClientRect(), t = tabs.getBoundingClientRect();
+            tabs.scrollLeft += (r.left + r.width / 2) - (t.left + t.width / 2);
+        }
+        tabs.addEventListener('wheel', function (e) {
+            if (tabs.scrollWidth <= tabs.clientWidth || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+            const end = tabs.scrollWidth - tabs.clientWidth;
+            if ((e.deltaY < 0 && tabs.scrollLeft <= 0) || (e.deltaY > 0 && tabs.scrollLeft >= end - 1)) return;
+            tabs.scrollLeft += e.deltaY;
+            e.preventDefault();
+        }, { passive: false });
     });
 
     // Sidebar toggle

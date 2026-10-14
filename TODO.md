@@ -11,7 +11,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - **Next migration: V42.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
-## Where we are (2026-10-12)
+## Where we are (2026-10-13)
 
 | Area | State | Where |
 |---|---|---|
@@ -35,6 +35,7 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | End of day: return scan, reconciliation, audit cases, driver floats (AT-06, AT-07 pass) | Done (M9) | V37, the trip's End of day tab, `/audit-cases`, `/floats`, `/reports/fleet`, the phone's breakage and cash screens |
 | Payroll (owner's request, not in SRS v2.1) | Done | V40, `/payroll/*` |
 | Vehicle costs and service plans (owner's request, not in SRS v2.1) | Done | V41, `/vehicle-costs`, the vehicle's Costs, Mileage and Service plans tabs, the trip's Costs tab, the fleet report's per-vehicle view |
+| The mobile POS as an Android and iOS app, High Bytes POS (Flutter; owner's choice) | **In progress**: written, to be tried on a phone | `mobile/` (see below) |
 | Hardening and go-live | **Next** (M10) | — |
 
 Unit tests: 547, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
@@ -188,6 +189,30 @@ Scope (owner, 2026-10-12): mileage, oil changes, garage costs and spare parts. P
 - [x] Ledger and reports (M) — 2026-10-12: `PostingService.vehicleCost` (VEHICLE_COST): Dr 6110 Vehicle Fuel, 6120 Vehicle Repairs and Maintenance or 6130 Other Vehicle Costs and VAT Input / Cr what paid it (`PostingServiceTest`, AT-10); the fleet report's "Per vehicle: running costs" view (Excel and PDF); the dashboard's "Waiting for approval" and "Vehicle services due"; a month does not close while a cost dated in it waits
 - [ ] Before go-live: the accountant confirms the three expense accounts and the approval limit; the business's service plans are entered per vehicle
 
+## The mobile POS as an Android and iOS app — High Bytes POS (Flutter), at the owner's request, 2026-10-13
+
+Owner's choices (2026-10-13):
+- the drivers' mobile POS, not the counter;
+- Flutter and Dart;
+- every feature of the web app;
+- the server's address set in the app;
+- receipts shared, with no printer;
+- tested on the owner's phone;
+- named "High Bytes POS", id `rw.highbytes.pos`.
+
+The web app (`/m/`) stays.
+
+- [x] The app (L) — 2026-10-13: `mobile/`, the same API and the same behaviour as the web app (sign in with the server's address, trip download, scan or tap to sell, prices within the limit, cash and mobile money, receipt shared as a picture or text, offline queue with backoff, EBM signature, breakage with photo and position, cash declaration, EN/FR, light and dark). Its sums are tested against the server's worked examples (`test/money_test.dart`), its rules and screens against a fake server
+- [ ] Tried on the owner's phone: a test APK (`ALLOW_HTTP`) against the dev server, then against the real one
+  - 2026-10-14: the test APK is built (`mobile/build/app/outputs/flutter-apk/app-release.apk`, 49 MB, a copy on the Desktop as HighBytesPOS-test.apk): ARM phones, Android 7.0 and later, signed with the debug key, plain http allowed, starting at the dev server http://192.168.76.4:8080. To build it the Android NDK r28c was installed by hand, Kotlin's incremental compilation is off (sources on C:, project on H:) and path_provider_android stays below 2.3 (mobile/README.md)
+- [ ] Release signing: an upload key for the Play Store, kept outside the repository; the Play Store listing
+- [ ] iOS: a build on a Mac with Xcode (`flutter build ipa`), then TestFlight or the App Store
+- [ ] The real server reachable from the road over HTTPS (a domain and a certificate): the app accepts no plain http in a release build
+- [ ] French: `mobile.app` still reads "iWarehouse Caisse mobile". The owner renamed the English one (uncommitted): agree on the French name
+- [x] User manual: installing the app, its sign-in with the server's address, and its screens, in the Mobile POS topic — 2026-10-13: the topic shows the app's eight screens (sign in, sell, pay, receipt, offline, sales, breakage, declare), drawn by `test/screens_test.dart` against the fake server (no dev data), light and dark; the web app keeps its sign-in picture. PDF and web copy on the Desktop
+  - Then, asked again: 14 app screens (no trip, the menu, a sale to an account customer, a receipt not signed yet, the breakage reports, the cash declared added); the main system on a phone in its own topics (a unit's page, moving units, counting, scan-loading); every phone picture in a drawn phone outline; and the Android install steps as an illustration
+- [ ] Replace the install illustration (Figure "Installing the app on Android") with screenshots from a real phone once the test APK is installed: allowing the source, Install, the icon on the home screen
+
 ---
 
 ## Questions for the business
@@ -306,6 +331,7 @@ Answers change what gets built; record each answer next to the question.
 - Stock counts CNT-WH-2026-000001..7: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled
 - Automated-check user qa-admin (ADMIN role, created 2026-10-08 so scripted browser checks never sign the real admin out: one session per user) — disable before go-live
 - User manual screenshots on 2026-10-12 (user manual-admin, ADMIN role, made for them — disable before go-live; named "Grace Mukamana" until 2026-10-13, then "NTAGANIRA Heritier" with the user's own photo in MinIO and the email heritier.ntaganira@example.com): trips TRP-WH-2026-000009 (four CLR-8 sheets, no price on the trip, all brought back, 0 declared, closed) and -000010 (U-WH-000027 sold from the phone on MINV-WH-2026-000029, 195,008 cash declared on the phone, U-WH-000079 missing then found: AC-WH-2026-000005; FC-WH-2026-000003 exact; closed), phone "Jean’s phone" signed in twice for driver-m7; ADJ-WH-2026-000008 (qa-admin, U-WH-000028, rejected); CUT-WH-2026-000014 cut from U-WH-000076 (the pieces of INV-WH-2026-000011 now wait to be handed over); GRN-WH-2026-000007 (2 CLR-6 sheets on PO-WH-2026-000012, posted, not invoiced); MJ-WH-2026-000005 (withdrawn); PAY-WH-2026-000003 (November, cancelled); tills TILL-WH-2026-000031..33 (opened and closed exact, sales cancelled) with APR-WH-2026-000008 and -000009 (withdrawn). Dark-theme shots the same day: TRP-WH-2026-000011 (U-WH-000077 sold on MINV-WH-2026-000033, U-WH-000083 missing then found: AC-WH-2026-000006; FC-WH-2026-000004 exact; closed), ADJ-WH-2026-000009 (rejected), CUT-WH-2026-000016 (U-WH-000082 taken, put back, cancelled), MJ-WH-2026-000006 (withdrawn), PAY-WH-2026-000004 (cancelled), TILL-WH-2026-000034 with APR-WH-2026-000010 (withdrawn). Shots again at 80 % zoom: TRP-WH-2026-000012 (U-WH-000078 sold on MINV-WH-2026-000037, U-WH-000084 missing then found: AC-WH-2026-000007; FC-WH-2026-000005 exact; closed), ADJ-WH-2026-000010 (rejected), CUT-WH-2026-000017 (cancelled), MJ-WH-2026-000007 (withdrawn), PAY-WH-2026-000005 (cancelled), TILL-WH-2026-000035 with APR-WH-2026-000011 (withdrawn). Shots again after the app was renamed High Bytes: TRP-WH-2026-000016 (Huye, Nyanza: U-WH-000053..55, nothing sold, all back where they left from, 0 declared at the office, closed), phone "Jean’s phone" signed in again for driver-m7. On 2026-10-13, so the manual names no "Grace": test employee EMP-WH-0003 renamed Claire Uwamahoro (was Grace Mukamana; PAY-WH-2026-000001's lines keep the old name, as a paid run does), PAY-WH-2026-000006 (November draft for a screenshot, cancelled)
+- Phone pictures of the main system for the user manual on 2026-10-13 (manual-admin): trip TRP-WH-2026-000017 (RAC123A, Jean Driver, Huye: U-WH-000053..55 on its manifest, two scanned, then cancelled "Made for the user manual (test)") and stock count CNT-WH-2026-000008 (WH-A-R04, U-WH-000053 and -000054 scanned, cancelled with the same reason). TRP-WH-2026-000013 (Nyamata, planned for 12/10/2026 with U-WH-000084) was already there and was left as it is
 - Responsive checks: orders PO-WH-2026-000010 and -000011 and cutting jobs CUT-WH-2026-000006 and -000007, all cancelled ("Responsive check"); U-WH-000055 taken and released twice
 - Disabled test users (cashier*, auditor*, super4032); test owner user owner38648 (password kept out of the repo) — disable before go-live
 - Test prices on the RETAIL and CONTRACTOR lists

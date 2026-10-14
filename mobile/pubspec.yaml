@@ -1,0 +1,47 @@
+name: highbytes_pos
+description: High Bytes POS - the drivers' mobile POS of iWarehouse for Android and iOS. Sells from the vehicle, with or without network.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  connectivity_plus: ^7.3.1   # 7.3.2 needs a dbus no geolocator release accepts yet (Linux only)
+  flutter_svg: ^2.3.0
+  geolocator: ^14.1.1
+  http: ^1.6.0
+  image_picker: ^1.2.4
+  mobile_scanner: ^7.4.2
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  # 2.3 reads the paths through jni, which builds C code with CMake (another Android SDK download) and makes the app bigger
+  path_provider_android: ">=2.2.23 <2.3.0"
+  share_plus: ^13.3.1
+  sqflite: ^2.4.4
+  uuid: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/texts/
+
+# dart run flutter_launcher_icons: the web app's icons (static/m) as the launcher icon
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/icon-512.png
+  adaptive_icon_background: "#1565E0"
+  adaptive_icon_foreground: assets/icon/icon-maskable-512.png
+  remove_alpha_ios: true

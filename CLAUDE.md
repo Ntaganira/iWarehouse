@@ -17,6 +17,8 @@ docker compose up -d                 # PostgreSQL 16 (db iwarehouse) + MinIO (DB
 ./mvnw spring-boot:run               # http://localhost:8080  (admin / password123)
 ./mvnw test                          # unit tests
 ./mvnw clean package -DskipTests     # build target/iWarehouse-0.0.1-SNAPSHOT.jar
+cd mobile && flutter test            # the Flutter app (mobile/README.md): its sums and screens
+cd mobile && flutter build apk --release --dart-define=SERVER_URL=https://...   # High Bytes POS for Android
 ```
 
 Flyway runs on startup. `ddl-auto` is `validate`, so the app refuses to start if an entity and the schema disagree.
@@ -25,7 +27,7 @@ Flyway runs on startup. `ddl-auto` is `validate`, so the app refuses to start if
 
 Java 17 · Spring Boot 3.4 (MVC, Security, Validation, Data JPA, Mail, Actuator) · Hibernate 6.6 · PostgreSQL 16 · Flyway · Thymeleaf + thymeleaf-extras-springsecurity6 · custom CSS (`static/css/iwarehouse.css`, iVura's design system) · Choices.js, Chart.js (vendored, no CDN) · MinIO · OpenHTMLToPDF · ZXing · Lombok · Maven wrapper.
 
-The mobile POS is a PWA (`static/m/`: Service Worker + IndexedDB) calling the versioned JSON API under `/api/v1/**`.
+The mobile POS is a PWA (`static/m/`: Service Worker + IndexedDB) calling the versioned JSON API under `/api/v1/**`. The same POS is also an Android and iOS app, High Bytes POS (`mobile/`: Flutter, SQLite), on the same API.
 
 ## Layout
 
@@ -45,6 +47,7 @@ src/main/resources/
   templates/    layout/, fragments/, error/, one folder per module (list/form/view.html)
   static/       css/iwarehouse.css, js/iwarehouse.js, js/session-timeout.js, vendor/, m/ (the mobile POS PWA)
   messages*.properties   en (default), fr, rw
+mobile/         High Bytes POS, the mobile POS as a Flutter app (lib/, test/, tool/texts.py; mobile/README.md)
 ```
 
 New module = one folder in `templates/`, a controller, a service, entities, a repository, and one Flyway migration. Follow the module table in SRS section 3.3.
@@ -182,6 +185,13 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
   - The PWA keeps its data in IndexedDB (`iwarehouse-pos`) and syncs oldest first with backoff. Signing out or closing the trip is refused while sales wait.
   - The service worker (`sw.js`) loads the shell from the network, falling back to its cache after 3 s or offline. Bump its `VERSION` when the shell's file list changes.
   - Check the PWA at 360–1024 px, offline (CDP network emulation, then a reload) and in both themes (`prefers-color-scheme`).
+  - **The Flutter app (`mobile/`, High Bytes POS, the owner's choice 2026-10-13)** does what the PWA does on the same API, so both change together:
+    - The sums: `lib/money.dart` = `app.js` = `MobileSales` (`test/money_test.dart` holds the server's worked examples).
+    - The rules: `lib/controller.dart`, view for view as `app.js`.
+    - The texts: the `mobile.*` keys; after changing one, `python mobile/tool/texts.py` copies them into the app.
+    - It keeps its data in SQLite and takes the server's address on the sign-in screen (https only, unless built with `ALLOW_HTTP`).
+    - Receipts are shared (WhatsApp, SMS), not printed.
+    - A new endpoint, field or check goes into both clients.
 - **The end of the day (FLT-08..FLT-11, MPOS-06, MPOS-07, ACC-06, ACC-07, RPT-04)** goes through `BreakageService`, `TripReturnService`, `AuditCaseService`, `TripCloseService` and `FloatService`; `TripReconciliation`, `FloatClearances` and `FleetAnalysis` are pure and tested.
   - A trip is PLANNED, DEPARTED, RETURNED (reconciled), CLOSED, or CANCELLED. Only DEPARTED holds the vehicle and the driver (`uk_trips_..._on_road`). The phone keeps working for a RETURNED trip: a sale synced late, the cash declaration (`Trip.isOpenForPhone`, `MobileTripService.openTrip`).
   - Breakage (`trip_breakages`) is reported on a DEPARTED trip, from the phone (idempotent on its `clientId`) or at the warehouse, always with a photo kept as a trip document (`AttachmentOwner.TRIP`). Another person decides it (VALIDATE_BREAKAGE, never the reporter); a rejection takes a note. A unit with a standing report is not sold (`SyncConflictReason.UNIT_REPORTED_BROKEN`).

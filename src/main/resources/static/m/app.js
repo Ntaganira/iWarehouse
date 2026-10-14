@@ -676,15 +676,109 @@
     }
 
     // ================================================================ rendering
+    // The client's design (claude.ai design "iWarehouse Mobile POS Redesign"), as the High Bytes POS app draws it
+    // (mobile/lib/widgets.dart, art.dart): the blue header with its wave, the network pill and an illustration; cards,
+    // notes with their icon, tiles, rows of 68 px with a round check, the sale's bar.
 
     const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     const icon = (path) => '<svg viewBox="0 0 24 24" aria-hidden="true">' + path + '</svg>';
+    const ic = (path, extra) => '<svg class="ic' + (extra ? ' ' + extra : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + path + '</svg>';
     const ICONS = {
-        menu: '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
-        back: '<polyline points="15 18 9 12 15 6"/>',
+        menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+        back: '<path d="M15 18l-6-6 6-6"/>',
         camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
-        close: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+        scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/>',
+        close: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+        check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+        info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+        alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/>',
+        xCircle: '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+        user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/>',
+        lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+        phone: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
+        globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/>',
+        eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+        eyeOff: '<path d="M3 3l18 18M10.6 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+        chevronDown: '<path d="M6 9l6 6 6-6"/>',
+        search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+        receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/>',
+        cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v5M18 9.5v5"/>',
+        truck: '<path d="M3 6h11v10H3zM14 9h4l3 3v4h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+        home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+        broken: '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+        sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/>',
+        box: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
+        logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10"/>',
+        printer: '<path d="M7 8V3h10v5M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3"/><rect x="7" y="14" width="10" height="7" rx="1"/>',
+        sms: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/>',
+        share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/>',
+        target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'
     };
+
+    // The design's illustrations (mobile/lib/art.dart): the truck carrying glass, the receipts, the banknotes; a cracked pane
+    const TRUCK_BODY = '<rect x="106" y="86" width="166" height="13" rx="3" fill="#e3f1ff"/>'
+        + '<path d="M34 108 L34 70 Q34 56 48 56 L80 56 Q90 56 95 65 L104 84 L104 108 Z" fill="#ffffff"/>'
+        + '<path d="M46 64 L78 64 Q83 64 86 69 L94 84 L46 84 Z" fill="#8ec4f0"/>'
+        + '<rect x="34" y="92" width="8" height="6" rx="2" fill="#f5a54f"/><rect x="30" y="98" width="246" height="12" rx="4" fill="#0d2f65"/>'
+        + '<circle cx="70" cy="112" r="14" fill="#0d2f65"/><circle cx="70" cy="112" r="5.5" fill="#c7d9ea"/>'
+        + '<circle cx="232" cy="112" r="14" fill="#0d2f65"/><circle cx="232" cy="112" r="5.5" fill="#c7d9ea"/>';
+    const panes = (stroke, frame) => '<path d="M130 88 L162 30 L194 88" fill="none" stroke="#c7d9ea" stroke-width="' + frame + '" stroke-linejoin="round"/>'
+        + '<rect x="120" y="40" width="34" height="48" rx="2" transform="rotate(-14 154 88)" fill="rgba(186,224,255,.78)" stroke="#fff" stroke-width="' + stroke + '"/>'
+        + '<rect x="168" y="30" width="44" height="58" rx="2" transform="rotate(16 168 88)" fill="rgba(186,224,255,.70)" stroke="#fff" stroke-width="' + stroke + '"/>'
+        + '<rect x="176" y="32" width="44" height="56" rx="2" transform="rotate(16 176 88)" fill="rgba(214,236,255,.82)" stroke="#fff" stroke-width="' + stroke + '"/>';
+    const lastPane = (stroke) => '<rect x="186" y="34" width="44" height="54" rx="2" transform="rotate(16 186 88)" fill="rgba(160,208,250,.72)" stroke="#fff" stroke-width="' + stroke + '"/>';
+    const ART = {
+        truck: '<svg class="art" width="124" height="58" viewBox="0 0 300 140" aria-hidden="true">'
+            + '<ellipse cx="150" cy="128" rx="132" ry="8" fill="rgba(0,20,60,.28)"/>'
+            + '<path d="M284 30 v14 M277 37 h14" fill="none" stroke="#f5a54f" stroke-width="5" stroke-linecap="round"/>'
+            + panes(2.5, 6) + lastPane(2.5) + TRUCK_BODY + '</svg>',
+        receipt: '<svg class="art" width="112" height="64" viewBox="0 0 112 64" aria-hidden="true">'
+            + '<ellipse cx="54" cy="61" rx="46" ry="3.5" fill="rgba(0,20,60,.28)"/>'
+            + '<path d="M100 8 v10 M95 13 h10" fill="none" stroke="#f5a54f" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="20" r="3" fill="#8ec4f0"/>'
+            + '<rect x="40" y="6" width="44" height="50" rx="4" transform="rotate(10 62 31)" fill="#d6ecff"/>'
+            + '<path d="M30 4 H70 Q74 4 74 8 V56 L68 52 L62 56 L56 52 L50 56 L44 52 L38 56 L32 52 L26 56 V8 Q26 4 30 4 Z" fill="#ffffff"/>'
+            + '<rect x="33" y="13" width="24" height="3.5" rx="1.75" fill="#c7d9ea"/><rect x="33" y="21" width="32" height="3.5" rx="1.75" fill="#c7d9ea"/>'
+            + '<rect x="33" y="29" width="20" height="3.5" rx="1.75" fill="#c7d9ea"/><rect x="33" y="39" width="34" height="5" rx="2.5" fill="#0878d1"/>'
+            + '<circle cx="76" cy="46" r="11" fill="#18a66a" stroke="#fff" stroke-width="2"/>'
+            + '<path d="M71 46.2 l3.4 3.4 l6 -6.4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        cash: '<svg class="art" width="118" height="64" viewBox="0 0 118 64" aria-hidden="true">'
+            + '<ellipse cx="60" cy="61" rx="50" ry="3.5" fill="rgba(0,20,60,.28)"/>'
+            + '<path d="M14 6 v10 M9 11 h10" fill="none" stroke="#f5a54f" stroke-width="2.4" stroke-linecap="round"/><circle cx="112" cy="14" r="3" fill="#8ec4f0"/>'
+            + '<rect x="10" y="22" width="68" height="34" rx="4" transform="rotate(-9 44 39)" fill="#a8dfc4"/>'
+            + '<rect x="18" y="18" width="68" height="34" rx="4" fill="#ddf6ea" stroke="#18a66a" stroke-width="1.6"/>'
+            + '<rect x="23" y="23" width="58" height="24" rx="2.5" fill="none" stroke="#18a66a" stroke-width="1" opacity=".55"/>'
+            + '<circle cx="52" cy="35" r="7" fill="none" stroke="#0e8553" stroke-width="1.8"/><path d="M52 31.5 v7" fill="none" stroke="#0e8553" stroke-width="1.8" stroke-linecap="round"/>'
+            + '<circle cx="29" cy="35" r="2.2" fill="#18a66a"/><circle cx="75" cy="35" r="2.2" fill="#18a66a"/>'
+            + '<rect x="86" y="44" width="26" height="12" fill="#e08a24"/><ellipse cx="99" cy="56" rx="13" ry="4" fill="#c97a1a"/><ellipse cx="99" cy="44" rx="13" ry="4" fill="#ffc56e"/>'
+            + '<rect x="90" y="33" width="26" height="9" fill="#e08a24"/><ellipse cx="103" cy="42" rx="13" ry="4" fill="#c97a1a"/><ellipse cx="103" cy="33" rx="13" ry="4" fill="#ffd27f"/></svg>',
+        breakage: '<svg class="art" width="112" height="64" viewBox="0 0 112 64" aria-hidden="true">'
+            + '<ellipse cx="56" cy="61" rx="46" ry="3.5" fill="rgba(0,20,60,.28)"/>'
+            + '<path d="M102 8 v10 M97 13 h10" fill="none" stroke="#f5a54f" stroke-width="2.4" stroke-linecap="round"/><circle cx="10" cy="22" r="3" fill="#8ec4f0"/>'
+            + '<rect x="30" y="7" width="46" height="50" rx="2" transform="rotate(-8 53 32)" fill="rgba(186,224,255,.85)" stroke="#fff" stroke-width="1.6"/>'
+            + '<path d="M52 29 L43 16 M52 29 L63 18 M52 29 L67 37 M52 29 L45 47 M52 29 L36 33" transform="rotate(-8 53 32)" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'
+            + '<circle cx="52" cy="29" r="4.5" transform="rotate(-8 53 32)" fill="none" stroke="#fff" stroke-width="1.4"/>'
+            + '<path d="M68 57 l6 -9 l6 9 z" fill="#d6ecff" stroke="#fff" stroke-width="1"/><path d="M20 57 l4 -6 l6 6 z" fill="#d6ecff" stroke="#fff" stroke-width="1"/>'
+            + '<circle cx="80" cy="42" r="11" fill="#f28c28" stroke="#fff" stroke-width="2"/>'
+            + '<path d="M80 36.5 v6.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="80" cy="47.4" r="1.6" fill="#fff"/></svg>'
+    };
+    /** The sign-in screen's truck with its badge. */
+    function heroArt(badge) {
+        return '<svg class="hero-art" width="300" height="140" viewBox="0 0 300 140" role="img" aria-label="">'
+            + '<ellipse cx="150" cy="128" rx="132" ry="7" fill="rgba(0,20,60,.28)"/>'
+            + '<path d="M30 34 v12 M24 40 h12" fill="none" stroke="#f5a54f" stroke-width="2.6" stroke-linecap="round"/>'
+            + '<path d="M284 62 v10 M279 67 h10" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'
+            + '<circle cx="112" cy="22" r="4" fill="#8ec4f0"/><circle cx="18" cy="92" r="3" fill="#f5a54f"/>'
+            + panes(1.4, 3)
+            + '<path d="M190 44 l10 -10 M196 54 l14 -14" transform="rotate(16 176 88)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/>'
+            + lastPane(1.4) + TRUCK_BODY + '<path d="M70 64 L70 84" fill="none" stroke="#fff" stroke-width="2"/>'
+            + '<rect x="214" y="0" width="82" height="26" rx="13" fill="#fff"/><circle cx="229" cy="13" r="7.5" fill="#18a66a"/>'
+            + '<path d="M225.5 13.2 l2.4 2.4 l4.6 -4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+            + '<text x="242" y="17.5" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#0d2f65">' + esc(badge) + '</text></svg>';
+    }
+    const WAVE = '<svg class="wave" viewBox="0 0 390 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 24 C 70 0, 140 2, 210 18 C 280 34, 340 34, 390 12 L 390 40 L 0 40 Z"/></svg>';
+    const WAVE_HERO = '<svg class="wave" viewBox="0 0 390 44" preserveAspectRatio="none" aria-hidden="true"><path d="M0 26 C 64 2, 132 0, 204 20 C 276 40, 338 40, 390 16 L 390 44 L 0 44 Z"/></svg>';
+    const LOGO_TILE = '<span class="logo-tile"><img src="/m/logo-mark.png" alt=""></span>';
+
     function dateTime(iso) {
         const d = new Date(iso);
         const p = (n) => String(n).padStart(2, '0');
@@ -693,62 +787,80 @@
     function badge(sale) {
         return '<span class="badge ' + sale.status + '">' + esc(t('mobile.status.' + sale.status)) + '</span>';
     }
+    const TONES = { pending: 'warn-tone', accepted: 'info-tone', signed: 'ok-tone', conflict: 'danger-tone' };
+    /** A note with its icon; a code it starts with in mono ("U-WH-000002 added to the sale"). */
+    function noteHtml(kind, textValue, role) {
+        const lead = /^[A-Z]+-[A-Z]+-[0-9-]+/.exec(textValue || '');
+        const body = lead ? '<span class="code">' + esc(lead[0]) + '</span>' + esc(textValue.slice(lead[0].length)) : esc(textValue);
+        const mark = kind === 'ok' ? '<span class="mark">' + icon(ICONS.check) + '</span>'
+            : ic(kind === 'warn' ? ICONS.alert : kind === 'danger' ? ICONS.xCircle : ICONS.info);
+        return '<div class="note ' + kind + '" role="' + (role || 'status') + '">' + mark + '<span>' + body + '</span></div>';
+    }
     function noticeHtml() {
-        if (!state.notice) return '';
-        return '<div class="note ' + state.notice.kind + '" role="status">' + esc(state.notice.text) + '</div>';
+        return state.notice ? noteHtml(state.notice.kind, state.notice.text) : '';
     }
+    const amountHtml = (value, size) => '<div class="amount ' + (size || 'big') + '">' + value + '<small>RWF</small></div>';   // no space: a mono space is wide
+    const tile = (label, value, kind) => '<div class="tile' + (kind ? ' ' + kind : '') + '"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
 
-    function topbar(title, sub, back) {
-        return '<header class="topbar">'
-            + (back ? '<button class="icon-btn" data-action="go" data-view="' + back + '" aria-label="' + esc(t('mobile.back')) + '">' + icon(ICONS.back) + '</button>' : '')
-            + '<div class="topbar-title"><h1>' + esc(title) + '</h1>' + (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div>'
-            + (state.session ? '<button class="icon-btn" data-action="menu" aria-label="' + esc(t('mobile.menu')) + '">' + icon(ICONS.menu) + '</button>' : '')
-            + '</header>' + netbar();
+    /** The header: Back or the logo tile, the titles, the menu; the network pill and the screen's illustration; the wave.
+     *  o: { title, sub (escaped already), eyebrow, back, art, monoTitle, monoSub } */
+    function header(o) {
+        const lead = o.back ? '<button class="hdr-btn" data-action="go" data-view="' + o.back + '" aria-label="' + esc(t('mobile.back')) + '">' + icon(ICONS.back) + '</button>' : LOGO_TILE;
+        const titles = '<div class="hdr-titles">' + (o.eyebrow ? '<span class="eyebrow">' + esc(o.eyebrow) + '</span>' : '')
+            + '<h1' + (o.monoTitle ? ' class="mono"' : '') + '>' + esc(o.title) + '</h1>'
+            + (o.sub ? '<div class="sub' + (o.monoSub ? ' mono' : '') + '">' + o.sub + '</div>' : '') + '</div>';
+        const menu = state.session ? '<button class="hdr-btn" data-action="menu" aria-label="' + esc(t('mobile.menu')) + '">' + icon(ICONS.menu) + '</button>' : '';
+        return '<header class="hdr"><div class="hdr-row' + (o.eyebrow ? ' top' : '') + '">' + lead + titles + menu + '</div>'
+            + '<div class="hdr-foot">' + (state.session ? netPill() : '<span></span>') + (o.art ? ART[o.art] : '') + '</div>' + WAVE + '</header>';
     }
-    /** "Online · all synced" / "Offline · 3 pending" (SYNC-02). */
-    function netbar() {
-        if (!state.session) return '';
+    /** "Online · everything synced" / "Offline · 3 waiting to sync" (SYNC-02) as a pill; tapping it sends what waits. */
+    function netPill() {
         const waiting = pendingCount();
         const online = navigator.onLine;
         const kind = !online ? 'offline' : waiting ? 'pending' : 'online';
         const label = !online ? (waiting ? t('mobile.net.offlinePending', waiting) : t('mobile.net.offline'))
             : state.syncing ? t('mobile.net.syncing', waiting)
             : waiting ? t('mobile.net.pending', waiting) : t('mobile.net.online');
-        const action = online && waiting && !state.syncing ? '<button class="netbar-action" data-action="sync">' + esc(t('mobile.net.syncNow')) + '</button>' : '';
-        return '<div class="netbar ' + kind + '" role="status"><span class="dot"></span><span>' + esc(label) + '</span>' + action + '</div>';
+        const canSync = online && waiting && !state.syncing;
+        const inner = '<span class="dot"></span><span>' + esc(label) + (canSync ? ' <span class="act">' + esc(t('mobile.net.syncNow')) + '</span>' : '') + '</span>';
+        return canSync ? '<button class="pill ' + kind + '" data-action="sync" aria-live="polite">' + inner + '</button>'
+            : '<span class="pill ' + kind + '" role="status">' + inner + '</span>';
     }
 
+    /** A field of the sign-in screen: its label, an underline with an icon, an optional hint. */
+    function uf(id, label, path, control, hint) {
+        return '<div class="field"><label for="' + id + '">' + esc(label) + '</label><div class="uf">' + ic(path) + control + '</div>'
+            + (hint ? '<span class="hint">' + esc(hint) + '</span>' : '') + '</div>';
+    }
     function loginView() {
         const e = state.errors.login;
-        return topbar(t('mobile.app'), t('mobile.login.subtitle'))
-            + '<main class="screen">' + noticeHtml()
-            + '<form class="card" data-form="login" autocomplete="on" novalidate>'
-            + '<img class="brand-mark" src="/m/logo-mark.png" alt="">'
-            + '<h2>' + esc(t('mobile.login.title')) + '</h2>'
-            + '<div class="field"><label for="username">' + esc(t('mobile.login.username')) + '</label>'
-            + '<input class="input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>'
-            + '<div class="field"><label for="password">' + esc(t('mobile.login.password')) + '</label>'
-            + '<input class="input" id="password" name="password" type="password" autocomplete="current-password" required></div>'
-            + '<div class="field"><label for="deviceName">' + esc(t('mobile.login.deviceName')) + '</label>'
-            + '<input class="input" id="deviceName" name="deviceName" maxlength="60" placeholder="' + esc(t('mobile.login.deviceNamePh')) + '">'
-            + '<span class="hint">' + esc(t('mobile.login.deviceHint')) + '</span></div>'
-            + '<div class="field"><label for="lang">' + esc(t('mobile.language')) + '</label>' + languageSelect() + '</div>'
+        return '<header class="hdr hero"><div class="hero-inner">'
+            + '<div class="brand">' + LOGO_TILE + '<div><b>' + esc(t('mobile.brand').toUpperCase()) + '</b><span>' + esc(t('mobile.brand.motto').toUpperCase()) + '</span></div></div>'
+            + heroArt(t('mobile.login.heroBadge'))
+            + '<div><h1>' + esc(t('mobile.login.title')) + '</h1><p>' + esc(t('mobile.login.subtitle')) + '</p></div>'
+            + '</div>' + WAVE_HERO + '</header>'
+            + '<main class="screen form">' + noticeHtml()
+            + '<form class="login" data-form="login" autocomplete="on" novalidate style="display:flex;flex-direction:column;gap:14px">'
+            + uf('username', t('mobile.login.username'), ICONS.user, '<input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="' + esc(t('mobile.login.usernamePh')) + '">')
+            + uf('password', t('mobile.login.password'), ICONS.lock, '<input id="password" name="password" type="password" autocomplete="current-password" required placeholder="' + esc(t('mobile.login.passwordPh')) + '">'
+                + '<button type="button" class="eye" data-action="pw-toggle" aria-label="' + esc(t('mobile.login.showPassword')) + '">' + ic(ICONS.eye) + '</button>')
+            + uf('deviceName', t('mobile.login.deviceName'), ICONS.phone, '<input id="deviceName" name="deviceName" maxlength="60" placeholder="' + esc(t('mobile.login.deviceNamePh')) + '">', t('mobile.login.deviceHint'))
+            + uf('lang', t('mobile.language'), ICONS.globe, languageSelect() + ic(ICONS.chevronDown, 'chev'))
             + (e ? '<p class="field error" role="alert">' + esc(e) + '</p>' : '')
-            + '<div class="field"><button class="btn btn-primary btn-block" type="submit"' + (state.busy ? ' disabled' : '') + '>'
-            + esc(state.busy ? t('mobile.wait') : t('mobile.login.submit')) + '</button></div>'
+            + '<button class="btn btn-primary btn-block" type="submit" style="margin-top:8px"' + (state.busy ? ' disabled' : '') + '>'
+            + esc(state.busy ? t('mobile.wait') : t('mobile.login.submit')) + '</button>'
             + '</form></main>';
     }
     function languageSelect() {
-        return '<select class="select" id="lang" data-action="lang">' + LANGUAGES.map((l) =>
+        return '<select id="lang" data-action="lang">' + LANGUAGES.map((l) =>
             '<option value="' + l + '"' + (l === state.lang ? ' selected' : '') + '>' + esc(t('mobile.language.' + l)) + '</option>').join('') + '</select>';
     }
 
     function noTripView() {
-        return topbar(t('mobile.app'), state.session.user.fullName)
+        return header({ eyebrow: t('mobile.brand'), title: t('mobile.trip.title'), sub: esc(state.session.user.fullName), art: 'truck' })
             + '<main class="screen">' + noticeHtml()
-            + '<div class="card"><img class="brand-mark" src="/m/logo-mark.png" alt=""><h2>' + esc(t('mobile.trip.title')) + '</h2>'
-            + '<p class="muted" style="margin-bottom:14px">' + esc(t('mobile.trip.hint')) + '</p>'
-            + '<button class="btn btn-primary btn-block" data-action="download"' + (state.busy ? ' disabled' : '') + '>'
+            + '<div class="card roomy"><div class="lead"><span class="icon-circle info-tone">' + ic(ICONS.truck) + '</span><p>' + esc(t('mobile.trip.hint')) + '</p></div>'
+            + '<button class="btn btn-primary btn-big btn-block" data-action="download"' + (state.busy ? ' disabled' : '') + '>'
             + esc(state.busy ? t('mobile.wait') : t('mobile.trip.download')) + '</button></div></main>';
     }
 
@@ -756,33 +868,41 @@
         const b = state.bundle;
         const customer = customerOf(state.cart.customerId);
         const term = state.search.trim().toUpperCase();
-        const units = unitsOnBoard().filter((u) => !term || u.code.includes(term) || u.productName.toUpperCase().includes(term) || u.productCode.includes(term));
+        const onBoard = unitsOnBoard();
+        const units = onBoard.filter((u) => !term || u.code.includes(term) || u.productName.toUpperCase().includes(term) || u.productCode.includes(term));
         const p = priced();
         const rows = units.map((u) => {
             const price = priceFor(customer, u);
-            const amount = price ? money(lineAmount(price.price, u, price.list)) + ' RWF' : t('mobile.sell.noPriceShort');
-            return '<button class="item' + (inCart(u.id) ? ' in-cart' : '') + '" data-action="toggle" data-unit="' + u.id + '">'
-                + '<div class="grow"><div class="code">' + esc(u.code) + '</div><div class="what">' + esc(u.productName) + ' · '
-                + u.widthMm + ' × ' + u.heightMm + ' mm</div></div><div class="price">' + esc(amount) + '</div></button>';
+            const on = inCart(u.id);
+            return '<button class="item' + (on ? ' in-cart' : '') + '" data-action="toggle" data-unit="' + u.id + '" aria-pressed="' + on + '">'
+                + '<span class="check">' + (on ? icon(ICONS.check) : '') + '</span>'
+                + '<span class="grow"><span class="code">' + esc(u.code) + '</span><span class="what">' + esc(u.productName) + ' · '
+                + u.widthMm + ' × ' + u.heightMm + ' mm</span></span>'
+                + (price ? '<span class="price">' + money(lineAmount(price.price, u, price.list)) + '<small>RWF</small></span>'
+                    : '<span class="what">' + esc(t('mobile.sell.noPriceShort')) + '</span>') + '</button>';
         }).join('');
-        return topbar(b.trip.number, b.trip.vehicle.plate + ' · ' + b.trip.area, 'day')
+        return header({ eyebrow: t('mobile.sell.trip'), title: b.trip.number, monoTitle: true, sub: esc(b.trip.vehicle.plate + ' · ' + b.trip.area), back: 'day', art: 'truck' })
             + '<main class="screen">' + noticeHtml()
-            + '<form class="card" data-form="scan" novalidate><h3>' + esc(t('mobile.sell.scanTitle')) + '</h3>'
-            + '<div class="scan-row"><input class="input" id="scan-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"'
-            + ' placeholder="' + esc(t('mobile.sell.scanPh')) + '" aria-label="' + esc(t('mobile.sell.scanTitle')) + '">'
+            + '<form class="card" data-form="scan" novalidate><label class="section-title" for="scan-code">' + esc(t('mobile.sell.scanTitle')) + '</label>'
+            + '<div class="scan-row"><input class="input mono" id="scan-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"'
+            + ' placeholder="' + esc(t('mobile.sell.scanPh')) + '">'
             + '<button class="btn btn-primary" type="submit">' + esc(t('mobile.sell.add')) + '</button>'
-            + ('BarcodeDetector' in window ? '<button class="icon-btn" type="button" data-action="camera" aria-label="' + esc(t('mobile.camera.open')) + '">' + icon(ICONS.camera) + '</button>' : '')
+            + ('BarcodeDetector' in window ? '<button class="icon-btn" type="button" data-action="camera" aria-label="' + esc(t('mobile.camera.open')) + '">' + icon(ICONS.scan) + '</button>' : '')
             + '</div>'
-            + (state.camera ? '<div class="camera" style="margin-top:12px"><video id="camera-video" playsinline muted></video>'
+            + (state.camera ? '<div class="camera"><video id="camera-video" playsinline muted></video>'
                 + '<button class="btn btn-outline" type="button" data-action="camera-stop">' + esc(t('mobile.camera.close')) + '</button></div>' : '')
             + '</form>'
-            + '<div class="field"><label for="search">' + esc(t('mobile.sell.stock', unitsOnBoard().length)) + '</label>'
-            + '<input class="input" id="search" type="search" data-action="search" value="' + esc(state.search) + '" placeholder="' + esc(t('mobile.sell.searchPh')) + '"></div>'
-            + '<div class="list">' + (rows || '<div class="empty">' + esc(unitsOnBoard().length ? t('mobile.sell.noMatch') : t('mobile.sell.nothingLeft')) + '</div>') + '</div>'
+            + '<div class="board-head"><h2 class="section-title">' + esc(t('mobile.sell.onBoard')) + ' <span class="count-chip">' + onBoard.length + '</span></h2>'
+            + '<span class="hint">' + esc(t('mobile.sell.tapHint')) + '</span></div>'
+            + '<label class="search">' + ic(ICONS.search) + '<input id="search" type="search" data-action="search" value="' + esc(state.search) + '"'
+            + ' aria-label="' + esc(t('mobile.sell.searchPh')) + '" placeholder="' + esc(t('mobile.sell.searchPh')) + '"></label>'
+            + '<div class="list">' + (rows || '<div class="empty">' + esc(onBoard.length ? t('mobile.sell.noMatch') : t('mobile.sell.nothingLeft')) + '</div>') + '</div>'
             + '</main>'
-            + (p.lines.length ? '<div class="cartbar"><div class="cartbar-inner"><div class="sum"><div class="count">' + esc(t('mobile.sell.inCart', p.lines.length))
-                + '</div><div class="amount">' + money(p.total) + ' RWF</div></div>'
-                + '<button class="btn btn-primary" data-action="go" data-view="cart">' + esc(t('mobile.sell.pay')) + '</button></div></div>' : '');
+            + (p.lines.length ? cartBar(t('mobile.sell.inCart', p.lines.length), money(p.total), '<button class="btn btn-primary" data-action="go" data-view="cart">' + esc(t('mobile.sell.pay')) + '</button>') : '');
+    }
+    function cartBar(count, amount, button) {
+        return '<div class="cartbar"><div class="cartbar-inner"><div class="sum"><div class="count">' + esc(count) + '</div>'
+            + '<div class="amount">' + amount + '<small>RWF</small></div></div>' + button + '</div></div>';
     }
 
     function cartView() {
@@ -793,14 +913,13 @@
         const lines = p.lines.map((x) => {
             const id = x.unit.id;
             return '<div class="line"><div class="line-head"><div class="grow"><div class="code mono strong">' + esc(x.unit.code) + '</div>'
-                + '<div class="muted">' + esc(x.unit.productName) + ' · ' + x.unit.widthMm + ' × ' + x.unit.heightMm + ' mm</div></div>'
+                + '<div class="muted" style="font-size:13px">' + esc(x.unit.productName) + ' · ' + x.unit.widthMm + ' × ' + x.unit.heightMm + ' mm</div></div>'
                 + '<button class="icon-btn" data-action="remove" data-unit="' + id + '" aria-label="' + esc(t('mobile.pay.remove')) + '">' + icon(ICONS.close) + '</button></div>'
                 + '<div class="row"><div class="field"><label for="price-' + id + '">' + esc(t('mobile.pay.price')) + '</label>'
                 + '<input class="input' + (e['price-' + id] ? ' is-invalid' : '') + '" id="price-' + id + '" inputmode="decimal" data-action="price" data-unit="' + id + '" value="' + esc(x.line.pricePerM2) + '">'
                 + (x.listPrice ? '<span class="hint">' + esc(t('mobile.pay.listPrice', grouped(x.listPrice, 2))) + '</span>' : '')
                 + (e['price-' + id] ? '<span class="error">' + esc(e['price-' + id]) + '</span>' : '') + '</div>'
-                + '<div class="field"><label>' + esc(t('mobile.pay.amount')) + '</label><div class="input num strong" style="display:flex;align-items:center;justify-content:flex-end">'
-                + (x.priceOk ? money(x.amount) : '—') + '</div></div></div>'
+                + '<div class="field"><label>' + esc(t('mobile.pay.amount')) + '</label><div class="shown">' + (x.priceOk ? money(x.amount) : '—') + '</div></div></div>'
                 + (x.changed ? '<div class="field"><label for="reason-' + id + '">' + esc(t('mobile.pay.reason')) + '</label>'
                     + '<input class="input' + (e['reason-' + id] ? ' is-invalid' : '') + '" id="reason-' + id + '" maxlength="200" data-action="reason" data-unit="' + id + '" value="' + esc(x.line.priceReason) + '">'
                     + (e['reason-' + id] ? '<span class="error">' + esc(e['reason-' + id]) + '</span>' : '') + '</div>' : '')
@@ -812,9 +931,10 @@
             const c = scaled(state.cart.tendered, state.bundle.decimals) - scaled(cash, state.bundle.decimals);
             if (c >= 0n) change = t('mobile.pay.change', money(c));
         }
-        return topbar(t('mobile.pay.title'), state.bundle.trip.number, 'sell')
+        const vat = grouped(text(vatOf(p.lines.filter((x) => x.priceOk).map((x) => ({ taxCode: x.unit.taxCode, vatRate: x.unit.vatRate, amount: text(x.amount, state.bundle.decimals) }))), 2), 2);
+        return header({ title: t('mobile.pay.title'), sub: esc(state.bundle.trip.number), monoSub: true, back: 'sell', art: 'cash' })
             + '<main class="screen">' + noticeHtml()
-            + (e.cart ? '<div class="note danger" role="alert">' + esc(e.cart) + '</div>' : '')
+            + (e.cart ? noteHtml('danger', e.cart, 'alert') : '')
             + '<div class="card"><h3>' + esc(t('mobile.pay.customer')) + '</h3>'
             + '<div class="field"><label for="customer">' + esc(t('mobile.pay.customer')) + '</label><select class="select" id="customer" data-action="customer">' + options + '</select>'
             + '<span class="hint">' + esc(t('mobile.pay.customerHint')) + '</span></div>'
@@ -823,21 +943,20 @@
             + (e.tin ? '<span class="error">' + esc(e.tin) + '</span>' : '<span class="hint">' + esc(t('mobile.pay.buyerTinHint')) + '</span>') + '</div></div>'
             + '<div class="list">' + (lines || '<div class="empty">' + esc(t('mobile.pay.empty')) + '</div>') + '</div>'
             + '<div class="card"><div class="totals"><div class="t-row total"><span>' + esc(t('mobile.pay.total')) + '</span><span>' + money(p.total) + ' RWF</span></div>'
-            + '<div class="t-row muted"><span>' + esc(t('mobile.pay.vatIncluded')) + '</span><span>' + grouped(text(vatOf(p.lines.filter((x) => x.priceOk).map((x) => ({ taxCode: x.unit.taxCode, vatRate: x.unit.vatRate, amount: text(x.amount, state.bundle.decimals) }))), 2), 2) + '</span></div></div></div>'
+            + '<div class="t-row muted"><span>' + esc(t('mobile.pay.vatIncluded')) + '</span><span>' + vat + '</span></div></div></div>'
             + '<div class="card"><h3>' + esc(t('mobile.pay.payment')) + '</h3>'
-            + '<div class="btn-group" style="margin-bottom:12px"><button class="btn btn-outline" type="button" data-action="all-cash">' + esc(t('mobile.pay.allCash')) + '</button>'
+            + '<div class="btn-group"><button class="btn btn-outline" type="button" data-action="all-cash">' + esc(t('mobile.pay.allCash')) + '</button>'
             + '<button class="btn btn-outline" type="button" data-action="all-momo">' + esc(t('mobile.pay.allMomo')) + '</button></div>'
             + '<div class="row"><div class="field"><label for="cash">' + esc(t('mobile.pay.cash')) + '</label><input class="input" id="cash" inputmode="decimal" data-action="cart-field" data-field="cash" value="' + esc(cash) + '"></div>'
             + '<div class="field"><label for="tendered">' + esc(t('mobile.pay.tendered')) + '</label><input class="input' + (e.tendered ? ' is-invalid' : '') + '" id="tendered" inputmode="decimal" data-action="cart-field" data-field="tendered" value="' + esc(state.cart.tendered) + '"></div></div>'
             + (e.tendered ? '<p class="field error">' + esc(e.tendered) + '</p>' : change ? '<p class="field hint strong">' + esc(change) + '</p>' : '')
-            + '<div class="row" style="margin-top:12px"><div class="field"><label for="momo">' + esc(t('mobile.pay.momo')) + '</label><input class="input" id="momo" inputmode="decimal" data-action="cart-field" data-field="momo" value="' + esc(state.cart.momo) + '"></div>'
+            + '<div class="row"><div class="field"><label for="momo">' + esc(t('mobile.pay.momo')) + '</label><input class="input" id="momo" inputmode="decimal" data-action="cart-field" data-field="momo" value="' + esc(state.cart.momo) + '"></div>'
             + '<div class="field"><label for="momoRef">' + esc(t('mobile.pay.momoRefLabel')) + '</label><input class="input' + (e.momoRef ? ' is-invalid' : '') + '" id="momoRef" maxlength="60" autocapitalize="characters" data-action="cart-field" data-field="momoRef" value="' + esc(state.cart.momoRef) + '"></div></div>'
             + (e.momoRef ? '<p class="field error">' + esc(e.momoRef) + '</p>' : '')
             + (e.pay ? '<p class="field error" role="alert">' + esc(e.pay) + '</p>' : '')
             + '</div></main>'
-            + '<div class="cartbar"><div class="cartbar-inner"><div class="sum"><div class="count">' + esc(t('mobile.sell.inCart', p.lines.length))
-            + '</div><div class="amount">' + money(p.total) + ' RWF</div></div>'
-            + '<button class="btn btn-primary" data-action="complete"' + (p.lines.length ? '' : ' disabled') + '>' + esc(t('mobile.pay.complete')) + '</button></div></div>';
+            + cartBar(t('mobile.sell.inCart', p.lines.length), money(p.total),
+                '<button class="btn btn-primary" data-action="complete"' + (p.lines.length ? '' : ' disabled') + '>' + esc(t('mobile.pay.complete')) + '</button>');
     }
 
     /** The receipt (MPOS-05): printed or shared; "pending signature" until EBM signs it, then the SDC block (SYNC-06). */
@@ -850,8 +969,9 @@
             + '<div class="r-row"><span>' + l.widthMm + '×' + l.heightMm + ' @ ' + esc(grouped(l.pricePerM2, 2)) + '</span><span>' + money(scaled(l.amount, b.decimals)) + '</span></div>'
             + (l.priceReason ? '<div class="muted">' + esc(t('mobile.receipt.listPrice', grouped(l.listPrice, 2))) + '</div>' : '')).join('');
         const vat = vatOf(sale.lines);
-        const pays = sale.payments.map((p) => '<div class="r-row"><span>' + esc(t('mobile.method.' + p.method)) + (p.reference ? ' ' + esc(p.reference) : '')
-            + '</span><span>' + money(scaled(p.amount, b.decimals)) + '</span></div>').join('');
+        // A mobile money reference on its own line: it is long
+        const pays = sale.payments.map((p) => '<div class="r-row"><span>' + esc(t('mobile.method.' + p.method)) + '</span><span>' + money(scaled(p.amount, b.decimals)) + '</span></div>'
+            + (p.reference ? '<div>&nbsp;&nbsp;' + esc(p.reference) + '</div>' : '')).join('');
         let fiscal;
         if (ebm && ebm.signed) {
             fiscal = '<div class="r-rule"></div><div class="r-center r-strong">' + esc(t('mobile.receipt.sdc')) + '</div>'
@@ -903,32 +1023,34 @@
         const sale = state.sales.find((s) => s.clientId === state.receiptId);
         if (!sale) { state.view = 'sales'; return salesView(); }
         const r = sale.result;
-        const status = sale.status === 'conflict'
-            ? '<div class="note danger">' + esc(t('mobile.receipt.conflictNote', r && r.conflict ? r.conflict.reasonText : '')) + '</div>'
-            : sale.status === 'pending' ? '<div class="note warn">' + esc(t('mobile.receipt.pendingNote')) + '</div>'
-            : sale.status === 'accepted' ? '<div class="note info">' + esc(t('mobile.receipt.acceptedNote')) + '</div>'
-            : '<div class="note ok">' + esc(t('mobile.receipt.signedNote')) + '</div>';
+        const status = sale.status === 'conflict' ? noteHtml('danger', t('mobile.receipt.conflictNote', r && r.conflict ? r.conflict.reasonText : ''))
+            : sale.status === 'pending' ? noteHtml('warn', t('mobile.receipt.pendingNote'))
+            : sale.status === 'accepted' ? noteHtml('info', t('mobile.receipt.acceptedNote'))
+            : noteHtml('ok', t('mobile.receipt.signedNote'));
         const text = encodeURIComponent(receiptText(sale));
-        return topbar(sale.number, dateTime(sale.createdAt), 'sales')
+        return header({ title: sale.number, monoTitle: true, sub: esc(dateTime(sale.createdAt)), back: 'sales', art: 'receipt' })
             + '<main class="screen">' + noticeHtml() + status + receiptHtml(sale)
-            + '<div class="btn-group"><button class="btn btn-outline" data-action="print">' + esc(t('mobile.receipt.print')) + '</button>'
-            + '<a class="btn btn-outline" href="sms:?&body=' + text + '">' + esc(t('mobile.receipt.sms')) + '</a>'
-            + '<a class="btn btn-outline" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">' + esc(t('mobile.receipt.whatsapp')) + '</a></div>'
-            + '<button class="btn btn-primary btn-block" data-action="go" data-view="sell">' + esc(t('mobile.receipt.newSale')) + '</button>'
+            + '<div class="btn-group"><button class="btn btn-outline" data-action="print">' + icon(ICONS.printer) + esc(t('mobile.receipt.print')) + '</button>'
+            + '<a class="btn btn-outline" href="sms:?&body=' + text + '">' + icon(ICONS.sms) + esc(t('mobile.receipt.sms')) + '</a>'
+            + '<a class="btn btn-outline" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">' + icon(ICONS.share) + esc(t('mobile.receipt.whatsapp')) + '</a></div>'
+            + '<button class="btn btn-primary btn-big btn-block" data-action="go" data-view="sell">' + esc(t('mobile.receipt.newSale')) + '</button>'
             + '</main>';
     }
 
     function salesView() {
+        const d = state.bundle.decimals;
         const rows = state.sales.slice().reverse().map((s) => '<button class="item" data-action="receipt" data-sale="' + s.clientId + '">'
-            + '<div class="grow"><div class="code">' + esc(s.number) + '</div><div class="what">' + esc(dateTime(s.createdAt)) + ' · '
-            + esc(tn('mobile.sales.units', s.lines.length, s.lines.length)) + '</div></div><div style="text-align:right"><div class="price">' + money(scaled(s.total, state.bundle.decimals))
-            + '</div>' + badge(s) + '</div></button>').join('');
-        const total = state.sales.filter((s) => s.status !== 'conflict').reduce((sum, s) => sum + scaled(s.total, state.bundle.decimals), 0n);
-        return topbar(t('mobile.sales.title'), state.bundle.trip.number, 'day')
+            + '<span class="tile-ic ' + (TONES[s.status] || 'info-tone') + '">' + ic(ICONS.receipt) + '</span>'
+            + '<span class="grow"><span class="code" style="font-size:13px">' + esc(s.number) + '</span><span class="what">' + esc(dateTime(s.createdAt)) + ' · '
+            + esc(tn('mobile.sales.units', s.lines.length, s.lines.length)) + '</span></span>'
+            + '<span class="price end">' + money(scaled(s.total, d)) + badge(s) + '</span></button>').join('');
+        const total = state.sales.filter((s) => s.status !== 'conflict').reduce((sum, s) => sum + scaled(s.total, d), 0n);
+        const waiting = pending().length;
+        return header({ title: t('mobile.sales.title'), sub: esc(state.bundle.trip.number), monoSub: true, back: 'day', art: 'receipt' })
             + '<main class="screen">' + noticeHtml()
-            + '<div class="card"><div class="totals"><div class="t-row"><span>' + esc(t('mobile.sales.count')) + '</span><span class="strong">' + state.sales.length + '</span></div>'
-            + '<div class="t-row"><span>' + esc(t('mobile.sales.pending')) + '</span><span class="strong">' + pending().length + '</span></div>'
-            + '<div class="t-row total"><span>' + esc(t('mobile.sales.total')) + '</span><span>' + money(total) + ' RWF</span></div></div></div>'
+            + '<div class="card" style="padding:18px;gap:14px"><div><div class="eyebrow-label">' + esc(t('mobile.sales.totalPhone')) + '</div>' + amountHtml(money(total)) + '</div>'
+            + '<div class="tiles">' + tile(t('mobile.day.sales'), String(state.sales.length)) + tile(t('mobile.sales.pending'), String(waiting), waiting ? 'warn' : '') + '</div></div>'
+            + '<h2 class="section-title">' + esc(t('mobile.sales.count')) + '</h2>'
             + '<div class="list">' + (rows || '<div class="empty">' + esc(t('mobile.sales.none')) + '</div>') + '</div></main>';
     }
 
@@ -952,44 +1074,51 @@
             + (b.status === 'refused' && b.error ? '<div class="what error">' + esc(b.error) + '</div>' : '')
             + (b.result && b.result.decisionNote ? '<div class="what">' + esc(b.result.decisionNote) + '</div>' : '')
             + '</div><div>' + breakageBadge(b) + '</div></div>').join('');
-        return topbar(t('mobile.breakage.title'), state.bundle.trip.number, 'day')
+        return header({ title: t('mobile.breakage.title'), sub: esc(state.bundle.trip.number), monoSub: true, back: 'day', art: 'breakage' })
             + '<main class="screen">' + noticeHtml()
-            + '<form class="card" data-form="breakage" novalidate><p class="muted" style="margin-bottom:12px">' + esc(t('mobile.breakage.hint')) + '</p>'
+            + '<form class="card" data-form="breakage" novalidate><p class="muted" style="font-size:14px">' + esc(t('mobile.breakage.hint')) + '</p>'
             + '<div class="field"><label for="b-unit">' + esc(t('mobile.breakage.unit')) + '</label><select class="select" id="b-unit" data-action="b-unit">' + options + '</select>'
             + (chosen ? '<span class="hint">' + esc(chosen.productName + ' · ' + chosen.widthMm + ' × ' + chosen.heightMm + ' mm') + '</span>' : '')
             + (e.unit ? '<span class="error">' + esc(e.unit) + '</span>' : '') + '</div>'
             + '<div class="field"><label for="b-reason">' + esc(t('mobile.breakage.reason')) + '</label><input class="input' + (e.reason ? ' is-invalid' : '') + '" id="b-reason" maxlength="255" data-action="b-field" data-field="reason" value="' + esc(f.reason) + '" placeholder="' + esc(t('mobile.breakage.reasonPh')) + '">'
             + (e.reason ? '<span class="error">' + esc(e.reason) + '</span>' : '') + '</div>'
             + '<div class="field"><label for="b-place">' + esc(t('mobile.breakage.place')) + '</label><input class="input' + (e.place ? ' is-invalid' : '') + '" id="b-place" maxlength="255" data-action="b-field" data-field="place" value="' + esc(f.place) + '" placeholder="' + esc(t('mobile.breakage.placePh')) + '">'
-            + '<button class="btn btn-outline btn-block" type="button" data-action="b-position">' + esc(t('mobile.breakage.position')) + '</button>'
+            + '<button class="btn btn-outline btn-block" type="button" data-action="b-position">' + icon(ICONS.target) + esc(t('mobile.breakage.position')) + '</button>'
             + (e.place ? '<span class="error">' + esc(e.place) + '</span>' : '') + '</div>'
             + '<div class="field"><span class="label">' + esc(t('mobile.breakage.photo')) + '</span>'
             + (f.photo ? '<img class="photo-preview" src="' + f.photo + '" alt="' + esc(t('mobile.breakage.photo')) + '">'
                 + '<button class="btn btn-outline btn-block" type="button" data-action="b-photo-clear">' + esc(t('mobile.breakage.photoAgain')) + '</button>'
-                : '<label class="btn btn-outline btn-block" for="b-photo">' + esc(t('mobile.breakage.photoTake')) + '</label>')
+                : '<label class="btn btn-outline btn-block" for="b-photo">' + icon(ICONS.camera) + esc(t('mobile.breakage.photoTake')) + '</label>')
             + '<input class="file-input" type="file" id="b-photo" accept="image/*" capture="environment" data-action="b-photo">'
             + (e.photo ? '<span class="error">' + esc(e.photo) + '</span>' : '') + '</div>'
-            + '<div class="field"><button class="btn btn-primary btn-block" type="submit">' + esc(t('mobile.breakage.save')) + '</button></div>'
+            + '<button class="btn btn-primary btn-block" type="submit">' + esc(t('mobile.breakage.save')) + '</button>'
             + '</form>'
-            + '<h2 class="list-title">' + esc(t('mobile.breakage.list')) + '</h2>'
+            + '<h2 class="section-title">' + esc(t('mobile.breakage.list')) + '</h2>'
             + '<div class="list">' + (rows || '<div class="empty">' + esc(t('mobile.breakage.none')) + '</div>') + '</div>'
             + '</main>';
     }
-    /** The cash the driver declares at the end of the day (MPOS-07): once, with network. */
+    /** "45920" as "45,920" in the cash field, as it is typed. */
+    const groupDigits = (digits) => String(digits || '').replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    /** The cash the driver declares at the end of the day (MPOS-07): once, with network; the amount on the button. */
     function declareView() {
         const b = state.bundle;
         const e = state.errors;
         const done = b.cashDeclared != null;
+        const typed = state.declareAmount.trim();
+        const valid = /^\d+$/.test(typed);
         const body = done
-            ? '<div class="note ok">' + esc(t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : '')) + '</div>'
-            : '<form class="card" data-form="declare" novalidate><p class="muted" style="margin-bottom:12px">' + esc(t('mobile.declare.hint')) + '</p>'
-                + '<div class="field"><label for="declare-amount">' + esc(t('mobile.declare.amount')) + '</label>'
-                + '<input class="input' + (e.declare ? ' is-invalid' : '') + '" id="declare-amount" inputmode="numeric" data-action="declare-field" value="' + esc(state.declareAmount) + '">'
+            ? noteHtml('ok', t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : ''))
+            : '<form class="card roomy" data-form="declare" novalidate>'
+                + '<div class="lead"><span class="icon-circle ok-tone">' + ic(ICONS.cash) + '</span><p>' + esc(t('mobile.declare.hintCount')) + '</p></div>'
+                + '<div class="field"><label for="declare-amount" style="font-size:14px">' + esc(t('mobile.declare.cashLabel')) + '</label>'
+                + '<div class="cash-field' + (e.declare ? ' is-invalid' : '') + '"><input id="declare-amount" inputmode="numeric" autocomplete="off" data-action="declare-field" value="' + esc(groupDigits(state.declareAmount)) + '"'
+                + ' aria-label="' + esc(t('mobile.declare.amount')) + '"><span>RWF</span></div>'
                 + (e.declare ? '<span class="error">' + esc(e.declare) + '</span>' : '') + '</div>'
-                + (pendingCount() ? '<div class="note warn" style="margin-top:12px">' + esc(tn('mobile.declare.pending', pendingCount(), pendingCount())) + '</div>' : '')
-                + '<div class="field"><button class="btn btn-primary btn-block" type="button" data-action="ask-declare"' + (state.busy ? ' disabled' : '') + '>'
-                + esc(state.busy ? t('mobile.wait') : t('mobile.declare.save')) + '</button></div></form>';
-        return topbar(t('mobile.declare.title'), b.trip.number, 'day')
+                + noteHtml('info', t('mobile.declare.once'))
+                + (pendingCount() ? noteHtml('warn', tn('mobile.declare.pending', pendingCount(), pendingCount())) : '')
+                + '<button class="btn btn-primary btn-big btn-block" type="button" data-action="ask-declare"' + (state.busy ? ' disabled' : '') + '>'
+                + esc(state.busy ? t('mobile.wait') : valid ? t('mobile.declare.saveAmount', money(scaled(typed, b.decimals))) : t('mobile.declare.save')) + '</button></form>';
+        return header({ title: t('mobile.declare.title'), sub: esc(b.trip.number), monoSub: true, back: 'day', art: 'cash' })
             + '<main class="screen">' + noticeHtml() + body + '</main>';
     }
 
@@ -1010,29 +1139,28 @@
     function dayView() {
         const b = state.bundle;
         const s = daySummary();
-        const co = b.company || {};
-        const row = (label, value) => '<div class="t-row"><span>' + esc(label) + '</span><span class="strong">' + esc(value) + '</span></div>';
         const date = b.trip.date ? b.trip.date.split('-').reverse().join('/') : '';
+        const where = [b.trip.area, date].filter(Boolean).join(' · ');
         const cash = b.cashDeclared != null
-            ? '<div class="note ok">' + esc(t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : '')) + '</div>'
-            : '<div class="totals">' + row(t('mobile.day.cashFromSales'), money(s.cash) + ' RWF') + '</div>'
-                + '<p class="muted day-hint">' + esc(t('mobile.day.cashHint')) + '</p>'
-                + '<button class="btn btn-outline btn-block day-action" data-action="go" data-view="declare">' + esc(t('mobile.menu.declare')) + '</button>';
-        return topbar(t('mobile.day.title'), b.trip.number + ' · ' + b.trip.vehicle.plate)
+            ? noteHtml('ok', t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : ''))
+            : '<div class="lead"><span class="icon-circle ok-tone">' + ic(ICONS.cash) + '</span><div><div class="muted" style="font-size:13px">' + esc(t('mobile.day.cashFromSales')) + '</div>'
+                + amountHtml(money(s.cash), 'mid') + '</div></div>'
+                + '<p class="muted" style="font-size:13px;line-height:19px">' + esc(t('mobile.day.cashHint')) + '</p>'
+                + '<button class="btn btn-outline btn-block" data-action="go" data-view="declare">' + icon(ICONS.cash) + esc(t('mobile.menu.declare')) + '</button>';
+        return header({ eyebrow: t('mobile.day.title'), title: state.session.user.fullName, sub: esc(b.trip.number + ' · ' + b.trip.vehicle.plate) + (where ? '<br>' + esc(where) : ''), art: 'truck' })
             + '<main class="screen">' + noticeHtml()
-            + '<div class="day-brand"><img src="' + esc(co.logo || '/m/logo-mark.png') + '" alt="' + esc(co.name || '') + '">'
-            + '<div class="grow"><div class="strong">' + esc(state.session.user.fullName) + '</div><div class="muted">' + esc(b.trip.area + (date ? ' · ' + date : '')) + '</div></div></div>'
-            + '<button class="btn btn-primary btn-block day-sell" data-action="go" data-view="sell">' + esc(t('mobile.menu.sell')) + '</button>'
-            + '<div class="card"><h3>' + esc(t('mobile.day.sales')) + '</h3>'
-            + '<div class="day-total">' + money(s.total) + ' RWF</div><div class="muted">' + esc(tn('mobile.day.salesCount', s.sales, s.sales)) + '</div>'
-            + '<div class="totals day-rows">' + row(t('mobile.method.CASH'), money(s.cash) + ' RWF') + row(t('mobile.method.MOBILE_MONEY'), money(s.momo) + ' RWF')
-            + (s.conflicts ? row(t('mobile.day.conflicts'), String(s.conflicts)) : '') + '</div>'
-            + '<button class="btn btn-outline btn-block day-action" data-action="go" data-view="sales">' + esc(t('mobile.menu.sales')) + '</button></div>'
-            + '<div class="card"><h3>' + esc(t('mobile.day.glass')) + '</h3><div class="totals">'
-            + row(t('mobile.day.sold'), String(s.sold)) + row(t('mobile.day.broken'), String(s.broken)) + row(t('mobile.day.onBoard'), String(s.onBoard)) + '</div>'
-            + '<button class="btn btn-outline btn-block day-action" data-action="go" data-view="breakage">' + esc(t('mobile.menu.breakage')) + '</button></div>'
-            + '<div class="card"><h3>' + esc(t('mobile.day.receipts')) + '</h3><div class="totals">'
-            + row(t('mobile.day.signed'), t('mobile.day.ofTotal', s.signed, s.receipts)) + row(t('mobile.sales.pending'), String(s.waiting)) + '</div></div>'
+            + '<button class="btn btn-primary btn-big btn-block day-sell" data-action="go" data-view="sell">' + esc(t('mobile.menu.sell')) + '</button>'
+            + '<div class="card" style="padding:18px;gap:14px"><div><div class="eyebrow-label">' + esc(t('mobile.day.sales')) + '</div>' + amountHtml(money(s.total))
+            + '<div class="muted" style="font-size:13px">' + esc(tn('mobile.day.salesCount', s.sales, s.sales)) + '</div></div>'
+            + '<div class="tiles">' + tile(t('mobile.method.CASH'), money(s.cash)) + tile(t('mobile.method.MOBILE_MONEY'), money(s.momo)) + '</div>'
+            + (s.conflicts ? tile(t('mobile.day.conflicts'), String(s.conflicts), 'danger') : '')
+            + '<button class="btn btn-outline btn-block" data-action="go" data-view="sales">' + icon(ICONS.receipt) + esc(t('mobile.menu.sales')) + '</button></div>'
+            + '<div class="card"><h3>' + esc(t('mobile.day.glass')) + '</h3><div class="tiles">'
+            + tile(t('mobile.day.sold'), String(s.sold), 'ok') + tile(t('mobile.day.broken'), String(s.broken), s.broken ? 'warn' : '') + tile(t('mobile.day.onBoard'), String(s.onBoard)) + '</div>'
+            + '<button class="btn btn-outline btn-block" data-action="go" data-view="breakage">' + icon(ICONS.broken) + esc(t('mobile.menu.breakage')) + '</button></div>'
+            + '<div class="card"><h3>' + esc(t('mobile.day.receipts')) + '</h3><div class="tiles">'
+            + tile(t('mobile.day.signed'), t('mobile.day.ofTotal', s.signed, s.receipts), s.receipts && s.signed === s.receipts ? 'ok' : '')
+            + tile(t('mobile.sales.pending'), String(s.waiting), s.waiting ? 'warn' : '') + '</div></div>'
             + '<div class="card"><h3>' + esc(t('mobile.day.cash')) + '</h3>' + cash + '</div>'
             + '</main>';
     }
@@ -1040,18 +1168,19 @@
     function menuHtml() {
         if (!state.menu) return '';
         const items = [
-            ['go', 'day', t('mobile.menu.day')], ['go', 'sell', t('mobile.menu.sell')], ['go', 'sales', t('mobile.menu.sales')], ['go', 'breakage', t('mobile.menu.breakage')],
-            ['go', 'declare', t('mobile.menu.declare')], ['download', '', t('mobile.menu.refresh')],
-            ['lang-toggle', '', t('mobile.menu.language')], ['ask-close', '', t('mobile.menu.closeTrip')], ['ask-signout', '', t('mobile.menu.signOut')]
+            ['go', 'day', t('mobile.menu.day'), ICONS.home], ['go', 'sell', t('mobile.menu.sell'), ICONS.scan], ['go', 'sales', t('mobile.menu.sales'), ICONS.receipt],
+            ['go', 'breakage', t('mobile.menu.breakage'), ICONS.broken], ['go', 'declare', t('mobile.menu.declare'), ICONS.cash],
+            ['download', '', t('mobile.menu.refresh'), ICONS.sync], ['lang-toggle', '', t('mobile.menu.language'), ICONS.globe],
+            ['ask-close', '', t('mobile.menu.closeTrip'), ICONS.box], ['ask-signout', '', t('mobile.menu.signOut'), ICONS.logout]
         ].filter((i) => state.bundle || !['day', 'sell', 'sales', 'breakage', 'declare'].includes(i[1]) && i[0] !== 'ask-close');
         return '<div class="sheet-backdrop" data-action="menu-close"></div><div class="sheet" role="menu">'
             + items.map((i) => '<button class="item' + (i[0] === 'ask-signout' || i[0] === 'ask-close' ? ' danger' : '') + '" role="menuitem" data-action="' + i[0]
-                + '" data-view="' + i[1] + '">' + esc(i[2]) + '</button>').join('') + '</div>';
+                + '" data-view="' + i[1] + '">' + icon(i[3]) + '<span>' + esc(i[2]) + '</span></button>').join('') + '</div>';
     }
     function confirmHtml() {
         if (!state.confirm) return '';
         return '<div class="sheet-backdrop" data-action="confirm-no"></div><div class="sheet" role="dialog" aria-modal="true" style="padding:16px">'
-            + '<p style="margin-bottom:14px">' + esc(state.confirm.text) + '</p><div class="btn-group">'
+            + '<p style="margin-bottom:14px;color:var(--heading)">' + esc(state.confirm.text) + '</p><div class="btn-group">'
             + '<button class="btn btn-outline" data-action="confirm-no">' + esc(t('mobile.notNow')) + '</button>'
             + '<button class="btn btn-danger" data-action="confirm-yes">' + esc(state.confirm.label) + '</button></div></div>';
     }
@@ -1069,6 +1198,7 @@
         else if (state.view === 'declare') html = declareView();
         else if (state.view === 'day') html = dayView();
         else html = sellView();
+        app.className = 'app' + (state.session ? '' : ' on-card');   // the sign-in form sits on white, the rest on the page's ground
         app.innerHTML = html + menuHtml() + confirmHtml();
         if (state.camera) {
             const video = document.getElementById('camera-video');
@@ -1104,6 +1234,14 @@
             }
             case 'remove': return removeLine(el.dataset.unit);
             case 'b-position': return addPosition();
+            case 'pw-toggle': {   // in place: a render would empty what the driver typed
+                const input = document.getElementById('password');
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                el.setAttribute('aria-label', t(show ? 'mobile.login.hidePassword' : 'mobile.login.showPassword'));
+                el.innerHTML = ic(show ? ICONS.eyeOff : ICONS.eye);
+                return undefined;
+            }
             case 'b-photo-clear': state.breakage.photo = null; return render();
             case 'ask-declare': {
                 const value = state.declareAmount.trim();
@@ -1154,7 +1292,8 @@
         const action = el.dataset.action;
         if (action === 'search') { state.search = el.value; return render(); }
         if (action === 'b-field') { state.breakage[el.dataset.field] = el.value; delete state.errors[el.dataset.field]; return undefined; }
-        if (action === 'declare-field') { state.declareAmount = el.value; delete state.errors.declare; return undefined; }
+        // The digits alone; the field shows them grouped and the button the amount, as they are typed
+        if (action === 'declare-field') { state.declareAmount = el.value.replace(/\D/g, ''); delete state.errors.declare; return render(); }
         // A field being corrected drops its error, so what it shows (the change, the amount) is current
         if (action === 'cart-field') {
             state.cart[el.dataset.field] = el.value;

@@ -4,9 +4,10 @@
  * there is none or it is too slow to answer (3 s); every good answer refreshes the cache. The API (/api/...) always goes
  * to the network: the app keeps its data in IndexedDB and queues its sales there when offline (SYNC-02).
  */
-const VERSION = 'iw-pos-v3';
+const VERSION = 'iw-pos-v4';
 const SHELL = ['/m/', '/m/index.html', '/m/app.css', '/m/app.js', '/m/manifest.webmanifest',
-    '/m/icon-192.png', '/m/icon-512.png', '/m/icon-maskable-512.png', '/m/logo-mark.png'];
+    '/m/icon-192.png', '/m/icon-512.png', '/m/icon-maskable-512.png', '/m/logo-mark.png',
+    '/m/fonts/inter-latin.woff2', '/m/fonts/ibm-plex-mono-500-latin.woff2', '/m/fonts/ibm-plex-mono-600-latin.woff2', '/m/fonts/ibm-plex-mono-700-latin.woff2'];
 const NETWORK_WAIT = 3000;
 
 self.addEventListener('install', (event) => {

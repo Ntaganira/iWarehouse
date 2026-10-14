@@ -52,13 +52,14 @@ public class MobileTripService {
     private final SettingService settings;
     private final LinePricing pricing;
     private final TripBreakageRepository breakageRepo;
+    private final CompanyLogoService logos;
     private final Clock clock;
 
     public MobileTripService(TripRepository tripRepo, DriverRepository driverRepo, StockUnitRepository unitRepo,
                              CustomerRepository customerRepo, UserRepository userRepo, TripPriceListRepository priceListSnapshotRepo,
                              TripPriceRepository priceSnapshotRepo, TripInvoiceNumberRepository numberRepo, PriceListItemRepository itemRepo,
                              PriceListService priceListService, DocumentNumberService numbers, SettingService settings, LinePricing pricing,
-                             TripBreakageRepository breakageRepo, Clock clock) {
+                             TripBreakageRepository breakageRepo, CompanyLogoService logos, Clock clock) {
         this.tripRepo = tripRepo;
         this.driverRepo = driverRepo;
         this.unitRepo = unitRepo;
@@ -73,11 +74,12 @@ public class MobileTripService {
         this.settings = settings;
         this.pricing = pricing;
         this.breakageRepo = breakageRepo;
+        this.logos = logos;
         this.clock = clock;
     }
 
-    /** The company as receipts print it. */
-    public record Company(String name, String tin, String address, String phone) {
+    /** The company as receipts print it; logo: its PNG as a data URI (the phone keeps it for offline receipts), or null. */
+    public record Company(String name, String tin, String address, String phone, String logo) {
     }
 
     /** Everything a phone needs to sell offline for a trip. */
@@ -116,7 +118,7 @@ public class MobileTripService {
             unused.add(n.getNumber());
         }
         Company company = new Company(settings.get(SettingKey.COMPANY_NAME), settings.get(SettingKey.COMPANY_TIN),
-                settings.get(SettingKey.COMPANY_ADDRESS), settings.get(SettingKey.COMPANY_PHONE));
+                settings.get(SettingKey.COMPANY_ADDRESS), settings.get(SettingKey.COMPANY_PHONE), logos.dataUri());
         return new Bundle(trip, units, priceListSnapshotRepo.findByTripId(trip.getId()), priceSnapshotRepo.findByTripId(trip.getId()),
                 customerRepo.findByEnabledTrueOrderByNameAsc(), unused, discountLimit(user.getId()), pricing.baseDecimals(), company,
                 EbmMode.valueOf(settings.get(SettingKey.EBM_MODE)), now,

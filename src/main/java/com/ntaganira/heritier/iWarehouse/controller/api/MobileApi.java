@@ -65,7 +65,8 @@ public final class MobileApi {
                                boolean defaultCustomer) {
     }
 
-    public record CompanyView(String name, String tin, String address, String phone) {
+    /** logo: the company's logo as a data URI, printed above its name on receipts (as the web's receipts do), or null. */
+    public record CompanyView(String name, String tin, String address, String phone, String logo) {
     }
 
     public record TripBundle(TripView trip, List<UnitView> units, List<PriceListView> priceLists, List<PriceView> prices,
@@ -91,7 +92,7 @@ public final class MobileApi {
                 c.isDefaultCustomer())).toList();
         MobileTripService.Company co = b.company();
         return new TripBundle(trip, units, lists, prices, customers, b.numbers(), b.discountLimit(), b.decimals(),
-                new CompanyView(co.name(), co.tin(), co.address(), co.phone()), b.ebmMode().name(), b.downloadedAt(), b.reportedBroken(),
+                new CompanyView(co.name(), co.tin(), co.address(), co.phone(), co.logo()), b.ebmMode().name(), b.downloadedAt(), b.reportedBroken(),
                 b.cashDeclared());
     }
 

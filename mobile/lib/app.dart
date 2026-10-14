@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'controller.dart';
 import 'screens/breakage.dart';
 import 'screens/cart.dart';
+import 'screens/day.dart';
 import 'screens/declare.dart';
 import 'screens/login.dart';
 import 'screens/no_trip.dart';
@@ -15,6 +16,7 @@ import 'screens/receipt.dart';
 import 'screens/sales.dart';
 import 'screens/sell.dart';
 import 'theme.dart';
+import 'widgets.dart';
 
 class PosApp extends StatelessWidget {
   const PosApp({super.key, required this.c, this.fontFamily});
@@ -84,10 +86,11 @@ class _PosRootState extends State<PosRoot> with WidgetsBindingObserver {
         PosView.breakage => BreakageScreen(c: c),
         PosView.declare => DeclareScreen(c: c),
         PosView.sell => SellScreen(c: c),
+        PosView.day => DayScreen(c: c),
       };
     }
     return PopScope(
-      canPop: c.session == null || c.bundle == null || c.view == PosView.sell,
+      canPop: c.session == null || c.bundle == null || c.view == PosView.day,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) c.back();
       },
@@ -101,14 +104,6 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Container(
-            width: 72,
-            height: 72,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(18)),
-            child: const Text('HB', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 28)),
-          ),
-        ),
+        body: const Center(child: BrandMark(size: 96)),
       );
 }

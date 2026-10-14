@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../art.dart';
 import '../controller.dart';
 import '../money.dart' as m;
 import '../theme.dart';
@@ -25,10 +26,12 @@ class CartScreen extends StatelessWidget {
       c: c,
       title: c.t('mobile.pay.title'),
       sub: b.trip.number,
+      monoSub: true,
+      art: Art.cash,
       onBack: () => c.go(PosView.sell),
       bottom: CartBar(
         count: c.t('mobile.sell.inCart', [p.lines.length]),
-        amount: '${c.money(p.total)} RWF',
+        amount: c.money(p.total),
         action: c.t('mobile.pay.complete'),
         onAction: p.lines.isEmpty
             ? null
@@ -83,8 +86,7 @@ class CartScreen extends StatelessWidget {
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(x.unit.code,
-                          style: const TextStyle(fontFamily: mono, fontFamilyFallback: monoFallback, fontWeight: FontWeight.w700)),
+                      Text(x.unit.code, style: monoStyle(size: 14, weight: FontWeight.w600, color: pal.heading)),
                       Text('${x.unit.productName} · ${x.unit.size}', style: TextStyle(color: pal.muted, fontSize: 14)),
                     ]),
                   ),
@@ -114,8 +116,8 @@ class CartScreen extends StatelessWidget {
                         constraints: const BoxConstraints(minHeight: 48),
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 14),
-                        decoration: BoxDecoration(border: Border.all(color: pal.border), borderRadius: BorderRadius.circular(12)),
-                        child: Text(x.priceOk ? c.money(x.amount) : '—', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                        decoration: BoxDecoration(color: pal.bg, border: Border.all(color: pal.border, width: 1.5), borderRadius: BorderRadius.circular(8)),
+                        child: Text(x.priceOk ? c.money(x.amount) : '—', style: monoStyle(size: 16, weight: FontWeight.w700, color: pal.heading)),
                       ),
                     ),
                   ),
@@ -170,7 +172,7 @@ class CartScreen extends StatelessWidget {
           if (e['tendered'] != null)
             Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(e['tendered']!, style: const TextStyle(fontSize: 13, color: dangerColor, fontWeight: FontWeight.w600)))
+                child: Text(e['tendered']!, style: TextStyle(fontSize: 13, color: pal.danger, fontWeight: FontWeight.w600)))
           else if (change != null)
             Padding(
                 padding: const EdgeInsets.only(top: 6),
@@ -200,7 +202,7 @@ class CartScreen extends StatelessWidget {
             if (e[key] != null)
               Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(e[key]!, style: const TextStyle(fontSize: 13, color: dangerColor, fontWeight: FontWeight.w600))),
+                  child: Text(e[key]!, style: TextStyle(fontSize: 13, color: pal.danger, fontWeight: FontWeight.w600))),
         ]),
       ],
     );

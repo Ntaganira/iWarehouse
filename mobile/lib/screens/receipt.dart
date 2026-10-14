@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../art.dart';
 import '../controller.dart';
 import '../device.dart';
 import '../models.dart';
 import '../money.dart' as m;
+import '../theme.dart';
 import '../widgets.dart';
 
 class ReceiptScreen extends StatefulWidget {
@@ -58,7 +60,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       'accepted' => NoteBox('info', c.t('mobile.receipt.acceptedNote')),
       _ => NoteBox('ok', c.t('mobile.receipt.signedNote')),
     };
-    return PosPage(c: c, title: sale.number, sub: dateTime(sale.createdAt), onBack: () => c.go(PosView.sales), children: [
+    return PosPage(
+        c: c, title: sale.number, monoTitle: true, sub: dateTime(sale.createdAt), art: Art.receipt, onBack: () => c.go(PosView.sales), children: [
       noticeOf(c),
       status,
       Center(child: RepaintBoundary(key: _paper, child: ReceiptPaper(c: c, sale: sale))),
@@ -66,7 +69,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
         OutlineButton(c.t('mobile.receipt.share'), icon: Icons.share, onPressed: _sharing ? null : () => _share(picture: true)),
         OutlineButton(c.t('mobile.receipt.shareText'), icon: Icons.sms_outlined, onPressed: _sharing ? null : () => _share(picture: false)),
       ]),
-      PrimaryButton(c.t('mobile.receipt.newSale'), onPressed: () => c.go(PosView.sell)),
+      PrimaryButton(c.t('mobile.receipt.newSale'), big: true, onPressed: () => c.go(PosView.sell)),
     ]);
   }
 }
@@ -87,12 +90,17 @@ class ReceiptPaper extends StatelessWidget {
     String amount(String v) => c.money(m.scaled(v, d));
     final vat = m.vatOf(sale.lines.map((l) => m.VatLine(l.taxCode, l.vatRate, l.amount)), d);
     return DefaultTextStyle(
-      style: const TextStyle(fontFamily: 'monospace', fontFamilyFallback: ['Menlo', 'Courier New'], fontSize: 13, color: Color(0xFF111111), height: 1.35),
+      style: const TextStyle(fontFamily: mono, fontFamilyFallback: monoFallback, fontSize: 13, color: Color(0xFF111111), height: 1.35),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 380),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE3E8F1))),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFDCE8F2))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // The company's logo above its name, as the web's receipts print it
+          if (co.logoBytes != null)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Center(child: Image.memory(co.logoBytes!, height: 72, fit: BoxFit.contain, gaplessPlayback: true))),
           _center(co.name.isEmpty ? c.t('mobile.app') : co.name, size: 15, bold: true),
           if (co.address.isNotEmpty) _center(co.address),
           if (co.phone.isNotEmpty) _center(co.phone),
@@ -113,8 +121,10 @@ class ReceiptPaper extends StatelessWidget {
           const _Rule(),
           _row(c.t('mobile.receipt.total'), amount(sale.total), bold: true, size: 15),
           _row(c.t('mobile.receipt.vat'), m.grouped(m.text(vat, 2), 2)),
-          for (final p in sale.payments)
-            _row('${c.t('mobile.method.${p.method}')}${p.reference.isEmpty ? '' : ' ${p.reference}'}', amount(p.amount)),
+          for (final p in sale.payments) ...[
+            _row(c.t('mobile.method.${p.method}'), amount(p.amount)),
+            if (p.reference.isNotEmpty) Text('  ${p.reference}'), // a mobile money reference on its own line: it is long
+          ],
           if (sale.change != null) _row(c.t('mobile.receipt.change'), amount(sale.change!)),
           const _Rule(),
           if (ebm != null && ebm.signed) ...[

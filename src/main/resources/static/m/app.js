@@ -65,7 +65,7 @@
         bundle: null,           // the trip download (SYNC-01)
         sales: [],              // every sale made on this phone for the trip, oldest first
         cart: emptyCart(),
-        view: 'sell',
+        view: 'day',            // My day first; then sell, cart, receipt, sales, breakage, declare
         receiptId: null,
         search: '',
         notice: null,           // { kind: info|ok|warn|danger, text }
@@ -615,7 +615,7 @@
             state.session = { token: response.token, device: response.device, user: response.user };
             await kvSet('session', state.session);
             state.errors = {};
-            state.view = 'sell';
+            state.view = 'day';
             state.busy = false;
             await downloadTrip();
             sync();
@@ -635,7 +635,7 @@
         state.breakages = [];
         state.bundle = null;
         state.cart = emptyCart();
-        state.view = 'sell';
+        state.view = 'day';
         notice('ok', t('mobile.close.done'));
     }
     async function signOut() {
@@ -654,7 +654,7 @@
         state.sales = [];
         state.breakages = [];
         state.cart = emptyCart();
-        state.view = 'sell';
+        state.view = 'day';
     }
     async function signedOutByServer() {
         // The token was revoked or the user disabled: sales waiting stay until someone signs in again
@@ -723,6 +723,7 @@
         return topbar(t('mobile.app'), t('mobile.login.subtitle'))
             + '<main class="screen">' + noticeHtml()
             + '<form class="card" data-form="login" autocomplete="on" novalidate>'
+            + '<img class="brand-mark" src="/m/logo-mark.png" alt="">'
             + '<h2>' + esc(t('mobile.login.title')) + '</h2>'
             + '<div class="field"><label for="username">' + esc(t('mobile.login.username')) + '</label>'
             + '<input class="input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>'
@@ -745,7 +746,7 @@
     function noTripView() {
         return topbar(t('mobile.app'), state.session.user.fullName)
             + '<main class="screen">' + noticeHtml()
-            + '<div class="card"><h2>' + esc(t('mobile.trip.title')) + '</h2>'
+            + '<div class="card"><img class="brand-mark" src="/m/logo-mark.png" alt=""><h2>' + esc(t('mobile.trip.title')) + '</h2>'
             + '<p class="muted" style="margin-bottom:14px">' + esc(t('mobile.trip.hint')) + '</p>'
             + '<button class="btn btn-primary btn-block" data-action="download"' + (state.busy ? ' disabled' : '') + '>'
             + esc(state.busy ? t('mobile.wait') : t('mobile.trip.download')) + '</button></div></main>';
@@ -764,7 +765,7 @@
                 + '<div class="grow"><div class="code">' + esc(u.code) + '</div><div class="what">' + esc(u.productName) + ' · '
                 + u.widthMm + ' × ' + u.heightMm + ' mm</div></div><div class="price">' + esc(amount) + '</div></button>';
         }).join('');
-        return topbar(b.trip.number, b.trip.vehicle.plate + ' · ' + b.trip.area)
+        return topbar(b.trip.number, b.trip.vehicle.plate + ' · ' + b.trip.area, 'day')
             + '<main class="screen">' + noticeHtml()
             + '<form class="card" data-form="scan" novalidate><h3>' + esc(t('mobile.sell.scanTitle')) + '</h3>'
             + '<div class="scan-row"><input class="input" id="scan-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"'
@@ -869,6 +870,7 @@
             fiscal = '<div class="r-rule"></div><div class="r-center r-strong">' + esc(t('mobile.receipt.pending')) + '</div>';
         }
         return '<div class="receipt" id="receipt">'
+            + (co.logo ? '<img class="r-logo" src="' + esc(co.logo) + '" alt="">' : '')
             + '<div class="r-center r-title">' + esc(co.name || 'iWarehouse') + '</div>'
             + (co.address ? '<div class="r-center">' + esc(co.address) + '</div>' : '')
             + (co.phone ? '<div class="r-center">' + esc(co.phone) + '</div>' : '')
@@ -922,7 +924,7 @@
             + esc(tn('mobile.sales.units', s.lines.length, s.lines.length)) + '</div></div><div style="text-align:right"><div class="price">' + money(scaled(s.total, state.bundle.decimals))
             + '</div>' + badge(s) + '</div></button>').join('');
         const total = state.sales.filter((s) => s.status !== 'conflict').reduce((sum, s) => sum + scaled(s.total, state.bundle.decimals), 0n);
-        return topbar(t('mobile.sales.title'), state.bundle.trip.number, 'sell')
+        return topbar(t('mobile.sales.title'), state.bundle.trip.number, 'day')
             + '<main class="screen">' + noticeHtml()
             + '<div class="card"><div class="totals"><div class="t-row"><span>' + esc(t('mobile.sales.count')) + '</span><span class="strong">' + state.sales.length + '</span></div>'
             + '<div class="t-row"><span>' + esc(t('mobile.sales.pending')) + '</span><span class="strong">' + pending().length + '</span></div>'
@@ -950,7 +952,7 @@
             + (b.status === 'refused' && b.error ? '<div class="what error">' + esc(b.error) + '</div>' : '')
             + (b.result && b.result.decisionNote ? '<div class="what">' + esc(b.result.decisionNote) + '</div>' : '')
             + '</div><div>' + breakageBadge(b) + '</div></div>').join('');
-        return topbar(t('mobile.breakage.title'), state.bundle.trip.number, 'sell')
+        return topbar(t('mobile.breakage.title'), state.bundle.trip.number, 'day')
             + '<main class="screen">' + noticeHtml()
             + '<form class="card" data-form="breakage" novalidate><p class="muted" style="margin-bottom:12px">' + esc(t('mobile.breakage.hint')) + '</p>'
             + '<div class="field"><label for="b-unit">' + esc(t('mobile.breakage.unit')) + '</label><select class="select" id="b-unit" data-action="b-unit">' + options + '</select>'
@@ -987,17 +989,61 @@
                 + (pendingCount() ? '<div class="note warn" style="margin-top:12px">' + esc(tn('mobile.declare.pending', pendingCount(), pendingCount())) + '</div>' : '')
                 + '<div class="field"><button class="btn btn-primary btn-block" type="button" data-action="ask-declare"' + (state.busy ? ' disabled' : '') + '>'
                 + esc(state.busy ? t('mobile.wait') : t('mobile.declare.save')) + '</button></div></form>';
-        return topbar(t('mobile.declare.title'), b.trip.number, 'sell')
+        return topbar(t('mobile.declare.title'), b.trip.number, 'day')
             + '<main class="screen">' + noticeHtml() + body + '</main>';
+    }
+
+    /** My day: the trip at a glance from what this phone holds, so it works offline. Money leaves out the sales kept for the
+     *  supervisor, as the sales list does; the cash is what the sales took, before vehicle costs paid from the float. */
+    function daySummary() {
+        const b = state.bundle;
+        const d = b.decimals;
+        const kept = state.sales.filter((s) => s.status !== 'conflict');
+        const sum = (values) => values.reduce((acc, v) => acc + v, 0n);
+        const paid = (method) => sum(kept.flatMap((s) => s.payments.filter((p) => p.method === method).map((p) => scaled(p.amount, d))));
+        return {
+            sales: state.sales.length, total: sum(kept.map((s) => scaled(s.total, d))), cash: paid('CASH'), momo: paid('MOBILE_MONEY'),
+            conflicts: state.sales.length - kept.length, sold: soldHere().size, broken: reportedBroken().size, onBoard: unitsOnBoard().length,
+            signed: kept.filter((s) => s.status === 'signed').length, receipts: kept.length, waiting: pendingCount()
+        };
+    }
+    function dayView() {
+        const b = state.bundle;
+        const s = daySummary();
+        const co = b.company || {};
+        const row = (label, value) => '<div class="t-row"><span>' + esc(label) + '</span><span class="strong">' + esc(value) + '</span></div>';
+        const date = b.trip.date ? b.trip.date.split('-').reverse().join('/') : '';
+        const cash = b.cashDeclared != null
+            ? '<div class="note ok">' + esc(t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : '')) + '</div>'
+            : '<div class="totals">' + row(t('mobile.day.cashFromSales'), money(s.cash) + ' RWF') + '</div>'
+                + '<p class="muted day-hint">' + esc(t('mobile.day.cashHint')) + '</p>'
+                + '<button class="btn btn-outline btn-block day-action" data-action="go" data-view="declare">' + esc(t('mobile.menu.declare')) + '</button>';
+        return topbar(t('mobile.day.title'), b.trip.number + ' · ' + b.trip.vehicle.plate)
+            + '<main class="screen">' + noticeHtml()
+            + '<div class="day-brand"><img src="' + esc(co.logo || '/m/logo-mark.png') + '" alt="' + esc(co.name || '') + '">'
+            + '<div class="grow"><div class="strong">' + esc(state.session.user.fullName) + '</div><div class="muted">' + esc(b.trip.area + (date ? ' · ' + date : '')) + '</div></div></div>'
+            + '<button class="btn btn-primary btn-block day-sell" data-action="go" data-view="sell">' + esc(t('mobile.menu.sell')) + '</button>'
+            + '<div class="card"><h3>' + esc(t('mobile.day.sales')) + '</h3>'
+            + '<div class="day-total">' + money(s.total) + ' RWF</div><div class="muted">' + esc(tn('mobile.day.salesCount', s.sales, s.sales)) + '</div>'
+            + '<div class="totals day-rows">' + row(t('mobile.method.CASH'), money(s.cash) + ' RWF') + row(t('mobile.method.MOBILE_MONEY'), money(s.momo) + ' RWF')
+            + (s.conflicts ? row(t('mobile.day.conflicts'), String(s.conflicts)) : '') + '</div>'
+            + '<button class="btn btn-outline btn-block day-action" data-action="go" data-view="sales">' + esc(t('mobile.menu.sales')) + '</button></div>'
+            + '<div class="card"><h3>' + esc(t('mobile.day.glass')) + '</h3><div class="totals">'
+            + row(t('mobile.day.sold'), String(s.sold)) + row(t('mobile.day.broken'), String(s.broken)) + row(t('mobile.day.onBoard'), String(s.onBoard)) + '</div>'
+            + '<button class="btn btn-outline btn-block day-action" data-action="go" data-view="breakage">' + esc(t('mobile.menu.breakage')) + '</button></div>'
+            + '<div class="card"><h3>' + esc(t('mobile.day.receipts')) + '</h3><div class="totals">'
+            + row(t('mobile.day.signed'), t('mobile.day.ofTotal', s.signed, s.receipts)) + row(t('mobile.sales.pending'), String(s.waiting)) + '</div></div>'
+            + '<div class="card"><h3>' + esc(t('mobile.day.cash')) + '</h3>' + cash + '</div>'
+            + '</main>';
     }
 
     function menuHtml() {
         if (!state.menu) return '';
         const items = [
-            ['go', 'sell', t('mobile.menu.sell')], ['go', 'sales', t('mobile.menu.sales')], ['go', 'breakage', t('mobile.menu.breakage')],
+            ['go', 'day', t('mobile.menu.day')], ['go', 'sell', t('mobile.menu.sell')], ['go', 'sales', t('mobile.menu.sales')], ['go', 'breakage', t('mobile.menu.breakage')],
             ['go', 'declare', t('mobile.menu.declare')], ['download', '', t('mobile.menu.refresh')],
             ['lang-toggle', '', t('mobile.menu.language')], ['ask-close', '', t('mobile.menu.closeTrip')], ['ask-signout', '', t('mobile.menu.signOut')]
-        ].filter((i) => state.bundle || !['sell', 'sales', 'breakage', 'declare'].includes(i[1]) && i[0] !== 'ask-close');
+        ].filter((i) => state.bundle || !['day', 'sell', 'sales', 'breakage', 'declare'].includes(i[1]) && i[0] !== 'ask-close');
         return '<div class="sheet-backdrop" data-action="menu-close"></div><div class="sheet" role="menu">'
             + items.map((i) => '<button class="item' + (i[0] === 'ask-signout' || i[0] === 'ask-close' ? ' danger' : '') + '" role="menuitem" data-action="' + i[0]
                 + '" data-view="' + i[1] + '">' + esc(i[2]) + '</button>').join('') + '</div>';
@@ -1021,6 +1067,7 @@
         else if (state.view === 'sales') html = salesView();
         else if (state.view === 'breakage') html = breakageView();
         else if (state.view === 'declare') html = declareView();
+        else if (state.view === 'day') html = dayView();
         else html = sellView();
         app.innerHTML = html + menuHtml() + confirmHtml();
         if (state.camera) {

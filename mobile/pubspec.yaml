@@ -36,12 +36,36 @@ flutter:
   uses-material-design: true
   assets:
     - assets/texts/
+    - assets/brand/
+  # The client's design (HIGH BYTES WMS): Inter for text, IBM Plex Mono for codes and amounts (SIL Open Font License, the
+  # licences beside them)
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+          weight: 800
+    - family: IBM Plex Mono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexMono-Bold.ttf
+          weight: 700
 
-# dart run flutter_launcher_icons: the web app's icons (static/m) as the launcher icon
+# dart run flutter_launcher_icons: the High Bytes mark on white as the launcher icon (scratchpad make-icons.mjs drew the
+# two files from static/images/logo-mark.png; a larger logo file would make them sharper)
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icon/icon-512.png
-  adaptive_icon_background: "#1565E0"
-  adaptive_icon_foreground: assets/icon/icon-maskable-512.png
+  image_path: assets/icon/hb-icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/icon/hb-foreground.png
   remove_alpha_ios: true

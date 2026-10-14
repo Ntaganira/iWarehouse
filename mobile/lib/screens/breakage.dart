@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../art.dart';
 import '../controller.dart';
 import '../device.dart';
 import '../theme.dart';
@@ -58,7 +59,8 @@ class _BreakageScreenState extends State<BreakageScreen> {
     final units = c.unitsOnBoard;
     final chosen = c.bundle!.unit(f.unitId);
     final preview = _preview(f.photo);
-    return PosPage(c: c, title: c.t('mobile.breakage.title'), sub: c.bundle!.trip.number, onBack: () => c.go(PosView.sell), children: [
+    return PosPage(
+        c: c, title: c.t('mobile.breakage.title'), sub: c.bundle!.trip.number, monoSub: true, art: Art.breakage, onBack: () => c.go(PosView.day), children: [
       noticeOf(c),
       CardBox(children: [
         Text(c.t('mobile.breakage.hint'), style: TextStyle(color: p.muted)),
@@ -117,7 +119,7 @@ class _BreakageScreenState extends State<BreakageScreen> {
               ? OutlineButton(c.t('mobile.breakage.photoTake'), icon: Icons.photo_camera_outlined, onPressed: _photo)
               : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     child: Image.memory(preview, height: 260, fit: BoxFit.cover, semanticLabel: c.t('mobile.breakage.photo')),
                   ),
                   const SizedBox(height: 8),
@@ -137,7 +139,7 @@ class _BreakageScreenState extends State<BreakageScreen> {
             code: b.code,
             what: '${b.reason} · ${b.place}',
             extra: [
-              if (b.status == 'refused' && b.error.isNotEmpty) Text(b.error, style: const TextStyle(fontSize: 14, color: dangerColor)),
+              if (b.status == 'refused' && b.error.isNotEmpty) Text(b.error, style: TextStyle(fontSize: 13, color: p.danger)),
               if (b.decisionNote.isNotEmpty) Text(b.decisionNote, style: TextStyle(fontSize: 14, color: p.muted)),
             ],
             trailing: PosBadge(

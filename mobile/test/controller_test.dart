@@ -281,4 +281,52 @@ void main() {
       expect(server.posts('/trip/declaration').single.body, contains('"amount":25920'));
     });
   });
+
+  group('my day', () {
+    test('opens first and adds up the trip from what the phone holds', () async {
+      await signedIn();
+      expect(c.view, PosView.day);
+      var day = c.day;
+      expect([day.sales, day.total, day.sold, day.onBoard, day.waiting], [0, BigInt.zero, 0, 2, 0]);
+
+      c.addByCode('U-WH-000001'); // 25,920 in cash, sent and signed
+      await c.completeSale();
+      await settle();
+      network.set(false); // 6,750 split between cash and mobile money, waiting on the phone
+      c.addByCode('U-WH-000002');
+      c.setCartField('cash', '5000');
+      c.setCartField('momo', '1750');
+      c.setCartField('momoRef', 'MP-1');
+      expect(await c.completeSale(), isTrue);
+
+      day = c.day;
+      expect(day.sales, 2);
+      expect(day.total, BigInt.from(32670));
+      expect(day.cash, BigInt.from(30920));
+      expect(day.momo, BigInt.from(1750));
+      expect([day.sold, day.broken, day.onBoard], [2, 0, 0]);
+      expect([day.signed, day.receipts, day.waiting, day.conflicts], [1, 2, 1, 0]);
+    });
+
+    test('the system\'s back leads home to My day, which leaves the app', () async {
+      await signedIn();
+      expect(c.back(), isFalse);
+      for (final from in [PosView.sell, PosView.sales, PosView.breakage, PosView.declare]) {
+        c.go(from);
+        expect(c.back(), isTrue);
+        expect(c.view, PosView.day, reason: '$from');
+      }
+      c.go(PosView.cart);
+      c.back();
+      expect(c.view, PosView.sell);
+    });
+
+    test('the company\'s logo comes with the trip, decoded once', () async {
+      server.trip!['company'] = {...server.trip!['company'] as Map, 'logo': 'data:image/png;base64,iVBORw0KGgo='};
+      await signedIn();
+      final logo = c.bundle!.company.logoBytes!;
+      expect(logo.take(4), [0x89, 0x50, 0x4E, 0x47]); // PNG
+      expect(identical(c.bundle!.company.logoBytes, logo), isTrue);
+    });
+  });
 }

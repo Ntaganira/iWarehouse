@@ -18,27 +18,18 @@ import 'package:highbytes_pos/controller.dart';
 import 'fake_server.dart';
 
 const _dir = String.fromEnvironment('SCREENS_DIR');
-const _sans = 'ScreensSans';
-
-/// Real letters instead of the test font's boxes: a sans-serif and a monospace font of the PC, and Material's icons.
-/// The sans-serif gets a name of its own: the test runner keeps "Roboto" for its box font.
+/// Real letters instead of the test font's boxes: the app's own Inter and IBM Plex Mono (assets/fonts), and Material's icons.
 Future<void> _fonts() async {
   Future<void> load(String family, List<String> paths) async {
     final loader = FontLoader(family);
-    var any = false;
     for (final path in paths) {
-      final file = File(path);
-      if (file.existsSync()) {
-        loader.addFont(Future.value(ByteData.view(file.readAsBytesSync().buffer)));
-        any = true;
-      }
+      loader.addFont(Future.value(ByteData.view(File(path).readAsBytesSync().buffer)));
     }
-    if (any) await loader.load();
+    await loader.load();
   }
 
-  final fonts = Platform.environment['SCREENS_FONTS'] ?? r'C:\Windows\Fonts';
-  await load(_sans, ['$fonts/Roboto-Regular.ttf', '$fonts/Roboto-Medium.ttf', '$fonts/Roboto-Bold.ttf', '$fonts/segoeui.ttf', '$fonts/seguisb.ttf', '$fonts/segoeuib.ttf']);
-  await load('monospace', ['$fonts/consola.ttf', '$fonts/consolab.ttf']);
+  await load('Inter', [for (final w in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) 'assets/fonts/Inter-$w.ttf']);
+  await load('IBM Plex Mono', [for (final w in ['Medium', 'SemiBold', 'Bold']) 'assets/fonts/IBMPlexMono-$w.ttf']);
   // flutter_tester runs from <flutter>/bin/cache/artifacts/engine/<platform>/
   final root = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path;
   await load('MaterialIcons', ['$root/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf']);
@@ -95,23 +86,26 @@ void main() {
         });
 
     await tester.runAsync(c.start);
-    await tester.pumpWidget(RepaintBoundary(key: frame, child: PosApp(c: c, fontFamily: _dir.isEmpty ? null : _sans)));
-    await shot('signin');
+    await tester.pumpWidget(RepaintBoundary(key: frame, child: PosApp(c: c)));
+    await shot('signin', full: true);
 
     // Signed in before the supervisor confirmed the departure
     server.trip = null;
     await tester.runAsync(() => c.signIn(serverTyped: 'https://pos.example.rw', username: 'driver-m7', password: 'test-password', deviceName: 'Jean’s phone'));
     await shot('notrip');
 
-    // On the road: the trip with two more sheets
-    server.trip = tripJson()
+    // On the road: the trip with two more sheets, and the company's logo (High Bytes Ltd, as set in Settings)
+    final trip = tripJson();
+    server.trip = trip
       ..['units'] = [
-        ...(tripJson()['units'] as List),
+        ...(trip['units'] as List),
         _unit(3, 1000, 600),
         _unit(4, 1200, 900),
-      ];
+      ]
+      ..['company'] = {...trip['company'] as Map, 'logo': 'data:image/png;base64,${base64Encode(File('test/company-logo.png').readAsBytesSync())}'};
     await tester.runAsync(c.downloadTrip);
     c.clearNotice();
+    c.go(PosView.sell);
     c.addByCode('U-WH-000001');
     await shot('sell');
 
@@ -168,6 +162,9 @@ void main() {
     c.go(PosView.breakage);
     c.clearNotice();
     await shot('reports', full: true);
+
+    c.go(PosView.day);
+    await shot('day', full: true);
 
     c.setDeclareAmount('45920'); // the two sales' cash
     c.go(PosView.declare);

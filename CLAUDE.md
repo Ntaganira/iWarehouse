@@ -183,6 +183,7 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
     - `PostingService.mobileSale` (cash Dr Driver Float with the driver, `Journal.addForDriver` / `journal_lines.driver_id`), then `EbmService.queueSale`.
   - A driver's float is their lines on DRIVER_FLOAT: never keep a second balance.
   - The PWA keeps its data in IndexedDB (`iwarehouse-pos`) and syncs oldest first with backoff. Signing out or closing the trip is refused while sales wait.
+  - Both clients open on My day (the trip at a glance from the phone's data: `daySummary` in `app.js`, `PosController.day`); receipts print the company's logo from Settings, sent with the trip download (`company.logo`).
   - The service worker (`sw.js`) loads the shell from the network, falling back to its cache after 3 s or offline. Bump its `VERSION` when the shell's file list changes.
   - Check the PWA at 360–1024 px, offline (CDP network emulation, then a reload) and in both themes (`prefers-color-scheme`).
   - **The Flutter app (`mobile/`, High Bytes POS, the owner's choice 2026-10-13)** does what the PWA does on the same API, so both change together:
@@ -191,6 +192,7 @@ New module = one folder in `templates/`, a controller, a service, entities, a re
     - The texts: the `mobile.*` keys; after changing one, `python mobile/tool/texts.py` copies them into the app.
     - It keeps its data in SQLite and takes the server's address on the sign-in screen (https only, unless built with `ALLOW_HTTP`).
     - Receipts are shared (WhatsApp, SMS), not printed.
+    - Its look is the client's design (claude.ai design "iWarehouse Mobile POS Redesign", HIGH BYTES WMS tokens in `lib/theme.dart`, illustrations in `lib/art.dart`, Inter and IBM Plex Mono in `assets/fonts`); the web app keeps its own look. `test/screens_test.dart` draws every screen for the manual.
     - A new endpoint, field or check goes into both clients.
 - **The end of the day (FLT-08..FLT-11, MPOS-06, MPOS-07, ACC-06, ACC-07, RPT-04)** goes through `BreakageService`, `TripReturnService`, `AuditCaseService`, `TripCloseService` and `FloatService`; `TripReconciliation`, `FloatClearances` and `FleetAnalysis` are pure and tested.
   - A trip is PLANNED, DEPARTED, RETURNED (reconciled), CLOSED, or CANCELLED. Only DEPARTED holds the vehicle and the driver (`uk_trips_..._on_road`). The phone keeps working for a RETURNED trip: a sale synced late, the cash declaration (`Trip.isOpenForPhone`, `MobileTripService.openTrip`).

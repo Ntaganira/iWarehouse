@@ -20,7 +20,37 @@ import 'money.dart' as m;
 import 'store.dart';
 import 'texts.dart';
 
-enum PosView { sell, cart, receipt, sales, breakage, declare }
+enum PosView { day, sell, cart, receipt, sales, breakage, declare }
+
+/// My day: the trip at a glance from what this phone holds (daySummary in app.js). Money leaves out the sales kept for the
+/// supervisor, as the sales list does; the cash is what the sales took, before vehicle costs paid from the float.
+class DaySummary {
+  const DaySummary({
+    required this.sales,
+    required this.total,
+    required this.cash,
+    required this.momo,
+    required this.conflicts,
+    required this.sold,
+    required this.broken,
+    required this.onBoard,
+    required this.signed,
+    required this.receipts,
+    required this.waiting,
+  });
+
+  final int sales;
+  final BigInt total;
+  final BigInt cash;
+  final BigInt momo;
+  final int conflicts;
+  final int sold;
+  final int broken;
+  final int onBoard;
+  final int signed;
+  final int receipts;
+  final int waiting;
+}
 
 /// A message at the top of the screen: info, ok, warn or danger.
 class Notice {
@@ -108,7 +138,7 @@ class PosController extends ChangeNotifier {
   List<Sale> sales = [];
   List<Breakage> breakages = [];
   Cart cart = Cart();
-  PosView view = PosView.sell;
+  PosView view = PosView.day;
   String? receiptId;
   String search = '';
   Notice? notice;
@@ -298,6 +328,26 @@ class PosController extends ChangeNotifier {
 
   /// Everything this phone still has to send: sales and breakage reports.
   int get pendingCount => pending.length + pendingBreakages.length;
+
+  DaySummary get day {
+    final d = bundle!.decimals;
+    final kept = sales.where((s) => s.status != 'conflict').toList();
+    BigInt paid(String method) =>
+        kept.expand((s) => s.payments).where((p) => p.method == method).fold(BigInt.zero, (sum, p) => sum + m.scaled(p.amount, d));
+    return DaySummary(
+      sales: sales.length,
+      total: kept.fold(BigInt.zero, (sum, s) => sum + m.scaled(s.total, d)),
+      cash: paid('CASH'),
+      momo: paid('MOBILE_MONEY'),
+      conflicts: sales.length - kept.length,
+      sold: soldHere.length,
+      broken: reportedBroken.length,
+      onBoard: unitsOnBoard.length,
+      signed: kept.where((s) => s.status == 'signed').length,
+      receipts: kept.length,
+      waiting: pendingCount,
+    );
+  }
 
   Future<void> downloadTrip() async {
     if (!online) return _notice('warn', t('mobile.offline.needed'));
@@ -743,6 +793,7 @@ class PosController extends ChangeNotifier {
   void setDeclareAmount(String value) {
     declareAmount = value;
     errors.remove('declare');
+    _changed(); // the button shows the amount as it is typed
   }
 
   /// The question before declaring, or null (and the error shown) when the amount is not a whole number.
@@ -834,7 +885,7 @@ class PosController extends ChangeNotifier {
       await store.set('session', session!.toJson());
       await store.set('server', address);
       errors = {};
-      view = PosView.sell;
+      view = PosView.day;
       busy = false;
       await loadTexts(lang);
       await downloadTrip();
@@ -858,7 +909,7 @@ class PosController extends ChangeNotifier {
     breakages = [];
     bundle = null;
     cart = Cart();
-    view = PosView.sell;
+    view = PosView.day;
     _notice('ok', t('mobile.close.done'));
   }
 
@@ -884,7 +935,7 @@ class PosController extends ChangeNotifier {
     sales = [];
     breakages = [];
     cart = Cart();
-    view = PosView.sell;
+    view = PosView.day;
   }
 
   /// The token was revoked or the user disabled: sales waiting stay until someone signs in again.
@@ -906,8 +957,12 @@ class PosController extends ChangeNotifier {
 
   /// The system's back: to the screen this one came from; false when there is nowhere to go back to.
   bool back() {
-    if (session == null || bundle == null || view == PosView.sell) return false;
-    go(view == PosView.receipt ? PosView.sales : PosView.sell);
+    if (session == null || bundle == null || view == PosView.day) return false;
+    go(switch (view) {
+      PosView.receipt => PosView.sales,
+      PosView.cart => PosView.sell,
+      _ => PosView.day,
+    });
     return true;
   }
 

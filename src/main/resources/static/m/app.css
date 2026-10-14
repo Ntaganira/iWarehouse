@@ -75,8 +75,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Splash while the app starts */
 .splash { flex: 1; display: flex; align-items: center; justify-content: center; }
-.splash-logo { width: 72px; height: 72px; border-radius: 18px; background: var(--primary); color: #fff; font-weight: 800; font-size: 28px;
-  display: flex; align-items: center; justify-content: center; }
 
 /* Top bar: the trip, the network and what waits to sync (SYNC-02) */
 .topbar { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border);
@@ -206,6 +204,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .receipt .r-qr svg { width: 140px; height: 140px; }
 .receipt .r-break { word-break: break-all; }
 
+/* The logo: the mark on a white tile (navy letters vanish on the dark theme), the company's logo on My day and receipts */
+.brand-mark { display: block; width: 72px; height: 72px; object-fit: contain; margin: 0 auto 14px; padding: 6px; background: #fff;
+  border-radius: 16px; border: 1px solid var(--border); }
+.splash-mark { width: 96px; height: 96px; object-fit: contain; padding: 8px; background: #fff; border-radius: 22px; }
+.receipt .r-logo { display: block; max-width: 140px; max-height: 80px; margin: 0 auto 6px; object-fit: contain; }
+
+/* My day: the driver's trip at a glance, the first screen */
+.day-brand { display: flex; align-items: center; gap: 14px; }
+.day-brand img { width: 96px; height: 72px; flex-shrink: 0; object-fit: contain; padding: 4px; background: #fff; border-radius: 12px;
+  border: 1px solid var(--border); }
+.day-brand .grow { flex: 1; min-width: 0; }
+.day-brand .muted { font-size: 14px; }
+.day-sell { min-height: 56px; font-size: 18px; }
+.day-total { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.day-rows { margin-top: 12px; }
+.day-hint { font-size: 13px; margin-top: 8px; }
+.day-action { margin-top: 12px; }
+
 @media (min-width: 768px) {
   .screen { padding: 24px; }
 }
@@ -216,4 +232,5 @@ button, input, select, textarea { font: inherit; color: inherit; }
   body * { visibility: hidden; }
   .receipt, .receipt * { visibility: visible; }
   .receipt { position: absolute; left: 0; top: 0; border: 0; padding: 0; max-width: none; width: 74mm; }
+  .receipt .r-logo { filter: grayscale(1); }   /* thermal printers print in grey, as the web's receipts do */
 }

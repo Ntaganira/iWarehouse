@@ -1,6 +1,9 @@
 // High Bytes POS - what the phone keeps: the trip download (the API's TripBundle, SYNC-01), the sales made on it and the
 // breakage reports, each saved as the JSON the server sends or expects (controller/api/MobileApi.java on the server).
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'money.dart';
 
 Map<String, dynamic> _map(Object? v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
@@ -39,12 +42,14 @@ class Trip {
   Trip(Map<String, dynamic> j)
       : id = _s(j['id']),
         number = _s(j['number']),
+        date = _s(j['date']),
         area = _s(j['area']),
         driver = _s(j['driver']),
         vehicle = Vehicle(_map(j['vehicle']));
 
   final String id;
   final String number;
+  final String date; // yyyy-MM-dd
   final String area;
   final String driver;
   final Vehicle vehicle;
@@ -124,12 +129,26 @@ class Company {
       : name = _s(j['name']),
         tin = _s(j['tin']),
         address = _s(j['address']),
-        phone = _s(j['phone']);
+        phone = _s(j['phone']),
+        logo = _sn(j['logo']);
 
   final String name;
   final String tin;
   final String address;
   final String phone;
+  final String? logo; // the company's logo from Settings as a data URI: above its name on receipts, on My day
+
+  /// The logo's PNG, decoded once (screens redraw often), or null.
+  late final Uint8List? logoBytes = _bytesOf(logo);
+}
+
+Uint8List? _bytesOf(String? dataUrl) {
+  if (dataUrl == null || dataUrl.isEmpty) return null;
+  try {
+    return base64Decode(dataUrl.substring(dataUrl.indexOf(',') + 1));
+  } on FormatException {
+    return null;
+  }
 }
 
 /// The trip as downloaded: prices frozen for the trip, its invoice numbers, the driver's discount limit. The JSON is kept

@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.dto.VehicleCostDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.*;
@@ -45,6 +46,8 @@ import java.util.*;
 @Service
 @Transactional(readOnly = true)
 public class VehicleCostService {
+
+    private static final java.time.format.DateTimeFormatter DAY_FMT = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final List<VehicleCostStatus> COMMITTED = List.of(VehicleCostStatus.PENDING_APPROVAL, VehicleCostStatus.POSTED);
@@ -197,7 +200,8 @@ public class VehicleCostService {
 
     /** What is left of a trip's cash for its driver to pay costs from (its cash sales less what costs took, waiting or posted). */
     public BigDecimal floatLeft(UUID tripId) {
-        return VehicleCosts.floatLeft(floatService.cashOf(tripId), sums(List.of(tripId), COMMITTED).getOrDefault(tripId, BigDecimal.ZERO));
+        BigDecimal banked = floatService.bankedOf(List.of(tripId)).getOrDefault(tripId, BigDecimal.ZERO);
+        return VehicleCosts.floatLeft(floatService.cashOf(tripId).subtract(banked), sums(List.of(tripId), COMMITTED).getOrDefault(tripId, BigDecimal.ZERO));
     }
 
     private Map<UUID, BigDecimal> sums(Collection<UUID> tripIds, Collection<VehicleCostStatus> statuses) {
@@ -307,6 +311,11 @@ public class VehicleCostService {
         }
         Driver driver = null;
         if (payment == VehicleCostPayment.DRIVER_FLOAT) {
+            // Decision D9: costs are paid from a float only up to the Settings' day (from then on, by Finance)
+            String until = settings.get(SettingKey.FLEET_COSTS_FROM_FLOAT_UNTIL);
+            if (until != null && !until.isBlank() && dto.getCostDate().isAfter(LocalDate.parse(until.trim()))) {
+                throw BusinessException.onField("payment", "vehicleCost.float.stopped", LocalDate.parse(until.trim()).format(DAY_FMT));
+            }
             if (trip == null) {
                 throw BusinessException.onField("tripId", "vehicleCost.float.trip");
             }

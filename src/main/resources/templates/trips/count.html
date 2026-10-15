@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{tripCount.title(${trip.number})}, ~{::content})}">
+<head><title>Count the van - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{tripCount.title(${trip.number})}">Count the van of TRP-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span class="mono" th:text="${trip.vehicle.plate}">RAD 512 C</span>
+                &middot; <span th:text="${trip.driver.user.fullName}">Jean Driver</span>
+            </div>
+        </div>
+        <a th:href="@{/trips/{id}(id=${trip.id}, tab='counts')}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <!--/* An unannounced count (BP 7.3 rule 10, F-08): the counter scans every label on the vehicle without seeing the list */-->
+    <div class="section count-scan">
+        <div class="section-header">
+            <h2 th:text="#{tripCount.scanTitle}">Scan every label on the vehicle</h2>
+        </div>
+        <form th:action="@{/trips/{id}/count(id=${trip.id})}" method="post" class="form-container count-scan-form" novalidate>
+            <p class="form-note" th:text="#{tripCount.blindNote}">The list of what should be on board is not shown: scan each label you find, then record the count. The system compares it with what is on the vehicle.</p>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="count-codes" th:text="#{tripCount.labels}">Labels found</label>
+                    <textarea id="count-codes" name="codes" rows="6" maxlength="20000" class="input-code" autocomplete="off" autocapitalize="characters"
+                              spellcheck="false" autofocus th:placeholder="#{count.labelPh}" th:text="${codesBack}"></textarea>
+                    <span class="hint" th:text="#{tripCount.labelsHint}">One label per line, as the scanner types them</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="count-note" th:text="#{tripCount.note}">Note</label>
+                    <input type="text" id="count-note" name="note" maxlength="255" th:placeholder="#{tripCount.notePh}">
+                </div>
+            </div>
+            <div class="form-actions">
+                <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+                <button type="submit" class="btn btn-primary" th:text="#{tripCount.save}">Record the count</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

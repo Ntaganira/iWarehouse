@@ -1,5 +1,6 @@
 // The app's rules against a fake server: signing in and the trip, selling and its checks, the offline queue, the
-// server's refusals, breakage and the cash declaration. The same behaviour as the web app (static/m/app.js).
+// server's refusals, breakage and the cash declaration, deposits, van counts and credit on the road. The same behaviour
+// as the web app (static/m/app.js).
 
 import 'dart:io';
 
@@ -282,6 +283,106 @@ void main() {
     });
   });
 
+  group('on the road', () {
+    test('credit goes to an approved customer, within what their account has left', () async {   // decision D8
+      await signedIn();
+      expect(c.creditLeftOf(c.customerOf(walkIn)), isNull); // the walk-in buys without credit
+      c.addByCode('U-WH-000001');
+      c.setCustomer(contractor);
+      expect(c.creditLeftOf(c.customerOf(contractor)), BigInt.from(50000));
+      c.setCartField('credit', '24355');
+      expect(c.cashShown(c.priced()), ''); // the credit typed: nothing is assumed in cash
+      expect(await c.completeSale(), isTrue);
+      await settle();
+      expect(server.sales.single['payments'], [
+        {'method': 'CREDIT', 'amount': 24355, 'reference': null},
+      ]);
+      // Taken after the download: off what the phone still lets the customer take
+      expect(c.creditLeftOf(c.customerOf(contractor)), BigInt.from(25645));
+      server.trip!['customers'] = [
+        for (final cu in server.trip!['customers'] as List) cu['id'] == contractor ? {...cu as Map, 'creditLeft': 25645.00} : cu,
+      ];
+      await c.downloadTrip(); // the server counts the sale now, and so does the phone (never twice)
+      expect(c.creditLeftOf(c.customerOf(contractor)), BigInt.from(25645));
+      c.addByCode('U-WH-000002');
+      c.setCustomer(contractor);
+      c.setCartField('credit', '30000');
+      expect(await c.completeSale(), isFalse);
+      expect(c.errors['credit'], c.t('mobile.pay.creditOver', ['25,645']));
+      expect(c.errors['pay'], c.t('mobile.pay.mustAddUp', ['30,000', '12,685']));
+    });
+
+    test('a deposit stays within the cash held and syncs like a sale', () async {   // BP 7.3 rule 4
+      await signedIn();
+      c.addByCode('U-WH-000001'); // 25,920 in cash
+      await c.completeSale();
+      await settle();
+      c.setDepositAmount('30,000');
+      c.setDepositField('reference', 'bk-58812');
+      expect(await c.saveDeposit(), isFalse);
+      expect(c.errors['amount'], c.t('mobile.deposit.tooMuch', ['25,920']));
+      c.setDepositAmount('20000');
+      c.setDepositField('day', '2026-10-01'); // before the trip
+      expect(await c.saveDeposit(), isFalse);
+      expect(c.errors['day'], c.t('mobile.deposit.dayBad'));
+      c.setDepositField('day', today());
+      c.setDepositMethod('MOBILE_MONEY');
+      expect(await c.saveDeposit(), isTrue);
+      await settle();
+      final sent = server.deposits.single;
+      expect([sent['method'], sent['amount'], sent['reference'], sent['depositedOn']], ['MOBILE_MONEY', 20000, 'BK-58812', today()]);
+      expect(c.deposits.single.status, 'sent');
+      expect(c.deposits.single.number, 'TDP-WH-2026-000001');
+      expect(c.day.banked, BigInt.from(20000));
+      expect(c.day.held, BigInt.from(5920));
+      expect(c.deposit.amount, ''); // a fresh form
+    });
+
+    test('a van count keeps its labels, asks before leaving any out and gets the office\'s comparison', () async {   // SDP 6
+      await signedIn();
+      c.addByCode('U-WH-000001');
+      await c.completeSale(); // sold: no longer expected on board
+      await settle();
+      expect(c.countReady(), isFalse);
+      expect(c.errors['count'], c.t('mobile.count.nothing'));
+      c.countCode(' u-wh-000999 ');
+      expect(c.notice!.kind, 'warn');
+      c.countCode('U-WH-000999');
+      expect(c.notice!.text, c.t('mobile.count.already', ['U-WH-000999']));
+      expect(c.countQuestion(), c.tn('mobile.count.confirmMissing', 1, [1])); // U-WH-000002 not scanned
+      expect((await c.store.get('count-draft') as Map)['codes'], ['U-WH-000999']); // closing the app keeps the count going
+      c.countCode('U-WH-000002');
+      expect(c.notice!.kind, 'ok');
+      expect(c.countQuestion(), isNull);
+      server.onBoard = ['U-WH-000002'];
+      await c.saveCount();
+      await settle();
+      expect(server.counts.single['codes'], ['U-WH-000999', 'U-WH-000002']);
+      final count = c.counts.single;
+      expect([count.status, count.expected, count.found, count.extra], ['sent', 1, 1, ['U-WH-000999']]);
+      expect(count.stage, 'clean');
+      expect(c.counted, isEmpty);
+      expect(await c.store.get('count-draft'), isNull);
+      expect(c.day.lastCount!.clientId, count.clientId);
+    });
+
+    test('a refused deposit is kept with the server\'s reason and no longer counts as banked', () async {
+      await signedIn();
+      c.addByCode('U-WH-000001');
+      await c.completeSale();
+      await settle();
+      server.refuseDeposits = (422, 'The driver holds 5,920 RWF of cash on trip TRP-WH-2026-000020');
+      c.setDepositAmount('5000');
+      c.setDepositField('reference', 'BK-1');
+      expect(await c.saveDeposit(), isTrue);
+      await settle();
+      expect(c.deposits.single.status, 'refused');
+      expect(c.deposits.single.error, 'The driver holds 5,920 RWF of cash on trip TRP-WH-2026-000020');
+      expect(c.day.banked, BigInt.zero);
+      expect(c.pendingCount, 0); // nothing waits: the office sees why
+    });
+  });
+
   group('my day', () {
     test('opens first and adds up the trip from what the phone holds', () async {
       await signedIn();
@@ -311,7 +412,7 @@ void main() {
     test('the system\'s back leads home to My day, which leaves the app', () async {
       await signedIn();
       expect(c.back(), isFalse);
-      for (final from in [PosView.sell, PosView.sales, PosView.breakage, PosView.declare]) {
+      for (final from in [PosView.sell, PosView.sales, PosView.breakage, PosView.deposit, PosView.count, PosView.declare]) {
         c.go(from);
         expect(c.back(), isTrue);
         expect(c.view, PosView.day, reason: '$from');

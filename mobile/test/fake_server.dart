@@ -1,5 +1,5 @@
 // A server for the tests: the mobile API's answers (controller/api on the server) for one trip of two sheets, recording
-// what the phone sends.
+// what the phone sends (sales, breakage, deposits, van counts).
 
 import 'dart:async';
 import 'dart:convert';
@@ -49,8 +49,9 @@ Map<String, dynamic> tripJson({String id = 'eeeeeeee-0000-0000-0000-000000000001
       ],
       'customers': [
         {'id': walkIn, 'code': 'WALK-IN', 'name': 'Walk-in customer', 'type': 'WALK_IN', 'tin': null, 'phone': null, 'priceListId': null, 'defaultCustomer': true},
-        {'id': contractor, 'code': 'CUS-WH-00007', 'name': 'Kigali Builders', 'type': 'ACCOUNT', 'tin': '102345678', 'phone': null, 'priceListId': contractorList, 'defaultCustomer': false},
+        {'id': contractor, 'code': 'CUS-WH-00007', 'name': 'Kigali Builders', 'type': 'ACCOUNT', 'tin': '102345678', 'phone': null, 'priceListId': contractorList, 'defaultCustomer': false, 'creditLeft': 50000.00},
       ],
+      'fieldCredit': true,
       'numbers': ['MINV-WH-2026-000101', 'MINV-WH-2026-000102', 'MINV-WH-2026-000103'],
       'discountLimit': 10.00,
       'decimals': 0,
@@ -65,6 +66,12 @@ class FakeServer {
   final List<http.Request> requests = [];
   final List<Map<String, dynamic>> sales = [];
   final List<Map<String, dynamic>> breakages = [];
+  final List<Map<String, dynamic>> deposits = [];
+  final List<Map<String, dynamic>> counts = [];
+  List<String> onBoard = ['U-WH-000001', 'U-WH-000002']; // what the server knows is on the vehicle
+
+  /// When set, POST /deposits answers this status and message instead.
+  (int, String)? refuseDeposits;
   Map<String, dynamic>? trip = tripJson(); // null: the driver is on no trip on the road
 
   /// When set, POST /sales answers this status and message instead.
@@ -107,6 +114,24 @@ class FakeServer {
     }
     if (path.startsWith('/api/v1/breakages/')) {
       return _json({'clientId': path.split('/').last, 'outcome': 'ALREADY', 'unitCode': 'U-WH-000002', 'status': 'ACCEPTED', 'decisionNote': 'Checked on the photo'});
+    }
+    if (path == '/api/v1/deposits') {
+      if (refuseDeposits != null) return _json({'error': 'mobile.badRequest', 'message': refuseDeposits!.$2}, refuseDeposits!.$1);
+      final d = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+      deposits.add(d);
+      return _json({'clientId': d['clientId'], 'outcome': 'RECORDED', 'number': 'TDP-WH-2026-00000${deposits.length}', 'amount': d['amount'], 'floatLeft': 0});
+    }
+    if (path == '/api/v1/counts') {
+      final b = Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+      counts.add(b);
+      final codes = (b['codes'] as List).map((c) => c.toString()).toList();
+      return _json({
+        'clientId': b['clientId'],
+        'expected': onBoard.length,
+        'found': onBoard.where(codes.contains).length,
+        'missing': onBoard.where((c) => !codes.contains(c)).toList(),
+        'extra': codes.where((c) => !onBoard.contains(c)).toList(),
+      });
     }
     if (path == '/api/v1/trip/declaration') {
       final body = jsonDecode(request.body) as Map;

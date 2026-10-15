@@ -500,6 +500,59 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.field}">The field cycle</div>
+                                <div class="role-card-desc" th:text="#{settings.group.fieldHint}">hint</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.fleetLoadApproval}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.fleetLoadApprovalHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.fleetLoadApproval} ? #{settings.onFleetLoadApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.fleetPreviousCleared}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.fleetPreviousClearedHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.fleetPreviousCleared} ? #{settings.onFleetPreviousCleared} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.fleetClearanceCountersign}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.fleetClearanceCountersignHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.fleetClearanceCountersign} ? #{settings.onFleetClearanceCountersign} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.mobileFieldCredit}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.mobileFieldCreditHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.mobileFieldCredit} ? #{settings.onMobileFieldCredit} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.fleetCostsFromFloatUntil}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.fleetCostsFromFloatUntilHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.fleetCostsFromFloatUntil != null} ? ${settings.fleetCostsFromFloatUntil} : #{settings.always}">31/12/2026</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.fleetShortageTolerancePercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.fleetShortageTolerancePercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.m2(settings.fleetShortageTolerancePercent)}">0.5</span> <span class="unit">%</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

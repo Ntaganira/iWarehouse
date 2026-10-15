@@ -66,6 +66,7 @@ class MessageCoverageTest {
             Map.entry("saleApproval.kind.", SaleApprovalKind.class),
             Map.entry("saleApproval.status.", SaleApprovalStatus.class),
             Map.entry("exceptions.kind.", ExceptionsReportService.Kind.class),
+            Map.entry("tripCount.kind.", com.ntaganira.heritier.iWarehouse.enums.TripCountKind.class),
             Map.entry("exceptions.outcome.", ExceptionsReportService.Outcome.class),
             Map.entry("creditNote.request.status.", CreditNoteRequestStatus.class),
             Map.entry("writeOff.status.", WriteOffStatus.class),

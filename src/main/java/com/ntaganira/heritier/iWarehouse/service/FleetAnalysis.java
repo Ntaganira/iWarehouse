@@ -141,6 +141,34 @@ public final class FleetAnalysis {
     public record FloatRow(UUID driverId, String driver, int trips, BigDecimal amount, LocalDateTime oldestReturn, String oldestTrip) {
     }
 
+    /** A load that left: when, and whether its vehicle had a trip before it and when that one was closed. */
+    public record Departure(LocalDateTime departedAt, boolean hadPrevious, LocalDateTime previousClosedAt) {
+
+        /** Its previous trip was cleared and closed before it left (or it had none). */
+        public boolean afterCleared() {
+            return !hadPrevious || (previousClosedAt != null && !previousClosedAt.isAfter(departedAt));
+        }
+    }
+
+    /** Loads reconciled before the next (target 100 %) and van stock shortages against the tolerance (Annex D). */
+    public record LoadKpis(int loads, int afterCleared, BigDecimal clearedPercent, int loaded, int missing, BigDecimal shortagePercent,
+                           BigDecimal tolerance) {
+
+        public boolean isShortageBreached() {
+            return shortagePercent != null && shortagePercent.compareTo(tolerance) > 0;
+        }
+
+        public boolean isAllCleared() {
+            return loads == afterCleared;
+        }
+    }
+
+    public static LoadKpis loads(List<Departure> departures, int loaded, int missing, BigDecimal tolerance) {
+        int cleared = (int) departures.stream().filter(Departure::afterCleared).count();
+        BigDecimal shortage = loaded == 0 ? null : BigDecimal.valueOf(missing * 100L).divide(BigDecimal.valueOf(loaded), 2, RoundingMode.HALF_UP);
+        return new LoadKpis(departures.size(), cleared, rate(cleared, departures.size()), loaded, missing, shortage, tolerance);
+    }
+
     public static BigDecimal rate(int part, int whole) {
         return whole == 0 ? null : BigDecimal.valueOf(part * 100L).divide(BigDecimal.valueOf(whole), 1, RoundingMode.HALF_UP);
     }

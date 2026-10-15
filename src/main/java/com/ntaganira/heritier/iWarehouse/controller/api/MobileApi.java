@@ -61,8 +61,9 @@ public final class MobileApi {
     public record PriceView(UUID listId, UUID productId, BigDecimal pricePerM2) {
     }
 
+    /** creditLeft: what the customer may take on credit on this trip (decision D8, frozen at the download), null without credit. */
     public record CustomerView(UUID id, String code, String name, String type, String tin, String phone, UUID priceListId,
-                               boolean defaultCustomer) {
+                               boolean defaultCustomer, BigDecimal creditLeft) {
     }
 
     /** logo: the company's logo as a data URI, printed above its name on receipts (as the web's receipts do), or null. */
@@ -72,7 +73,7 @@ public final class MobileApi {
     public record TripBundle(TripView trip, List<UnitView> units, List<PriceListView> priceLists, List<PriceView> prices,
                              List<CustomerView> customers, List<String> numbers, BigDecimal discountLimit, int decimals,
                              CompanyView company, String ebmMode, LocalDateTime downloadedAt, List<UUID> reportedBroken,
-                             BigDecimal cashDeclared) {
+                             BigDecimal cashDeclared, boolean fieldCredit) {
     }
 
     static TripBundle bundle(MobileTripService.Bundle b, Messages messages) {
@@ -89,11 +90,11 @@ public final class MobileApi {
         List<PriceView> prices = b.prices().stream().map(p -> new PriceView(p.getPriceListId(), p.getProductId(), p.getPricePerM2())).toList();
         List<CustomerView> customers = b.customers().stream().map(c -> new CustomerView(c.getId(), c.getCode(), c.getName(),
                 c.getType().name(), c.getTin(), c.getPhone(), c.getPriceList() == null ? null : c.getPriceList().getId(),
-                c.isDefaultCustomer())).toList();
+                c.isDefaultCustomer(), b.creditLeft().get(c.getId()))).toList();
         MobileTripService.Company co = b.company();
         return new TripBundle(trip, units, lists, prices, customers, b.numbers(), b.discountLimit(), b.decimals(),
                 new CompanyView(co.name(), co.tin(), co.address(), co.phone(), co.logo()), b.ebmMode().name(), b.downloadedAt(), b.reportedBroken(),
-                b.cashDeclared());
+                b.cashDeclared(), b.creditOn());
     }
 
     /** "Tinted Bronze 6 mm": the type in the phone's language, colour or finish as entered, thickness. */
@@ -160,6 +161,24 @@ public final class MobileApi {
     }
 
     public record DeclarationResult(UUID tripId, String tripNumber, BigDecimal cashDeclared, LocalDateTime declaredAt) {
+    }
+
+    // ---------------------------------------------------------------- on the road: deposits and counts (N.07, N.12)
+
+    /** Collections the driver banked or sent by mobile money (BP 7.3 rule 4): its own id, the trip, how, how much, the reference, the day. */
+    public record DepositRequest(UUID clientId, UUID tripId, String method, BigDecimal amount, String reference, LocalDate depositedOn) {
+    }
+
+    /** What the server did with a deposit: RECORDED (now or before), its number, and what is left on the float. */
+    public record DepositResult(UUID clientId, String outcome, String number, BigDecimal amount, BigDecimal floatLeft) {
+    }
+
+    /** The driver's daily count of what is on board (SDP 6): its own id, the trip, the labels scanned. */
+    public record CountRequest(UUID clientId, UUID tripId, List<String> codes, String note) {
+    }
+
+    /** What a count found: how many expected, found, the labels missing and those not expected. */
+    public record CountResult(UUID clientId, int expected, int found, List<String> missing, List<String> extra) {
     }
 
     /** An API error: a message key and its text in the phone's language. */

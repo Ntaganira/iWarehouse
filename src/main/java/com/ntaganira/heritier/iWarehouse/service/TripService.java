@@ -1,5 +1,8 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import java.util.Optional;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.dto.TripDto;
 import com.ntaganira.heritier.iWarehouse.entity.Driver;
@@ -78,9 +81,12 @@ public class TripService {
     private final Notifier notifier;
     private final NumberFormats num;
     private final Clock clock;
+    private final SettingService settings;
 
     public TripService(TripRepository repo, VehicleRepository vehicleRepo, DriverRepository driverRepo, StockUnitRepository unitRepo,
-                       StockService stockService, DocumentNumberService numbers, Notifier notifier, NumberFormats num, Clock clock) {
+                       StockService stockService, DocumentNumberService numbers, Notifier notifier, NumberFormats num, Clock clock,
+                       SettingService settings) {
+        this.settings = settings;
         this.repo = repo;
         this.vehicleRepo = vehicleRepo;
         this.driverRepo = driverRepo;
@@ -207,6 +213,32 @@ public class TripService {
 
     // ---------------------------------------------------------------- planning (FLT-04, FLT-05)
 
+    /** The load request is approved before the vehicle leaves (F-09). */
+    public boolean loadApprovalRequired() {
+        return settings.getBoolean(SettingKey.FLEET_LOAD_APPROVAL);
+    }
+
+    /**
+     * The driver's or the vehicle's last trip not cleared yet (on the road, or back and not closed): with the Settings'
+     * fleet.previous-cleared, no new load leaves until it is (BP 7.3 rule 9, F-09 C, F-11), unless the COO waives it.
+     */
+    public Optional<Trip> unclearedPrevious(Trip trip) {
+        if (!settings.getBoolean(SettingKey.FLEET_PREVIOUS_CLEARED)) {
+            return Optional.empty();
+        }
+        return repo.findOfDriverOrVehicle(trip.getDriver().getId(), trip.getVehicle().getId(), List.of(TripStatus.DEPARTED, TripStatus.RETURNED))
+                .stream().filter(t -> !t.getId().equals(trip.getId())).findFirst();
+    }
+
+    /** The manifest's value at cost (the load request's value). */
+    public BigDecimal loadValue(Trip trip) {
+        if (trip.getLines().isEmpty()) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        return unitRepo.findByIdIn(trip.getLines().stream().map(TripLine::getStockUnitId).toList()).stream()
+                .map(u -> u.getUnitCost() == null ? BigDecimal.ZERO : u.getUnitCost()).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2);
+    }
+
     @Transactional
     public Trip create(TripDto dto) {
         LocalDate today = LocalDate.now(clock);
@@ -219,7 +251,13 @@ public class TripService {
         Trip trip = new Trip();
         trip.setNumber(numbers.next(DocumentType.TRIP));
         apply(trip, dto, vehicle, driver);
-        return repo.save(trip);
+        repo.save(trip);
+        if (loadApprovalRequired()) {
+            notifier.holders("APPROVE_LOAD_REQUEST", AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null), NotificationKind.FLEET,
+                    "notify.trip.loadRequest", "notify.trip.loadRequestText", "/trips/" + trip.getId(), trip.getNumber(),
+                    vehicle.getPlate(), driver.getUser().getFullName());
+        }
+        return trip;
     }
 
     @Transactional
@@ -233,7 +271,81 @@ public class TripService {
         }
         requirePapers(driver, vehicle, dto.getTripDate(), true);
         apply(trip, dto, vehicle, driver);
+        withdrawApproval(trip);
         return trip;
+    }
+
+    /**
+     * Approves a planned trip's load request (F-09; the Director of Commercial): the route and the settlement date given,
+     * a manifest, never by who planned it, the previous trip cleared or waived. Its value at cost is kept; changing the
+     * trip or its manifest withdraws the approval.
+     */
+    @Transactional
+    public Trip approveLoad(UUID id) {
+        Trip trip = lock(id);
+        requirePlanned(trip);
+        if (trip.isLoadApproved()) {
+            throw BusinessException.of("trip.load.approved", trip.getNumber(), trip.getLoadApprovedBy());
+        }
+        if (trip.getRoute() == null || trip.getSettleBy() == null) {
+            throw BusinessException.of("trip.load.incomplete", trip.getNumber());
+        }
+        if (trip.getLines().isEmpty()) {
+            throw BusinessException.of("trip.depart.empty", trip.getNumber());
+        }
+        AppUserPrincipal user = AppUserPrincipal.current().orElseThrow(() -> BusinessException.of("till.noUser"));
+        if (user.getUsername().equals(trip.getCreatedBy())) {
+            throw BusinessException.of("trip.load.ownRequest");
+        }
+        requirePreviousCleared(trip);
+        trip.setLoadValue(loadValue(trip));
+        trip.setLoadApprovedBy(user.getUsername());
+        trip.setLoadApprovedById(user.getId());
+        trip.setLoadApprovedAt(LocalDateTime.now(clock));
+        return trip;
+    }
+
+    /**
+     * Lets a planned trip leave although its driver's or its vehicle's last trip is not cleared (BP 7.3 rule 9: not waived
+     * below the COO), with the reason.
+     */
+    @Transactional
+    public Trip waivePrevious(UUID id, String reason) {
+        Trip trip = lock(id);
+        requirePlanned(trip);
+        String clean = PartyRules.clean(reason);
+        if (clean == null || clean.length() > 255) {
+            throw BusinessException.onField("reason", "trip.previous.reason");
+        }
+        AppUserPrincipal user = AppUserPrincipal.current().orElseThrow(() -> BusinessException.of("till.noUser"));
+        boolean coo = AuthorityTiers.highest(user.getAuthorities().stream().map(a -> a.getAuthority()).toList())
+                .map(o -> o.atLeast(AuthorityLevel.COO)).orElse(false);
+        if (!coo) {
+            throw BusinessException.of("trip.previous.notCoo");
+        }
+        trip.setPreviousOverrideReason(clean);
+        trip.setPreviousOverrideBy(user.getUsername());
+        trip.setPreviousOverrideAt(LocalDateTime.now(clock));
+        return trip;
+    }
+
+    private void requirePreviousCleared(Trip trip) {
+        if (trip.getPreviousOverrideAt() != null) {
+            return;
+        }
+        unclearedPrevious(trip).ifPresent(prev -> {
+            throw BusinessException.of("trip.previous.open", prev.getNumber(), prev.getStatus().name(), trip.getNumber());
+        });
+    }
+
+    /** The load request's approval no longer stands once the trip or its manifest changes. */
+    private static void withdrawApproval(Trip trip) {
+        if (trip.isLoadApproved()) {
+            trip.setLoadApprovedAt(null);
+            trip.setLoadApprovedBy(null);
+            trip.setLoadApprovedById(null);
+            trip.setLoadValue(null);
+        }
     }
 
     @Transactional
@@ -333,6 +445,9 @@ public class TripService {
         }
         Map<UUID, StockUnit> units = units(trip);
         wanted.forEach(u -> units.putIfAbsent(u.getId(), u));
+        if (!wanted.isEmpty()) {
+            withdrawApproval(trip);
+        }
         return new AddResult(trip, wanted.stream().map(StockUnit::getCode).toList(), already, skipped, check(trip, units, false));
     }
 
@@ -344,6 +459,7 @@ public class TripService {
         TripLine line = trip.getLines().stream().filter(l -> l.getId().equals(lineId)).findFirst()
                 .orElseThrow(() -> new NotFoundException("TripLine", lineId));
         trip.getLines().remove(line);
+        withdrawApproval(trip);
         return line;
     }
 
@@ -407,6 +523,10 @@ public class TripService {
             throw BusinessException.of("trip.driver.inactive", driver.getUser().getFullName());
         }
         requirePapers(driver, vehicle, today, false);
+        if (loadApprovalRequired() && !trip.isLoadApproved()) {
+            throw BusinessException.of("trip.depart.notApproved", trip.getNumber());
+        }
+        requirePreviousCleared(trip);
         repo.findFirstByVehicle_IdAndStatus(vehicle.getId(), TripStatus.DEPARTED).ifPresent(other -> {
             throw BusinessException.of("trip.depart.vehicleOnRoad", vehicle.getPlate(), other.getNumber());
         });
@@ -544,6 +664,10 @@ public class TripService {
         trip.setTripDate(dto.getTripDate());
         trip.setArea(dto.getArea().trim());
         trip.setNote(PartyRules.clean(dto.getNote()));
+        trip.setRoute(PartyRules.clean(dto.getRoute()));
+        trip.setTowns(PartyRules.clean(dto.getTowns()));
+        trip.setDaysOut(dto.getDaysOut());
+        trip.setSettleBy(dto.getSettleBy());
     }
 
     private Trip lock(UUID id) {

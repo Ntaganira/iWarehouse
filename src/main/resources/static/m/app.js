@@ -7,8 +7,11 @@
  * first (IndexedDB) with its own UUID and invoice number, its receipt shown at once ("pending signature"), then sent to
  * the server when there is network, oldest first, retrying with backoff; the server takes it once, or keeps it for the
  * supervisor. The signed receipt (EBM) is fetched afterwards. At the end of the day the driver reports breakage on the
- * road (a photo, the reason, the place; queued offline like the sales) and declares the cash they hold (MPOS-06, MPOS-07). Amounts are worked out with integers exactly as the server
- * does (MobileSales, Vat.lineAmount, Vat.totals), so both always agree. Every text comes from the server's mobile.* keys.
+ * road (a photo, the reason, the place; queued offline like the sales) and declares the cash they hold (MPOS-06, MPOS-07).
+ * On the road the driver banks the cash as they go (BP 7.3 rule 4), counts what is on board each day (SDP 6) and sells on
+ * credit to approved customers within what their account has left (decision D8), all queued offline like the sales.
+ * Amounts are worked out with integers exactly as the server does (MobileSales, Vat.lineAmount, Vat.totals), so both
+ * always agree. Every text comes from the server's mobile.* keys.
  */
 (function () {
     'use strict';
@@ -25,12 +28,14 @@
     function db() {
         if (!dbPromise) {
             dbPromise = new Promise((resolve, reject) => {
-                const open = indexedDB.open(DB_NAME, 2);
+                const open = indexedDB.open(DB_NAME, 3);
                 open.onupgradeneeded = () => {
                     const d = open.result;
                     if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
                     if (!d.objectStoreNames.contains('sales')) d.createObjectStore('sales', { keyPath: 'clientId' });
                     if (!d.objectStoreNames.contains('breakages')) d.createObjectStore('breakages', { keyPath: 'clientId' });
+                    if (!d.objectStoreNames.contains('deposits')) d.createObjectStore('deposits', { keyPath: 'clientId' });
+                    if (!d.objectStoreNames.contains('counts')) d.createObjectStore('counts', { keyPath: 'clientId' });
                 };
                 open.onsuccess = () => resolve(open.result);
                 open.onerror = () => reject(open.error);
@@ -55,6 +60,24 @@
     const breakagesAll = () => tx('breakages', 'readonly', (s) => s.getAll()).then((all) => (all || []).sort((a, b) => a.seq - b.seq));
     const breakagePut = (b) => tx('breakages', 'readwrite', (s) => s.put(b));
     const breakagesClear = () => tx('breakages', 'readwrite', (s) => s.clear());
+    const depositsAll = () => tx('deposits', 'readonly', (s) => s.getAll()).then((all) => (all || []).sort((a, b) => a.seq - b.seq));
+    const depositPut = (d) => tx('deposits', 'readwrite', (s) => s.put(d));
+    const countsAll = () => tx('counts', 'readonly', (s) => s.getAll()).then((all) => (all || []).sort((a, b) => a.seq - b.seq));
+    const countPut = (c) => tx('counts', 'readwrite', (s) => s.put(c));
+    /** Everything the phone holds for a trip: its sales, breakage reports, deposits, counts and the count being made. */
+    async function clearTripData() {
+        await salesClear();
+        await breakagesClear();
+        await tx('deposits', 'readwrite', (s) => s.clear());
+        await tx('counts', 'readwrite', (s) => s.clear());
+        await kvDel('count-draft');
+        state.sales = [];
+        state.breakages = [];
+        state.deposits = [];
+        state.counts = [];
+        state.counted = [];
+        state.countNote = '';
+    }
 
     // ================================================================ state
 
@@ -65,7 +88,7 @@
         bundle: null,           // the trip download (SYNC-01)
         sales: [],              // every sale made on this phone for the trip, oldest first
         cart: emptyCart(),
-        view: 'day',            // My day first; then sell, cart, receipt, sales, breakage, declare
+        view: 'day',            // My day first; then sell, cart, receipt, sales, breakage, deposit, count, declare
         receiptId: null,
         search: '',
         notice: null,           // { kind: info|ok|warn|danger, text }
@@ -79,13 +102,26 @@
         camera: null,
         breakages: [],          // the breakage reports made on this phone for the trip (MPOS-06)
         breakage: emptyBreakage(),
-        declareAmount: ''
+        declareAmount: '',
+        deposits: [],           // the cash banked or sent by mobile money during the trip (BP 7.3 rule 4)
+        deposit: emptyDeposit(),
+        counts: [],             // the counts of what is on board (SDP 6)
+        counted: [],            // the labels scanned for the count being made
+        countNote: ''
     };
     function emptyBreakage() {
         return { unitId: '', reason: '', place: '', photo: null };
     }
     function emptyCart() {
-        return { lines: [], customerId: null, buyerName: '', buyerTin: '', cash: '', tendered: '', momo: '', momoRef: '' };
+        return { lines: [], customerId: null, buyerName: '', buyerTin: '', cash: '', tendered: '', momo: '', momoRef: '', credit: '' };
+    }
+    function emptyDeposit() {
+        return { method: 'BANK_TRANSFER', amount: '', reference: '', day: todayIso() };
+    }
+    /** Today on the phone as a date field takes it: "2026-10-15". */
+    function todayIso() {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
     // ================================================================ texts (mobile.* keys of the message bundles)
@@ -276,10 +312,29 @@
         const used = new Set(state.sales.map((s) => s.number));
         return (state.bundle ? state.bundle.numbers : []).find((n) => !used.has(n)) || null;
     }
+    /** What a customer may still take on credit on this phone (decision D8): what their account had left at the download,
+     *  less the credit of the sales made here that the server had not counted then; null when they buy without credit. */
+    function creditLeftOf(customer) {
+        const b = state.bundle;
+        if (!b || !b.fieldCredit || !customer || customer.defaultCustomer || customer.creditLeft == null) return null;
+        const counted = new Set(b.creditCounted || []);
+        const used = state.sales.filter((s) => s.customerId === customer.id && s.status !== 'conflict' && !counted.has(s.clientId))
+            .reduce((sum, s) => sum + s.payments.filter((p) => p.method === 'CREDIT').reduce((a, p) => a + scaled(p.amount, b.decimals), 0n), 0n);
+        const left = scaled(customer.creditLeft, b.decimals) - used;
+        return left > 0n ? left : 0n;
+    }
+    /** The units the vehicle should carry as far as this phone knows: loaded, not sold here; broken glass still rides on it. */
+    function unitsExpected() {
+        if (!state.bundle) return [];
+        const sold = soldHere();
+        return state.bundle.units.filter((u) => !sold.has(u.id));
+    }
     const pending = () => state.sales.filter((s) => s.status === 'pending');
     const pendingBreakages = () => state.breakages.filter((b) => b.status === 'pending');
-    /** Everything this phone still has to send: sales and breakage reports. */
-    const pendingCount = () => pending().length + pendingBreakages().length;
+    const pendingDeposits = () => state.deposits.filter((d) => d.status === 'pending');
+    const pendingCounts = () => state.counts.filter((c) => c.status === 'pending');
+    /** Everything this phone still has to send: sales, breakage reports, deposits and counts. */
+    const pendingCount = () => pending().length + pendingBreakages().length + pendingDeposits().length + pendingCounts().length;
 
     async function downloadTrip() {
         if (!navigator.onLine) return notice('warn', t('mobile.offline.needed'));
@@ -291,11 +346,10 @@
                     notice('danger', t('mobile.trip.otherPending'));
                     return;
                 }
-                await salesClear();
-                await breakagesClear();
-                state.sales = [];
-                state.breakages = [];
+                await clearTripData();
             }
+            // The sales the server had taken before this download: their credit is in what each customer has left (D8)
+            bundle.creditCounted = state.sales.filter((s) => s.status === 'accepted' || s.status === 'signed').map((s) => s.clientId);
             state.bundle = bundle;
             await kvSet('bundle', bundle);
             state.cart = emptyCart();
@@ -348,6 +402,32 @@
                 }
                 b.photo = null;                                         // sent or refused: the phone keeps no copy
                 await breakagePut(b);
+                render();
+            }
+            for (const d of pendingDeposits()) {
+                try {
+                    d.result = await api('POST', '/deposits', {
+                        clientId: d.clientId, tripId: d.tripId, method: d.method, amount: Number(d.amount), reference: d.reference, depositedOn: d.depositedOn
+                    });
+                    d.status = 'sent';
+                } catch (e) {
+                    if (e.offline || e.unauthorized || !e.status || e.status >= 500) throw e;
+                    d.status = 'refused';
+                    d.error = e.message;
+                }
+                await depositPut(d);
+                render();
+            }
+            for (const c of pendingCounts()) {
+                try {
+                    c.result = await api('POST', '/counts', { clientId: c.clientId, tripId: c.tripId, codes: c.codes, note: c.note || null });
+                    c.status = 'sent';
+                } catch (e) {
+                    if (e.offline || e.unauthorized || !e.status || e.status >= 500) throw e;
+                    c.status = 'refused';
+                    c.error = e.message;
+                }
+                await countPut(c);
                 render();
             }
             state.retryDelay = 2000;
@@ -432,6 +512,7 @@
             state.cart.buyerName = state.cart.buyerName || '';
             state.cart.buyerTin = customer.tin || state.cart.buyerTin;
         }
+        if (!creditLeftOf(customer)) state.cart.credit = '';
     }
     /** Checks the cart and saves the sale on the phone with its number; it syncs when it can. */
     async function completeSale() {
@@ -446,12 +527,16 @@
         });
         const tin = state.cart.buyerTin.replace(/[\s-]/g, '');
         if (tin && !/^\d{9}$/.test(tin)) errors.tin = t('mobile.pay.tin');
-        // Both left empty: the whole total in cash, as the form shows it
-        const cashText = state.cart.cash.trim() === '' && state.cart.momo.trim() === '' ? text(p.total, decimals) : state.cart.cash;
+        // All left empty: the whole total in cash, as the form shows it
+        const creditLeft = creditLeftOf(p.customer);
+        const creditText = creditLeft ? state.cart.credit.trim() : '';
+        const cashText = state.cart.cash.trim() === '' && state.cart.momo.trim() === '' && creditText === '' ? text(p.total, decimals) : state.cart.cash;
         const cash = cashText.trim() === '' ? 0n : scaled(cashText, decimals);
         const momo = state.cart.momo.trim() === '' ? 0n : scaled(state.cart.momo, decimals);
-        if (cash < 0n || momo < 0n) errors.pay = t('mobile.pay.negative');
-        else if (cash + momo !== p.total) errors.pay = t('mobile.pay.mustAddUp', money(cash + momo), money(p.total));
+        const credit = creditText === '' ? 0n : scaled(creditText, decimals);
+        if (cash < 0n || momo < 0n || credit < 0n) errors.pay = t('mobile.pay.negative');
+        else if (cash + momo + credit !== p.total) errors.pay = t('mobile.pay.mustAddUp', money(cash + momo + credit), money(p.total));
+        if (credit > 0n && credit > creditLeft) errors.credit = t('mobile.pay.creditOver', money(creditLeft));
         if (momo > 0n && !state.cart.momoRef.trim()) errors.momoRef = t('mobile.pay.momoRef');
         let tendered = null;
         if (cash > 0n && state.cart.tendered.trim() !== '') {
@@ -466,6 +551,7 @@
         const payments = [];
         if (cash > 0n) payments.push({ method: 'CASH', amount: text(cash, decimals) });
         if (momo > 0n) payments.push({ method: 'MOBILE_MONEY', amount: text(momo, decimals), reference: state.cart.momoRef.trim() });
+        if (credit > 0n) payments.push({ method: 'CREDIT', amount: text(credit, decimals) });
         const sale = {
             clientId: uuid(), seq: Date.now(), number, tripId: state.bundle.trip.id,
             customerId: p.customer ? p.customer.id : null, customerName: p.customer ? p.customer.name : '',
@@ -541,6 +627,65 @@
         notice('ok', t('mobile.breakage.saved', unit.code));
         sync();
     }
+    /** Saves a deposit on the phone (BP 7.3 rule 4): the cash banked or sent by mobile money; it syncs when it can. */
+    async function saveDeposit() {
+        const f = state.deposit;
+        const b = state.bundle;
+        const s = daySummary();
+        const errors = {};
+        const amount = /^\d+$/.test(f.amount) ? scaled(f.amount, b.decimals) : 0n;
+        if (amount <= 0n) errors.amount = t('mobile.deposit.amountNeeded');
+        else if (amount > s.held) errors.amount = t('mobile.deposit.tooMuch', money(s.held > 0n ? s.held : 0n));
+        if (!f.reference.trim()) errors.reference = t('mobile.deposit.referenceNeeded');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(f.day) || f.day > todayIso() || (b.trip.date && f.day < b.trip.date)) errors.day = t('mobile.deposit.dayBad');
+        state.errors = errors;
+        if (Object.keys(errors).length) return render();
+        const d = {
+            clientId: uuid(), seq: Date.now(), tripId: b.trip.id, method: f.method, amount: text(amount, b.decimals),
+            reference: f.reference.trim().toUpperCase(), depositedOn: f.day, createdAt: new Date().toISOString(), status: 'pending', result: null
+        };
+        await depositPut(d);
+        state.deposits.push(d);
+        state.deposit = emptyDeposit();
+        notice('ok', t('mobile.deposit.saved', money(amount)));
+        sync();
+    }
+    /** A label scanned or typed for the count: kept on the phone (a reload keeps the count going) until it is saved. */
+    function countCode(raw) {
+        const code = String(raw || '').trim().toUpperCase();
+        if (!code) return;
+        if (state.counted.includes(code)) return notice('info', t('mobile.count.already', code));
+        state.counted.push(code);
+        saveCountDraft();
+        const expected = unitsExpected().some((u) => u.code === code);
+        notice(expected ? 'ok' : 'warn', expected ? t('mobile.count.found', code) : t('mobile.count.notExpectedCode', code));
+    }
+    function saveCountDraft() {
+        kvSet('count-draft', { tripId: state.bundle.trip.id, codes: state.counted, note: state.countNote }).catch(() => {});
+    }
+    function askCount() {
+        if (!state.counted.length) { state.errors = { count: t('mobile.count.nothing') }; return render(); }
+        const scanned = new Set(state.counted);
+        const missing = unitsExpected().filter((u) => !scanned.has(u.code)).length;
+        if (!missing) return saveCount();
+        state.confirm = { text: tn('mobile.count.confirmMissing', missing, missing), label: t('mobile.count.save'), action: saveCount };
+        return render();
+    }
+    /** Saves the count on the phone (SDP 6); the server compares it with what is on the vehicle when it syncs. */
+    async function saveCount() {
+        const c = {
+            clientId: uuid(), seq: Date.now(), tripId: state.bundle.trip.id, codes: state.counted.slice(), note: state.countNote.trim(),
+            countedAt: new Date().toISOString(), status: 'pending', result: null
+        };
+        await countPut(c);
+        state.counts.push(c);
+        state.counted = [];
+        state.countNote = '';
+        state.errors = {};
+        await kvDel('count-draft');
+        notice('ok', tn('mobile.count.saved', c.codes.length, c.codes.length));
+        sync();
+    }
     /** Declares the cash the driver holds (MPOS-07), once, with network. */
     async function declareCash() {
         const value = state.declareAmount.trim();
@@ -582,7 +727,7 @@
                     const codes = await detector.detect(video);
                     if (codes.length) {
                         stopCamera();
-                        addByCode(codes[0].rawValue);
+                        if (state.view === 'count') countCode(codes[0].rawValue); else addByCode(codes[0].rawValue);
                     }
                 } catch (e) { /* next frame */ }
             }, 300);
@@ -628,11 +773,8 @@
     /** The phone's data for the trip is cleared, once nothing waits to sync (SYNC-07, SYNC-08). */
     async function closeTrip() {
         if (pendingCount()) return notice('danger', tn('mobile.close.pending', pendingCount(), pendingCount()));
-        await salesClear();
-        await breakagesClear();
+        await clearTripData();
         await kvDel('bundle');
-        state.sales = [];
-        state.breakages = [];
         state.bundle = null;
         state.cart = emptyCart();
         state.view = 'day';
@@ -645,14 +787,11 @@
         notice('ok', t('mobile.signOut.done'));
     }
     async function forget() {
-        await salesClear();
-        await breakagesClear();
+        await clearTripData();
         await kvDel('bundle');
         await kvDel('session');
         state.session = null;
         state.bundle = null;
-        state.sales = [];
-        state.breakages = [];
         state.cart = emptyCart();
         state.view = 'day';
     }
@@ -712,7 +851,9 @@
         printer: '<path d="M7 8V3h10v5M7 17H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-3"/><rect x="7" y="14" width="10" height="7" rx="1"/>',
         sms: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/>',
         share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/>',
-        target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>'
+        target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+        bank: '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+        checklist: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/>'
     };
 
     // The design's illustrations (mobile/lib/art.dart): the truck carrying glass, the receipts, the banknotes; a cracked pane
@@ -925,7 +1066,14 @@
                     + (e['reason-' + id] ? '<span class="error">' + esc(e['reason-' + id]) + '</span>' : '') + '</div>' : '')
                 + '</div>';
         }).join('');
-        const cash = state.cart.cash === '' && state.cart.momo === '' ? text(p.total, state.bundle.decimals) : state.cart.cash;
+        const creditLeft = creditLeftOf(p.customer);
+        const cash = state.cart.cash === '' && state.cart.momo === '' && (!creditLeft || state.cart.credit === '') ? text(p.total, state.bundle.decimals) : state.cart.cash;
+        // Credit (decision D8): an approved customer, within what their account has left
+        const credit = creditLeft == null ? ''
+            : creditLeft === 0n ? noteHtml('info', t('mobile.pay.noCreditLeft'))
+            : '<div class="field"><label for="credit">' + esc(t('mobile.pay.credit')) + '</label><input class="input' + (e.credit ? ' is-invalid' : '') + '" id="credit" inputmode="decimal" data-action="cart-field" data-field="credit" value="' + esc(state.cart.credit) + '">'
+                + (e.credit ? '<span class="error">' + esc(e.credit) + '</span>' : '<span class="hint">' + esc(t('mobile.pay.creditLeft', money(creditLeft))) + '</span>') + '</div>'
+                + (creditLeft >= p.total && p.total > 0n ? '<button class="btn btn-outline btn-block" type="button" data-action="all-credit">' + esc(t('mobile.pay.allCredit')) + '</button>' : '');
         let change = '';
         if (state.cart.tendered.trim() !== '' && cash.trim() !== '') {
             const c = scaled(state.cart.tendered, state.bundle.decimals) - scaled(cash, state.bundle.decimals);
@@ -953,6 +1101,7 @@
             + '<div class="row"><div class="field"><label for="momo">' + esc(t('mobile.pay.momo')) + '</label><input class="input" id="momo" inputmode="decimal" data-action="cart-field" data-field="momo" value="' + esc(state.cart.momo) + '"></div>'
             + '<div class="field"><label for="momoRef">' + esc(t('mobile.pay.momoRefLabel')) + '</label><input class="input' + (e.momoRef ? ' is-invalid' : '') + '" id="momoRef" maxlength="60" autocapitalize="characters" data-action="cart-field" data-field="momoRef" value="' + esc(state.cart.momoRef) + '"></div></div>'
             + (e.momoRef ? '<p class="field error">' + esc(e.momoRef) + '</p>' : '')
+            + credit
             + (e.pay ? '<p class="field error" role="alert">' + esc(e.pay) + '</p>' : '')
             + '</div></main>'
             + cartBar(t('mobile.sell.inCart', p.lines.length), money(p.total),
@@ -1099,6 +1248,95 @@
     }
     /** "45920" as "45,920" in the cash field, as it is typed. */
     const groupDigits = (digits) => String(digits || '').replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    /** Where a deposit or a count stands: waiting to sync, recorded (a count: all there or glass missing), or refused. */
+    function roadBadge(kind, x) {
+        const status = x.status === 'pending' ? 'pending' : x.status === 'refused' ? 'refused'
+            : kind === 'deposit' ? 'sent' : x.result && x.result.missing && x.result.missing.length ? 'missing' : 'clean';
+        const css = { pending: 'pending', sent: 'signed', clean: 'signed', missing: 'conflict', refused: 'conflict' }[status];
+        return '<span class="badge ' + css + '">' + esc(t('mobile.' + kind + '.status.' + status)) + '</span>';
+    }
+    const dayOf = (iso) => (iso || '').split('-').reverse().join('/');
+    /** Banking the cash on the road (BP 7.3 rule 4): how, how much, the slip or transaction reference, the day. */
+    function depositView() {
+        const b = state.bundle;
+        const f = state.deposit;
+        const e = state.errors;
+        const s = daySummary();
+        const valid = /^\d+$/.test(f.amount) && scaled(f.amount, b.decimals) > 0n;
+        const rows = state.deposits.slice().reverse().map((d) => '<div class="item static"><div class="grow">'
+            + '<div class="code">' + esc(d.result && d.result.number ? d.result.number : d.reference) + '</div>'
+            + '<div class="what">' + esc(t('mobile.deposit.method.' + d.method)) + ' · ' + esc(d.reference) + ' · ' + esc(dayOf(d.depositedOn)) + '</div>'
+            + (d.status === 'refused' && d.error ? '<div class="what error">' + esc(d.error) + '</div>' : '')
+            + '</div><span class="price end">' + money(scaled(d.amount, b.decimals)) + '<small>RWF</small>' + roadBadge('deposit', d) + '</span></div>').join('');
+        const method = (m) => '<option value="' + m + '"' + (f.method === m ? ' selected' : '') + '>' + esc(t('mobile.deposit.method.' + m)) + '</option>';
+        return header({ title: t('mobile.deposit.title'), sub: esc(b.trip.number), monoSub: true, back: 'day', art: 'cash' })
+            + '<main class="screen">' + noticeHtml()
+            + '<form class="card roomy" data-form="deposit" novalidate>'
+            + '<div class="lead"><span class="icon-circle ok-tone">' + ic(ICONS.bank) + '</span><p>' + esc(t('mobile.deposit.hint')) + '</p></div>'
+            + '<div class="tiles">' + tile(t('mobile.deposit.held'), money(s.held > 0n ? s.held : 0n)) + tile(t('mobile.deposit.banked'), money(s.banked), s.banked ? 'ok' : '') + '</div>'
+            + '<div class="field"><label for="d-method">' + esc(t('mobile.deposit.method')) + '</label><select class="select" id="d-method" data-action="d-method">'
+            + method('BANK_TRANSFER') + method('MOBILE_MONEY') + '</select></div>'
+            + '<div class="field"><label for="d-amount">' + esc(t('mobile.deposit.amount')) + '</label>'
+            + '<div class="cash-field' + (e.amount ? ' is-invalid' : '') + '"><input id="d-amount" inputmode="numeric" autocomplete="off" data-action="d-amount" value="' + esc(groupDigits(f.amount)) + '"><span>RWF</span></div>'
+            + (e.amount ? '<span class="error">' + esc(e.amount) + '</span>' : '') + '</div>'
+            + '<div class="field"><label for="d-reference">' + esc(t('mobile.deposit.reference')) + '</label><input class="input mono' + (e.reference ? ' is-invalid' : '') + '" id="d-reference" maxlength="60" autocapitalize="characters" spellcheck="false" data-action="d-field" data-field="reference" value="' + esc(f.reference) + '" placeholder="' + esc(t('mobile.deposit.referencePh')) + '">'
+            + (e.reference ? '<span class="error">' + esc(e.reference) + '</span>' : '') + '</div>'
+            + '<div class="field"><label for="d-day">' + esc(t('mobile.deposit.day')) + '</label><input class="input' + (e.day ? ' is-invalid' : '') + '" id="d-day" type="date" data-action="d-field" data-field="day" value="' + esc(f.day) + '"'
+            + (b.trip.date ? ' min="' + esc(b.trip.date) + '"' : '') + ' max="' + todayIso() + '">'
+            + (e.day ? '<span class="error">' + esc(e.day) + '</span>' : '') + '</div>'
+            + '<button class="btn btn-primary btn-big btn-block" type="submit">' + esc(valid ? t('mobile.deposit.saveAmount', money(scaled(f.amount, b.decimals))) : t('mobile.deposit.save')) + '</button></form>'
+            + '<h2 class="section-title">' + esc(t('mobile.deposit.list')) + '</h2>'
+            + '<div class="list">' + (rows || '<div class="empty">' + esc(t('mobile.deposit.none')) + '</div>') + '</div>'
+            + '</main>';
+    }
+    /** The count of what is on board (SDP 6): every label scanned; what is not scanned yet and what is not expected. */
+    function countView() {
+        const b = state.bundle;
+        const e = state.errors;
+        const expected = unitsExpected();
+        const codes = new Set(expected.map((u) => u.code));
+        const scanned = new Set(state.counted);
+        const left = expected.filter((u) => !scanned.has(u.code));
+        const extra = state.counted.filter((c) => !codes.has(c));
+        const found = state.counted.length - extra.length;
+        const unitRow = (u) => '<div class="item static"><div class="grow"><div class="code">' + esc(u.code) + '</div>'
+            + '<div class="what">' + esc(u.productName) + ' · ' + u.widthMm + ' × ' + u.heightMm + ' mm</div></div></div>';
+        const extraRow = (c) => '<div class="item static"><div class="grow"><div class="code">' + esc(c) + '</div>'
+            + '<div class="what">' + esc(t('mobile.count.notExpected')) + '</div></div>'
+            + '<button class="icon-btn" type="button" data-action="count-remove" data-code="' + esc(c) + '" aria-label="' + esc(t('mobile.count.remove')) + '">' + icon(ICONS.close) + '</button></div>';
+        const rows = state.counts.slice().reverse().map((c) => {
+            const r = c.status === 'sent' ? c.result : null;
+            return '<div class="item static"><div class="grow"><div class="code" style="font-size:13px">' + esc(dateTime(c.countedAt)) + '</div>'
+                + '<div class="what">' + esc(r ? t('mobile.count.result', r.found, r.expected, r.missing.length, r.extra.length) : tn('mobile.count.labels', c.codes.length, c.codes.length)) + '</div>'
+                + (r && r.missing.length ? '<div class="what error">' + esc(t('mobile.count.missingCodes', r.missing.join(', '))) + '</div>' : '')
+                + (r && r.extra.length ? '<div class="what">' + esc(t('mobile.count.extraCodes', r.extra.join(', '))) + '</div>' : '')
+                + (c.status === 'refused' && c.error ? '<div class="what error">' + esc(c.error) + '</div>' : '')
+                + '</div><div>' + roadBadge('count', c) + '</div></div>';
+        }).join('');
+        return header({ title: t('mobile.count.title'), sub: esc(b.trip.number + ' · ' + b.trip.vehicle.plate), monoSub: true, back: 'day', art: 'truck' })
+            + '<main class="screen">' + noticeHtml()
+            + '<form class="card" data-form="count-scan" novalidate><label class="section-title" for="count-code">' + esc(t('mobile.count.scanTitle')) + '</label>'
+            + '<p class="muted" style="font-size:14px">' + esc(t('mobile.count.hint')) + '</p>'
+            + '<div class="scan-row"><input class="input mono" id="count-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go"'
+            + ' placeholder="' + esc(t('mobile.sell.scanPh')) + '">'
+            + '<button class="btn btn-primary" type="submit">' + esc(t('mobile.sell.add')) + '</button>'
+            + ('BarcodeDetector' in window ? '<button class="icon-btn" type="button" data-action="camera" aria-label="' + esc(t('mobile.camera.open')) + '">' + icon(ICONS.scan) + '</button>' : '')
+            + '</div>'
+            + (state.camera ? '<div class="camera"><video id="camera-video" playsinline muted></video>'
+                + '<button class="btn btn-outline" type="button" data-action="camera-stop">' + esc(t('mobile.camera.close')) + '</button></div>' : '')
+            + '<div class="tiles">' + tile(t('mobile.count.scanned'), t('mobile.count.ofExpected', found, expected.length), expected.length && !left.length ? 'ok' : '')
+            + tile(t('mobile.count.toFind'), String(left.length), left.length && state.counted.length ? 'warn' : '') + tile(t('mobile.count.notExpected'), String(extra.length), extra.length ? 'danger' : '') + '</div>'
+            + (expected.length && !left.length ? noteHtml('ok', t('mobile.count.allFound')) : '')
+            + '<div class="field"><label for="count-note">' + esc(t('mobile.count.note')) + '</label><input class="input" id="count-note" maxlength="255" data-action="count-note" value="' + esc(state.countNote) + '" placeholder="' + esc(t('mobile.count.notePh')) + '"></div>'
+            + (e.count ? '<p class="field error" role="alert">' + esc(e.count) + '</p>' : '')
+            + '<div class="btn-group"><button class="btn btn-outline" type="button" data-action="count-reset"' + (state.counted.length ? '' : ' disabled') + '>' + esc(t('mobile.count.reset')) + '</button>'
+            + '<button class="btn btn-primary" type="button" data-action="ask-count">' + esc(t('mobile.count.save')) + '</button></div></form>'
+            + (extra.length ? '<h2 class="section-title">' + esc(t('mobile.count.extraList')) + ' <span class="count-chip">' + extra.length + '</span></h2><div class="list">' + extra.map(extraRow).join('') + '</div>' : '')
+            + (left.length && state.counted.length ? '<h2 class="section-title">' + esc(t('mobile.count.leftList')) + ' <span class="count-chip">' + left.length + '</span></h2><div class="list">' + left.map(unitRow).join('') + '</div>' : '')
+            + '<h2 class="section-title">' + esc(t('mobile.count.list')) + '</h2>'
+            + '<div class="list">' + (rows || '<div class="empty">' + esc(t('mobile.count.none')) + '</div>') + '</div>'
+            + '</main>';
+    }
     /** The cash the driver declares at the end of the day (MPOS-07): once, with network; the amount on the button. */
     function declareView() {
         const b = state.bundle;
@@ -1123,15 +1361,19 @@
     }
 
     /** My day: the trip at a glance from what this phone holds, so it works offline. Money leaves out the sales kept for the
-     *  supervisor, as the sales list does; the cash is what the sales took, before vehicle costs paid from the float. */
+     *  supervisor, as the sales list does; the cash held is what the sales took less what was banked (deposits not refused),
+     *  before vehicle costs paid from the float. */
     function daySummary() {
         const b = state.bundle;
         const d = b.decimals;
         const kept = state.sales.filter((s) => s.status !== 'conflict');
         const sum = (values) => values.reduce((acc, v) => acc + v, 0n);
         const paid = (method) => sum(kept.flatMap((s) => s.payments.filter((p) => p.method === method).map((p) => scaled(p.amount, d))));
+        const cash = paid('CASH');
+        const banked = sum(state.deposits.filter((x) => x.status !== 'refused').map((x) => scaled(x.amount, d)));
         return {
-            sales: state.sales.length, total: sum(kept.map((s) => scaled(s.total, d))), cash: paid('CASH'), momo: paid('MOBILE_MONEY'),
+            sales: state.sales.length, total: sum(kept.map((s) => scaled(s.total, d))), cash, momo: paid('MOBILE_MONEY'), credit: paid('CREDIT'),
+            banked, held: cash - banked, lastCount: state.counts.length ? state.counts[state.counts.length - 1] : null,
             conflicts: state.sales.length - kept.length, sold: soldHere().size, broken: reportedBroken().size, onBoard: unitsOnBoard().length,
             signed: kept.filter((s) => s.status === 'signed').length, receipts: kept.length, waiting: pendingCount()
         };
@@ -1143,20 +1385,33 @@
         const where = [b.trip.area, date].filter(Boolean).join(' · ');
         const cash = b.cashDeclared != null
             ? noteHtml('ok', t('mobile.declare.done', money(scaled(b.cashDeclared, b.decimals)), b.cashDeclaredAt ? dateTime(b.cashDeclaredAt) : ''))
-            : '<div class="lead"><span class="icon-circle ok-tone">' + ic(ICONS.cash) + '</span><div><div class="muted" style="font-size:13px">' + esc(t('mobile.day.cashFromSales')) + '</div>'
-                + amountHtml(money(s.cash), 'mid') + '</div></div>'
+            : '<div class="lead"><span class="icon-circle ok-tone">' + ic(ICONS.cash) + '</span><div><div class="muted" style="font-size:13px">'
+                + esc(t(s.banked ? 'mobile.day.cashHeld' : 'mobile.day.cashFromSales')) + '</div>'
+                + amountHtml(money(s.banked ? (s.held > 0n ? s.held : 0n) : s.cash), 'mid')
+                + (s.banked ? '<div class="muted" style="font-size:13px">' + esc(t('mobile.day.cashBanked', money(s.cash), money(s.banked))) + '</div>' : '') + '</div></div>'
                 + '<p class="muted" style="font-size:13px;line-height:19px">' + esc(t('mobile.day.cashHint')) + '</p>'
+                + '<button class="btn btn-outline btn-block" data-action="go" data-view="deposit">' + icon(ICONS.bank) + esc(t('mobile.menu.deposit')) + '</button>'
                 + '<button class="btn btn-outline btn-block" data-action="go" data-view="declare">' + icon(ICONS.cash) + esc(t('mobile.menu.declare')) + '</button>';
+        // The last count of the vehicle: all there, or what was missing
+        const lc = s.lastCount;
+        const lcr = lc && lc.status === 'sent' ? lc.result : null;
+        const lastCount = !lc ? ''
+            : lcr && lcr.missing.length ? noteHtml('warn', tn('mobile.day.lastCountMissing', lcr.missing.length, dateTime(lc.countedAt), lcr.missing.length))
+            : lcr ? noteHtml('ok', t('mobile.day.lastCount', dateTime(lc.countedAt), lcr.found, lcr.expected))
+            : noteHtml('info', t('mobile.day.lastCountWaiting', dateTime(lc.countedAt)));
         return header({ eyebrow: t('mobile.day.title'), title: state.session.user.fullName, sub: esc(b.trip.number + ' · ' + b.trip.vehicle.plate) + (where ? '<br>' + esc(where) : ''), art: 'truck' })
             + '<main class="screen">' + noticeHtml()
             + '<button class="btn btn-primary btn-big btn-block day-sell" data-action="go" data-view="sell">' + esc(t('mobile.menu.sell')) + '</button>'
             + '<div class="card" style="padding:18px;gap:14px"><div><div class="eyebrow-label">' + esc(t('mobile.day.sales')) + '</div>' + amountHtml(money(s.total))
             + '<div class="muted" style="font-size:13px">' + esc(tn('mobile.day.salesCount', s.sales, s.sales)) + '</div></div>'
             + '<div class="tiles">' + tile(t('mobile.method.CASH'), money(s.cash)) + tile(t('mobile.method.MOBILE_MONEY'), money(s.momo)) + '</div>'
+            + (s.credit ? tile(t('mobile.method.CREDIT'), money(s.credit)) : '')
             + (s.conflicts ? tile(t('mobile.day.conflicts'), String(s.conflicts), 'danger') : '')
             + '<button class="btn btn-outline btn-block" data-action="go" data-view="sales">' + icon(ICONS.receipt) + esc(t('mobile.menu.sales')) + '</button></div>'
             + '<div class="card"><h3>' + esc(t('mobile.day.glass')) + '</h3><div class="tiles">'
             + tile(t('mobile.day.sold'), String(s.sold), 'ok') + tile(t('mobile.day.broken'), String(s.broken), s.broken ? 'warn' : '') + tile(t('mobile.day.onBoard'), String(s.onBoard)) + '</div>'
+            + lastCount
+            + '<button class="btn btn-outline btn-block" data-action="go" data-view="count">' + icon(ICONS.checklist) + esc(t('mobile.menu.count')) + '</button>'
             + '<button class="btn btn-outline btn-block" data-action="go" data-view="breakage">' + icon(ICONS.broken) + esc(t('mobile.menu.breakage')) + '</button></div>'
             + '<div class="card"><h3>' + esc(t('mobile.day.receipts')) + '</h3><div class="tiles">'
             + tile(t('mobile.day.signed'), t('mobile.day.ofTotal', s.signed, s.receipts), s.receipts && s.signed === s.receipts ? 'ok' : '')
@@ -1169,10 +1424,11 @@
         if (!state.menu) return '';
         const items = [
             ['go', 'day', t('mobile.menu.day'), ICONS.home], ['go', 'sell', t('mobile.menu.sell'), ICONS.scan], ['go', 'sales', t('mobile.menu.sales'), ICONS.receipt],
-            ['go', 'breakage', t('mobile.menu.breakage'), ICONS.broken], ['go', 'declare', t('mobile.menu.declare'), ICONS.cash],
+            ['go', 'count', t('mobile.menu.count'), ICONS.checklist], ['go', 'breakage', t('mobile.menu.breakage'), ICONS.broken],
+            ['go', 'deposit', t('mobile.menu.deposit'), ICONS.bank], ['go', 'declare', t('mobile.menu.declare'), ICONS.cash],
             ['download', '', t('mobile.menu.refresh'), ICONS.sync], ['lang-toggle', '', t('mobile.menu.language'), ICONS.globe],
             ['ask-close', '', t('mobile.menu.closeTrip'), ICONS.box], ['ask-signout', '', t('mobile.menu.signOut'), ICONS.logout]
-        ].filter((i) => state.bundle || !['day', 'sell', 'sales', 'breakage', 'declare'].includes(i[1]) && i[0] !== 'ask-close');
+        ].filter((i) => state.bundle || !['day', 'sell', 'sales', 'count', 'breakage', 'deposit', 'declare'].includes(i[1]) && i[0] !== 'ask-close');
         return '<div class="sheet-backdrop" data-action="menu-close"></div><div class="sheet" role="menu">'
             + items.map((i) => '<button class="item' + (i[0] === 'ask-signout' || i[0] === 'ask-close' ? ' danger' : '') + '" role="menuitem" data-action="' + i[0]
                 + '" data-view="' + i[1] + '">' + icon(i[3]) + '<span>' + esc(i[2]) + '</span></button>').join('') + '</div>';
@@ -1195,6 +1451,8 @@
         else if (state.view === 'receipt') html = receiptView();
         else if (state.view === 'sales') html = salesView();
         else if (state.view === 'breakage') html = breakageView();
+        else if (state.view === 'deposit') html = depositView();
+        else if (state.view === 'count') html = countView();
         else if (state.view === 'declare') html = declareView();
         else if (state.view === 'day') html = dayView();
         else html = sellView();
@@ -1207,8 +1465,8 @@
         if (focus) {
             const el = document.getElementById(focus);
             if (el && el.focus) { el.focus(); if (el.setSelectionRange && el.type !== 'number' && typeof el.value === 'string') el.setSelectionRange(el.value.length, el.value.length); }
-        } else if (state.session && state.bundle && state.view === 'sell' && !state.menu && !state.confirm) {
-            const scan = document.getElementById('scan-code');
+        } else if (state.session && state.bundle && (state.view === 'sell' || state.view === 'count') && !state.menu && !state.confirm) {
+            const scan = document.getElementById(state.view === 'count' ? 'count-code' : 'scan-code');
             if (scan && window.matchMedia('(pointer: fine)').matches) scan.focus();
         }
     }
@@ -1256,8 +1514,12 @@
             case 'print': return window.print();
             case 'camera': return startCamera();
             case 'camera-stop': return stopCamera();
-            case 'all-cash': state.cart.cash = text(priced().total, state.bundle.decimals); state.cart.momo = ''; return render();
-            case 'all-momo': state.cart.momo = text(priced().total, state.bundle.decimals); state.cart.cash = '0'; state.cart.tendered = ''; return render();
+            case 'all-cash': state.cart.cash = text(priced().total, state.bundle.decimals); state.cart.momo = ''; state.cart.credit = ''; return render();
+            case 'all-momo': state.cart.momo = text(priced().total, state.bundle.decimals); state.cart.cash = '0'; state.cart.tendered = ''; state.cart.credit = ''; return render();
+            case 'all-credit': state.cart.credit = text(priced().total, state.bundle.decimals); state.cart.cash = '0'; state.cart.momo = ''; state.cart.tendered = ''; return render();
+            case 'count-remove': state.counted = state.counted.filter((c) => c !== el.dataset.code); saveCountDraft(); return render();
+            case 'count-reset': state.counted = []; state.errors = {}; saveCountDraft(); return render();
+            case 'ask-count': return askCount();
             case 'lang-toggle': {
                 state.menu = false;
                 state.lang = state.lang === 'en' ? 'fr' : 'en';
@@ -1279,6 +1541,14 @@
         const form = event.target;
         if (form.dataset.form === 'login') return signIn(form);
         if (form.dataset.form === 'breakage') return saveBreakage();
+        if (form.dataset.form === 'deposit') return saveDeposit();
+        if (form.dataset.form === 'count-scan') {
+            const code = form.code.value;
+            form.code.value = '';
+            state.notice = null;
+            delete state.errors.count;
+            return countCode(code);
+        }
         if (form.dataset.form === 'scan') {
             const code = form.code.value;
             form.code.value = '';
@@ -1294,10 +1564,14 @@
         if (action === 'b-field') { state.breakage[el.dataset.field] = el.value; delete state.errors[el.dataset.field]; return undefined; }
         // The digits alone; the field shows them grouped and the button the amount, as they are typed
         if (action === 'declare-field') { state.declareAmount = el.value.replace(/\D/g, ''); delete state.errors.declare; return render(); }
+        if (action === 'd-amount') { state.deposit.amount = el.value.replace(/\D/g, ''); delete state.errors.amount; return render(); }
+        if (action === 'd-field') { state.deposit[el.dataset.field] = el.value; delete state.errors[el.dataset.field]; return undefined; }
+        if (action === 'count-note') { state.countNote = el.value; saveCountDraft(); return undefined; }
         // A field being corrected drops its error, so what it shows (the change, the amount) is current
         if (action === 'cart-field') {
             state.cart[el.dataset.field] = el.value;
             delete state.errors[FIELD_ERRORS[el.dataset.field] || el.dataset.field];
+            if (el.dataset.field === 'credit') delete state.errors.credit;
             return renderSoon();
         }
         const line = state.cart.lines.find((l) => l.unitId === el.dataset.unit);
@@ -1309,6 +1583,7 @@
         const el = event.target;
         if (el.dataset.action === 'customer') { setCustomer(el.value); return render(); }
         if (el.dataset.action === 'b-unit') { state.breakage.unitId = el.value; delete state.errors.unit; return render(); }
+        if (el.dataset.action === 'd-method') { state.deposit.method = el.value; return undefined; }
         if (el.dataset.action === 'b-photo' && el.files && el.files[0]) {
             try {
                 state.breakage.photo = await shrink(el.files[0]);
@@ -1326,8 +1601,8 @@
         }
         return undefined;
     });
-    /** The error each payment field clears when changed (cash and mobile money share "must add up"). */
-    const FIELD_ERRORS = { buyerTin: 'tin', cash: 'pay', momo: 'pay' };
+    /** The error each payment field clears when changed (cash, mobile money and credit share "must add up"). */
+    const FIELD_ERRORS = { buyerTin: 'tin', cash: 'pay', momo: 'pay', credit: 'pay' };
     let renderTimer = null;
     function renderSoon() {
         clearTimeout(renderTimer);
@@ -1352,6 +1627,13 @@
         state.bundle = (await kvGet('bundle')) || null;
         state.sales = await salesAll();
         state.breakages = await breakagesAll();
+        state.deposits = await depositsAll();
+        state.counts = await countsAll();
+        const draft = await kvGet('count-draft');
+        if (draft && state.bundle && draft.tripId === state.bundle.trip.id) {
+            state.counted = draft.codes || [];
+            state.countNote = draft.note || '';
+        }
         render();
         if (state.session && navigator.onLine) {
             if (state.bundle) downloadTrip().then(sync); else downloadTrip();

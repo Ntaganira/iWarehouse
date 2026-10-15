@@ -93,6 +93,10 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
     List<SalesInvoice> findByStatusAndInvoiceDateBetweenOrderByNumber(com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus status,
                                                                      java.time.LocalDate from, java.time.LocalDate to);
 
+    /** A trip's issued sales with their customers and lines (its daily return, F-10). */
+    @EntityGraph(attributePaths = {"customer", "lines"})
+    List<SalesInvoice> findByTrip_IdAndStatusOrderByNumber(UUID tripId, com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus status);
+
     /** The mobile sale a phone sent under this UUID (SYNC-03): the same sale sent twice is taken once. */
     Optional<SalesInvoice> findByClientId(UUID clientId);
 

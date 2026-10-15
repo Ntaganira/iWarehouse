@@ -36,5 +36,7 @@ public enum SyncConflictReason {
     /** The sale cannot be read: no unit, a unit twice, a field missing. */
     INVALID,
     /** A price that takes the glass below what it cost (SDP 8): the counter needs the Managing Director for that. */
-    BELOW_COST
+    BELOW_COST,
+    /** Paid on credit by a customer without credit, beyond their limit, or while field credit is off (decision D8). */
+    CREDIT_REFUSED
 }

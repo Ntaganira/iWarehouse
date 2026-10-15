@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -75,6 +76,32 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     Page<Trip> findByDriver_Id(UUID driverId, Pageable pageable);
 
     long countByStatus(TripStatus status);
+
+    /** Planned trips whose load request waits for approval (F-09). */
+    long countByStatusAndLoadApprovedAtIsNull(TripStatus status);
+
+    /** Load requests approved in a period (the exceptions report). */
+    @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
+    List<Trip> findByLoadApprovedAtBetweenOrderByLoadApprovedAtAsc(LocalDateTime from, LocalDateTime to);
+
+    /** Previous trips waived in a period (BP 7.3 rule 9; the exceptions report). */
+    @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
+    List<Trip> findByPreviousOverrideAtBetweenOrderByPreviousOverrideAtAsc(LocalDateTime from, LocalDateTime to);
+
+    /** A driver's or a vehicle's trips in some states (the previous trip not cleared, BP 7.3 rule 9). */
+    @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
+    @Query("select t from Trip t where (t.driver.id = :driverId or t.vehicle.id = :vehicleId) and t.status in :statuses"
+            + " order by t.departedAt desc")
+    List<Trip> findOfDriverOrVehicle(@Param("driverId") UUID driverId, @Param("vehicleId") UUID vehicleId,
+                                     @Param("statuses") Collection<TripStatus> statuses);
+
+    /** Trips that left in a period, with their vehicles (the fleet report's KPIs, Annex D). */
+    @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
+    List<Trip> findByDepartedAtBetweenOrderByDepartedAtAsc(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    /** A vehicle's trips that left before a moment, the latest first (the trip before another). */
+    @EntityGraph(attributePaths = {"vehicle"})
+    List<Trip> findByVehicle_IdAndDepartedAtBeforeOrderByDepartedAtDesc(UUID vehicleId, java.time.LocalDateTime before);
 
     /** The driver's trip the phone still works for: on the road, or back and not closed (latest first). */
     @EntityGraph(attributePaths = {"vehicle", "vehicle.location", "driver", "driver.user"})

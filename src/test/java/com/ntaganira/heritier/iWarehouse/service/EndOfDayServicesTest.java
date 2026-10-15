@@ -62,6 +62,8 @@ class EndOfDayServicesTest {
     private AuditCaseService caseService;
     private TripCloseService closeService;
 
+    private final SettingService settings = mock(SettingService.class);
+
     @BeforeEach
     void setUp() {
         clear6.setId(UUID.randomUUID());
@@ -199,7 +201,7 @@ class EndOfDayServicesTest {
         returnService = new TripReturnService(tripRepo, breakageRepo, extraRepo, unitRepo, productRepo, locationService, stockService,
                 postingService, caseService, CLOCK);
         breakageService = new BreakageService(tripRepo, breakageRepo, unitRepo, driverRepo, deviceRepo, attachments, notifier, CLOCK);
-        closeService = new TripCloseService(tripRepo, caseRepo, floatService, pricing, CLOCK);
+        closeService = new TripCloseService(tripRepo, caseRepo, floatService, pricing, CLOCK, settings, notifier);
         signIn(7L, "supervisor1");
     }
 
@@ -376,6 +378,36 @@ class EndOfDayServicesTest {
         assertThat(closeService.settlement(trip).canClose()).isTrue();
         closeService.close(trip.getId());
         assertThat(trip.getClosedBy()).isEqualTo("supervisor1");
+    }
+
+    @Test
+    void aSettledTripIsClearedThenCountersignedByAnotherPersonWhichClosesIt() {   // F-11, N.15
+        when(settings.getBoolean(SettingKey.FLEET_CLEARANCE_COUNTERSIGN)).thenReturn(true);
+        returnService.scanBack(trip.getId(), "U-WH-000101 U-WH-000102 U-WH-000103");
+        returnService.reconcile(trip.getId(), null);
+        when(floatService.cashOf(trip.getId())).thenReturn(BigDecimal.ZERO);
+        closeService.declareCash(trip.getId(), BigDecimal.ZERO, TripCloseService.VIA_OFFICE);
+        // Nothing to countersign yet, and the trip no longer closes in one step
+        assertThatThrownBy(() -> closeService.countersign(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.clearance.notCleared");
+        assertThatThrownBy(() -> closeService.close(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.close.byClearance");
+
+        closeService.clear(trip.getId());
+        assertThat(trip.getClearedBy()).isEqualTo("supervisor1");
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.RETURNED);
+        verify(notifier).holders(eq("COUNTERSIGN_TRIP_CLEARANCE"), eq(7L), eq(NotificationKind.EOD), eq("notify.trip.cleared"),
+                eq("notify.trip.clearedText"), any(), eq(trip.getNumber()), eq("supervisor1"));
+        assertThatThrownBy(() -> closeService.clear(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.clearance.cleared");
+        // Whoever cleared it does not countersign it
+        assertThatThrownBy(() -> closeService.countersign(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.clearance.own");
+
+        signIn(8L, "dof1");
+        closeService.countersign(trip.getId());
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.CLOSED);
+        assertThat(trip.getClosedBy()).isEqualTo("dof1");
     }
 
     private StockUnit unit(String code) {

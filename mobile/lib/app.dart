@@ -1,5 +1,5 @@
 // High Bytes POS - the app: the phone's light or dark setting, the driver's language, and one screen at a time as the web
-// app shows them (signed out, no trip, sell, pay, receipt, sales, breakage, declare). The system's back goes to the
+// app shows them (signed out, no trip, sell, pay, receipt, sales, breakage, deposit, count, declare). The system's back goes to the
 // screen before; coming back to the app sends what waits.
 
 import 'package:flutter/material.dart';
@@ -8,8 +8,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'controller.dart';
 import 'screens/breakage.dart';
 import 'screens/cart.dart';
+import 'screens/count.dart';
 import 'screens/day.dart';
 import 'screens/declare.dart';
+import 'screens/deposit.dart';
 import 'screens/login.dart';
 import 'screens/no_trip.dart';
 import 'screens/receipt.dart';
@@ -84,6 +86,8 @@ class _PosRootState extends State<PosRoot> with WidgetsBindingObserver {
         PosView.receipt => receipt == null ? SalesScreen(c: c) : ReceiptScreen(key: ValueKey(receipt.clientId), c: c, sale: receipt),
         PosView.sales => SalesScreen(c: c),
         PosView.breakage => BreakageScreen(c: c),
+        PosView.deposit => DepositScreen(c: c),
+        PosView.count => CountScreen(c: c),
         PosView.declare => DeclareScreen(c: c),
         PosView.sell => SellScreen(c: c),
         PosView.day => DayScreen(c: c),

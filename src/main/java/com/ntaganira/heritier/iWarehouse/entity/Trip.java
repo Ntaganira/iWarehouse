@@ -126,6 +126,53 @@ public class Trip extends BaseEntity {
     @Column(name = "closed_at")
     private LocalDateTime closedAt;
 
+    /** The load request (F-09): the route, the towns, the days out and the day the trip is to be settled by. */
+    @Column(length = 200)
+    private String route;
+
+    @Column(length = 300)
+    private String towns;
+
+    @Column(name = "days_out")
+    private Integer daysOut;
+
+    @Column(name = "settle_by")
+    private LocalDate settleBy;
+
+    /** The load's value at cost when the request was approved. */
+    @Column(name = "load_value", precision = 18, scale = 2)
+    private BigDecimal loadValue;
+
+    /** The Director of Commercial's approval of the load request; withdrawn when the manifest changes. */
+    @Column(name = "load_approved_by", length = 50)
+    private String loadApprovedBy;
+
+    @Column(name = "load_approved_by_id")
+    private Long loadApprovedById;
+
+    @Column(name = "load_approved_at")
+    private LocalDateTime loadApprovedAt;
+
+    /** The COO's waiver of the previous trip not yet cleared (BP 7.3 rule 9), with the reason. */
+    @Column(name = "previous_override_reason", length = 255)
+    private String previousOverrideReason;
+
+    @Column(name = "previous_override_by", length = 50)
+    private String previousOverrideBy;
+
+    @Column(name = "previous_override_at")
+    private LocalDateTime previousOverrideAt;
+
+    /** Cleared by the Director of Commercial (F-11); the Director of Finance's countersignature closes the trip. */
+    @Column(name = "cleared_by", length = 50)
+    private String clearedBy;
+
+    @Column(name = "cleared_by_id")
+    private Long clearedById;
+
+    @Column(name = "cleared_at")
+    private LocalDateTime clearedAt;
+
     @Column(name = "closed_by", length = 50)
     private String closedBy;
 
@@ -164,5 +211,13 @@ public class Trip extends BaseEntity {
     /** Km driven, once both readings are in. */
     public Integer getDistanceKm() {
         return odometerStart == null || odometerEnd == null ? null : odometerEnd - odometerStart;
+    }
+
+    public boolean isLoadApproved() {
+        return loadApprovedAt != null;
+    }
+
+    public boolean isCleared() {
+        return clearedAt != null;
     }
 }

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{clearance.title(${trip.number})} + ' - ' + #{app.name}">Clearance certificate - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page" th:with="s=${settlement}, f=${settlement.clearance}">
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{clearance.title(${trip.number})}">Clearance certificate TRP-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{clearance.hint}">A4: the trip's stock, cash and float settled, cleared by the Director of Commercial and countersigned by the Director of Finance.</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!--/* The clearance certificate (F-11; N.15) */-->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+                <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{clearance.kind}">CLEARANCE CERTIFICATE</div>
+                <div class="mono" th:text="${trip.number}">TRP-WH-2026-000001</div>
+            </div>
+        </div>
+        <div class="print-doc-parties">
+            <div>
+                <div><span class="print-doc-label" th:text="#{trip.vehicle}">Vehicle</span> <span class="mono" th:text="${trip.vehicle.plate}">RAD 512 C</span></div>
+                <div><span class="print-doc-label" th:text="#{trip.driver}">Driver</span> <span th:text="${trip.driver.user.fullName}">Jean Driver</span></div>
+                <div><span class="print-doc-label" th:text="#{trip.route}">Route</span> <span th:text="${trip.route ?: trip.area}">Kigali – Musanze</span></div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{issueNote.left}">Left</span> <span th:text="${trip.departedAt != null} ? ${#temporals.format(trip.departedAt, 'dd/MM/yyyy HH:mm')} : '—'">15/10/2026 08:30</span></div>
+                <div><span class="print-doc-label" th:text="#{clearance.back}">Back</span> <span th:text="${trip.returnedAt != null} ? ${#temporals.format(trip.returnedAt, 'dd/MM/yyyy HH:mm')} : '—'">17/10/2026 18:00</span></div>
+                <div th:if="${trip.settleBy != null}"><span class="print-doc-label" th:text="#{trip.settleBy}">Settled by</span> <span th:text="${#temporals.format(trip.settleBy, 'dd/MM/yyyy')}">18/10/2026</span></div>
+            </div>
+        </div>
+        <table class="print-doc-table print-doc-pair">
+            <tbody>
+                <tr><td th:text="#{clearance.stock}">Stock</td>
+                    <td th:text="#{clearance.stockLine(${trip.loadedPieces ?: 0}, ${trip.soldPieces ?: 0}, ${trip.returnedPieces ?: 0}, ${trip.brokenPieces ?: 0}, ${trip.missingPieces ?: 0})}">40 loaded: 30 sold, 9 back, 1 broken, 0 missing</td></tr>
+                <tr><td th:text="#{clearance.case}">Differences</td>
+                    <td th:text="${s.auditCase == null} ? #{clearance.noCase} : #{clearance.caseLine(${s.auditCase.number}, #{${'auditCase.status.' + s.auditCase.status}})}">None</td></tr>
+                <tr><td th:text="#{clearance.cash}">Cash sales</td><td class="num" th:text="${@num.money(s.cash)}">300,000</td></tr>
+                <tr><td th:text="#{clearance.banked}">Banked during the trip</td><td class="num" th:text="${@num.money(banked)}">200,000</td></tr>
+                <tr><td th:text="#{clearance.declared}">Declared by the driver</td><td class="num" th:text="${trip.cashDeclared != null} ? ${@num.money(trip.cashDeclared)} : '—'">100,000</td></tr>
+                <tr th:if="${f != null}"><td th:text="#{clearance.float}">Float cleared</td>
+                    <td th:text="#{clearance.floatLine(${f.number}, ${@num.money(f.expected)}, ${@num.money(f.counted)}, ${@num.money(f.shortage)})}">FC-WH-2026-000001: expected 100,000, counted 100,000, short 0</td></tr>
+            </tbody>
+        </table>
+        <div class="print-doc-signs">
+            <div><span th:text="#{clearance.signCleared}">Cleared by (Director of Commercial)</span><span class="print-doc-signline" th:text="${trip.clearedBy}">commercial1</span></div>
+            <div><span th:text="#{clearance.signCountersigned}">Countersigned by (Director of Finance)</span><span class="print-doc-signline" th:text="${trip.closedBy}">dof1</span></div>
+            <div><span th:text="#{clearance.signDriver}">Driver</span><span class="print-doc-signline" th:text="${trip.driver.user.fullName}">Jean Driver</span></div>
+        </div>
+    </div>
+</body>
+</html>

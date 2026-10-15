@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.repository.TripDepositRepository;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.dto.FloatClearanceDto;
 import com.ntaganira.heritier.iWarehouse.entity.AlertState;
@@ -65,11 +66,13 @@ public class FloatService {
     private final Notifier notifier;
     private final NumberFormats num;
     private final Clock clock;
+    private final TripDepositRepository depositRepo;
 
     public FloatService(TripRepository tripRepo, DriverRepository driverRepo, FloatClearanceRepository repo, SalesPaymentRepository paymentRepo,
                         VehicleCostRepository costRepo, JournalService journalService,
                         PostingService postingService, DocumentNumberService numbers, LinePricing pricing, AlertStateRepository stateRepo,
-                        SettingService settings, Notifier notifier, NumberFormats num, Clock clock) {
+                        SettingService settings, Notifier notifier, NumberFormats num, Clock clock, TripDepositRepository depositRepo) {
+        this.depositRepo = depositRepo;
         this.tripRepo = tripRepo;
         this.driverRepo = driverRepo;
         this.repo = repo;
@@ -96,8 +99,10 @@ public class FloatService {
         List<UUID> ids = trips.stream().map(Trip::getId).toList();
         Map<UUID, BigDecimal> cash = cashOf(ids);
         Map<UUID, BigDecimal> paid = paidFromFloat(ids);
+        Map<UUID, BigDecimal> banked = bankedOf(ids);
         return trips.stream().filter(t -> cash.getOrDefault(t.getId(), BigDecimal.ZERO).signum() > 0)
-                .map(t -> new ToClear(t, cash.get(t.getId()).subtract(paid.getOrDefault(t.getId(), BigDecimal.ZERO)))).toList();
+                .map(t -> new ToClear(t, cash.get(t.getId()).subtract(paid.getOrDefault(t.getId(), BigDecimal.ZERO))
+                        .subtract(banked.getOrDefault(t.getId(), BigDecimal.ZERO)))).toList();
     }
 
     /** What the drivers paid vehicle costs with from some trips' cash, posted (VehicleCostService): no longer on the float. */
@@ -111,9 +116,24 @@ public class FloatService {
         return paid;
     }
 
-    /** The cash a trip's driver should hand back: its cash sales less the vehicle costs paid from them. */
+    /**
+     * The cash a trip's driver should hand back: its cash sales less the vehicle costs paid from them and less what they
+     * banked during the trip (BP 7.3 rule 4).
+     */
     public BigDecimal expectedOf(UUID tripId) {
-        return cashOf(tripId).subtract(paidFromFloat(List.of(tripId)).getOrDefault(tripId, BigDecimal.ZERO));
+        return cashOf(tripId).subtract(paidFromFloat(List.of(tripId)).getOrDefault(tripId, BigDecimal.ZERO))
+                .subtract(bankedOf(List.of(tripId)).getOrDefault(tripId, BigDecimal.ZERO));
+    }
+
+    /** What each trip's driver banked or sent by mobile money during the trip (TripDepositService): no longer on the float. */
+    public Map<UUID, BigDecimal> bankedOf(Collection<UUID> tripIds) {
+        Map<UUID, BigDecimal> banked = new HashMap<>();
+        if (!tripIds.isEmpty()) {
+            for (Object[] row : depositRepo.totalsOfTrips(tripIds)) {
+                banked.put((UUID) row[0], (BigDecimal) row[1]);
+            }
+        }
+        return banked;
     }
 
     /** The cash each trip's sales took: what they put on the driver's float. */

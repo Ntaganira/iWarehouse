@@ -6,7 +6,9 @@
 // the phone first with its own UUID and invoice number, its receipt shown at once ("pending signature"), then sent to the
 // server when there is network, oldest first, retrying with backoff; the server takes it once (its clientId), or keeps it
 // for the supervisor. The signed receipt (EBM) is fetched afterwards. At the end of the day the driver reports breakage on
-// the road (a photo, the reason, the place; queued offline like the sales) and declares the cash they hold.
+// the road (a photo, the reason, the place; queued offline like the sales) and declares the cash they hold. On the road
+// they bank the cash as they go (BP 7.3 rule 4), count what is on board each day (SDP 6) and sell on credit to approved
+// customers within what their account has left (decision D8), all queued offline like the sales.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -20,16 +22,21 @@ import 'money.dart' as m;
 import 'store.dart';
 import 'texts.dart';
 
-enum PosView { day, sell, cart, receipt, sales, breakage, declare }
+enum PosView { day, sell, cart, receipt, sales, breakage, deposit, count, declare }
 
 /// My day: the trip at a glance from what this phone holds (daySummary in app.js). Money leaves out the sales kept for the
-/// supervisor, as the sales list does; the cash is what the sales took, before vehicle costs paid from the float.
+/// supervisor, as the sales list does; the cash held is what the sales took less what was banked (deposits not refused),
+/// before vehicle costs paid from the float.
 class DaySummary {
   const DaySummary({
     required this.sales,
     required this.total,
     required this.cash,
     required this.momo,
+    required this.credit,
+    required this.banked,
+    required this.held,
+    required this.lastCount,
     required this.conflicts,
     required this.sold,
     required this.broken,
@@ -43,6 +50,10 @@ class DaySummary {
   final BigInt total;
   final BigInt cash;
   final BigInt momo;
+  final BigInt credit;
+  final BigInt banked;
+  final BigInt held;
+  final VanCount? lastCount;
   final int conflicts;
   final int sold;
   final int broken;
@@ -104,6 +115,20 @@ class BreakageForm {
   String? photo; // a JPEG as a data URL
 }
 
+class DepositForm {
+  String method = 'BANK_TRANSFER';
+  String amount = ''; // whole RWF, the digits alone
+  String reference = '';
+  String day = today();
+}
+
+/// Today on the phone: "2026-10-15".
+String today() {
+  final d = DateTime.now();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${d.year}-${two(d.month)}-${two(d.day)}';
+}
+
 class PosController extends ChangeNotifier {
   PosController({
     required this.store,
@@ -137,6 +162,8 @@ class PosController extends ChangeNotifier {
   Bundle? bundle;
   List<Sale> sales = [];
   List<Breakage> breakages = [];
+  List<Deposit> deposits = [];
+  List<VanCount> counts = [];
   Cart cart = Cart();
   PosView view = PosView.day;
   String? receiptId;
@@ -147,6 +174,9 @@ class PosController extends ChangeNotifier {
   bool syncing = false;
   bool online = true;
   BreakageForm breakage = BreakageForm();
+  DepositForm deposit = DepositForm();
+  List<String> counted = []; // the labels scanned for the count being made
+  String countNote = '';
   String declareAmount = '';
   int retryDelay = 2000;
 
@@ -183,6 +213,13 @@ class PosController extends ChangeNotifier {
     bundle = b is Map ? Bundle(Map<String, dynamic>.from(b)) : null;
     sales = (await store.all('sales')).map(Sale.new).toList();
     breakages = (await store.all('breakages')).map(Breakage.new).toList();
+    deposits = (await store.all('deposits')).map(Deposit.new).toList();
+    counts = (await store.all('counts')).map(VanCount.new).toList();
+    final draft = await store.get('count-draft');
+    if (draft is Map && bundle != null && draft['tripId'] == bundle!.trip.id) {
+      counted = draft['codes'] is List ? (draft['codes'] as List).map((c) => c.toString()).toList() : [];
+      countNote = draft['note']?.toString() ?? '';
+    }
     online = await network.isOnline();
     _net = network.changes.listen((on) {
       final was = online;
@@ -322,23 +359,56 @@ class PosController extends ChangeNotifier {
     return null;
   }
 
+  /// What a customer may still take on credit on this phone (decision D8): what their account had left at the download,
+  /// less the credit of the sales made here that the server had not counted then; null when they buy without credit.
+  BigInt? creditLeftOf(Customer? customer) {
+    final b = bundle;
+    if (b == null || !b.fieldCredit || customer == null || customer.defaultCustomer || customer.creditLeft == null) return null;
+    final counted = b.creditCounted;
+    final used = sales
+        .where((s) => s.customerId == customer.id && s.status != 'conflict' && !counted.contains(s.clientId))
+        .expand((s) => s.payments)
+        .where((p) => p.method == 'CREDIT')
+        .fold(BigInt.zero, (sum, p) => sum + m.scaled(p.amount, b.decimals));
+    final left = m.scaled(customer.creditLeft!, b.decimals) - used;
+    return left > BigInt.zero ? left : BigInt.zero;
+  }
+
+  /// The units the vehicle should carry as far as this phone knows: loaded, not sold here; broken glass still rides on it.
+  List<Unit> get unitsExpected {
+    final b = bundle;
+    if (b == null) return const [];
+    final sold = soldHere;
+    return b.units.where((u) => !sold.contains(u.id)).toList();
+  }
+
   List<Sale> get pending => sales.where((s) => s.status == 'pending').toList();
 
   List<Breakage> get pendingBreakages => breakages.where((b) => b.status == 'pending').toList();
 
-  /// Everything this phone still has to send: sales and breakage reports.
-  int get pendingCount => pending.length + pendingBreakages.length;
+  List<Deposit> get pendingDeposits => deposits.where((d) => d.status == 'pending').toList();
+
+  List<VanCount> get pendingCounts => counts.where((c) => c.status == 'pending').toList();
+
+  /// Everything this phone still has to send: sales, breakage reports, deposits and counts.
+  int get pendingCount => pending.length + pendingBreakages.length + pendingDeposits.length + pendingCounts.length;
 
   DaySummary get day {
     final d = bundle!.decimals;
     final kept = sales.where((s) => s.status != 'conflict').toList();
     BigInt paid(String method) =>
         kept.expand((s) => s.payments).where((p) => p.method == method).fold(BigInt.zero, (sum, p) => sum + m.scaled(p.amount, d));
+    final cash = paid('CASH');
+    final banked = deposits.where((x) => x.status != 'refused').fold(BigInt.zero, (sum, x) => sum + m.scaled(x.amount, d));
     return DaySummary(
       sales: sales.length,
       total: kept.fold(BigInt.zero, (sum, s) => sum + m.scaled(s.total, d)),
-      cash: paid('CASH'),
+      cash: cash,
       momo: paid('MOBILE_MONEY'),
+      credit: paid('CREDIT'),
+      banked: banked,
+      held: cash - banked,
+      lastCount: counts.isEmpty ? null : counts.last,
       conflicts: sales.length - kept.length,
       sold: soldHere.length,
       broken: reportedBroken.length,
@@ -361,11 +431,10 @@ class PosController extends ChangeNotifier {
           _notice('danger', t('mobile.trip.otherPending'));
           return;
         }
-        await store.clear('sales');
-        await store.clear('breakages');
-        sales = [];
-        breakages = [];
+        await _clearTripData();
       }
+      // The sales the server had taken before this download: their credit is in what each customer has left (D8)
+      fresh.json['creditCounted'] = [for (final s in sales) if (s.status == 'accepted' || s.status == 'signed') s.clientId];
       bundle = fresh;
       await store.set('bundle', fresh.json);
       cart = Cart();
@@ -414,6 +483,43 @@ class PosController extends ChangeNotifier {
         }
         b.json['photo'] = null; // sent or refused: the phone keeps no copy
         await store.put('breakages', b.json);
+        _changed();
+      }
+      // After the sales: the server compares a count with what it knows was sold, and a deposit with the cash taken
+      for (var x = _firstOf(pendingDeposits); x != null; x = _firstOf(pendingDeposits)) {
+        try {
+          x.json['result'] = await api.request('POST', '/deposits', {
+            'clientId': x.clientId,
+            'tripId': x.tripId,
+            'method': x.method,
+            'amount': num.parse(x.amount),
+            'reference': x.reference,
+            'depositedOn': x.depositedOn,
+          });
+          x.json['status'] = 'sent';
+        } on ApiError catch (e) {
+          if (e.offline || e.unauthorized || e.status == null || e.status! >= 500) rethrow;
+          x.json['status'] = 'refused';
+          x.json['error'] = e.message ?? t('mobile.error.server');
+        }
+        await store.put('deposits', x.json);
+        _changed();
+      }
+      for (var x = _firstOf(pendingCounts); x != null; x = _firstOf(pendingCounts)) {
+        try {
+          x.json['result'] = await api.request('POST', '/counts', {
+            'clientId': x.clientId,
+            'tripId': x.tripId,
+            'codes': x.codes,
+            'note': x.note.isEmpty ? null : x.note,
+          });
+          x.json['status'] = 'sent';
+        } on ApiError catch (e) {
+          if (e.offline || e.unauthorized || e.status == null || e.status! >= 500) rethrow;
+          x.json['status'] = 'refused';
+          x.json['error'] = e.message ?? t('mobile.error.server');
+        }
+        await store.put('counts', x.json);
         _changed();
       }
       retryDelay = 2000;
@@ -536,6 +642,8 @@ class PosController extends ChangeNotifier {
       }
     }
     if (customer != null && !customer.defaultCustomer && customer.tin.isNotEmpty) cart.buyerTin = customer.tin;
+    final left = creditLeftOf(customer);
+    if (left == null || left == BigInt.zero) cart.credit = '';
     _changed();
   }
 
@@ -554,7 +662,7 @@ class PosController extends ChangeNotifier {
     errors.remove('reason-$unitId');
   }
 
-  /// A payment field changed: its error goes (cash and mobile money share "must add up").
+  /// A payment field changed: its error goes (cash, mobile money and credit share "must add up").
   void setCartField(String field, String value) {
     switch (field) {
       case 'buyerName':
@@ -574,12 +682,23 @@ class PosController extends ChangeNotifier {
       case 'momoRef':
         cart.momoRef = value;
         errors.remove('momoRef');
+      case 'credit':
+        cart.credit = value;
+        errors.remove('pay');
+        errors.remove('credit');
     }
     _changed();
   }
 
-  /// The cash the form shows: both payment fields left empty means the whole total in cash.
-  String cashShown(PricedCart p) => cart.cash.trim().isEmpty && cart.momo.trim().isEmpty ? m.text(p.total, bundle!.decimals) : cart.cash;
+  /// The credit typed, when the customer may take credit (D8); else nothing.
+  String creditTyped(PricedCart p) {
+    final left = creditLeftOf(p.customer);
+    return left == null || left == BigInt.zero ? '' : cart.credit.trim();
+  }
+
+  /// The cash the form shows: every payment field left empty means the whole total in cash.
+  String cashShown(PricedCart p) =>
+      cart.cash.trim().isEmpty && cart.momo.trim().isEmpty && creditTyped(p).isEmpty ? m.text(p.total, bundle!.decimals) : cart.cash;
 
   String? changeText(PricedCart p) {
     final d = bundle!.decimals;
@@ -593,6 +712,7 @@ class PosController extends ChangeNotifier {
   void allCash() {
     cart.cash = m.text(priced().total, bundle!.decimals);
     cart.momo = '';
+    cart.credit = '';
     errors.remove('pay');
     _changed();
   }
@@ -601,7 +721,19 @@ class PosController extends ChangeNotifier {
     cart.momo = m.text(priced().total, bundle!.decimals);
     cart.cash = '0';
     cart.tendered = '';
+    cart.credit = '';
     errors.remove('pay');
+    _changed();
+  }
+
+  /// The whole sale on the customer's account (D8): offered only when what they have left covers it.
+  void allCredit() {
+    cart.credit = m.text(priced().total, bundle!.decimals);
+    cart.cash = '0';
+    cart.momo = '';
+    cart.tendered = '';
+    errors.remove('pay');
+    errors.remove('credit');
     _changed();
   }
 
@@ -632,10 +764,16 @@ class PosController extends ChangeNotifier {
     final cashTyped = cashShown(p);
     final cash = cashTyped.trim().isEmpty ? BigInt.zero : _amount(cashTyped, d);
     final momo = cart.momo.trim().isEmpty ? BigInt.zero : _amount(cart.momo, d);
-    if (cash == null || momo == null) {
+    final creditText = creditTyped(p);
+    final credit = creditText.isEmpty ? BigInt.zero : _amount(creditText, d);
+    if (cash == null || momo == null || credit == null) {
       e['pay'] = t('mobile.pay.invalidAmount');
-    } else if (cash + momo != p.total) {
-      e['pay'] = t('mobile.pay.mustAddUp', [money(cash + momo), money(p.total)]);
+    } else if (cash + momo + credit != p.total) {
+      e['pay'] = t('mobile.pay.mustAddUp', [money(cash + momo + credit), money(p.total)]);
+    }
+    final creditLeft = creditLeftOf(p.customer);
+    if (credit != null && credit > BigInt.zero && creditLeft != null && credit > creditLeft) {
+      e['credit'] = t('mobile.pay.creditOver', [money(creditLeft)]);
     }
     if (momo != null && momo > BigInt.zero && cart.momoRef.trim().isEmpty) e['momoRef'] = t('mobile.pay.momoRef');
     BigInt? tendered;
@@ -655,10 +793,11 @@ class PosController extends ChangeNotifier {
       return false;
     }
 
-    final paidCash = cash!, paidMomo = momo!;
+    final paidCash = cash!, paidMomo = momo!, onCredit = credit!;
     final payments = <Map<String, dynamic>>[
       if (paidCash > BigInt.zero) {'method': 'CASH', 'amount': m.text(paidCash, d)},
       if (paidMomo > BigInt.zero) {'method': 'MOBILE_MONEY', 'amount': m.text(paidMomo, d), 'reference': cart.momoRef.trim()},
+      if (onCredit > BigInt.zero) {'method': 'CREDIT', 'amount': m.text(onCredit, d)},
     ];
     final sale = Sale({
       'clientId': _uuid.v4(),
@@ -790,6 +929,139 @@ class PosController extends ChangeNotifier {
     return true;
   }
 
+  // ================================================================ on the road (BP 7.3 rule 4, SDP 6)
+
+  void setDepositMethod(String? method) {
+    if (method == 'BANK_TRANSFER' || method == 'MOBILE_MONEY') deposit.method = method!;
+    _changed();
+  }
+
+  void setDepositAmount(String digits) {
+    deposit.amount = digits.replaceAll(RegExp(r'[^0-9]'), '');
+    errors.remove('amount');
+    _changed(); // the button shows the amount as it is typed
+  }
+
+  void setDepositField(String field, String value) {
+    if (field == 'reference') deposit.reference = value;
+    if (field == 'day') deposit.day = value;
+    errors.remove(field);
+    if (field == 'day') _changed();
+  }
+
+  /// Saves a deposit on the phone (BP 7.3 rule 4): the cash banked or sent by mobile money; it syncs when it can.
+  Future<bool> saveDeposit() async {
+    final b = bundle!;
+    final f = deposit;
+    final s = day;
+    final e = <String, String>{};
+    final amount = RegExp(r'^\d+$').hasMatch(f.amount) ? m.scaled(f.amount, b.decimals) : BigInt.zero;
+    if (amount <= BigInt.zero) {
+      e['amount'] = t('mobile.deposit.amountNeeded');
+    } else if (amount > s.held) {
+      e['amount'] = t('mobile.deposit.tooMuch', [money(s.held > BigInt.zero ? s.held : BigInt.zero)]);
+    }
+    if (f.reference.trim().isEmpty) e['reference'] = t('mobile.deposit.referenceNeeded');
+    final now = today();
+    if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(f.day) || f.day.compareTo(now) > 0 || (b.trip.date.isNotEmpty && f.day.compareTo(b.trip.date) < 0)) {
+      e['day'] = t('mobile.deposit.dayBad');
+    }
+    errors = e;
+    if (e.isNotEmpty) {
+      _changed();
+      return false;
+    }
+    final x = Deposit({
+      'clientId': _uuid.v4(),
+      'seq': DateTime.now().millisecondsSinceEpoch,
+      'tripId': b.trip.id,
+      'method': f.method,
+      'amount': m.text(amount, b.decimals),
+      'reference': f.reference.trim().toUpperCase(),
+      'depositedOn': f.day,
+      'createdAt': _now(),
+      'status': 'pending',
+      'result': null,
+    });
+    await store.put('deposits', x.json);
+    deposits.add(x);
+    deposit = DepositForm();
+    _notice('ok', t('mobile.deposit.saved', [money(amount)]));
+    unawaited(sync());
+    return true;
+  }
+
+  /// A label scanned or typed for the count: kept on the phone (closing the app keeps the count going) until it is saved.
+  void countCode(String raw) {
+    notice = null;
+    final code = raw.trim().toUpperCase();
+    if (code.isEmpty) return _changed();
+    if (counted.contains(code)) return _notice('info', t('mobile.count.already', [code]));
+    counted = [...counted, code];
+    errors.remove('count');
+    unawaited(_saveCountDraft());
+    final expected = unitsExpected.any((u) => u.code == code);
+    _notice(expected ? 'ok' : 'warn', expected ? t('mobile.count.found', [code]) : t('mobile.count.notExpectedCode', [code]));
+  }
+
+  void removeCounted(String code) {
+    counted = counted.where((c) => c != code).toList();
+    unawaited(_saveCountDraft());
+    _changed();
+  }
+
+  void resetCount() {
+    counted = [];
+    errors.remove('count');
+    unawaited(_saveCountDraft());
+    _changed();
+  }
+
+  void setCountNote(String value) {
+    countNote = value;
+    unawaited(_saveCountDraft());
+  }
+
+  Future<void> _saveCountDraft() => store.set('count-draft', {'tripId': bundle?.trip.id, 'codes': counted, 'note': countNote});
+
+  /// False (and the error shown) when nothing is scanned yet.
+  bool countReady() {
+    if (counted.isNotEmpty) return true;
+    errors = {'count': t('mobile.count.nothing')};
+    _changed();
+    return false;
+  }
+
+  /// The question before saving a count that leaves labels unscanned (they are reported missing), or null.
+  String? countQuestion() {
+    final scanned = counted.toSet();
+    final missing = unitsExpected.where((u) => !scanned.contains(u.code)).length;
+    return missing == 0 ? null : tn('mobile.count.confirmMissing', missing, [missing]);
+  }
+
+  /// Saves the count on the phone (SDP 6); the server compares it with what is on the vehicle when it syncs.
+  Future<void> saveCount() async {
+    if (!countReady()) return;
+    final x = VanCount({
+      'clientId': _uuid.v4(),
+      'seq': DateTime.now().millisecondsSinceEpoch,
+      'tripId': bundle!.trip.id,
+      'codes': counted,
+      'note': countNote.trim(),
+      'countedAt': _now(),
+      'status': 'pending',
+      'result': null,
+    });
+    await store.put('counts', x.json);
+    counts.add(x);
+    counted = [];
+    countNote = '';
+    errors = {};
+    await store.remove('count-draft');
+    _notice('ok', tn('mobile.count.saved', x.codes.length, [x.codes.length]));
+    unawaited(sync());
+  }
+
   void setDeclareAmount(String value) {
     declareAmount = value;
     errors.remove('declare');
@@ -902,11 +1174,8 @@ class PosController extends ChangeNotifier {
   /// The phone's data for the trip is cleared, once nothing waits to sync (SYNC-07, SYNC-08).
   Future<void> closeTrip() async {
     if (pendingCount > 0) return _notice('danger', tn('mobile.close.pending', pendingCount, [pendingCount]));
-    await store.clear('sales');
-    await store.clear('breakages');
+    await _clearTripData();
     await store.remove('bundle');
-    sales = [];
-    breakages = [];
     bundle = null;
     cart = Cart();
     view = PosView.day;
@@ -924,16 +1193,27 @@ class PosController extends ChangeNotifier {
     _notice('ok', t('mobile.signOut.done'));
   }
 
+  /// Everything the phone holds for a trip: its sales, breakage reports, deposits, counts and the count being made.
+  Future<void> _clearTripData() async {
+    for (final table in SqliteStore.tables) {
+      await store.clear(table);
+    }
+    await store.remove('count-draft');
+    sales = [];
+    breakages = [];
+    deposits = [];
+    counts = [];
+    counted = [];
+    countNote = '';
+  }
+
   Future<void> _forget() async {
-    await store.clear('sales');
-    await store.clear('breakages');
+    await _clearTripData();
     await store.remove('bundle');
     await store.remove('session');
     session = null;
     api.token = null;
     bundle = null;
-    sales = [];
-    breakages = [];
     cart = Cart();
     view = PosView.day;
   }

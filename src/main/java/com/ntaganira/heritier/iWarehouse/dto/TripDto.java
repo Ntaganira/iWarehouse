@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -45,4 +47,18 @@ public class TripDto {
 
     @Size(max = 255, message = "{trip.note.size}")
     private String note;
+
+    /** The load request (F-09): route, towns, days out, the day the trip is settled by. */
+    @Size(max = 200, message = "{trip.route.size}")
+    private String route;
+
+    @Size(max = 300, message = "{trip.towns.size}")
+    private String towns;
+
+    @Min(value = 1, message = "{trip.daysOut.range}")
+    @Max(value = 60, message = "{trip.daysOut.range}")
+    private Integer daysOut;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate settleBy;
 }

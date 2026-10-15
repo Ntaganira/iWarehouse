@@ -68,6 +68,7 @@ public class MobileSaleService {
     private final AuditCaseService auditCaseService;
     private final Clock clock;
     private final SettingService settingService;
+    private final FieldCreditService fieldCredit;
 
     public MobileSaleService(SalesInvoiceRepository invoiceRepo, SalesPaymentRepository paymentRepo, SyncConflictRepository conflictRepo,
                              TripInvoiceNumberRepository numberRepo, TripRepository tripRepo, DriverRepository driverRepo,
@@ -75,7 +76,8 @@ public class MobileSaleService {
                              CustomerRepository customerRepo, PriceListRepository priceListRepo, MobileTripService tripService,
                              StockService stockService, PostingService postingService, EbmService ebmService, LinePricing pricing,
                              Notifier notifier, ObjectMapper mapper, TripBreakageRepository breakageRepo, AuditCaseService auditCaseService,
-                             Clock clock, SettingService settingService) {
+                             Clock clock, SettingService settingService, FieldCreditService fieldCredit) {
+        this.fieldCredit = fieldCredit;
         this.settingService = settingService;
         this.invoiceRepo = invoiceRepo;
         this.paymentRepo = paymentRepo;
@@ -261,9 +263,18 @@ public class MobileSaleService {
         }
         List<MobileSales.Payment> payments = (req.payments() == null ? List.<PaymentRequest>of() : req.payments()).stream()
                 .map(p -> new MobileSales.Payment(p.method(), p.amount(), p.reference() == null ? null : p.reference().trim())).toList();
-        MobileSales.paymentProblem(payments, totals.gross()).ifPresent(problem -> {
+        MobileSales.paymentProblem(payments, totals.gross(), true).ifPresent(problem -> {
             throw new Refused(SyncConflictReason.PAYMENT_MISMATCH, problem);
         });
+        // Credit on the road (decision D8): an approved customer within what they have left today
+        BigDecimal credit = payments.stream().filter(p -> p.method() == PaymentMethod.CREDIT).map(MobileSales.Payment::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (credit.signum() > 0) {
+            Customer locked = customerRepo.lockById(customer.getId()).orElse(customer);
+            FieldCredit.problem(fieldCredit.enabled(), credit, fieldCredit.leftOf(locked)).ifPresent(problem -> {
+                throw new Refused(SyncConflictReason.CREDIT_REFUSED, customer.getName() + ": " + problem);
+            });
+        }
         BigDecimal cash = payments.stream().filter(p -> p.method() == PaymentMethod.CASH).map(MobileSales.Payment::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal tendered = cash.signum() > 0 && req.cashTendered() != null && req.cashTendered().compareTo(cash) >= 0 ? req.cashTendered() : null;

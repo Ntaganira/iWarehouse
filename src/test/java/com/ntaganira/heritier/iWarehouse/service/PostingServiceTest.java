@@ -533,6 +533,71 @@ class PostingServiceTest {
     }
 
     @Test
+    void aDepositOnTheRoadMovesTheCashFromTheDriversFloatToTheBank() {   // BP 7.3 rule 4, ACC-06, AT-10
+        UUID driver = UUID.randomUUID();
+        Trip trip = new Trip();
+        trip.setId(UUID.randomUUID());
+        trip.setNumber("TRP-WH-2026-000011");
+        TripDeposit banked = new TripDeposit();
+        banked.setNumber("TDP-WH-2026-000001");
+        banked.setDriverId(driver);
+        banked.setMethod(PaymentMethod.BANK_TRANSFER);
+        banked.setAmount(new BigDecimal("200000.00"));
+        banked.setReference("BK-58812");
+        banked.setDepositedOn(LocalDate.of(2026, 10, 9));
+        postings.tripDeposit(banked, trip);
+        Journal deposit = last();
+        assertThat(deposit.source()).isEqualTo(JournalSource.TRIP_DEPOSIT);
+        assertThat(line(deposit, AccountKey.BANK).debit()).isEqualByComparingTo("200000");
+        assertThat(line(deposit, AccountKey.BANK).memo()).isEqualTo("BK-58812");
+        assertThat(line(deposit, AccountKey.DRIVER_FLOAT).credit()).isEqualByComparingTo("200000");
+        assertThat(line(deposit, AccountKey.DRIVER_FLOAT).driverId()).isEqualTo(driver);
+
+        // Sent by mobile money instead: the Mobile Money account
+        TripDeposit sent = new TripDeposit();
+        sent.setNumber("TDP-WH-2026-000002");
+        sent.setDriverId(driver);
+        sent.setMethod(PaymentMethod.MOBILE_MONEY);
+        sent.setAmount(new BigDecimal("15000.00"));
+        sent.setReference("MP241009.1146");
+        sent.setDepositedOn(LocalDate.of(2026, 10, 9));
+        postings.tripDeposit(sent, trip);
+        assertThat(line(last(), AccountKey.MOBILE_MONEY).debit()).isEqualByComparingTo("15000");
+        assertThat(lines(AccountKey.DRIVER_FLOAT).stream().filter(l -> driver.equals(l.driverId())).map(Journal.Line::signed)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("-215000");
+        BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debits).isEqualByComparingTo(credits);
+    }
+
+    @Test
+    void creditOnTheRoadIsOwedByTheCustomer() {   // decision D8, ACC-09
+        held.put(clear6.getId(), new BigDecimal("100.0000"));
+        clear6.setMacPerM2(new BigDecimal("5000.0000"));
+        postings.openingStock();
+        Customer builders = new Customer();
+        builders.setId(UUID.randomUUID());
+        builders.setName("Kigali Builders");
+        SalesInvoice sale = new SalesInvoice();
+        sale.setId(UUID.randomUUID());
+        sale.setNumber("MINV-WH-2026-000003");
+        sale.setCustomer(builders);
+        sale.setInvoiceDate(LocalDate.of(2026, 10, 9));
+        sale.setNetAmount(new BigDecimal("21966.10"));
+        sale.setVatAmount(new BigDecimal("3953.90"));
+        sale.setTotalAmount(new BigDecimal("25920.00"));
+        PostingService.StockValues before = postings.stockValues(List.of(clear6));
+        held.put(clear6.getId(), held().subtract(new BigDecimal("0.9600")));
+        postings.mobileSale(sale, List.of(salePayment(PaymentMethod.CREDIT, "20000", null), salePayment(PaymentMethod.CASH, "5920", null)),
+                before, UUID.randomUUID());
+        Journal mobile = last();
+        assertThat(line(mobile, AccountKey.RECEIVABLE).debit()).isEqualByComparingTo("20000");
+        assertThat(line(mobile, AccountKey.RECEIVABLE).customerId()).isEqualTo(builders.getId());
+        assertThat(line(mobile, AccountKey.DRIVER_FLOAT).debit()).isEqualByComparingTo("5920");
+        assertInventoryEqualsValuation();
+    }
+
+    @Test
     void aCreditNoteReversesTheSaleAndPutsGlassBackAtItsOwnCost() {   // POS-09, AT-10
         held.put(clear6.getId(), new BigDecimal("100.0000"));
         clear6.setMacPerM2(new BigDecimal("5000.0000"));

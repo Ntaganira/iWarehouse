@@ -532,6 +532,64 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.field}">The field cycle</h3>
+                <p class="hint" th:text="#{settings.group.fieldHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="fleetLoadApproval" th:text="#{settings.fleetLoadApproval}">fleetLoadApproval</label>
+                    <select id="fleetLoadApproval" th:field="*{fleetLoadApproval}" required th:classappend="${#fields.hasErrors('fleetLoadApproval')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onFleetLoadApproval}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('fleetLoadApproval')}" th:errors="*{fleetLoadApproval}"></span>
+                    <span class="hint" th:text="#{settings.fleetLoadApprovalHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="fleetPreviousCleared" th:text="#{settings.fleetPreviousCleared}">fleetPreviousCleared</label>
+                    <select id="fleetPreviousCleared" th:field="*{fleetPreviousCleared}" required th:classappend="${#fields.hasErrors('fleetPreviousCleared')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onFleetPreviousCleared}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('fleetPreviousCleared')}" th:errors="*{fleetPreviousCleared}"></span>
+                    <span class="hint" th:text="#{settings.fleetPreviousClearedHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="fleetClearanceCountersign" th:text="#{settings.fleetClearanceCountersign}">fleetClearanceCountersign</label>
+                    <select id="fleetClearanceCountersign" th:field="*{fleetClearanceCountersign}" required th:classappend="${#fields.hasErrors('fleetClearanceCountersign')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onFleetClearanceCountersign}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('fleetClearanceCountersign')}" th:errors="*{fleetClearanceCountersign}"></span>
+                    <span class="hint" th:text="#{settings.fleetClearanceCountersignHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="mobileFieldCredit" th:text="#{settings.mobileFieldCredit}">mobileFieldCredit</label>
+                    <select id="mobileFieldCredit" th:field="*{mobileFieldCredit}" required th:classappend="${#fields.hasErrors('mobileFieldCredit')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onMobileFieldCredit}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('mobileFieldCredit')}" th:errors="*{mobileFieldCredit}"></span>
+                    <span class="hint" th:text="#{settings.mobileFieldCreditHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="fleetCostsFromFloatUntil" th:text="#{settings.fleetCostsFromFloatUntil}">fleetCostsFromFloatUntil</label>
+                    <input type="date" id="fleetCostsFromFloatUntil" th:field="*{fleetCostsFromFloatUntil}"
+                           th:classappend="${#fields.hasErrors('fleetCostsFromFloatUntil')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('fleetCostsFromFloatUntil')}" th:errors="*{fleetCostsFromFloatUntil}"></span>
+                    <span class="hint" th:text="#{settings.fleetCostsFromFloatUntilHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="fleetShortageTolerancePercent" th:text="#{settings.fleetShortageTolerancePercent}">fleetShortageTolerancePercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="fleetShortageTolerancePercent" th:field="*{fleetShortageTolerancePercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('fleetShortageTolerancePercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('fleetShortageTolerancePercent')}" th:errors="*{fleetShortageTolerancePercent}"></span>
+                    <span class="hint" th:text="#{settings.fleetShortageTolerancePercentHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

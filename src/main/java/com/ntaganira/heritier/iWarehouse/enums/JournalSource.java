@@ -51,7 +51,9 @@ public enum JournalSource {
     /** A customer's debt written off on approval (F-14): bad debts against the receivable. */
     RECEIVABLE_WRITE_OFF("/accounting/write-offs/"),
     /** Takings banked from the vault (F-13): Dr Bank / Cr Cash Vault. */
-    CASH_DEPOSIT("/cash-deposits/");
+    CASH_DEPOSIT("/cash-deposits/"),
+    /** Collections banked during a trip: Dr Bank or Mobile Money / Cr Driver Float naming the driver. */
+    TRIP_DEPOSIT("/trips/");
 
     private final String path;
 

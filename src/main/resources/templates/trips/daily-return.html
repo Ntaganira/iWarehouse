@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{dailyReturn.title(${ret.trip.number})} + ' - ' + #{app.name}">Daily return - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page" th:with="t=${ret.trip}">
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{dailyReturn.title(${t.number})}">Daily return TRP-WH-2026-000001</h1>
+            <form method="get" th:action="@{/trips/{id}/daily-return(id=${t.id})}" class="table-toolbar">
+                <label class="filter-field">
+                    <span th:text="#{dailyReturn.day}">Day</span>
+                    <select name="day" class="toolbar-filter" onchange="this.form.submit()">
+                        <option th:each="d : ${ret.days}" th:value="${d}" th:selected="${d == ret.day}" th:text="${#temporals.format(d, 'dd/MM/yyyy')}">15/10/2026</option>
+                    </select>
+                </label>
+            </form>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/trips/{id}(id=${t.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!--/* The daily sales and cash return to the Order Desk (F-10; N.08): receipts, customers, items, how they were paid, banked, held */-->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+                <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{dailyReturn.kind}">DAILY SALES AND CASH RETURN</div>
+                <div class="mono" th:text="${t.number}">TRP-WH-2026-000001</div>
+                <div class="print-doc-label" th:text="${#temporals.format(ret.day, 'dd/MM/yyyy')}">15/10/2026</div>
+            </div>
+        </div>
+        <div class="print-doc-parties">
+            <div>
+                <div><span class="print-doc-label" th:text="#{trip.vehicle}">Vehicle</span> <span class="mono" th:text="${t.vehicle.plate}">RAD 512 C</span></div>
+                <div><span class="print-doc-label" th:text="#{trip.driver}">Driver</span> <span th:text="${t.driver.user.fullName}">Jean Driver</span></div>
+                <div><span class="print-doc-label" th:text="#{trip.route}">Route</span> <span th:text="${t.route ?: t.area}">Kigali – Musanze</span></div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{dailyReturn.sales}">Sales</span> <strong th:text="${@num.money(ret.totalSales)}">412,000</strong></div>
+                <div><span class="print-doc-label" th:text="#{dailyClose.cash}">Cash</span> <span th:text="${@num.money(ret.cash)}">300,000</span></div>
+                <div><span class="print-doc-label" th:text="#{dailyClose.momo}">MoMo</span> <span th:text="${@num.money(ret.momo)}">92,000</span></div>
+                <div><span class="print-doc-label" th:text="#{dailyClose.credit}">Credit</span> <span th:text="${@num.money(ret.credit)}">20,000</span></div>
+            </div>
+        </div>
+        <div class="print-doc-scroll">
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th th:text="#{dailyReturn.receipt}">Receipt</th>
+                    <th th:text="#{invoice.customer}">Customer</th>
+                    <th class="num" th:text="#{dailyReturn.pieces}">Pieces</th>
+                    <th class="num" th:text="#{dailyClose.cash}">Cash</th>
+                    <th class="num" th:text="#{dailyClose.momo}">MoMo</th>
+                    <th class="num" th:text="#{dailyClose.credit}">Credit</th>
+                    <th class="num" th:text="#{dailyClose.total}">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="s : ${ret.sales}">
+                    <td class="mono" th:text="${s.invoice.number}">MINV-WH-2026-000001</td>
+                    <td th:text="${s.invoice.billTo}">Umucyo Builders Ltd</td>
+                    <td class="num" th:text="${s.pieces}">2</td>
+                    <td class="num" th:text="${@num.money(s.cash)}">100,000</td>
+                    <td class="num" th:text="${@num.money(s.momo)}">0</td>
+                    <td class="num" th:text="${@num.money(s.credit)}">0</td>
+                    <td class="num" th:text="${@num.money(s.invoice.totalAmount)}">100,000</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(ret.sales)}">
+                    <td colspan="7" th:text="#{dailyReturn.noSales}">No sale on this day</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="2" th:text="#{dailyClose.total}">Total</th>
+                    <th class="num" th:text="${ret.pieces}">5</th>
+                    <th class="num" th:text="${@num.money(ret.cash)}">300,000</th>
+                    <th class="num" th:text="${@num.money(ret.momo)}">92,000</th>
+                    <th class="num" th:text="${@num.money(ret.credit)}">20,000</th>
+                    <th class="num" th:text="${@num.money(ret.totalSales)}">412,000</th>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+
+        <!--/* The cash: banked and spent this day, still held (BP 7.3 rule 4, SDP 10) */-->
+        <table class="print-doc-table print-doc-pair">
+            <tbody>
+                <tr><td th:text="#{dailyReturn.banked}">Banked or sent by MoMo this day</td><td class="num" th:text="${@num.money(ret.banked)}">200,000</td></tr>
+                <tr th:each="d : ${ret.deposits}"><td class="print-doc-sub" th:text="${d.number + ' · ' + d.reference}">TDP-WH-2026-000001 · BK-1</td><td class="num print-doc-sub" th:text="${@num.money(d.amount)}">200,000</td></tr>
+                <tr><td th:text="#{dailyReturn.costs}">Costs paid from the float this day</td><td class="num" th:text="${@num.money(ret.costsFromFloat)}">15,000</td></tr>
+                <tr><td><strong th:text="#{dailyReturn.held}">Cash still held at the end of the day</strong></td><td class="num"><strong th:text="${@num.money(ret.cashHeld)}">85,000</strong></td></tr>
+            </tbody>
+        </table>
+
+        <!--/* The van's equation (SDP 6): loaded = sold + broken + still on board; the day's counts */-->
+        <table class="print-doc-table print-doc-pair">
+            <tbody>
+                <tr><td th:text="#{dailyReturn.loaded}">Loaded</td><td class="num" th:text="${ret.loaded}">40</td></tr>
+                <tr><td th:text="#{dailyReturn.soldToDate}">Sold so far</td><td class="num" th:text="${ret.soldToDate}">12</td></tr>
+                <tr><td th:text="#{dailyReturn.brokenToDate}">Broken so far (accepted)</td><td class="num" th:text="${ret.brokenToDate}">1</td></tr>
+                <tr><td><strong th:text="#{dailyReturn.onBoard}">Still on board at the end of the day</strong></td><td class="num"><strong th:text="${ret.onBoard}">27</strong></td></tr>
+                <tr th:each="c : ${ret.counts}">
+                    <td th:text="#{dailyReturn.counted(#{${'tripCount.kind.' + c.kind}}, ${#temporals.format(c.countedAt, 'HH:mm')}, ${c.username})}">Counted (daily, driver) at 18:00 by driver1</td>
+                    <td class="num" th:text="#{dailyReturn.countResult(${c.found}, ${c.expected}, ${c.missing})}">27 of 27, 0 missing</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(ret.counts)}"><td colspan="2" class="print-doc-sub" th:text="#{dailyReturn.noCount}">No count of the van on this day</td></tr>
+            </tbody>
+        </table>
+
+        <div class="print-doc-signs">
+            <div><span th:text="#{dailyReturn.signDriver}">Driver</span><span class="print-doc-signline" th:text="${t.driver.user.fullName}">Jean Driver</span></div>
+            <div><span th:text="#{dailyReturn.signOrderDesk}">Received by (Order Desk)</span><span class="print-doc-signline"></span></div>
+            <div><span th:text="#{dailyReturn.signFinance}">Checked by (Finance)</span><span class="print-doc-signline"></span></div>
+        </div>
+    </div>
+</body>
+</html>

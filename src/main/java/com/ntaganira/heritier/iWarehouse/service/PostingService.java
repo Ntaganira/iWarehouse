@@ -259,7 +259,9 @@ public class PostingService {
             if (p.getMethod() == PaymentMethod.CASH) {
                 journal.addForDriver(AccountKey.DRIVER_FLOAT, p.getAmount(), driverId, null);
             } else {
-                journal.add(p.getMethod().account(), p.getAmount(), null, null, null, p.getReference(), null);
+                // Credit in the field (decision D8) is owed by the customer
+                journal.add(p.getMethod().account(), p.getAmount(), null, null,
+                        p.getMethod() == PaymentMethod.CREDIT ? invoice.getCustomer().getId() : null, p.getReference(), null);
             }
         }
         journal.credit(AccountKey.SALES, invoice.getNetAmount())
@@ -568,6 +570,18 @@ public class PostingService {
                 .debit(AccountKey.CASH_VAULT, session.getCountedCash())
                 .credit(AccountKey.CASH, session.getExpectedCash())
                 .balanceOn(AccountKey.CASH_OVER_SHORT);
+        return journalService.post(journal);
+    }
+
+    /**
+     * Collections banked during a trip (BP 7.3 rule 4): Dr Bank or Mobile Money / Cr Driver Float naming the driver, so the
+     * float to clear is less by it.
+     */
+    public JournalEntry tripDeposit(TripDeposit deposit, Trip trip) {
+        Journal journal = Journal.of(JournalSource.TRIP_DEPOSIT, trip.getId(), deposit.getNumber(), deposit.getDepositedOn(),
+                        "Collections of " + trip.getNumber() + " banked, " + deposit.getReference())
+                .add(deposit.getMethod().account(), deposit.getAmount(), null, null, null, deposit.getReference(), null)
+                .addForDriver(AccountKey.DRIVER_FLOAT, deposit.getAmount().negate(), deposit.getDriverId(), deposit.getNumber());
         return journalService.post(journal);
     }
 

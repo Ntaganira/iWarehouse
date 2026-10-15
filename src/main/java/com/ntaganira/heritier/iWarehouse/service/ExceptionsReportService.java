@@ -33,7 +33,7 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -65,6 +65,7 @@ public class ExceptionsReportService {
     private final SupplierRepository supplierRepo;
     private final SiteTransferRepository siteTransferRepo;
     private final DeliveryNoteRepository deliveryNoteRepo;
+    private final TripRepository tripRepo;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
                                    ManualJournalRepository manualJournalRepo, VehicleCostRepository vehicleCostRepo,
@@ -72,8 +73,9 @@ public class ExceptionsReportService {
                                    ReceivableWriteOffRepository writeOffRepo, PurchaseOrderRepository purchaseOrderRepo,
                                    SupplierPaymentRequestRepository paymentRequestRepo, CreditApplicationRepository creditApplicationRepo,
                                    PriceChangeRepository priceChangeRepo, SupplierRepository supplierRepo,
-                                   SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo) {
+                                   SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, TripRepository tripRepo) {
         this.deliveryNoteRepo = deliveryNoteRepo;
+        this.tripRepo = tripRepo;
         this.siteTransferRepo = siteTransferRepo;
         this.creditApplicationRepo = creditApplicationRepo;
         this.priceChangeRepo = priceChangeRepo;
@@ -88,6 +90,10 @@ public class ExceptionsReportService {
         this.vehicleCostRepo = vehicleCostRepo;
         this.creditNoteRepo = creditNoteRepo;
         this.clock = clock;
+    }
+
+    private static String tripSubject(Trip t) {
+        return t.getVehicle().getPlate() + " · " + t.getDriver().getUser().getFullName() + (t.getRoute() != null ? " · " + t.getRoute() : "");
     }
 
     public YearMonth thisMonth() {
@@ -211,6 +217,15 @@ public class ExceptionsReportService {
             rows.add(new Row(Kind.CREDIT_NOTE, n.getNumber(), "/credit-notes/" + n.getId(), n.getPostedAt(),
                     n.getInvoice().getNumber() + " · " + n.getCustomer().getName() + " · " + n.getReason(), n.getTotalAmount(), false, null,
                     n.getPostedBy(), n.getPostedBy(), Outcome.ISSUED, null));
+        }
+        // The field cycle (M15): loads approved before they left (F-09), previous trips waived by the COO (BP 7.3 rule 9)
+        for (Trip t : tripRepo.findByLoadApprovedAtBetweenOrderByLoadApprovedAtAsc(from, to)) {
+            rows.add(new Row(Kind.TRIP_LOAD, t.getNumber(), "/trips/" + t.getId(), t.getLoadApprovedAt(), tripSubject(t), t.getLoadValue(), false, null,
+                    t.getCreatedBy(), t.getLoadApprovedBy(), Outcome.APPROVED, null));
+        }
+        for (Trip t : tripRepo.findByPreviousOverrideAtBetweenOrderByPreviousOverrideAtAsc(from, to)) {
+            rows.add(new Row(Kind.TRIP_WAIVER, t.getNumber(), "/trips/" + t.getId(), t.getPreviousOverrideAt(), tripSubject(t), null, false,
+                    AuthorityLevel.COO, t.getCreatedBy(), t.getPreviousOverrideBy(), Outcome.APPROVED, t.getPreviousOverrideReason()));
         }
         rows.sort(Comparator.comparing(Row::at).thenComparing(Row::number));
         Map<Kind, Long> counts = new EnumMap<>(Kind.class);

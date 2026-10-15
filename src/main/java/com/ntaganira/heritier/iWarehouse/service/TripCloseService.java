@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.entity.AuditCase;
 import com.ntaganira.heritier.iWarehouse.entity.FloatClearance;
 import com.ntaganira.heritier.iWarehouse.entity.Trip;
@@ -42,8 +44,13 @@ public class TripCloseService {
     private final FloatService floatService;
     private final LinePricing pricing;
     private final Clock clock;
+    private final SettingService settings;
+    private final Notifier notifier;
 
-    public TripCloseService(TripRepository tripRepo, AuditCaseRepository caseRepo, FloatService floatService, LinePricing pricing, Clock clock) {
+    public TripCloseService(TripRepository tripRepo, AuditCaseRepository caseRepo, FloatService floatService, LinePricing pricing, Clock clock,
+                            SettingService settings, Notifier notifier) {
+        this.settings = settings;
+        this.notifier = notifier;
         this.tripRepo = tripRepo;
         this.caseRepo = caseRepo;
         this.floatService = floatService;
@@ -115,6 +122,60 @@ public class TripCloseService {
     @Transactional
     public Trip close(UUID tripId) {
         Trip trip = lock(tripId);
+        if (countersignRequired()) {
+            throw BusinessException.of("trip.close.byClearance", trip.getNumber());
+        }
+        requireSettled(trip);
+        trip.setClosedBy(AppUserPrincipal.currentUsername());
+        trip.setClosedAt(LocalDateTime.now(clock));
+        trip.setStatus(TripStatus.CLOSED);
+        return trip;
+    }
+
+    /** The clearance is countersigned by the Director of Finance, which closes the trip (F-11). */
+    public boolean countersignRequired() {
+        return settings.getBoolean(SettingKey.FLEET_CLEARANCE_COUNTERSIGN);
+    }
+
+    /**
+     * Clears a returned trip (F-11; the Director of Commercial): everything its closing needs settled. The Director of
+     * Finance's countersignature then closes it (another person).
+     */
+    @Transactional
+    public Trip clear(UUID tripId) {
+        Trip trip = lock(tripId);
+        if (trip.isCleared()) {
+            throw BusinessException.of("trip.clearance.cleared", trip.getNumber(), trip.getClearedBy());
+        }
+        requireSettled(trip);
+        AppUserPrincipal user = AppUserPrincipal.current().orElseThrow(() -> BusinessException.of("till.noUser"));
+        trip.setClearedBy(user.getUsername());
+        trip.setClearedById(user.getId());
+        trip.setClearedAt(LocalDateTime.now(clock));
+        notifier.holders("COUNTERSIGN_TRIP_CLEARANCE", user.getId(), NotificationKind.EOD, "notify.trip.cleared", "notify.trip.clearedText",
+                "/trips/" + trip.getId(), trip.getNumber(), user.getUsername());
+        return trip;
+    }
+
+    /** Countersigns a cleared trip's clearance, which closes it: never by who cleared it. */
+    @Transactional
+    public Trip countersign(UUID tripId) {
+        Trip trip = lock(tripId);
+        if (!trip.isCleared()) {
+            throw BusinessException.of("trip.clearance.notCleared", trip.getNumber());
+        }
+        AppUserPrincipal user = AppUserPrincipal.current().orElseThrow(() -> BusinessException.of("till.noUser"));
+        if (user.getId().equals(trip.getClearedById())) {
+            throw BusinessException.of("trip.clearance.own");
+        }
+        requireSettled(trip);
+        trip.setClosedBy(user.getUsername());
+        trip.setClosedAt(LocalDateTime.now(clock));
+        trip.setStatus(TripStatus.CLOSED);
+        return trip;
+    }
+
+    private void requireSettled(Trip trip) {
         if (!trip.isReturned()) {
             throw TripService.notState(trip);
         }
@@ -128,10 +189,6 @@ public class TripCloseService {
         if (!s.floatCleared()) {
             throw BusinessException.of("trip.close.floatNotCleared", trip.getNumber());
         }
-        trip.setClosedBy(AppUserPrincipal.currentUsername());
-        trip.setClosedAt(LocalDateTime.now(clock));
-        trip.setStatus(TripStatus.CLOSED);
-        return trip;
     }
 
     private Trip lock(UUID id) {

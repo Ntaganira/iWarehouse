@@ -1,5 +1,6 @@
 // High Bytes POS - paying (MPOS-04, MPOS-05): the customer (their frozen list prices the units), each unit's price per m²
-// (lower only within the driver's limit, with a reason), the total and its VAT, then cash and/or mobile money.
+// (lower only within the driver's limit, with a reason), the total and its VAT, then cash and/or mobile money, and
+// credit for an approved customer within what their account has left (decision D8).
 
 import 'package:flutter/material.dart';
 
@@ -21,6 +22,7 @@ class CartScreen extends StatelessWidget {
     final e = c.errors;
     final pal = Palette.of(context);
     final change = c.changeText(p);
+    final creditLeft = c.creditLeftOf(p.customer);
     const amountKeys = TextInputType.numberWithOptions(decimal: true);
     return PosPage(
       c: c,
@@ -198,6 +200,23 @@ class CartScreen extends StatelessWidget {
               ),
             ),
           ]),
+          if (creditLeft != null) ...[
+            const SizedBox(height: 12),
+            if (creditLeft == BigInt.zero)
+              NoteBox('info', c.t('mobile.pay.noCreditLeft'))
+            else
+              FieldBox(
+                label: c.t('mobile.pay.credit'),
+                hint: c.t('mobile.pay.creditLeft', [c.money(creditLeft)]),
+                error: e['credit'],
+                child: BoundField(
+                    value: c.cart.credit, keyboard: amountKeys, invalid: e['credit'] != null, onChanged: (v) => c.setCartField('credit', v)),
+              ),
+            if (creditLeft >= p.total && p.total > BigInt.zero) ...[
+              const SizedBox(height: 10),
+              OutlineButton(c.t('mobile.pay.allCredit'), onPressed: c.allCredit),
+            ],
+          ],
           for (final key in ['momoRef', 'pay'])
             if (e[key] != null)
               Padding(

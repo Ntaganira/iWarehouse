@@ -238,6 +238,7 @@
                                         <span sec:authorize="hasAuthority('PAGE_TRANSACTION_TICKETS')"> · <a href="/tickets?status=open" th:text="#{dash.biz.tickets(${biz.tickets})}">0 tickets</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_SITE_TRANSFERS')"> · <a href="/site-transfers?status=REQUESTED" th:text="#{dash.biz.siteTransfers(${biz.siteTransfers})}">0 site transfers</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_DELIVERY_NOTES')"> · <a href="/delivery-notes?status=DRAFT" th:text="#{dash.biz.deliveryNotes(${biz.deliveryNotes})}">0 delivery notes</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_FLEET')"> · <a href="/trips?status=PLANNED" th:text="#{dash.biz.loadRequests(${biz.loadRequests})}">0 loads</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_SUPPLIERS')"> · <a href="/suppliers?status=pending" th:text="#{dash.biz.suppliersWaiting(${biz.suppliers})}">0 suppliers</a></span>
                                     </div>
                                 </td>

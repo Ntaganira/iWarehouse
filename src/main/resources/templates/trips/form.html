@@ -56,6 +56,36 @@
                     <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
                 </div>
             </div>
+
+            <!--/* The load request (F-09): the Director of Commercial approves it before the vehicle leaves */-->
+            <div class="form-divider"><h3 th:text="#{trip.load.title}">Load request</h3>
+                <p class="hint" th:text="#{trip.load.formHint}">The route, the towns, the days out and the day the trip is settled by</p></div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="route" th:text="#{trip.route}">Route</label>
+                    <input type="text" id="route" th:field="*{route}" maxlength="200" th:placeholder="#{trip.routePh}"
+                           th:classappend="${#fields.hasErrors('route')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('route')}" th:errors="*{route}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="towns" th:text="#{trip.towns}">Towns</label>
+                    <input type="text" id="towns" th:field="*{towns}" maxlength="300" th:placeholder="#{trip.townsPh}"
+                           th:classappend="${#fields.hasErrors('towns')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('towns')}" th:errors="*{towns}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="daysOut" th:text="#{trip.daysOut}">Days out</label>
+                    <input type="number" id="daysOut" th:field="*{daysOut}" min="1" max="60" step="1"
+                           th:classappend="${#fields.hasErrors('daysOut')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('daysOut')}" th:errors="*{daysOut}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="settleBy" th:text="#{trip.settleBy}">Settled by</label>
+                    <input type="date" id="settleBy" th:field="*{settleBy}" th:classappend="${#fields.hasErrors('settleBy')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('settleBy')}" th:errors="*{settleBy}"></span>
+                    <span class="hint" th:text="#{trip.settleByHint}">The day the trip is back, reconciled and its cash cleared</span>
+                </div>
+            </div>
             <p class="form-note" th:if="${tripDto.id == null}" th:text="#{trip.formNote}">Once planned, add the units to its manifest on the trip's page.</p>
 
             <div class="form-actions">

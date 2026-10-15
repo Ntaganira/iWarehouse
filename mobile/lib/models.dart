@@ -1,5 +1,6 @@
-// High Bytes POS - what the phone keeps: the trip download (the API's TripBundle, SYNC-01), the sales made on it and the
-// breakage reports, each saved as the JSON the server sends or expects (controller/api/MobileApi.java on the server).
+// High Bytes POS - what the phone keeps: the trip download (the API's TripBundle, SYNC-01), the sales made on it, the
+// breakage reports, the deposits and the van counts, each saved as the JSON the server sends or expects
+// (controller/api/MobileApi.java on the server).
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -112,7 +113,8 @@ class Customer {
         name = _s(j['name']),
         tin = _s(j['tin']),
         priceListId = _sn(j['priceListId']),
-        defaultCustomer = _b(j['defaultCustomer']);
+        defaultCustomer = _b(j['defaultCustomer']),
+        creditLeft = j['creditLeft'] == null ? null : decimalText(j['creditLeft']);
 
   final String id;
   final String code;
@@ -120,6 +122,9 @@ class Customer {
   final String tin;
   final String? priceListId;
   final bool defaultCustomer;
+
+  /// What the customer may take on credit on this trip (decision D8, at the download); null: they buy without credit.
+  final String? creditLeft;
 
   String get label => code.isEmpty ? name : '$name ($code)';
 }
@@ -179,6 +184,12 @@ class Bundle {
   final Set<String> reportedBroken;
 
   String? get cashDeclared => json['cashDeclared'] == null ? null : decimalText(json['cashDeclared']);
+
+  /// The phone may sell on credit to approved customers within what their account has left (decision D8).
+  bool get fieldCredit => _b(json['fieldCredit']);
+
+  /// The sales the server had taken before this download: their credit is in each customer's credit left.
+  Set<String> get creditCounted => json['creditCounted'] is List ? (json['creditCounted'] as List).map((n) => n.toString()).toSet() : <String>{};
   String? get cashDeclaredAt => _sn(json['cashDeclaredAt']);
 
   Bundle declared(Object? amount, Object? at) => Bundle({...json, 'cashDeclared': amount, 'cashDeclaredAt': at});
@@ -209,6 +220,7 @@ class Cart {
   String tendered = '';
   String momo = '';
   String momoRef = '';
+  String credit = '';
 }
 
 class SaleLine {
@@ -314,6 +326,63 @@ class Sale {
         'total': num.parse(total),
         'cashTendered': cashTendered == null ? null : num.parse(cashTendered!),
       };
+}
+
+/// Cash banked or sent by mobile money on the road (BP 7.3 rule 4): pending until sent, then recorded or refused.
+class Deposit {
+  Deposit(this.json);
+
+  final Map<String, dynamic> json;
+
+  String get clientId => _s(json['clientId']);
+  int get seq => _i(json['seq']);
+  String get tripId => _s(json['tripId']);
+
+  /// BANK_TRANSFER | MOBILE_MONEY
+  String get method => _s(json['method']);
+  String get amount => decimalText(json['amount']);
+  String get reference => _s(json['reference']);
+  String get depositedOn => _s(json['depositedOn']); // yyyy-MM-dd
+
+  /// pending | sent | refused
+  String get status => _s(json['status']);
+  String get error => _s(json['error']);
+  Map<String, dynamic>? get result => json['result'] is Map ? _map(json['result']) : null;
+
+  /// The deposit's number once recorded (TDP-WH-2026-000001).
+  String get number => result == null ? '' : _s(result!['number']);
+}
+
+/// A count of what is on board (SDP 6): the labels scanned; pending until sent, then the server's comparison, or refused.
+class VanCount {
+  VanCount(this.json);
+
+  final Map<String, dynamic> json;
+
+  String get clientId => _s(json['clientId']);
+  int get seq => _i(json['seq']);
+  String get tripId => _s(json['tripId']);
+  List<String> get codes => json['codes'] is List ? (json['codes'] as List).map((c) => c.toString()).toList() : <String>[];
+  String get note => _s(json['note']);
+  String get countedAt => _s(json['countedAt']);
+
+  /// pending | sent | refused
+  String get status => _s(json['status']);
+  String get error => _s(json['error']);
+  Map<String, dynamic>? get result => json['result'] is Map ? _map(json['result']) : null;
+  int get expected => _i(result?['expected']);
+  int get found => _i(result?['found']);
+  List<String> get missing => result != null && result!['missing'] is List ? (result!['missing'] as List).map((c) => c.toString()).toList() : <String>[];
+  List<String> get extra => result != null && result!['extra'] is List ? (result!['extra'] as List).map((c) => c.toString()).toList() : <String>[];
+
+  /// pending | clean | missing | refused: where the count stands for the driver.
+  String get stage => status == 'pending'
+      ? 'pending'
+      : status == 'refused'
+          ? 'refused'
+          : missing.isNotEmpty
+              ? 'missing'
+              : 'clean';
 }
 
 /// Breakage on the road (MPOS-06): pending until sent, then sent (the supervisor decides) or refused by the server.

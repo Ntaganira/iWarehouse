@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.entity.AuditCase;
 import com.ntaganira.heritier.iWarehouse.entity.AuditCaseLine;
 import com.ntaganira.heritier.iWarehouse.entity.FloatClearance;
@@ -51,10 +52,12 @@ public class FleetReportService {
     private final VehicleCostRepository costRepo;
     private final VehicleRepository vehicleRepo;
     private final Clock clock;
+    private final SettingService settings;
 
     public FleetReportService(TripRepository tripRepo, SalesPaymentRepository paymentRepo, FloatClearanceRepository clearanceRepo,
                               AuditCaseRepository caseRepo, FloatService floatService, VehicleCostRepository costRepo,
-                              VehicleRepository vehicleRepo, Clock clock) {
+                              VehicleRepository vehicleRepo, Clock clock, SettingService settings) {
+        this.settings = settings;
         this.tripRepo = tripRepo;
         this.paymentRepo = paymentRepo;
         this.clearanceRepo = clearanceRepo;
@@ -68,7 +71,8 @@ public class FleetReportService {
     public record Report(List<FleetAnalysis.TripRow> trips, List<FleetAnalysis.DriverRow> drivers, FleetAnalysis.DriverRow total,
                          List<FleetAnalysis.DiscrepancyRow> discrepancies, long openDiscrepancies, List<FleetAnalysis.FloatRow> floats,
                          BigDecimal floatsOutstanding, List<FleetAnalysis.VehicleRow> vehicles, FleetAnalysis.VehicleRow vehicleTotal,
-                         List<SalesReportService.Option> driverOptions, List<SalesReportService.Option> vehicleOptions) {
+                         List<SalesReportService.Option> driverOptions, List<SalesReportService.Option> vehicleOptions,
+                         FleetAnalysis.LoadKpis loadKpis) {
     }
 
     public LocalDate today() {
@@ -145,9 +149,20 @@ public class FleetReportService {
         costs.stream().map(c -> new SalesReportService.Option(c.vehicleId().toString(), c.plate()))
                 .filter(o -> !vehicleOptions.contains(o)).distinct().forEach(vehicleOptions::add);
         vehicleOptions.sort(Comparator.comparing(SalesReportService.Option::label));
+        // Loads that left in the period with their vehicle's previous trip closed first, and shortages against the load (Annex D)
+        List<FleetAnalysis.Departure> departures = tripRepo.findByDepartedAtBetweenOrderByDepartedAtAsc(from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+                .stream().filter(t -> (driverId == null || t.getDriver().getId().equals(driverId))
+                        && (vehicleId == null || t.getVehicle().getId().equals(vehicleId)))
+                .map(t -> {
+                    List<Trip> before = tripRepo.findByVehicle_IdAndDepartedAtBeforeOrderByDepartedAtDesc(t.getVehicle().getId(), t.getDepartedAt());
+                    return new FleetAnalysis.Departure(t.getDepartedAt(), !before.isEmpty(), before.isEmpty() ? null : before.get(0).getClosedAt());
+                }).toList();
+        FleetAnalysis.DriverRow total = FleetAnalysis.total(rows);
+        FleetAnalysis.LoadKpis loadKpis = FleetAnalysis.loads(departures, total.loaded(), total.missing(),
+                settings.getDecimal(SettingKey.FLEET_SHORTAGE_TOLERANCE_PERCENT));
         return new Report(rows, FleetAnalysis.byDriver(rows), FleetAnalysis.total(rows), discrepancies,
                 discrepancies.stream().filter(d -> d.outcome() == null).count(), floats,
                 floats.stream().map(FleetAnalysis.FloatRow::amount).reduce(BigDecimal.ZERO, BigDecimal::add), byVehicle,
-                FleetAnalysis.totalVehicles(byVehicle), drivers, vehicleOptions);
+                FleetAnalysis.totalVehicles(byVehicle), drivers, vehicleOptions, loadKpis);
     }
 }

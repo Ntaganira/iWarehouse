@@ -69,12 +69,17 @@ public final class MobileSales {
 
     /** What is wrong with the payments of a sale, or empty: cash and mobile money only, each above 0, references, the total. */
     public static Optional<String> paymentProblem(Collection<Payment> payments, BigDecimal total) {
+        return paymentProblem(payments, total, false);
+    }
+
+    /** The same, credit also taken when field credit is on (decision D8; the customer's credit is checked on its own). */
+    public static Optional<String> paymentProblem(Collection<Payment> payments, BigDecimal total, boolean creditTaken) {
         if (payments.isEmpty()) {
             return Optional.of("no payment");
         }
         BigDecimal sum = BigDecimal.ZERO;
         for (Payment p : payments) {
-            if (p.method() != PaymentMethod.CASH && p.method() != PaymentMethod.MOBILE_MONEY) {
+            if (p.method() != PaymentMethod.CASH && p.method() != PaymentMethod.MOBILE_MONEY && !(creditTaken && p.method() == PaymentMethod.CREDIT)) {
                 return Optional.of(p.method() + " is not taken on the road");
             }
             if (p.amount() == null || p.amount().signum() <= 0) {

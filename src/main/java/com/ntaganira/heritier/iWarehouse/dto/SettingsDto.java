@@ -298,6 +298,35 @@ public class SettingsDto {
     @Max(value = 20, message = "{settings.workingDay.range}")
     private Integer accountsWorkingDay;
 
+    // --- The field cycle (M15)
+
+    /** The load request is approved before the vehicle leaves (F-09). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean fleetLoadApproval;
+
+    /** No new load while the last trip is not cleared (BP 7.3 rule 9). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean fleetPreviousCleared;
+
+    /** The clearance is countersigned by the Director of Finance (F-11). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean fleetClearanceCountersign;
+
+    /** Vehicle costs are paid from a float up to this day; blank = always (decision D9). */
+    @Pattern(regexp = "^$|^\\d{4}-\\d{2}-\\d{2}$", message = "{settings.date.pattern}")
+    private String fleetCostsFromFloatUntil;
+
+    /** Van stock shortages kept within this % of what was loaded (Annex D). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.fleetShortageTolerancePercent.range}")
+    @DecimalMax(value = "100", message = "{settings.fleetShortageTolerancePercent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal fleetShortageTolerancePercent;
+
+    /** The phone sells on credit to approved customers within their limit (decision D8). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean mobileFieldCredit;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

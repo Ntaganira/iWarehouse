@@ -14,6 +14,12 @@
         canClose=${#authorization.expression('hasAuthority(''PERM_CLOSE_TRIP'')')},
         canClearFloat=${#authorization.expression('hasAuthority(''PAGE_FLOATS'') and hasAuthority(''PERM_CLEAR_FLOAT'')')},
         canCases=${#authorization.expression('hasAuthority(''PAGE_AUDIT_CASES'') and hasAuthority(''PERM_VIEW_AUDIT_CASES'')')},
+        canApproveLoad=${#authorization.expression('hasAuthority(''PERM_APPROVE_LOAD_REQUEST'')')},
+        canWaive=${#authorization.expression('hasAuthority(''PERM_WAIVE_PREVIOUS_TRIP'')')},
+        canDeposit=${#authorization.expression('hasAuthority(''PERM_RECORD_TRIP_DEPOSIT'')')},
+        canCount=${#authorization.expression('hasAuthority(''PERM_COUNT_VAN'')')},
+        canClear=${#authorization.expression('hasAuthority(''PERM_CLEAR_TRIP'')')},
+        canCountersign=${#authorization.expression('hasAuthority(''PERM_COUNTERSIGN_TRIP_CLEARANCE'')')},
         v=${trip.vehicle}, base=${'/trips/' + trip.id}">
     <div class="page-header">
         <div>
@@ -38,15 +44,47 @@
                     data-modal-open="cash-modal" th:text="#{trip.cash.record}">Cash declared</button>
             <a class="btn btn-outline" th:if="${s == 'RETURNED' and canClearFloat and settlement.floatNeeded() and settlement.clearance() == null and trip.cashDeclaredAt != null}"
                th:href="@{/floats/clear/{id}(id=${trip.id})}" th:text="#{float.clear}">Clear the float</a>
+            <button type="button" class="btn btn-outline" th:if="${s == 'PLANNED' and canWaive and previous != null and trip.previousOverrideAt == null}"
+                    data-modal-open="waive-modal" th:text="#{trip.previous.waive}">Waive the previous trip</button>
+            <form th:if="${s == 'PLANNED' and canApproveLoad and loadApprovalRequired and !trip.loadApproved}" th:action="@{/trips/{id}/approve-load(id=${trip.id})}"
+                  method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{trip.load.approveConfirm(${trip.number}, ${trip.lines.size()}, ${@num.money(loadValueNow)})}">
+                <button type="submit" class="btn btn-outline" th:text="#{trip.load.approve}">Approve the load</button>
+            </form>
+            <a class="btn btn-outline" th:if="${s == 'DEPARTED' and canCount and !isDriver}" th:href="@{/trips/{id}/count(id=${trip.id})}" th:text="#{tripCount.action}">Count the van</a>
+            <button type="button" class="btn btn-outline" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canDeposit and !floatCleared}"
+                    data-modal-open="deposit-modal" th:text="#{tripDeposit.action}">Record a deposit</button>
             <button type="button" class="btn btn-primary" th:if="${s == 'PLANNED' and canDepart}" data-modal-open="depart-modal"
                     th:text="#{trip.depart}">Confirm departure</button>
             <button type="button" class="btn btn-primary" th:if="${s == 'DEPARTED' and canReturn}" data-modal-open="reconcile-modal"
                     th:text="#{trip.return.reconcile}">Reconcile the return</button>
-            <form th:if="${s == 'RETURNED' and canClose and settlement.canClose()}" th:action="@{/trips/{id}/close(id=${trip.id})}" method="post"
+            <form th:if="${s == 'RETURNED' and !countersignRequired and canClose and settlement.canClose()}" th:action="@{/trips/{id}/close(id=${trip.id})}" method="post"
                   class="row-action-form confirm-submit" th:attr="data-confirm=#{trip.closeConfirm(${trip.number})}">
                 <button type="submit" class="btn btn-primary" th:text="#{trip.close}">Close the trip</button>
             </form>
+            <!--/* The clearance certificate (F-11): cleared by the Director of Commercial, countersigned by the Director of Finance */-->
+            <form th:if="${s == 'RETURNED' and countersignRequired and canClear and !trip.cleared and settlement.canClose()}" th:action="@{/trips/{id}/clear(id=${trip.id})}"
+                  method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{trip.clearance.clearConfirm(${trip.number})}">
+                <button type="submit" class="btn btn-primary" th:text="#{trip.clearance.clear}">Clear the trip</button>
+            </form>
+            <form th:if="${s == 'RETURNED' and countersignRequired and canCountersign and trip.cleared and !clearedByMe}" th:action="@{/trips/{id}/countersign(id=${trip.id})}"
+                  method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{trip.clearance.countersignConfirm(${trip.number}, ${trip.clearedBy})}">
+                <button type="submit" class="btn btn-primary" th:text="#{trip.clearance.countersign}">Countersign and close</button>
+            </form>
         </div>
+    </div>
+
+    <!-- The load request (F-09), the previous trip (BP 7.3 rule 9), the clearance (F-11) -->
+    <div class="doc-note is-danger" th:if="${s == 'PLANNED' and previous != null and trip.previousOverrideAt == null}"
+         th:text="#{trip.previous.openNote(${previous.number}, #{${'trip.status.' + previous.status}})}">The driver's or the vehicle's last trip TRP-WH-2026-000003 is not cleared (Returned): no new load leaves until it is, unless the COO waives it.</div>
+    <div class="doc-note is-warning" th:if="${trip.previousOverrideAt != null}"
+         th:text="#{trip.previous.waivedNote(${trip.previousOverrideBy}, ${#temporals.format(trip.previousOverrideAt, 'dd/MM/yyyy HH:mm')}, ${trip.previousOverrideReason})}">Previous trip waived by coo1 on 15/10/2026 10:00: urgent order.</div>
+    <div class="doc-note is-warning" th:if="${s == 'PLANNED' and loadApprovalRequired and !trip.loadApproved}"
+         th:text="${trip.route == null or trip.settleBy == null} ? #{trip.load.incompleteNote} : #{trip.load.waitingNote}">The load request waits for the Director of Commercial's approval before the vehicle leaves.</div>
+    <div class="doc-note" th:if="${trip.loadApproved}"
+         th:text="#{trip.load.approvedNote(${trip.loadApprovedBy}, ${#temporals.format(trip.loadApprovedAt, 'dd/MM/yyyy HH:mm')}, ${@num.money(trip.loadValue)})}">Load request approved by commercial1 on 15/10/2026 09:00 (value at cost 1,250,000 RWF).</div>
+    <div class="doc-note is-success" th:if="${trip.cleared}">
+        <span th:text="#{trip.clearance.clearedNote(${trip.clearedBy}, ${#temporals.format(trip.clearedAt, 'dd/MM/yyyy HH:mm')})}">Cleared by commercial1 on 15/10/2026 19:00.</span>
+        <span th:if="${s == 'RETURNED'}" th:text="#{trip.clearance.waitingCountersign}">The Director of Finance countersigns it, which closes the trip.</span>
     </div>
 
     <!-- Where the trip stands -->
@@ -227,6 +265,42 @@
         </div>
     </div>
 
+    <!--/* The load request (F-09) and the trip's papers (F-09, F-10, F-11) */-->
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{trip.load.title}">Load request</h2>
+            <div class="btn-group">
+                <a class="btn btn-outline btn-sm" th:if="${trip.departedAt != null}" th:href="@{/trips/{id}/issue-note(id=${trip.id})}" th:text="#{trip.papers.issueNote}">Stock issue note</a>
+                <a class="btn btn-outline btn-sm" th:if="${trip.departedAt != null}" th:href="@{/trips/{id}/daily-return(id=${trip.id})}" th:text="#{trip.papers.dailyReturn}">Daily return</a>
+                <a class="btn btn-outline btn-sm" th:if="${trip.cleared or s == 'CLOSED'}" th:href="@{/trips/{id}/clearance(id=${trip.id})}" th:text="#{trip.papers.clearance}">Clearance certificate</a>
+            </div>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{trip.route}">Route</label>
+                    <div class="value" th:text="${trip.route ?: '—'}">Kigali – Musanze – Rubavu</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{trip.towns}">Towns</label>
+                    <div class="value" th:text="${trip.towns ?: '—'}">Musanze, Rubavu</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{trip.daysOut}">Days out</label>
+                    <div class="value" th:text="${trip.daysOut ?: '—'}">3</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{trip.settleBy}">Settled by</label>
+                    <div class="value" th:text="${trip.settleBy != null} ? ${#temporals.format(trip.settleBy, 'dd/MM/yyyy')} : '—'">18/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{trip.load.value}">Value at cost (RWF)</label>
+                    <div class="value" th:text="${trip.loadValue != null} ? ${@num.money(trip.loadValue)} : (${loadValueNow != null} ? ${@num.money(loadValueNow)} : '—')">1,250,000</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-manifest" th:classappend="${tab == 'manifest'} ? 'active'">
@@ -244,6 +318,14 @@
             <button type="button" class="tab" data-tab="tab-costs" th:classappend="${tab == 'costs'} ? 'active'">
                 <span th:text="#{trip.tab.costs}">Costs</span>
                 <span class="section-count" th:text="${costs.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-deposits" th:if="${away}" th:classappend="${tab == 'deposits'} ? 'active'">
+                <span th:text="#{trip.tab.deposits}">Deposits</span>
+                <span class="section-count" th:text="${deposits.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-counts" th:if="${away}" th:classappend="${tab == 'counts'} ? 'active'">
+                <span th:text="#{trip.tab.counts}">Van counts</span>
+                <span class="section-count" th:text="${counts.totalElements}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
                 <span th:text="#{attachment.tab}">Documents</span>
@@ -644,6 +726,83 @@
             </div>
 
             <!-- The photos of breakage on the road and any paper of the trip -->
+            <!--/* Collections banked during the trip (BP 7.3 rule 4) */-->
+            <div class="tab-content" id="tab-deposits" th:if="${away}" th:classappend="${tab == 'deposits'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="${floatLeft != null and !floatCleared} ? #{tripDeposit.intro(${@num.money(bankedTotal)}, ${@num.money(floatLeft)})} : #{tripDeposit.introDone(${@num.money(bankedTotal)})}">Banked during the trip: 120,000 RWF. Still on the float: 35,000 RWF.</p>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{tripDeposit.number}">Deposit</th>
+                                <th th:text="#{tripDeposit.day}">Day</th>
+                                <th th:text="#{tripDeposit.method}">How</th>
+                                <th th:text="#{pos.pay.reference}">Reference</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                                <th th:text="#{tripDeposit.recordedBy}">Recorded</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${deposits.content}">
+                                <td class="mono" th:text="${d.number}">TDP-WH-2026-000001</td>
+                                <td class="nowrap" th:text="${#temporals.format(d.depositedOn, 'dd/MM/yyyy')}">15/10/2026</td>
+                                <td th:text="#{${'payment.method.' + d.method}}">Bank transfer</td>
+                                <td class="mono" th:text="${d.reference}">BK-5512</td>
+                                <td class="num" th:text="${@num.money(d.amount)}">120,000</td>
+                                <td>
+                                    <span th:text="${d.username}">driver1</span>
+                                    <div class="cell-sub" th:text="#{${'tripDeposit.via.' + d.recordedVia}}">From the phone</div>
+                                </td>
+                            </tr>
+                            <tr th:if="${deposits.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state slim" th:text="#{tripDeposit.none}">Nothing banked during this trip</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${deposits}, ${base}, 'tab=deposits')}"></th:block>
+            </div>
+
+            <!--/* The van counted on the road: the driver's daily count, a supervisor's unannounced one (SDP 6, BP 7.3 rule 10) */-->
+            <div class="tab-content" id="tab-counts" th:if="${away}" th:classappend="${tab == 'counts'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{tripCount.intro}">The driver counts what is on board each day from the phone; a supervisor counts it unannounced.</p>
+                    <a class="btn btn-outline" th:if="${s == 'DEPARTED' and canCount and !isDriver}" th:href="@{/trips/{id}/count(id=${trip.id})}" th:text="#{tripCount.action}">Count the van</a>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{tripCount.when}">When</th>
+                                <th th:text="#{tripCount.kind}">Count</th>
+                                <th class="num" th:text="#{tripCount.expected}">Expected</th>
+                                <th class="num" th:text="#{tripCount.found}">Found</th>
+                                <th class="num" th:text="#{tripCount.missing}">Missing</th>
+                                <th class="num" th:text="#{tripCount.extra}">Not expected</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${counts.content}">
+                                <td>
+                                    <span class="nowrap" th:text="${#temporals.format(c.countedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 12:00</span>
+                                    <div class="cell-sub" th:text="${c.username}">driver1</div>
+                                </td>
+                                <td><span class="badge" th:classappend="${c.clean} ? 'badge-success' : 'badge-danger'" th:text="#{${'tripCount.kind.' + c.kind}}">Daily (driver)</span></td>
+                                <td class="num" th:text="${c.expected}">14</td>
+                                <td class="num" th:text="${c.found}">14</td>
+                                <td class="num" th:classappend="${c.missing > 0} ? 'text-danger'" th:text="${c.missing}">0</td>
+                                <td class="num" th:classappend="${c.extra > 0} ? 'text-danger'" th:text="${c.extra}">0</td>
+                            </tr>
+                            <tr th:if="${counts.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state slim" th:text="#{tripCount.none}">No count of this van yet</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${counts}, ${base}, 'tab=counts')}"></th:block>
+            </div>
+
             <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
                 <th:block th:replace="~{fragments/attachments :: documents('TRIP', ${trip.id}, ${documents}, ${base})}"></th:block>
             </div>
@@ -661,6 +820,47 @@
     </th:block>
 
     <!-- Departure (FLT-06, FLT-07): the supervisor approves the loading -->
+    <th:block th:if="${s == 'PLANNED' and canWaive and previous != null and trip.previousOverrideAt == null}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('waive-modal', #{trip.previous.waiveTitle(${previous.number})},
+                @{/trips/{id}/waive-previous(id=${trip.id})}, #{trip.previous.waiveText}, #{trip.previous.waive})}"></div>
+    </th:block>
+
+    <div class="modal-overlay" id="deposit-modal" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canDeposit and !floatCleared}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deposit-title">
+            <div class="modal-header">
+                <h3 id="deposit-title" th:text="#{tripDeposit.title(${trip.number})}">A deposit of TRP-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="deposit-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/trips/{id}/deposits(id=${trip.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{tripDeposit.text(${@num.money(floatLeft)})}">Collections the driver banked or sent by mobile money during the trip. Still on the float: 35,000 RWF.</p>
+                    <div class="form-group">
+                        <label for="deposit-method" th:text="#{tripDeposit.method}">How</label>
+                        <select id="deposit-method" name="method">
+                            <option th:each="m : ${depositMethods}" th:value="${m}" th:text="#{${'payment.method.' + m}}">Bank transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="deposit-amount" th:text="#{pos.amount}">Amount (RWF)</label>
+                        <input type="number" id="deposit-amount" name="amount" min="0" step="any" inputmode="decimal" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="deposit-reference" th:text="#{tripDeposit.reference}">Slip or transfer reference</label>
+                        <input type="text" id="deposit-reference" name="reference" maxlength="60" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="deposit-day" th:text="#{tripDeposit.day}">Day</label>
+                        <input type="date" id="deposit-day" name="depositedOn" th:value="${today}" th:attr="max=${today}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="deposit-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{tripDeposit.save}">Record the deposit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="depart-modal" th:if="${s == 'PLANNED' and canDepart}">
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="depart-modal-title">
             <div class="modal-header">

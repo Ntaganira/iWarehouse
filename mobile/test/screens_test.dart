@@ -163,10 +163,34 @@ void main() {
     c.clearNotice();
     await shot('reports', full: true);
 
+    // On the road: a deposit at the bank, then a count of the van (the broken sheet still rides on it)
+    c.setDepositAmount('20000');
+    c.setDepositField('reference', 'BK-2026-58812');
+    c.go(PosView.deposit);
+    c.clearNotice();
+    await shot('deposit', full: true);
+    await tester.runAsync(() async {
+      await c.saveDeposit();
+      await settle();
+    });
+    server.onBoard = ['U-WH-000004'];
+    c.go(PosView.count);
+    c.countCode('U-WH-000004');
+    c.countCode('U-WH-000077');
+    c.clearNotice();
+    await shot('count', full: true);
+    c.removeCounted('U-WH-000077');
+    await tester.runAsync(() async {
+      await c.saveCount();
+      await settle();
+    });
+    c.clearNotice();
+    await shot('counted', full: true);
+
     c.go(PosView.day);
     await shot('day', full: true);
 
-    c.setDeclareAmount('45920'); // the two sales' cash
+    c.setDeclareAmount('25920'); // the two sales' cash less the deposit
     c.go(PosView.declare);
     c.clearNotice();
     await shot('declare');

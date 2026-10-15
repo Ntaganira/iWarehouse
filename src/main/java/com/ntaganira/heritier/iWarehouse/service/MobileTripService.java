@@ -54,12 +54,14 @@ public class MobileTripService {
     private final TripBreakageRepository breakageRepo;
     private final CompanyLogoService logos;
     private final Clock clock;
+    private final FieldCreditService fieldCredit;
 
     public MobileTripService(TripRepository tripRepo, DriverRepository driverRepo, StockUnitRepository unitRepo,
                              CustomerRepository customerRepo, UserRepository userRepo, TripPriceListRepository priceListSnapshotRepo,
                              TripPriceRepository priceSnapshotRepo, TripInvoiceNumberRepository numberRepo, PriceListItemRepository itemRepo,
                              PriceListService priceListService, DocumentNumberService numbers, SettingService settings, LinePricing pricing,
-                             TripBreakageRepository breakageRepo, CompanyLogoService logos, Clock clock) {
+                             TripBreakageRepository breakageRepo, CompanyLogoService logos, Clock clock, FieldCreditService fieldCredit) {
+        this.fieldCredit = fieldCredit;
         this.tripRepo = tripRepo;
         this.driverRepo = driverRepo;
         this.unitRepo = unitRepo;
@@ -85,7 +87,8 @@ public class MobileTripService {
     /** Everything a phone needs to sell offline for a trip. */
     public record Bundle(Trip trip, List<StockUnit> units, List<TripPriceList> lists, List<TripPrice> prices, List<Customer> customers,
                          List<String> numbers, BigDecimal discountLimit, int decimals, Company company, EbmMode ebmMode,
-                         LocalDateTime downloadedAt, List<UUID> reportedBroken, BigDecimal cashDeclared) {
+                         LocalDateTime downloadedAt, List<UUID> reportedBroken, BigDecimal cashDeclared, boolean creditOn,
+                         Map<UUID, BigDecimal> creditLeft) {
     }
 
     /** The driver's trip on the road, or why there is none. */
@@ -119,11 +122,12 @@ public class MobileTripService {
         }
         Company company = new Company(settings.get(SettingKey.COMPANY_NAME), settings.get(SettingKey.COMPANY_TIN),
                 settings.get(SettingKey.COMPANY_ADDRESS), settings.get(SettingKey.COMPANY_PHONE), logos.dataUri());
+        List<Customer> customers = customerRepo.findByEnabledTrueOrderByNameAsc();
         return new Bundle(trip, units, priceListSnapshotRepo.findByTripId(trip.getId()), priceSnapshotRepo.findByTripId(trip.getId()),
-                customerRepo.findByEnabledTrueOrderByNameAsc(), unused, discountLimit(user.getId()), pricing.baseDecimals(), company,
+                customers, unused, discountLimit(user.getId()), pricing.baseDecimals(), company,
                 EbmMode.valueOf(settings.get(SettingKey.EBM_MODE)), now,
                 units.isEmpty() ? List.of() : breakageRepo.findStandingUnitIds(trip.getId(), units.stream().map(StockUnit::getId).toList()),
-                trip.getCashDeclared());
+                trip.getCashDeclared(), fieldCredit.enabled(), fieldCredit.leftOf(customers));
     }
 
     /**

@@ -78,6 +78,23 @@
                 <div class="kpi-trend flat"><span class="vs" th:text="#{fleetReport.kpi.floatsSub(${report.openDiscrepancies})}">today · 1 difference to settle</span></div>
             </div>
         </div>
+        <!--/* Annex D: loads reconciled before the next (target 100 %), van shortages within the tolerance */-->
+        <div class="kpi-card" th:with="k=${report.loadKpis}">
+            <div class="kpi-icon" th:classappend="${k.allCleared} ? 'green' : 'red'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fleetReport.kpi.cleared}">Loads after the last cleared</div>
+                <div class="kpi-value" th:text="${k.clearedPercent != null} ? ${k.clearedPercent + ' %'} : '—'">100.0 %</div>
+                <div class="kpi-trend" th:classappend="${k.allCleared} ? 'flat' : 'bad'"><span class="vs" th:text="#{fleetReport.kpi.clearedSub(${k.afterCleared}, ${k.loads})}">5 of 5 loads · target 100 %</span></div>
+            </div>
+        </div>
+        <div class="kpi-card" th:with="k=${report.loadKpis}">
+            <div class="kpi-icon" th:classappend="${k.shortageBreached} ? 'red' : 'blue'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fleetReport.kpi.shortage}">Van stock missing</div>
+                <div class="kpi-value" th:text="${k.shortagePercent != null} ? ${k.shortagePercent + ' %'} : '—'">0.00 %</div>
+                <div class="kpi-trend" th:classappend="${k.shortageBreached} ? 'bad' : 'flat'"><span class="vs" th:text="#{fleetReport.kpi.shortageSub(${k.missing}, ${k.loaded}, ${k.tolerance})}">0 of 40 loaded · tolerance 0.5 %</span></div>
+            </div>
+        </div>
     </div>
 
     <div class="section">

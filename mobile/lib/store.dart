@@ -1,5 +1,5 @@
-// High Bytes POS - what the phone keeps between launches: settings and the trip (kv), the sales and the breakage reports
-// (SYNC-02). SQLite in the app's own storage, which the system does not clear the way a browser may clear a web app's:
+// High Bytes POS - what the phone keeps between launches: settings and the trip (kv), the sales, the breakage reports, the
+// deposits and the van counts (SYNC-02). SQLite in the app's own storage, which the system does not clear the way a browser may clear a web app's:
 // a sale waiting to sync is money the driver holds.
 
 import 'dart:convert';
@@ -14,7 +14,7 @@ abstract class Store {
 
   Future<void> remove(String key);
 
-  /// Every row of 'sales' or 'breakages', oldest first.
+  /// Every row of 'sales', 'breakages', 'deposits' or 'counts', oldest first.
   Future<List<Map<String, dynamic>>> all(String table);
 
   /// Saves a row by its clientId.
@@ -27,13 +27,20 @@ class SqliteStore implements Store {
   SqliteStore._(this._db);
 
   final Database _db;
-  static const tables = ['sales', 'breakages'];
+  static const tables = ['sales', 'breakages', 'deposits', 'counts'];
 
   static Future<SqliteStore> open() async {
-    final db = await openDatabase(p.join(await getDatabasesPath(), 'highbytes-pos.db'), version: 1, onCreate: (db, version) async {
+    Future<void> create(Database db, String t) => db.execute('CREATE TABLE $t (client_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, body TEXT NOT NULL)');
+    final db = await openDatabase(p.join(await getDatabasesPath(), 'highbytes-pos.db'), version: 2, onCreate: (db, version) async {
       await db.execute('CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
       for (final t in tables) {
-        await db.execute('CREATE TABLE $t (client_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, body TEXT NOT NULL)');
+        await create(db, t);
+      }
+    }, onUpgrade: (db, from, to) async {
+      // Version 2 (M15): the deposits and the van counts
+      if (from < 2) {
+        await create(db, 'deposits');
+        await create(db, 'counts');
       }
     });
     return SqliteStore._(db);
@@ -78,7 +85,7 @@ class SqliteStore implements Store {
 /// The same in memory, for the tests.
 class MemoryStore implements Store {
   final Map<String, String> _kv = {};
-  final Map<String, Map<String, String>> _rows = {'sales': {}, 'breakages': {}};
+  final Map<String, Map<String, String>> _rows = {for (final t in SqliteStore.tables) t: {}};
 
   @override
   Future<Object?> get(String key) async => _kv.containsKey(key) ? jsonDecode(_kv[key]!) : null;

@@ -129,6 +129,20 @@ public enum SettingKey {
     /** The month's accounts are ready by this working day of the next month (BP 5.3). */
     CALENDAR_ACCOUNTS_WORKING_DAY("calendar.accounts-working-day", "accountsWorkingDay", "10"),
 
+    // --- The field cycle (M15)
+    /** The load request is approved before the vehicle leaves (F-09). */
+    FLEET_LOAD_APPROVAL("fleet.load-approval", "fleetLoadApproval", "true"),
+    /** No new load while the driver's or the vehicle's last trip is not cleared (BP 7.3 rule 9). */
+    FLEET_PREVIOUS_CLEARED("fleet.previous-cleared", "fleetPreviousCleared", "true"),
+    /** The clearance is countersigned by the Director of Finance, which closes the trip (F-11). */
+    FLEET_CLEARANCE_COUNTERSIGN("fleet.clearance-countersign", "fleetClearanceCountersign", "true"),
+    /** Vehicle costs may be paid from a trip's float up to this day; blank = always (decision D9). yyyy-MM-dd. */
+    FLEET_COSTS_FROM_FLOAT_UNTIL("fleet.costs-from-float-until", "fleetCostsFromFloatUntil", "2026-12-31"),
+    /** Van stock shortages are kept within this % of the value loaded (Annex D). */
+    FLEET_SHORTAGE_TOLERANCE_PERCENT("fleet.shortage-tolerance-percent", "fleetShortageTolerancePercent", "0.5"),
+    /** The phone sells on credit to approved customers within their limit (decision D8). */
+    MOBILE_FIELD_CREDIT("mobile.field-credit", "mobileFieldCredit", "true"),
+
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),
     /** Documents refuse a rate older than this many days, so a forgotten update is noticed (ACC-02). */

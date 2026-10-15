@@ -49,6 +49,7 @@ class MobileSaleServiceTest {
     private final Map<UUID, SalesInvoice> invoices = new HashMap<>();
     private final Map<UUID, SyncConflict> conflicts = new HashMap<>();
     private final Map<String, TripInvoiceNumber> numbers = new HashMap<>();
+    private final FieldCreditService fieldCredit = mock(FieldCreditService.class);
 
     private Trip trip;
     private Driver driver;
@@ -187,7 +188,7 @@ class MobileSaleServiceTest {
                 mock(DocumentNumberService.class), CLOCK);
         service = new MobileSaleService(invoiceRepo, paymentRepo, conflictRepo, numberRepo, tripRepo, driverRepo, deviceRepo, unitRepo,
                 productRepo, customerRepo, priceListRepo, tripService, stockService, postingService, ebmService, pricing, notifier,
-                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK, mock(SettingService.class));
+                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK, mock(SettingService.class), fieldCredit);
     }
 
     @AfterEach
@@ -398,7 +399,36 @@ class MobileSaleServiceTest {
         assertThat(units.get(0).getStatus()).isEqualTo(StockStatus.ON_VEHICLE);
     }
 
+    @Test
+    void creditOnTheRoadGoesOnlyToApprovedCustomersWithinWhatTheyHaveLeft() {   // decision D8, CREDIT_REFUSED
+        // Off in the Settings: a sale on credit is kept for the supervisor
+        MobileSaleService.Result off = service.submit(jean, phone.getId(), sale(1, credit("25920"), units.get(0)));
+        assertThat(off.conflict().getReason()).isEqualTo(SyncConflictReason.CREDIT_REFUSED);
+        assertThat(off.conflict().getDetail()).contains("not given on the road");
+        when(fieldCredit.enabled()).thenReturn(true);
+        // A customer without credit
+        assertThat(service.submit(jean, phone.getId(), sale(2, credit("25920"), units.get(0))).conflict().getDetail()).contains("no credit");
+        // More than what is left on the account today
+        when(fieldCredit.leftOf(any(Customer.class))).thenReturn(new BigDecimal("20000"));
+        assertThat(service.submit(jean, phone.getId(), sale(3, credit("25920"), units.get(0))).conflict().getDetail())
+                .contains("beyond the 20000 left");
+        assertThat(units.get(0).getStatus()).isEqualTo(StockStatus.ON_VEHICLE);
+        // Within it: taken, part on credit and part in cash
+        when(fieldCredit.leftOf(any(Customer.class))).thenReturn(new BigDecimal("30000"));
+        MobileSaleService.Result taken = service.submit(jean, phone.getId(), sale(4, List.of(
+                new MobileSaleService.PaymentRequest(PaymentMethod.CREDIT, new BigDecimal("20000"), null),
+                new MobileSaleService.PaymentRequest(PaymentMethod.CASH, new BigDecimal("5920"), null)), units.get(0)));
+        assertThat(taken.outcome()).isEqualTo(MobileSaleService.Outcome.ACCEPTED);
+        assertThat(units.get(0).getStatus()).isEqualTo(StockStatus.SOLD);
+        verify(postingService).mobileSale(any(), argThat(p -> p.stream().anyMatch(x -> x.getMethod() == PaymentMethod.CREDIT
+                && x.getAmount().compareTo(new BigDecimal("20000")) == 0)), any(), eq(driver.getId()));
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static List<MobileSaleService.PaymentRequest> credit(String amount) {
+        return List.of(new MobileSaleService.PaymentRequest(PaymentMethod.CREDIT, new BigDecimal(amount), null));
+    }
 
     private MobileSaleService.SaleRequest sale(int number, List<MobileSaleService.PaymentRequest> payments, StockUnit... sold) {
         List<MobileSaleService.LineRequest> lines = Arrays.stream(sold).map(u -> line(u, "27000", "25920")).toList();

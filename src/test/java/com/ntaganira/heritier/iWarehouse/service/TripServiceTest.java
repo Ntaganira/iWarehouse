@@ -60,6 +60,7 @@ class TripServiceTest {
     private Notifier notifier;
     private StockService stockService;
     private TripService service;
+    private final SettingService settings = mock(SettingService.class);
 
     @BeforeEach
     void setUp() {
@@ -118,6 +119,13 @@ class TripServiceTest {
         });
         when(tripRepo.lockById(any())).thenAnswer(a -> Optional.ofNullable(trips.get(a.<UUID>getArgument(0))));
         when(tripRepo.findDetailedById(any())).thenAnswer(a -> Optional.ofNullable(trips.get(a.<UUID>getArgument(0))));
+        when(tripRepo.findOfDriverOrVehicle(any(), any(), any())).thenAnswer(a -> {
+            UUID driverId = a.getArgument(0);
+            UUID vehicleId = a.getArgument(1);
+            Collection<TripStatus> statuses = a.getArgument(2);
+            return trips.values().stream().filter(t -> statuses.contains(t.getStatus())
+                    && (t.getDriver().getId().equals(driverId) || t.getVehicle().getId().equals(vehicleId))).toList();
+        });
         // Planned trips hold the units on their manifest
         when(tripRepo.findHolds(any())).thenAnswer(a -> {
             Collection<UUID> ids = a.getArgument(0);
@@ -131,7 +139,7 @@ class TripServiceTest {
         when(numbers.next(DocumentType.TRIP)).thenReturn("TRP-WH-2026-000001", "TRP-WH-2026-000002");
         stockService = new StockService(unitRepo, movementRepo, mock(StockCostEntryRepository.class), mock(StockAdjustmentLineRepository.class),
                 mock(StockCountRepository.class), mock(SalesInvoiceLineRepository.class), tripRepo, locationRepo, numbers, CLOCK);
-        service = new TripService(tripRepo, vehicleRepo, driverRepo, unitRepo, stockService, numbers, notifier, new NumberFormats(), CLOCK);
+        service = new TripService(tripRepo, vehicleRepo, driverRepo, unitRepo, stockService, numbers, notifier, new NumberFormats(), CLOCK, settings);
         signIn(7L, "supervisor1");
     }
 
@@ -365,6 +373,71 @@ class TripServiceTest {
 
     // ---------------------------------------------------------------- helpers
 
+    // ---------------------------------------------------------------- the load request (F-09) and the previous trip (BP 7.3 rule 9)
+
+    @Test
+    void aLoadLeavesOnlyOnceAnotherPersonApprovedItsRequest() {
+        when(settings.getBoolean(SettingKey.FLEET_LOAD_APPROVAL)).thenReturn(true);
+        Trip trip = plan();
+        List<StockUnit> five = sheets(5, rack1, "14.40");
+        service.addUnits(trip.getId(), codes(five));
+        service.scan(trip.getId(), codes(five));
+        assertThatThrownBy(() -> service.depart(trip.getId(), null))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.depart.notApproved");
+        // The request carries its route and the day it is settled by
+        assertThatThrownBy(() -> service.approveLoad(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.load.incomplete");
+        trip.setRoute("Kigali - Musanze");
+        trip.setSettleBy(TODAY.plusDays(2));
+        // Whoever planned the trip does not approve its load
+        trip.setCreatedBy("supervisor1");
+        assertThatThrownBy(() -> service.approveLoad(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.load.ownRequest");
+
+        signIn(9L, "commercial1");
+        service.approveLoad(trip.getId());
+        assertThat(trip.getLoadApprovedBy()).isEqualTo("commercial1");
+        assertThat(trip.getLoadValue()).isEqualByComparingTo("165500.00");                 // 5 x 33,100 at cost
+        assertThatThrownBy(() -> service.approveLoad(trip.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.load.approved");
+
+        // A unit added afterwards withdraws the approval: the load approved is the load that leaves
+        List<StockUnit> sixth = sheets(1, rack1, "14.40");
+        service.addUnits(trip.getId(), codes(sixth));
+        assertThat(trip.isLoadApproved()).isFalse();
+        service.scan(trip.getId(), codes(sixth));
+        service.approveLoad(trip.getId());
+        service.depart(trip.getId(), null);
+        assertThat(trip.getStatus()).isEqualTo(TripStatus.DEPARTED);
+    }
+
+    @Test
+    void aNewLoadWaitsForTheLastTripToBeClearedUnlessTheCooWaivesIt() {
+        when(settings.getBoolean(SettingKey.FLEET_PREVIOUS_CLEARED)).thenReturn(true);
+        Trip last = plan();
+        last.setStatus(TripStatus.RETURNED);                                                 // back, not cleared yet
+        Trip next = plan();
+        List<StockUnit> two = sheets(2, rack1, "14.40");
+        service.addUnits(next.getId(), codes(two));
+        service.scan(next.getId(), codes(two));
+        assertThat(service.unclearedPrevious(next)).contains(last);
+        assertThatThrownBy(() -> service.depart(next.getId(), null))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.previous.open")
+                .satisfies(e -> assertThat(((BusinessException) e).getArgs()).containsExactly(last.getNumber(), "RETURNED", next.getNumber()));
+
+        // Only the COO or a higher office waives it, with a reason
+        assertThatThrownBy(() -> service.waivePrevious(next.getId(), "Urgent order"))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.previous.notCoo");
+        signIn(11L, "coo1", "PERM_AUTHORITY_COO");
+        assertThatThrownBy(() -> service.waivePrevious(next.getId(), "  "))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "trip.previous.reason");
+        service.waivePrevious(next.getId(), "Urgent order for Rubavu");
+        assertThat(next.getPreviousOverrideBy()).isEqualTo("coo1");
+        assertThat(next.getPreviousOverrideReason()).isEqualTo("Urgent order for Rubavu");
+        service.depart(next.getId(), null);
+        assertThat(next.getStatus()).isEqualTo(TripStatus.DEPARTED);
+    }
+
     private Trip plan() {
         return service.create(tripForm(TODAY));
     }
@@ -422,8 +495,9 @@ class TripServiceTest {
         return p;
     }
 
-    private static void signIn(long id, String username) {
-        AppUserPrincipal principal = new AppUserPrincipal(id, username, username, "x", true, true, List.of());
+    private static void signIn(long id, String username, String... authorities) {
+        AppUserPrincipal principal = new AppUserPrincipal(id, username, username, "x", true, true,
+                Arrays.stream(authorities).map(org.springframework.security.core.authority.SimpleGrantedAuthority::new).toList());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }

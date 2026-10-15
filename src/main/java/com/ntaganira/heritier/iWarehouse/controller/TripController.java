@@ -1,5 +1,10 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.service.FloatService;
+import com.ntaganira.heritier.iWarehouse.service.TripCountService;
+import com.ntaganira.heritier.iWarehouse.service.TripDepositService;
+import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
+import com.ntaganira.heritier.iWarehouse.entity.TripDeposit;
 import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
@@ -91,12 +96,19 @@ public class TripController {
     private final AttachmentService attachmentService;
     private final VehicleCostService vehicleCostService;
     private final Clock clock;
+    private final TripDepositService depositService;
+    private final TripCountService countService;
+    private final FloatService floatService;
 
     public TripController(TripService tripService, VehicleService vehicleService, DriverService driverService, StockService stockService,
                           MobileSaleService mobileSaleService, MobileTripService mobileTripService, SyncConflictService syncConflictService,
                           DataChangeService dataChangeService, ActivityLogService activityLogService, NumberFormats num, Messages messages,
                           TripReturnService returnService, BreakageService breakageService, TripCloseService closeService,
-                          AttachmentService attachmentService, VehicleCostService vehicleCostService, Clock clock) {
+                          AttachmentService attachmentService, VehicleCostService vehicleCostService, Clock clock,
+                          TripDepositService depositService, TripCountService countService, FloatService floatService) {
+        this.depositService = depositService;
+        this.countService = countService;
+        this.floatService = floatService;
         this.tripService = tripService;
         this.vehicleService = vehicleService;
         this.driverService = driverService;
@@ -149,8 +161,8 @@ public class TripController {
                        Model model) {
         Trip trip = visible(id);
         boolean away = trip.getStatus() != TripStatus.PLANNED && trip.getStatus() != TripStatus.CANCELLED;
-        String open = tab != null && List.of("manifest", "return", "sales", "costs", "documents", "history").contains(tab)
-                && (away || !"return".equals(tab)) ? tab : "manifest";
+        String open = tab != null && List.of("manifest", "return", "sales", "costs", "deposits", "counts", "documents", "history").contains(tab)
+                && (away || !List.of("return", "deposits", "counts").contains(tab)) ? tab : "manifest";
         Map<UUID, StockUnit> units = tripService.units(trip);
         List<Row> rows = TripService.sortedLines(trip).stream().map(l -> new Row(l, units.get(l.getStockUnitId()))).toList();
         List<VehicleCost> costs = vehicleCostService.ofTrip(id);
@@ -212,6 +224,20 @@ public class TripController {
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.TRIP, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         model.addAttribute("history", dataChangeService.historyWithChildren("Trip", id.toString(),
                 List.of("TripLine", "TripFuel", "TripBreakage", "TripReturnExtra", "VehicleCost"), "trip", Paging.pageOf("history", open, page), Paging.SIZE));
+        // The field cycle (M15): the load request, the previous trip, deposits during the trip, van counts, the clearance
+        model.addAttribute("loadApprovalRequired", tripService.loadApprovalRequired());
+        model.addAttribute("previous", trip.isPlanned() ? tripService.unclearedPrevious(trip).orElse(null) : null);
+        model.addAttribute("loadValueNow", trip.isPlanned() ? tripService.loadValue(trip) : null);
+        List<TripDeposit> deposits = depositService.ofTrip(id);
+        model.addAttribute("deposits", Paging.of(deposits, Paging.pageOf("deposits", open, page)));
+        model.addAttribute("bankedTotal", deposits.stream().map(TripDeposit::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+        model.addAttribute("floatLeft", (trip.isDeparted() || trip.isReturned()) ? floatService.expectedOf(id) : null);
+        model.addAttribute("floatCleared", floatService.ofTrip(id).isPresent());
+        model.addAttribute("counts", Paging.of(countService.ofTrip(id), Paging.pageOf("counts", open, page)));
+        model.addAttribute("countersignRequired", closeService.countersignRequired());
+        model.addAttribute("clearedByMe", trip.getClearedById() != null
+                && trip.getClearedById().equals(AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null)));
+        model.addAttribute("depositMethods", List.of(PaymentMethod.BANK_TRANSFER, PaymentMethod.MOBILE_MONEY));
         model.addAttribute("tab", open);
         return "trips/view";
     }
@@ -267,6 +293,10 @@ public class TripController {
         dto.setTripDate(trip.getTripDate());
         dto.setArea(trip.getArea());
         dto.setNote(trip.getNote());
+        dto.setRoute(trip.getRoute());
+        dto.setTowns(trip.getTowns());
+        dto.setDaysOut(trip.getDaysOut());
+        dto.setSettleBy(trip.getSettleBy());
         return form(model, dto);
     }
 

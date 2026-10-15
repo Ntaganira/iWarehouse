@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{issueNote.title(${note.trip.number})} + ' - ' + #{app.name}">Stock issue note - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page" th:with="t=${note.trip}">
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{issueNote.title(${t.number})}">Stock issue note TRP-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{issueNote.hint}">A4: the glass that left on the vehicle, signed by Dispatch, the driver and Security.</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/trips/{id}(id=${t.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!--/* The Stock Issue Note (F-09): what left on the vehicle against the load request */-->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+                <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+                <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>
+                <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{issueNote.kind}">STOCK ISSUE NOTE</div>
+                <div class="mono" th:text="${t.number}">TRP-WH-2026-000001</div>
+            </div>
+        </div>
+        <div class="print-doc-parties">
+            <div>
+                <div><span class="print-doc-label" th:text="#{trip.vehicle}">Vehicle</span> <span class="mono" th:text="${t.vehicle.plate}">RAD 512 C</span></div>
+                <div><span class="print-doc-label" th:text="#{trip.driver}">Driver</span> <span th:text="${t.driver.user.fullName}">Jean Driver</span></div>
+                <div><span class="print-doc-label" th:text="#{trip.route}">Route</span> <span th:text="${t.route ?: t.area}">Kigali – Musanze</span></div>
+                <div th:if="${t.towns != null}"><span class="print-doc-label" th:text="#{trip.towns}">Towns</span> <span th:text="${t.towns}">Musanze, Rubavu</span></div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{issueNote.left}">Left</span>
+                    <strong th:text="${t.departedAt != null} ? ${#temporals.format(t.departedAt, 'dd/MM/yyyy HH:mm')} : '—'">15/10/2026 08:30</strong></div>
+                <div th:if="${t.daysOut != null}"><span class="print-doc-label" th:text="#{trip.daysOut}">Days out</span> <span th:text="${t.daysOut}">3</span></div>
+                <div th:if="${t.settleBy != null}"><span class="print-doc-label" th:text="#{trip.settleBy}">Settled by</span> <span th:text="${#temporals.format(t.settleBy, 'dd/MM/yyyy')}">18/10/2026</span></div>
+                <div th:if="${t.loadApprovedBy != null}"><span class="print-doc-label" th:text="#{issueNote.approved}">Load approved by</span> <span th:text="${t.loadApprovedBy}">commercial1</span></div>
+            </div>
+        </div>
+        <div class="print-doc-scroll">
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th class="num">#</th>
+                    <th th:text="#{stock.code}">Label</th>
+                    <th th:text="#{summary.group.PRODUCT}">Glass</th>
+                    <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                    <th class="num" th:text="#{summary.area}">m²</th>
+                    <th class="num" th:text="#{issueNote.cost}">Cost (RWF)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r, st : ${note.rows}">
+                    <td class="num" th:text="${st.count}">1</td>
+                    <td class="mono" th:text="${r.line.unitCode}">U-WH-000038</td>
+                    <td class="mono" th:text="${r.unit != null} ? ${r.unit.product.code} : '—'">CLR-6</td>
+                    <td class="num" th:text="${r.unit != null} ? ${r.unit.widthMm + ' × ' + r.unit.heightMm} : '—'">3210 × 2250</td>
+                    <td class="num" th:text="${r.unit != null} ? ${@num.m2(r.unit.areaM2)} : '—'">7.2225</td>
+                    <td class="num" th:text="${@num.money(r.cost)}">162,000</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="4" th:text="#{issueNote.total(${note.rows.size()})}">40 units</th>
+                    <th class="num" th:text="${@num.m2(note.area)}">288.9000</th>
+                    <th class="num" th:text="${@num.money(note.value)}">6,480,000</th>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+        <div class="print-doc-signs">
+            <div><span th:text="#{issueNote.signDispatch}">Issued by (Dispatch)</span><span class="print-doc-signline" th:text="${t.departedBy}">dispatch1</span></div>
+            <div><span th:text="#{issueNote.signDriver}">Received by (Driver)</span><span class="print-doc-signline" th:text="${t.driver.user.fullName}">Jean Driver</span></div>
+            <div><span th:text="#{issueNote.signSecurity}">Checked at the gate (Security)</span><span class="print-doc-signline"></span></div>
+        </div>
+    </div>
+</body>
+</html>

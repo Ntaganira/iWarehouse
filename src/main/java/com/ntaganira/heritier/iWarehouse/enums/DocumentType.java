@@ -68,6 +68,8 @@ public enum DocumentType {
     DELIVERY_NOTE("DN"),
     /** Takings banked in full with the deposit slip (F-13). */
     CASH_DEPOSIT("BNK"),
+    /** Collections a driver banked or sent by MoMo during a trip (BP 7.3 rule 4). */
+    TRIP_DEPOSIT("TDP"),
     /** The day's close: the end-of-day sales report, signed (F-12). */
     DAILY_CLOSE("DC"),
     /** A payment reminder to a customer with an overdue balance (BP 5.1). */

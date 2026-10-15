@@ -21,6 +21,9 @@
         <minio.version>8.5.14</minio.version>
         <openhtmltopdf.version>1.0.9</openhtmltopdf.version>
         <zxing.version>3.5.3</zxing.version>
+        <!-- Newer than Spring Boot 3.4.1's 1.18.36: the IDE's Java checker (Java 25 support) reads 1.18.36's generated
+             constructors as Java 25 "flexible constructor bodies" and reports them on every Lombok entity -->
+        <lombok.version>1.18.46</lombok.version>
     </properties>
 
     <dependencies>

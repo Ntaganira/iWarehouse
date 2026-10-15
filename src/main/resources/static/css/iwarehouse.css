@@ -4612,3 +4612,6 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
 /* A tab toolbar's button keeps its label on one line beside a long intro (M10) */
 .tab-toolbar > .btn { flex-shrink: 0; white-space: nowrap; }
 .authority-table td:first-child { min-width: 200px; }
+
+/* A record's reference in a multi-record history may be a bare id with nothing to break on: let it wrap */
+table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }

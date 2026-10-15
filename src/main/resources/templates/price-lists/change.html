@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${change.number}, ~{::content})}">
+<head><title>Price change - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${change.status.name()},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_PRICE_CHANGE'')')},
+        canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_PRICE_LIST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${change.number}">PCH-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{creditNote.request.askedBy(${change.requestedBy}, ${#temporals.format(change.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by commercial1 on 15/10/2026 10:30</span>
+                &middot; <a th:href="@{/price-lists/{id}(id=${change.priceList.id})}" th:text="${change.priceList.name}">Retail</a>
+                &middot; <th:block th:replace="~{price-lists/changes :: changeStatus(${change.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/price-lists/changes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline" data-modal-open="withdraw-modal" th:if="${s == 'PENDING' and canManage and mine}" th:text="#{creditNote.request.withdraw}">Withdraw</button>
+            <th:block th:if="${s == 'PENDING' and canApprove and !mine}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{creditNote.request.reject}">Reject</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/price-lists/changes/{id}/approve(id=${change.id})}, #{priceChange.approveConfirm(${change.number}, ${change.priceList.name}, ${lines.size()})}, #{priceChange.approve}, ${authority})}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="#{priceChange.reason} + ':'">Why the prices change:</strong> <span th:text="${change.reason}">New supplier prices</span></div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING'}">
+        <span th:text="#{priceChange.waitingText}">Waiting for approval: the list keeps its prices until then.</span>
+        <span th:if="${mine}" th:text="#{priceChange.notYourOwn}">You asked for it: another person approves it.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED'}">
+        <strong th:text="#{creditNote.request.approvedBy(${change.decidedBy}, ${#temporals.format(change.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 15/10/2026 11:30</strong>
+        <span th:if="${change.decisionNote != null}" th:text="${'· ' + change.decisionNote}">· ok</span>
+        <span th:text="#{priceChange.applied}">The new prices apply from then.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'WITHDRAWN'}">
+        <strong th:text="${s == 'REJECTED'} ? #{creditNote.request.rejectedBy(${change.decidedBy})} : #{creditNote.request.withdrawnBy(${change.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${change.decisionNote}">Too high</span>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{priceChange.linesTitle}">Prices</span>
+                <span class="section-count" th:text="${lines.size()}">2</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="num">#</th>
+                        <th th:text="#{invoice.item}">Item</th>
+                        <th class="num" th:text="#{priceChange.old}">Price before (RWF)</th>
+                        <th class="num" th:text="#{priceChange.new}">New price (RWF)</th>
+                        <th class="num" th:text="#{priceChange.difference}">Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${lines}">
+                        <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                        <td>
+                            <span class="mono" th:text="${l.glass} ? ${l.product.code} : ${l.service.code}">CLR-6</span>
+                            <div class="cell-sub" th:text="${l.glass} ? #{priceChange.perM2} : ${l.service.name}">per m²</div>
+                        </td>
+                        <td class="num" th:text="${l.oldPrice != null} ? ${@num.money(l.oldPrice)} : #{priceChange.notPriced}">27,000</td>
+                        <td class="num strong" th:text="${l.newPrice != null} ? ${@num.money(l.newPrice)} : #{priceChange.notPriced}">28,500</td>
+                        <td class="num" th:with="pct=${percents.get(l.lineNo)}" th:text="${pct != null} ? ${(pct.signum() > 0 ? '+' : '') + @num.amount(pct, 1) + ' %'} : '—'">+5.6 %</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, '/price-lists/changes/' + ${change.id}, '')}"></th:block>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'PENDING' and canApprove and !mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{priceChange.rejectTitle(${change.number})},
+                @{/price-lists/changes/{id}/reject(id=${change.id})}, #{priceChange.rejectText}, #{creditNote.request.reject})}"></div>
+        <div th:replace="~{fragments/authority :: boardModal(@{/price-lists/changes/{id}/approve(id=${change.id})}, #{priceChange.approve}, ${authority})}"></div>
+    </th:block>
+    <th:block th:if="${s == 'PENDING' and canManage and mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('withdraw-modal', #{priceChange.withdrawTitle(${change.number})},
+                @{/price-lists/changes/{id}/withdraw(id=${change.id})}, #{priceChange.withdrawText}, #{creditNote.request.withdraw})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

@@ -1,6 +1,11 @@
 package com.ntaganira.heritier.iWarehouse.config;
 
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
+import com.ntaganira.heritier.iWarehouse.enums.CostType;
+import com.ntaganira.heritier.iWarehouse.enums.CreditApplicationKind;
+import com.ntaganira.heritier.iWarehouse.enums.CreditApplicationStatus;
+import com.ntaganira.heritier.iWarehouse.enums.PriceChangeStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.CreditNoteRequestStatus;
@@ -17,6 +22,7 @@ import com.ntaganira.heritier.iWarehouse.enums.VehicleCostCategory;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostPayment;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
 import com.ntaganira.heritier.iWarehouse.enums.WriteOffStatus;
+import com.ntaganira.heritier.iWarehouse.service.CreditApplicationService;
 import com.ntaganira.heritier.iWarehouse.service.ExceptionsReportService;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -55,7 +61,13 @@ class MessageCoverageTest {
             Map.entry("creditNote.request.status.", CreditNoteRequestStatus.class),
             Map.entry("writeOff.status.", WriteOffStatus.class),
             Map.entry("supplierPayment.request.status.", PaymentRequestStatus.class),
-            Map.entry("po.status.", PurchaseOrderStatus.class));
+            Map.entry("po.status.", PurchaseOrderStatus.class),
+            Map.entry("creditApp.status.", CreditApplicationStatus.class),
+            Map.entry("creditApp.kind.", CreditApplicationKind.class),
+            Map.entry("priceChange.status.", PriceChangeStatus.class),
+            Map.entry("supplier.approval.", SupplierApprovalStatus.class),
+            Map.entry("shipment.costType.", CostType.class),
+            Map.entry("notify.creditReview.", CreditApplicationService.DueReason.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

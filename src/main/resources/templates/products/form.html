@@ -111,6 +111,16 @@
                     <span class="field-error" th:if="${#fields.hasErrors('reorderLevelM2')}" th:errors="*{reorderLevelM2}"></span>
                     <span class="hint" th:text="#{product.reorderHint}">Alert when stock falls below this area; leave empty for no alert</span>
                 </div>
+                <div class="form-group">
+                    <label for="maxLevelM2" th:text="#{product.maxLevel}">Maximum level</label>
+                    <div class="input-unit">
+                        <input type="number" id="maxLevelM2" th:field="*{maxLevelM2}" step="0.01" min="0" inputmode="decimal"
+                               th:classappend="${#fields.hasErrors('maxLevelM2')} ? 'is-invalid'">
+                        <span>m²</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('maxLevelM2')}" th:errors="*{maxLevelM2}"></span>
+                    <span class="hint" th:text="#{product.maxLevelHint}">More than this area is overstock; leave empty for no maximum</span>
+                </div>
                 <div class="form-group full-width">
                     <label for="notes" th:text="#{product.notes}">Notes</label>
                     <input type="text" id="notes" th:field="*{notes}" maxlength="255" th:placeholder="#{product.notesPh}"

@@ -4,12 +4,18 @@ import com.ntaganira.heritier.iWarehouse.config.Countries;
 import com.ntaganira.heritier.iWarehouse.dto.SupplierDto;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.entity.Supplier;
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
+import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.repository.AttachmentRepository;
 import com.ntaganira.heritier.iWarehouse.repository.CurrencyRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PurchaseOrderRepository;
 import com.ntaganira.heritier.iWarehouse.repository.SupplierRepository;
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,9 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * <pre>
@@ -44,9 +50,18 @@ public class SupplierService {
     private final DocumentNumberService numbers;
     private final Countries countries;
     private final PurchaseOrderRepository orderRepo;
+    private final SettingService settingService;
+    private final AttachmentRepository attachmentRepo;
+    private final Notifier notifier;
+    private final Clock clock;
 
     public SupplierService(SupplierRepository repo, CurrencyRepository currencyRepo, DocumentNumberService numbers,
-                           Countries countries, PurchaseOrderRepository orderRepo) {
+                           Countries countries, PurchaseOrderRepository orderRepo, SettingService settingService,
+                           AttachmentRepository attachmentRepo, Notifier notifier, Clock clock) {
+        this.settingService = settingService;
+        this.attachmentRepo = attachmentRepo;
+        this.notifier = notifier;
+        this.clock = clock;
         this.repo = repo;
         this.currencyRepo = currencyRepo;
         this.numbers = numbers;
@@ -72,7 +87,9 @@ public class SupplierService {
             if (StringUtils.hasText(currency)) {
                 p = cb.and(p, cb.equal(root.get("currencyCode"), currency));
             }
-            if ("active".equalsIgnoreCase(status)) {
+            if ("pending".equalsIgnoreCase(status)) {
+                p = cb.and(p, cb.equal(root.get("approvalStatus"), SupplierApprovalStatus.PENDING));
+            } else if ("active".equalsIgnoreCase(status)) {
                 p = cb.and(p, cb.isTrue(root.get("enabled")));
             } else if ("inactive".equalsIgnoreCase(status)) {
                 p = cb.and(p, cb.isFalse(root.get("enabled")));
@@ -107,15 +124,139 @@ public class SupplierService {
         Supplier supplier = new Supplier();
         supplier.setCode(numbers.next(DocumentType.SUPPLIER));
         apply(supplier, dto);
-        return repo.save(supplier);
+        // CMP 08: a new supplier waits for another person's approval before it is ordered from or paid
+        supplier.setApprovalStatus(onboarding() ? SupplierApprovalStatus.PENDING : SupplierApprovalStatus.APPROVED);
+        repo.save(supplier);
+        if (!supplier.isApproved()) {
+            tell(supplier);
+        }
+        return supplier;
     }
 
     @Transactional
     public Supplier update(UUID id, SupplierDto dto) {
         Supplier supplier = findById(id);
         check(dto, supplier);
+        boolean bankChanged = !Objects.equals(supplier.getBankName(), PartyRules.clean(dto.getBankName()))
+                || !Objects.equals(supplier.getBankAccount(), PartyRules.clean(dto.getBankAccount()))
+                || !Objects.equals(supplier.getBankSwift(), PartyRules.clean(dto.getBankSwift()));
         apply(supplier, dto);
+        // New bank details on an approved supplier, or a rejected one put right, wait for approval again (CMP 08)
+        if (onboarding() && ((supplier.isApproved() && bankChanged) || supplier.getApprovalStatus() == SupplierApprovalStatus.REJECTED)) {
+            supplier.setApprovalStatus(SupplierApprovalStatus.PENDING);
+            supplier.setApprovedBy(null);
+            supplier.setApprovedById(null);
+            supplier.setApprovedAt(null);
+            supplier.setApprovalNote(null);
+            tell(supplier);
+        }
         return supplier;
+    }
+
+    /** Whether new suppliers, and new bank details, wait for approval (Settings). */
+    public boolean onboarding() {
+        return settingService.getBoolean(SettingKey.APPROVAL_SUPPLIER_ONBOARDING);
+    }
+
+    public int referencesRequired() {
+        return settingService.getInt(SettingKey.SUPPLIER_REFERENCES_REQUIRED);
+    }
+
+    public long pendingCount() {
+        return repo.countByApprovalStatus(SupplierApprovalStatus.PENDING);
+    }
+
+    /** Who last entered or changed the supplier's details: they do not approve them. */
+    public static boolean isLastEditor(Supplier supplier) {
+        String me = AppUserPrincipal.currentUsername();
+        String last = supplier.getUpdatedBy() != null ? supplier.getUpdatedBy() : supplier.getCreatedBy();
+        return me != null && me.equals(last);
+    }
+
+    /** What the supplier still lacks to be approved (message keys), empty when complete (CMP 08). */
+    public List<String> missingForApproval(Supplier supplier) {
+        List<String> missing = new ArrayList<>();
+        if (supplier.getRegistrationNumber() == null) {
+            missing.add("supplier.missing.registration");
+        }
+        if (supplier.getTin() == null && PartyRules.RWANDA.equals(supplier.getCountryCode())) {
+            missing.add("supplier.missing.tin");
+        }
+        if (supplier.getBankName() == null || supplier.getBankAccount() == null) {
+            missing.add("supplier.missing.bank");
+        }
+        if (supplier.getReferenceList().size() < settingService.getInt(SettingKey.SUPPLIER_REFERENCES_REQUIRED)) {
+            missing.add("supplier.missing.references");
+        }
+        if (attachmentRepo.countByOwnerTypeAndOwnerIdAndRemovedAtIsNull(AttachmentOwner.SUPPLIER, supplier.getId()) == 0) {
+            missing.add("supplier.missing.documents");
+        }
+        return missing;
+    }
+
+    /** Another person approves a supplier waiting, once its papers are complete: it can be ordered from and paid. */
+    @Transactional
+    public Supplier approve(UUID id, String note) {
+        Supplier supplier = lock(id);
+        if (supplier.getApprovalStatus() != SupplierApprovalStatus.PENDING) {
+            throw BusinessException.of("supplier.approve.notPending", supplier.getName());
+        }
+        if (isLastEditor(supplier)) {
+            throw BusinessException.of("supplier.approve.own", supplier.getName());
+        }
+        List<String> missing = missingForApproval(supplier);
+        if (!missing.isEmpty()) {
+            throw BusinessException.of(missing.get(0), supplier.getName(), settingService.getInt(SettingKey.SUPPLIER_REFERENCES_REQUIRED));
+        }
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        supplier.setApprovedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        supplier.setApprovedById(user.map(AppUserPrincipal::getId).orElse(null));
+        supplier.setApprovedAt(LocalDateTime.now(clock));
+        supplier.setApprovalNote(PartyRules.clean(note));
+        supplier.setApprovalStatus(SupplierApprovalStatus.APPROVED);
+        return supplier;
+    }
+
+    /** Another person rejects a supplier waiting, with the reason; correcting its details sends it for approval again. */
+    @Transactional
+    public Supplier reject(UUID id, String reason) {
+        Supplier supplier = lock(id);
+        if (supplier.getApprovalStatus() != SupplierApprovalStatus.PENDING) {
+            throw BusinessException.of("supplier.approve.notPending", supplier.getName());
+        }
+        if (isLastEditor(supplier)) {
+            throw BusinessException.of("supplier.approve.own", supplier.getName());
+        }
+        String why = PartyRules.clean(reason);
+        if (why == null || why.length() > 255) {
+            throw BusinessException.of("po.reason.required");
+        }
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        supplier.setApprovedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        supplier.setApprovedById(user.map(AppUserPrincipal::getId).orElse(null));
+        supplier.setApprovedAt(LocalDateTime.now(clock));
+        supplier.setApprovalNote(why);
+        supplier.setApprovalStatus(SupplierApprovalStatus.REJECTED);
+        return supplier;
+    }
+
+    /** Only approved suppliers are ordered from or paid (CMP 08). */
+    public static void requireApproved(Supplier supplier, String field) {
+        if (!supplier.isApproved()) {
+            throw field == null ? BusinessException.of("supplier.notApproved", supplier.getName())
+                    : BusinessException.onField(field, "supplier.notApproved", supplier.getName());
+        }
+    }
+
+    private void tell(Supplier supplier) {
+        notifier.holders("APPROVE_SUPPLIER", AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null), NotificationKind.APPROVAL,
+                "notify.supplier.waiting", "notify.supplier.waitingText", "/suppliers/" + supplier.getId(), supplier.getName(),
+                supplier.getCode());
+    }
+
+    private Supplier lock(UUID id) {
+        repo.lockById(id).orElseThrow(() -> new NotFoundException("Supplier", id));
+        return findById(id);
     }
 
     @Transactional
@@ -164,5 +305,10 @@ public class SupplierService {
         supplier.setEmail(PartyRules.clean(dto.getEmail()));
         supplier.setAddress(PartyRules.clean(dto.getAddress()));
         supplier.setNotes(PartyRules.clean(dto.getNotes()));
+        supplier.setRegistrationNumber(PartyRules.clean(dto.getRegistrationNumber()));
+        supplier.setBankName(PartyRules.clean(dto.getBankName()));
+        supplier.setBankAccount(PartyRules.clean(dto.getBankAccount()));
+        supplier.setBankSwift(PartyRules.clean(dto.getBankSwift()));
+        supplier.setTradeReferences(PartyRules.clean(dto.getTradeReferences()));
     }
 }

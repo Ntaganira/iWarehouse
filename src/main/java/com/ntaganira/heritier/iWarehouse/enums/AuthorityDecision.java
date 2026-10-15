@@ -34,7 +34,11 @@ public enum AuthorityDecision {
     /** A manual journal (F-15). */
     MANUAL_JOURNAL(false),
     /** Operating expenditure on a vehicle. */
-    VEHICLE_COST(false);
+    VEHICLE_COST(false),
+    /** A customer's credit limit, by the limit asked (F-02 D). */
+    CREDIT_LIMIT(false),
+    /** Prices of a price list changed (SDP 5): no amount, so the lowest office allowed decides. */
+    PRICE_CHANGE(false);
 
     private final boolean percent;
 

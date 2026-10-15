@@ -36,6 +36,36 @@
                                th:placeholder="#{receipt.deliveryRefPh}" th:classappend="${#fields.hasErrors('deliveryRef')} ? 'is-invalid'">
                         <span class="field-error" th:if="${#fields.hasErrors('deliveryRef')}" th:errors="*{deliveryRef}"></span>
                     </div>
+                    <div class="form-group">
+                        <label for="vehiclePlate" th:text="#{receipt.vehiclePlate}">receipt.vehiclePlate</label>
+                        <input type="text" id="vehiclePlate" th:field="*{vehiclePlate}" maxlength="20" class="input-code" spellcheck="false" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('vehiclePlate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('vehiclePlate')}" th:errors="*{vehiclePlate}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="driverName" th:text="#{receipt.driverName}">receipt.driverName</label>
+                        <input type="text" id="driverName" th:field="*{driverName}" maxlength="100" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('driverName')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('driverName')}" th:errors="*{driverName}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="transporter" th:text="#{receipt.transporter}">receipt.transporter</label>
+                        <input type="text" id="transporter" th:field="*{transporter}" maxlength="100" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('transporter')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('transporter')}" th:errors="*{transporter}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="invoiceNumber" th:text="#{receipt.invoiceNumber}">receipt.invoiceNumber</label>
+                        <input type="text" id="invoiceNumber" th:field="*{invoiceNumber}" maxlength="60" class="input-code" spellcheck="false" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('invoiceNumber')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('invoiceNumber')}" th:errors="*{invoiceNumber}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="declarationNumber" th:text="#{receipt.declarationNumber}">receipt.declarationNumber</label>
+                        <input type="text" id="declarationNumber" th:field="*{declarationNumber}" maxlength="60" class="input-code" spellcheck="false" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('declarationNumber')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('declarationNumber')}" th:errors="*{declarationNumber}"></span>
+                    </div>
                     <div class="form-group full-width">
                         <label for="notes" th:text="#{product.notes}">Notes</label>
                         <input type="text" id="notes" th:field="*{notes}" maxlength="500" th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">

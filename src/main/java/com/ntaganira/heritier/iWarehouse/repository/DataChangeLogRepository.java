@@ -32,6 +32,16 @@ public interface DataChangeLogRepository extends Repository<DataChangeLog, Long>
 
     long countByServerTimeBetween(LocalDateTime from, LocalDateTime to);
 
+    /** Changes to these kinds of record in a period, newest first (the master data report, BP 11). */
+    Page<DataChangeLog> findByEntityTypeInAndServerTimeBetweenOrderByServerTimeDescIdDesc(Collection<String> entityTypes,
+                                                                                          LocalDateTime from, LocalDateTime to, Pageable pageable);
+
+    /** The same, oldest first, whole (the export). */
+    List<DataChangeLog> findByEntityTypeInAndServerTimeBetweenOrderByServerTimeAscIdAsc(Collection<String> entityTypes,
+                                                                                       LocalDateTime from, LocalDateTime to);
+
+    long countByEntityTypeAndServerTimeBetween(String entityType, LocalDateTime from, LocalDateTime to);
+
     /** Rows of (yyyy-MM-dd, count) for the dashboard chart. */
     @Query(value = "select to_char(server_time, 'YYYY-MM-DD'), count(*) from data_change_logs"
             + " where server_time >= :since group by 1", nativeQuery = true)

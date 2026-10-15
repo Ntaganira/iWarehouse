@@ -63,6 +63,29 @@ public class SupplierDto {
     @Size(max = 255, message = "{party.notes.size}")
     private String notes;
 
+    // --- The approved supplier register (CMP 08)
+
+    @Size(max = 40, message = "{customer.registration.size}")
+    private String registrationNumber;
+
+    @Size(max = 80, message = "{party.bankName.size}")
+    private String bankName;
+
+    @Size(max = 40, message = "{party.bankAccount.size}")
+    private String bankAccount;
+
+    /** Spaces dropped and upper case (see setter): 8 or 11 letters and digits. */
+    @Pattern(regexp = "^([A-Z0-9]{8}([A-Z0-9]{3})?)?$", message = "{supplier.swift.pattern}")
+    private String bankSwift;
+
+    /** One reference a line. */
+    @Size(max = 500, message = "{party.references.size}")
+    private String tradeReferences;
+
+    public void setBankSwift(String swift) {
+        this.bankSwift = swift == null ? null : swift.replaceAll("\\s", "").toUpperCase(java.util.Locale.ROOT);
+    }
+
     public void setCountryCode(String countryCode) {
         this.countryCode = countryCode == null ? null : countryCode.trim().toUpperCase(Locale.ROOT);
     }

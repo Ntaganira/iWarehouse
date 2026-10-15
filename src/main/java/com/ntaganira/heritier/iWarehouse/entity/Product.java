@@ -53,6 +53,10 @@ public class Product extends BaseEntity {
     @Column(name = "reorder_level_m2", precision = 10, scale = 4)
     private BigDecimal reorderLevelM2;
 
+    /** STC-003: more than this many m² is overstock; null = no maximum. Never below the reorder level. */
+    @Column(name = "max_level_m2", precision = 10, scale = 4)
+    private BigDecimal maxLevelM2;
+
     @Column(length = 255)
     private String notes;
 

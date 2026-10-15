@@ -17,6 +17,7 @@ import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.CuttingJobService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
+import com.ntaganira.heritier.iWarehouse.service.JournalService;
 import com.ntaganira.heritier.iWarehouse.service.GoodsReceiptService;
 import com.ntaganira.heritier.iWarehouse.service.Labels;
 import com.ntaganira.heritier.iWarehouse.service.LocationService;
@@ -41,6 +42,7 @@ import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
@@ -77,12 +79,14 @@ public class StockController {
     private final StockReportService stockReports;
     private final ReportFiles reportFiles;
     private final Messages messages;
+    private final JournalService journalService;
 
     public StockController(StockService stockService, GoodsReceiptService receiptService, CuttingJobService jobService,
                            LocationService locationService, ProductRepository productRepo, DataChangeService dataChangeService,
                            ActivityLogService activityLogService, StockReservationService reservationService,
                            StockSummaryService summaryService, StockReportService stockReports, ReportFiles reportFiles,
-                           Messages messages) {
+                           Messages messages, JournalService journalService) {
+        this.journalService = journalService;
         this.stockReports = stockReports;
         this.reportFiles = reportFiles;
         this.stockService = stockService;
@@ -220,12 +224,17 @@ public class StockController {
     @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_VIEW_STOCK')")
     public String summary(@RequestParam(defaultValue = "PRODUCT") StockSummary.GroupBy group,
                           @RequestParam(required = false) UUID product, @RequestParam(defaultValue = "0") int page,
-                          @RequestParam(defaultValue = "0") int rpage, Model model) {
+                          @RequestParam(defaultValue = "0") int rpage, @RequestParam(defaultValue = "0") int opage, Model model) {
         StockSummaryService.View view = summaryService.summary(group, product);
         model.addAttribute("view", view);
         // Two tables, each with its own page: the groups (page) and glass to reorder (rpage); totals stay overall
         model.addAttribute("rowPage", Paging.of(view.rows(), page));
         model.addAttribute("reorderPage", Paging.of(view.reorder(), rpage));
+        model.addAttribute("overstockPage", Paging.of(view.overstock(), opage));
+        // By location, the value of every site and vehicle adds up to the Inventory account (decision D12: one account)
+        if (group == StockSummary.GroupBy.LOCATION && product == null && AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST")) {
+            model.addAttribute("ledger", journalService.inventoryByProduct().values().stream().reduce(BigDecimal.ZERO, BigDecimal::add));
+        }
         model.addAttribute("groups", StockSummary.GroupBy.values());
         model.addAttribute("products", summaryService.products());
         model.addAttribute("group", group);

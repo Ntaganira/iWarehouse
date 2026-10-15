@@ -274,6 +274,72 @@
                     <span class="field-error" th:if="${#fields.hasErrors('approvalReceiptSecondPerson')}" th:errors="*{approvalReceiptSecondPerson}"></span>
                     <span class="hint" th:text="#{settings.approvalReceiptSecondPersonHint}">hint</span>
                 </div>
+                <div class="form-group">
+                    <label for="approvalCreditApplication" th:text="#{settings.approvalCreditApplication}">approvalCreditApplication</label>
+                    <select id="approvalCreditApplication" th:field="*{approvalCreditApplication}" required th:classappend="${#fields.hasErrors('approvalCreditApplication')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onApproval}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('approvalCreditApplication')}" th:errors="*{approvalCreditApplication}"></span>
+                    <span class="hint" th:text="#{settings.approvalCreditApplicationHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="approvalCreditApplicationReview" th:text="#{settings.approvalCreditApplicationReview}">approvalCreditApplicationReview</label>
+                    <select id="approvalCreditApplicationReview" th:field="*{approvalCreditApplicationReview}" required th:classappend="${#fields.hasErrors('approvalCreditApplicationReview')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onReview}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('approvalCreditApplicationReview')}" th:errors="*{approvalCreditApplicationReview}"></span>
+                    <span class="hint" th:text="#{settings.approvalCreditApplicationReviewHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="creditReviewMonths" th:text="#{settings.creditReviewMonths}">creditReviewMonths</label>
+                    <div class="input-unit">
+                        <input type="number" id="creditReviewMonths" th:field="*{creditReviewMonths}" step="1" min="1" max="60" required
+                               th:classappend="${#fields.hasErrors('creditReviewMonths')} ? 'is-invalid'">
+                        <span th:text="#{settings.months}">unit</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditReviewMonths')}" th:errors="*{creditReviewMonths}"></span>
+                    <span class="hint" th:text="#{settings.creditReviewMonthsHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="creditReviewOverdueDays" th:text="#{settings.creditReviewOverdueDays}">creditReviewOverdueDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="creditReviewOverdueDays" th:field="*{creditReviewOverdueDays}" step="1" min="1" max="365" required
+                               th:classappend="${#fields.hasErrors('creditReviewOverdueDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.days}">unit</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditReviewOverdueDays')}" th:errors="*{creditReviewOverdueDays}"></span>
+                    <span class="hint" th:text="#{settings.creditReviewOverdueDaysHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="approvalPriceChange" th:text="#{settings.approvalPriceChange}">approvalPriceChange</label>
+                    <select id="approvalPriceChange" th:field="*{approvalPriceChange}" required th:classappend="${#fields.hasErrors('approvalPriceChange')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onApproval}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('approvalPriceChange')}" th:errors="*{approvalPriceChange}"></span>
+                    <span class="hint" th:text="#{settings.approvalPriceChangeHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="approvalSupplierOnboarding" th:text="#{settings.approvalSupplierOnboarding}">approvalSupplierOnboarding</label>
+                    <select id="approvalSupplierOnboarding" th:field="*{approvalSupplierOnboarding}" required th:classappend="${#fields.hasErrors('approvalSupplierOnboarding')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onApproval}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('approvalSupplierOnboarding')}" th:errors="*{approvalSupplierOnboarding}"></span>
+                    <span class="hint" th:text="#{settings.approvalSupplierOnboardingHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="supplierReferencesRequired" th:text="#{settings.supplierReferencesRequired}">supplierReferencesRequired</label>
+                    <div class="input-unit">
+                        <input type="number" id="supplierReferencesRequired" th:field="*{supplierReferencesRequired}" step="1" min="0" max="10" required
+                               th:classappend="${#fields.hasErrors('supplierReferencesRequired')} ? 'is-invalid'">
+                        
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('supplierReferencesRequired')}" th:errors="*{supplierReferencesRequired}"></span>
+                    <span class="hint" th:text="#{settings.supplierReferencesRequiredHint}">hint</span>
+                </div>
             </div>
 
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>

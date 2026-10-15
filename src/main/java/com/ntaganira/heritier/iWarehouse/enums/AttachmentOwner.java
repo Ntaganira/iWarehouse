@@ -30,7 +30,13 @@ public enum AttachmentOwner {
     /** The evidence for a credit note asked (F-14). */
     CREDIT_NOTE_REQUEST("PAGE_CREDIT_NOTES", "/credit-notes/requests/"),
     /** The evidence for a write-off: letters sent, a court ruling, the customer's closure (F-14). */
-    RECEIVABLE_WRITE_OFF("PAGE_RECEIVABLE_WRITE_OFFS", "/accounting/write-offs/");
+    RECEIVABLE_WRITE_OFF("PAGE_RECEIVABLE_WRITE_OFFS", "/accounting/write-offs/"),
+    /** A customer's know-your-customer papers: registration, TIN certificate, ID, guarantee (SDP 11, F-02). */
+    CUSTOMER("PAGE_CUSTOMERS", "/customers/"),
+    /** A supplier's onboarding papers: registration, TIN certificate, bank letter, references (CMP 08). */
+    SUPPLIER("PAGE_SUPPLIERS", "/suppliers/"),
+    /** The papers behind a credit application: financial statements, references, the guarantee (F-02). */
+    CREDIT_APPLICATION("PAGE_CREDIT_APPLICATIONS", "/credit-applications/");
 
     private final String page;
     private final String path;

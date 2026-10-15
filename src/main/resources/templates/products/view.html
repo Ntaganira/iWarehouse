@@ -83,6 +83,10 @@
                         <div class="value" th:text="${product.reorderLevelM2 != null} ? ${product.reorderLevelM2.stripTrailingZeros().toPlainString() + ' m²'} : #{product.noReorder}">No alert</div>
                     </div>
                     <div class="item">
+                        <label th:text="#{product.maxLevel}">Maximum level</label>
+                        <div class="value" th:text="${product.maxLevelM2 != null} ? ${product.maxLevelM2.stripTrailingZeros().toPlainString() + ' m²'} : #{product.noMaxLevel}">No maximum</div>
+                    </div>
+                    <div class="item">
                         <label th:text="#{product.notes}">Notes</label>
                         <div class="value" th:text="${product.notes ?: '—'}">—</div>
                     </div>

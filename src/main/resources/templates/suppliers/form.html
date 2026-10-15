@@ -104,6 +104,43 @@
                 </div>
             </div>
 
+            <h3 class="form-section-title" th:text="#{supplier.registerSection}">Approved supplier register</h3>
+            <p class="form-note" th:text="#{supplier.registerNote}">A new supplier, or new bank details, wait for another person's approval before any order or payment. Keep the registration, TIN certificate and bank letter on its Documents tab.</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="registrationNumber" th:text="#{customer.registration}">Registration number</label>
+                    <input type="text" id="registrationNumber" th:field="*{registrationNumber}" maxlength="40" class="input-code" spellcheck="false" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('registrationNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('registrationNumber')}" th:errors="*{registrationNumber}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bankName" th:text="#{party.bankName}">Bank</label>
+                    <input type="text" id="bankName" th:field="*{bankName}" maxlength="80" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('bankName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('bankName')}" th:errors="*{bankName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bankAccount" th:text="#{party.bankAccount}">Bank account</label>
+                    <input type="text" id="bankAccount" th:field="*{bankAccount}" maxlength="40" class="input-code" spellcheck="false" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('bankAccount')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('bankAccount')}" th:errors="*{bankAccount}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bankSwift" th:text="#{supplier.swift}">SWIFT code</label>
+                    <input type="text" id="bankSwift" th:field="*{bankSwift}" maxlength="14" class="input-code" spellcheck="false" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('bankSwift')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('bankSwift')}" th:errors="*{bankSwift}"></span>
+                    <span class="hint" th:text="#{supplier.swiftHint}">For payments abroad: 8 or 11 letters and digits</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="tradeReferences" th:text="#{party.references}">References</label>
+                    <textarea id="tradeReferences" th:field="*{tradeReferences}" rows="3" maxlength="500" th:placeholder="#{party.referencesPh}"
+                              th:classappend="${#fields.hasErrors('tradeReferences')} ? 'is-invalid'"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('tradeReferences')}" th:errors="*{tradeReferences}"></span>
+                    <span class="hint" th:text="#{supplier.referencesHint}">One reference a line: who, and how to reach them</span>
+                </div>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" th:text="#{supplier.save}">Save Supplier</button>
                 <a th:href="${supplierDto.id == null} ? @{/suppliers} : @{/suppliers/{id}(id=${supplierDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>

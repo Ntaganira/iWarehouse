@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{creditApp.title}, ~{::content})}">
+<head><title>Credit applications - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{creditApp.title}">Credit applications</h1>
+            <div class="subtitle" th:text="#{creditApp.subtitle}">Credit limits and payment terms asked, assessed by Credit Control and approved within the Delegation of Authority</div>
+        </div>
+        <div class="btn-group">
+            <a href="/customers" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="#{nav.customers}">Customers</a>
+        </div>
+    </div>
+
+    <div class="section" th:if="${reviews.totalElements > 0}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{creditApp.reviewsTitle}">Credit reviews due</span>
+                <span class="section-count" th:text="${reviews.totalElements}">0</span>
+            </h2>
+        </div>
+        <p class="form-note" th:text="#{creditApp.reviewsNote(${reviewMonths}, ${reviewOverdueDays})}">A credit limit is reviewed 12 months after it was approved, and at once when an invoice is 90 days overdue.</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th th:text="#{customer.creditLimit}">Credit limit</th>
+                        <th th:text="#{creditApp.dueWhy}">Why</th>
+                        <th th:text="#{creditApp.waitingCol}">Application</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${reviews.content}">
+                        <td>
+                            <a th:href="@{/customers/{id}(id=${d.customer.id}, tab='applications')}" th:text="${d.customer.name}">Umucyo Builders Ltd</a>
+                            <div class="cell-sub mono" th:text="${d.customer.code}">CUS-WH-00001</div>
+                        </td>
+                        <td>
+                            <span th:text="${@num.money(d.customer.creditLimit)} + ' RWF'">5,000,000 RWF</span>
+                            <div class="cell-sub" th:text="#{party.termsDays(${d.customer.paymentTermsDays})}">30 days</div>
+                        </td>
+                        <td th:switch="${d.reason.name()}">
+                            <span th:case="'OVERDUE'" class="badge badge-danger" th:text="#{creditApp.due.OVERDUE(${d.oldestOverdueDays})}">An invoice 120 days overdue</span>
+                            <span th:case="'NEVER'" class="badge badge-warning" th:text="#{creditApp.due.NEVER}">Never reviewed</span>
+                            <span th:case="*" class="badge badge-warning" th:text="#{creditApp.due.DATE(${#temporals.format(d.dueOn, 'dd/MM/yyyy')})}">Due since 15/10/2026</span>
+                        </td>
+                        <td>
+                            <a class="mono" th:if="${d.waiting != null}" th:href="@{/credit-applications/{id}(id=${d.waiting.id})}" th:text="${d.waiting.number}">CAP-WH-2026-000001</a>
+                            <a th:if="${d.waiting == null}" sec:authorize="hasAuthority('PERM_REQUEST_CREDIT_TERMS')"
+                               th:href="@{/credit-applications/new(customer=${d.customer.id})}" th:text="#{creditApp.startReview}">Start the review</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reviews}, '/credit-applications', ${paginationQuery + (paginationQuery.isEmpty() ? '' : '&') + 'page=' + applications.number}, 'rpage')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{creditApp.sectionTitle}">Applications</span>
+                <span class="section-count" th:text="${applications.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/credit-applications}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{creditApp.searchPh}" th:aria-label="#{creditApp.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'creditApp.status.' + st}}">Waiting for assessment</option>
+                </select>
+            </form>
+        </div>
+        <th:block th:replace="~{credit-applications/list :: applicationTable(${applications.content}, true)}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${applications}, '/credit-applications', ${paginationQuery + (paginationQuery.isEmpty() ? '' : '&') + 'rpage=' + reviews.number}, 'page')}"></th:block>
+    </div>
+</div>
+
+<!--/* Credit applications: number, asked, customer (when the list is not a customer's), terms asked, office, status */-->
+<div th:fragment="applicationTable(rows, showCustomer)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{creditApp.number}">Application</th>
+                <th th:text="#{creditNote.request.asked}">Asked</th>
+                <th th:if="${showCustomer}" th:text="#{invoice.customer}">Customer</th>
+                <th th:text="#{creditApp.termsAsked}">Terms asked</th>
+                <th th:text="#{creditNote.request.office}">Office</th>
+                <th th:text="#{common.status}">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="a : ${rows}">
+                <td>
+                    <a class="row-link strong mono" th:href="@{/credit-applications/{id}(id=${a.id})}" th:text="${a.number}">CAP-WH-2026-000001</a>
+                    <div class="cell-sub" th:text="#{${'creditApp.kind.' + a.kind}}">New</div>
+                </td>
+                <td>
+                    <span class="nowrap" th:text="${#temporals.format(a.requestedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                    <div class="cell-sub" th:text="${a.requestedBy}">credit1</div>
+                </td>
+                <td th:if="${showCustomer}" th:text="${a.customer.name}">Umucyo Builders Ltd</td>
+                <td>
+                    <span class="nowrap" th:text="${@num.money(a.creditLimit)} + ' RWF'">5,000,000 RWF</span>
+                    <div class="cell-sub" th:text="#{creditApp.termsWas(${a.paymentTermsDays}, ${@num.money(a.previousLimit)}, ${a.previousTermsDays})}">30 days · was 0 RWF, 0 days</div>
+                </td>
+                <td th:text="#{${'authority.level.' + a.authorityLevel}}">Chief Operating Officer</td>
+                <td><th:block th:replace="~{credit-applications/list :: applicationStatus(${a.status})}"></th:block></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}">
+                <td th:attr="colspan=${showCustomer ? 6 : 5}">
+                    <div class="empty-state">
+                        <h3 th:text="#{creditApp.empty}">No credit applications</h3>
+                        <p th:text="#{creditApp.emptyHint}">Credit terms are asked for from the customer's page</p>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!--/* Status badge of a credit application. */-->
+<th:block th:fragment="applicationStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING_ASSESSMENT'" class="badge badge-warning" th:text="#{creditApp.status.PENDING_ASSESSMENT}">Waiting for assessment</span>
+    <span th:case="'PENDING_REVIEW'" class="badge badge-warning" th:text="#{creditApp.status.PENDING_REVIEW}">Waiting for review</span>
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{creditApp.status.PENDING_APPROVAL}">Waiting for approval</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{creditApp.status.APPROVED}">Approved</span>
+    <span th:case="'WITHDRAWN'" class="badge badge-secondary" th:text="#{creditApp.status.WITHDRAWN}">Withdrawn</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{creditApp.status.REJECTED}">Rejected</span>
+</th:block>
+</body>
+</html>

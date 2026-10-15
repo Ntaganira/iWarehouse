@@ -40,6 +40,23 @@ public class GoodsReceiptDto {
     @Size(max = 60, message = "{receipt.deliveryRef.size}")
     private String deliveryRef;
 
+    // The delivery's papers (GRN-001, F-06 A)
+
+    @Size(max = 20, message = "{receipt.vehiclePlate.size}")
+    private String vehiclePlate;
+
+    @Size(max = 100, message = "{receipt.driverName.size}")
+    private String driverName;
+
+    @Size(max = 100, message = "{receipt.transporter.size}")
+    private String transporter;
+
+    @Size(max = 60, message = "{receipt.invoiceNumber.size}")
+    private String invoiceNumber;
+
+    @Size(max = 60, message = "{receipt.declarationNumber.size}")
+    private String declarationNumber;
+
     @Size(max = 500, message = "{po.notes.size}")
     private String notes;
 

@@ -80,6 +80,17 @@ class StockSummaryTest {
         assertThat(reorder.get(1).getShortM2()).isEqualByComparingTo("13.8875");
     }
 
+    @Test
+    void glassAboveItsMaximumIsOverstockCountingEveryUnitInStock() {   // STC-003
+        clear6.setMaxLevelM2(new BigDecimal("40"));                     // 36.1125 available + 5 reserved = 41.1125
+        mirror4.setMaxLevelM2(new BigDecimal("10"));                    // 8.9304: within
+        List<StockSummary.Overstock> over = StockSummary.overstock(facts, products.values());
+        assertThat(over).extracting(o -> o.product().getCode()).containsExactly("CLR-6");
+        assertThat(over.get(0).getOverM2()).isEqualByComparingTo("1.1125");
+        clear6.setEnabled(false);
+        assertThat(StockSummary.overstock(facts, products.values())).isEmpty();
+    }
+
     private static Product product(String code, String mac, String level) {
         Product p = new Product();
         p.setId(UUID.randomUUID());

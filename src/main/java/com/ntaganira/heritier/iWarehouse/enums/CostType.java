@@ -19,6 +19,10 @@ public enum CostType {
     CLEARING,
     PORT,
     TRANSPORT,
+    /** Charged by the port or the shipping line for containers kept past the free days (F-06 C). */
+    DEMURRAGE,
+    /** Warehouse or bonded storage while the goods wait (F-06 C). */
+    STORAGE,
     OTHER;
 
     /** Rate source this cost is converted with; null means the default source. */

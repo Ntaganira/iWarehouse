@@ -79,7 +79,7 @@
                             <div class="cell-sub" th:if="${r.note != null}" th:text="${r.note}">ok</div>
                         </td>
                         <td class="num nowrap">
-                            <span th:text="${r.percent} ? ${@num.m2(r.amount) + ' %'} : ${@num.money(r.amount)}">120,000</span>
+                            <span th:text="${r.amount == null} ? '—' : (${r.percent} ? ${@num.m2(r.amount) + ' %'} : ${@num.money(r.amount)})">120,000</span>
                             <div class="cell-sub" th:if="${r.office != null}" th:text="#{${'authority.level.' + r.office}}">COO</div>
                         </td>
                         <td>

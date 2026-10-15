@@ -45,13 +45,21 @@ public class AttachmentService {
     private final VehicleCostRepository vehicleCostRepo;
     private final CreditNoteRequestRepository creditNoteRequestRepo;
     private final ReceivableWriteOffRepository writeOffRepo;
+    private final CustomerRepository customerRepo;
+    private final SupplierRepository supplierRepo;
+    private final CreditApplicationRepository creditApplicationRepo;
     private final Clock clock;
 
     public AttachmentService(AttachmentRepository repo, FileStorageService storage, GoodsReceiptRepository receiptRepo,
                              ShipmentRepository shipmentRepo, SupplierInvoiceRepository supplierInvoiceRepo,
                              StockAdjustmentRepository adjustmentRepo, VehicleRepository vehicleRepo, DriverRepository driverRepo,
                              TripRepository tripRepo, VehicleCostRepository vehicleCostRepo, Clock clock,
-                             CreditNoteRequestRepository creditNoteRequestRepo, ReceivableWriteOffRepository writeOffRepo) {
+                             CreditNoteRequestRepository creditNoteRequestRepo, ReceivableWriteOffRepository writeOffRepo,
+                             CustomerRepository customerRepo, SupplierRepository supplierRepo,
+                             CreditApplicationRepository creditApplicationRepo) {
+        this.customerRepo = customerRepo;
+        this.supplierRepo = supplierRepo;
+        this.creditApplicationRepo = creditApplicationRepo;
         this.creditNoteRequestRepo = creditNoteRequestRepo;
         this.writeOffRepo = writeOffRepo;
         this.repo = repo;
@@ -137,6 +145,9 @@ public class AttachmentService {
             case VEHICLE_COST -> vehicleCostRepo.existsById(id);
             case CREDIT_NOTE_REQUEST -> creditNoteRequestRepo.existsById(id);
             case RECEIVABLE_WRITE_OFF -> writeOffRepo.existsById(id);
+            case CUSTOMER -> customerRepo.existsById(id);
+            case SUPPLIER -> supplierRepo.existsById(id);
+            case CREDIT_APPLICATION -> creditApplicationRepo.existsById(id);
         };
         if (!exists) {
             throw new NotFoundException(owner.name(), id);

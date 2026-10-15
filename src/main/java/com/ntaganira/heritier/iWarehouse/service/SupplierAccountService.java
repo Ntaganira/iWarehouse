@@ -345,6 +345,7 @@ public class SupplierAccountService {
             throw BusinessException.onField("method", "supplierPayment.method.required");
         }
         Supplier supplier = supplierRepo.lockById(supplierId).orElseThrow(() -> new NotFoundException("Supplier", supplierId));
+        SupplierService.requireApproved(supplier, null);                   // CMP 08: approved suppliers only
         String currency = form.currencyCode();
         Payables.Open open = currency == null ? null : open(supplier).get(currency);
         if (open == null || open.getAmount().signum() <= 0) {

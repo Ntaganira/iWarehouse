@@ -26,6 +26,11 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID>, JpaSp
     /** Active suppliers invoicing in a currency: that currency must stay active (ACC-02). */
     long countByCurrencyCodeAndEnabledTrue(String currencyCode);
 
+    long countByApprovalStatus(com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus status);
+
+    /** Suppliers approved or rejected in a period (the exceptions report). */
+    List<Supplier> findByApprovedAtBetweenOrderByApprovedAtAsc(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
     /** Countries in use, for the list filter. */
     @Query("select distinct s.countryCode from Supplier s")
     List<String> findCountryCodes();

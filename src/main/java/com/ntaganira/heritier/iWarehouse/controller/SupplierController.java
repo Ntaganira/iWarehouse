@@ -1,17 +1,21 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
+import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Countries;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.SupplierDto;
 import com.ntaganira.heritier.iWarehouse.entity.Supplier;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
 import com.ntaganira.heritier.iWarehouse.enums.Incoterm;
+import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.Ageing;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.SupplierAccountService;
 import com.ntaganira.heritier.iWarehouse.service.SupplierService;
@@ -50,9 +54,12 @@ public class SupplierController {
     private final ActivityLogService activityLogService;
     private final Countries countries;
     private final Messages messages;
+    private final AttachmentService attachmentService;
 
     public SupplierController(SupplierService supplierService, SupplierAccountService accountService, DataChangeService dataChangeService,
-                              ActivityLogService activityLogService, Countries countries, Messages messages) {
+                              ActivityLogService activityLogService, Countries countries, Messages messages,
+                              AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
         this.supplierService = supplierService;
         this.accountService = accountService;
         this.dataChangeService = dataChangeService;
@@ -88,7 +95,7 @@ public class SupplierController {
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
         boolean seesAccount = AppUserPrincipal.currentHas("PERM_VIEW_SUPPLIER_ACCOUNT");
-        String open = List.of("details", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
+        String open = List.of("details", "documents", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
         Supplier supplier = supplierService.findById(id);
         model.addAttribute("supplier", supplier);
         // The account (ACC-09): what is owed per currency, the ageing, receipts to invoice, the statement, paying
@@ -102,6 +109,10 @@ public class SupplierController {
             model.addAttribute("payPrepared", accountService.authorisationRequired());
         }
         model.addAttribute("history", dataChangeService.history("Supplier", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.SUPPLIER, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        model.addAttribute("lastEditor", SupplierService.isLastEditor(supplier));
+        model.addAttribute("missing", supplier.getApprovalStatus() == SupplierApprovalStatus.PENDING ? supplierService.missingForApproval(supplier) : List.of());
+        model.addAttribute("referencesRequired", supplierService.referencesRequired());
         model.addAttribute("tab", open);
         return "suppliers/view";
     }
@@ -150,6 +161,11 @@ public class SupplierController {
         dto.setEmail(s.getEmail());
         dto.setAddress(s.getAddress());
         dto.setNotes(s.getNotes());
+        dto.setRegistrationNumber(s.getRegistrationNumber());
+        dto.setBankName(s.getBankName());
+        dto.setBankAccount(s.getBankAccount());
+        dto.setBankSwift(s.getBankSwift());
+        dto.setTradeReferences(s.getTradeReferences());
         return form(model, dto);
     }
 
@@ -171,6 +187,51 @@ public class SupplierController {
             activityLogService.record(MODULE, "UPDATE_SUPPLIER", "Failed to update supplier " + codeOf(id) + ": "
                     + messages.get(e.getMessageKey(), e.getArgs()), ActivityStatus.FAILED);
             return rejected(model, dto, result, e);
+        }
+    }
+
+    /** Another person approves a supplier waiting, once its papers are complete (CMP 08). */
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAuthority('PAGE_SUPPLIERS') and hasAuthority('PERM_APPROVE_SUPPLIER')")
+    public String approve(@PathVariable UUID id, @RequestParam(required = false) String note, RedirectAttributes redirect) {
+        try {
+            Supplier supplier = supplierService.approve(id, note);
+            activityLogService.record(MODULE, "APPROVE_SUPPLIER", "Approved supplier " + supplier.getCode() + " " + supplier.getName()
+                    + (supplier.getApprovalNote() != null ? " (" + supplier.getApprovalNote() + ")" : ""), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("supplier.approvedMsg", supplier.getName()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "APPROVE_SUPPLIER", "Failed to approve supplier " + nameOf(id) + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/suppliers/" + id;
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('PAGE_SUPPLIERS') and hasAuthority('PERM_APPROVE_SUPPLIER')")
+    public String reject(@PathVariable UUID id, @RequestParam(required = false) String reason, RedirectAttributes redirect) {
+        if (reason == null || reason.isBlank() || reason.trim().length() > 255) {
+            redirect.addFlashAttribute("flashError", messages.get("po.reason.required"));
+            return "redirect:/suppliers/" + id;
+        }
+        try {
+            Supplier supplier = AuditContext.withReason(reason.trim(), () -> supplierService.reject(id, reason));
+            activityLogService.record(MODULE, "REJECT_SUPPLIER", "Rejected supplier " + supplier.getCode() + " " + supplier.getName() + ": "
+                    + reason.trim(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("supplier.rejectedMsg", supplier.getName()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "REJECT_SUPPLIER", "Failed to reject supplier " + nameOf(id) + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/suppliers/" + id;
+    }
+
+    private String nameOf(UUID id) {
+        try {
+            return supplierService.findById(id).getName();
+        } catch (RuntimeException e) {
+            return id.toString();
         }
     }
 

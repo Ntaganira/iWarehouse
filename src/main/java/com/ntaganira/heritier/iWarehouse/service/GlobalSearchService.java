@@ -98,6 +98,8 @@ public class GlobalSearchService {
     private final VehicleCostService vehicleCostService;
     private final Messages messages;
     private final ReceivableWriteOffService writeOffService;
+    private final CreditApplicationService creditApplicationService;
+    private final PriceChangeService priceChangeService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -110,8 +112,11 @@ public class GlobalSearchService {
                                StockCountService stockCountService, TripService tripService, VehicleService vehicleService,
                                DriverService driverService, AuditCaseService auditCaseService, UserService userService,
                                EmployeeService employeeService, PayRunService payRunService, VehicleCostService vehicleCostService,
-                               Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService) {
+                               Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService,
+                               CreditApplicationService creditApplicationService, PriceChangeService priceChangeService) {
         this.writeOffService = writeOffService;
+        this.creditApplicationService = creditApplicationService;
+        this.priceChangeService = priceChangeService;
         this.stockService = stockService;
         this.locationService = locationService;
         this.locationRepo = locationRepo;
@@ -217,9 +222,18 @@ public class GlobalSearchService {
             new Source<>("nav.customers", "/customers", null, List.of("PAGE_CUSTOMERS", "PERM_VIEW_CUSTOMER"),
                 q -> customerService.findPage(q, null, null, 0, PER_GROUP),
                 c -> new Hit(c.getCode(), c.getName(), join(c.getPhone(), c.getTin() == null ? null : "TIN " + c.getTin()), "/customers/" + c.getId())),
+            new Source<>("nav.creditApplications", "/credit-applications", null, List.of("PAGE_CREDIT_APPLICATIONS"),
+                q -> creditApplicationService.findPage(null, q, 0, PER_GROUP),
+                a -> new Hit(a.getNumber(), a.getCustomer() == null ? null : a.getCustomer().getName(),
+                        join(date(a.getRequestedAt()), rwf(a.getCreditLimit()), messages.get("creditApp.status." + a.getStatus())),
+                        "/credit-applications/" + a.getId())),
             new Source<>("nav.suppliers", "/suppliers", null, List.of("PAGE_SUPPLIERS", "PERM_VIEW_SUPPLIER"),
                 q -> supplierService.findPage(q, null, null, null, 0, PER_GROUP),
                 s -> new Hit(s.getCode(), s.getName(), join(s.getPhone(), s.getTin() == null ? null : "TIN " + s.getTin()), "/suppliers/" + s.getId())),
+            new Source<>("priceChange.title", "/price-lists/changes", null, List.of("PAGE_PRICE_LISTS", "PERM_VIEW_PRICE_LIST"),
+                q -> priceChangeService.findPage(null, q, 0, PER_GROUP),
+                c -> new Hit(c.getNumber(), c.getPriceList() == null ? null : c.getPriceList().getName(),
+                        join(date(c.getRequestedAt()), messages.get("priceChange.status." + c.getStatus())), "/price-lists/changes/" + c.getId())),
             new Source<>("nav.invoices", "/invoices", null, List.of("PAGE_INVOICES", "PERM_VIEW_INVOICE"),
                 q -> salesService.findPage(q, false, 0, PER_GROUP),
                 i -> new Hit(i.getNumber(), buyer(i.getBuyerName(), i.getCustomer()),

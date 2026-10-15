@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{priceChange.title}, ~{::content})}">
+<head><title>Price changes - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{priceChange.title}">Price changes</h1>
+            <div class="subtitle" th:text="#{priceChange.subtitle}">New prices asked, approved before they apply</div>
+        </div>
+        <div class="btn-group">
+            <a href="/price-lists" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{priceChange.sectionTitle}">Changes</span>
+                <span class="section-count" th:text="${changes.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/price-lists/changes}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{priceChange.searchPh}" th:aria-label="#{priceChange.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'priceChange.status.' + st}}">Waiting for approval</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{priceChange.number}">Change</th>
+                        <th th:text="#{creditNote.request.asked}">Asked</th>
+                        <th th:text="#{customer.priceList}">Price list</th>
+                        <th th:text="#{priceChange.reason}">Why the prices change</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${changes.content}">
+                        <td><a class="row-link strong mono" th:href="@{/price-lists/changes/{id}(id=${c.id})}" th:text="${c.number}">PCH-WH-2026-000001</a></td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(c.requestedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${c.requestedBy}">commercial1</div>
+                        </td>
+                        <td th:text="${c.priceList.name}">Retail</td>
+                        <td th:text="${c.reason}">New supplier prices</td>
+                        <td><th:block th:replace="~{price-lists/changes :: changeStatus(${c.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${changes.content.isEmpty()}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{priceChange.empty}">No price changes</h3>
+                                <p th:text="#{priceChange.emptyHint}">New prices are asked for from a price list's Edit prices page</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${changes}, '/price-lists/changes', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a price change. */-->
+<th:block th:fragment="changeStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING'" class="badge badge-warning" th:text="#{priceChange.status.PENDING}">Waiting for approval</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{priceChange.status.APPROVED}">Approved</span>
+    <span th:case="'WITHDRAWN'" class="badge badge-secondary" th:text="#{priceChange.status.WITHDRAWN}">Withdrawn</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{priceChange.status.REJECTED}">Rejected</span>
+</th:block>
+</body>
+</html>

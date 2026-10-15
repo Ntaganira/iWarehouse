@@ -233,6 +233,9 @@
                                         <span sec:authorize="hasAuthority('PAGE_RECEIVABLE_WRITE_OFFS') and hasAuthority('PERM_VIEW_WRITE_OFF')"> · <a href="/accounting/write-offs" th:text="#{dash.biz.writeOffs(${biz.writeOffs})}">0 write-offs</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_PROCUREMENT')"> · <a href="/purchase-orders?status=PENDING_APPROVAL" th:text="#{dash.biz.purchaseOrders(${biz.purchaseOrders})}">0 purchase orders</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_SUPPLIER_PAYMENTS')"> · <a href="/supplier-payments/requests" th:text="#{dash.biz.supplierPayments(${biz.supplierPayments})}">0 supplier payments</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_CREDIT_APPLICATIONS')"> · <a href="/credit-applications" th:text="#{dash.biz.creditApplications(${biz.creditApplications})}">0 credit applications</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_PRICE_LISTS')"> · <a href="/price-lists/changes?status=PENDING" th:text="#{dash.biz.priceChanges(${biz.priceChanges})}">0 price changes</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_SUPPLIERS')"> · <a href="/suppliers?status=pending" th:text="#{dash.biz.suppliersWaiting(${biz.suppliers})}">0 suppliers</a></span>
                                     </div>
                                 </td>
                                 <td class="num" th:classappend="${biz.waiting > 0} ? 'strong'" th:text="${biz.waiting}">0</td>

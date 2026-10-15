@@ -56,6 +56,10 @@ public enum DocumentType {
     RECEIVABLE_WRITE_OFF("RWO"),
     /** A supplier payment prepared, before it is authorised and paid (CMP 07): PRQ-WH-2026-000001. */
     SUPPLIER_PAYMENT_REQUEST("PRQ"),
+    /** Credit terms asked for a customer, assessed, reviewed and approved (F-02): CAP-WH-2026-000001. */
+    CREDIT_APPLICATION("CAP"),
+    /** Prices of a price list changed, waiting for approval (SDP 5): PCH-WH-2026-000001. */
+    PRICE_CHANGE("PCH"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

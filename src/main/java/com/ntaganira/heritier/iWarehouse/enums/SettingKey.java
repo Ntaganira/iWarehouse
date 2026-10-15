@@ -72,6 +72,20 @@ public enum SettingKey {
     APPROVAL_SUPPLIER_PAYMENT_DUAL_LIMIT("approval.supplier-payment-dual-limit", "approvalSupplierPaymentDualLimit", "500000"),
     /** A goods receipt is posted by someone other than who drafted it (F-06). */
     APPROVAL_RECEIPT_SECOND_PERSON("approval.receipt-second-person", "approvalReceiptSecondPerson", "true"),
+    /** Credit terms change only through an approved credit application (F-02 C-D). */
+    APPROVAL_CREDIT_APPLICATION("approval.credit-application", "approvalCreditApplication", "true"),
+    /** The Director of Finance reviews a credit application after Credit Control assessed it (F-02 C). */
+    APPROVAL_CREDIT_APPLICATION_REVIEW("approval.credit-application-review", "approvalCreditApplicationReview", "true"),
+    /** Months after which an approved credit limit is reviewed (F-02 C). */
+    CREDIT_REVIEW_MONTHS("credit.review-months", "creditReviewMonths", "12"),
+    /** Days overdue after which a customer's credit limit is reviewed at once (F-02 C). */
+    CREDIT_REVIEW_OVERDUE_DAYS("credit.review-overdue-days", "creditReviewOverdueDays", "90"),
+    /** Prices change only once another person approves them (SDP 5). */
+    APPROVAL_PRICE_CHANGE("approval.price-change", "approvalPriceChange", "true"),
+    /** A new supplier is approved before it is ordered from or paid (CMP 08). */
+    APPROVAL_SUPPLIER_ONBOARDING("approval.supplier-onboarding", "approvalSupplierOnboarding", "true"),
+    /** References a supplier needs before it is approved (CMP 08). */
+    SUPPLIER_REFERENCES_REQUIRED("supplier.references-required", "supplierReferencesRequired", "2"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

@@ -44,11 +44,23 @@
                 <span th:text="#{customerAccount.tab}">Account</span>
                 <span class="section-count" th:text="${@num.money(account.balance)}">392,038</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-applications" th:classappend="${tab == 'applications'} ? 'active'">
+                <span th:text="#{creditApp.tab}">Credit applications</span>
+                <span class="section-count" th:text="${applications.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
         <div class="section-body">
             <div class="tab-content" id="tab-details" th:classappend="${tab == 'details'} ? 'active'">
                 <h3 class="detail-heading" th:text="#{customer.termsSection}">Credit and prices</h3>
+                <div class="doc-note is-warning" th:if="${waitingApplication != null}">
+                    <span th:text="#{creditApp.waitingNote}">Credit terms asked, waiting:</span>
+                    <a class="mono" th:href="@{/credit-applications/{id}(id=${waitingApplication.id})}" th:text="${waitingApplication.number}">CAP-WH-2026-000001</a>
+                </div>
                 <div class="detail-list">
                     <div class="item">
                         <label th:text="#{customer.creditLimit}">Credit limit</label>
@@ -67,6 +79,12 @@
                             <span th:if="${customer.priceList == null}" th:text="#{customer.defaultList(${defaultList.name})}">Default (Retail)</span>
                             <div class="hint" th:if="${customer.priceList != null}" th:text="#{customer.listFallback(${defaultList.name})}">Products this list does not price use the Retail price</div>
                         </div>
+                    </div>
+                    <div class="item" th:if="${customer.hasCredit()}">
+                        <label th:text="#{customer.creditReview}">Credit review</label>
+                        <div class="value" th:classappend="${reviewOverdue} ? 'text-danger'"
+                             th:text="${customer.creditReviewDue != null} ? #{customer.reviewDue(${#temporals.format(customer.creditReviewDue, 'dd/MM/yyyy')})} : #{customer.reviewNever}">Due 15/10/2027</div>
+                        <div class="hint" th:if="${customer.creditReviewedOn != null}" th:text="#{customer.reviewedOn(${#temporals.format(customer.creditReviewedOn, 'dd/MM/yyyy')})}">Last reviewed 15/10/2026</div>
                     </div>
                 </div>
 
@@ -105,6 +123,50 @@
                         <div class="value" th:text="${customer.version > 0} ? ${#temporals.format(customer.updatedAt, 'dd/MM/yyyy HH:mm') + ' · ' + customer.updatedBy} : '—'">—</div>
                     </div>
                 </div>
+
+                <h3 class="detail-heading" th:text="#{customer.kycSection}">Know your customer</h3>
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{customer.registration}">Registration number</label>
+                        <div class="value mono" th:text="${customer.registrationNumber ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customer.district}">District</label>
+                        <div class="value" th:text="${(customer.district ?: '—') + (customer.countryCode != null ? ' · ' + customer.countryCode : '')}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customer.momo}">Mobile money number</label>
+                        <div class="value" th:text="${customer.momoNumber ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.bankAccount}">Bank account</label>
+                        <div class="value" th:text="${customer.bankAccount != null} ? ${(customer.bankName ?: '') + ' ' + customer.bankAccount} : '—'">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customer.expected}">Expected purchases a month</label>
+                        <div class="value" th:text="${customer.expectedMonthly != null} ? ${@num.money(customer.expectedMonthly) + ' RWF'} : '—'">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{customer.security}">Security offered</label>
+                        <div class="value" th:text="${customer.securityOffered ?: '—'}">—</div>
+                    </div>
+                    <div class="item item-full">
+                        <label th:text="#{party.references}">References</label>
+                        <div class="value pre-line" th:text="${customer.tradeReferences ?: '—'}">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('CUSTOMER', ${customer.id}, ${documents}, '/customers/' + ${customer.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-applications" th:classappend="${tab == 'applications'} ? 'active'">
+                <div class="tab-toolbar" sec:authorize="hasAuthority('PAGE_CREDIT_APPLICATIONS') and hasAuthority('PERM_REQUEST_CREDIT_TERMS')"
+                     th:if="${customer.type.creditAllowed and !customer.defaultCustomer and waitingApplication == null}">
+                    <p class="tab-intro" th:text="#{creditApp.tabIntro}">Credit limit, payment terms and price list change through an application: Credit Control assesses it, then it is approved.</p>
+                    <a th:href="@{/credit-applications/new(customer=${customer.id})}" class="btn btn-primary" th:text="#{creditApp.ask}">Ask for credit terms</a>
+                </div>
+                <th:block th:replace="~{credit-applications/list :: applicationTable(${applications.content}, false)}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${applications}, ${'/customers/' + customer.id}, 'tab=applications')}"></th:block>
             </div>
             <!-- The account (ACC-09): what the customer owes, its ageing, the statement -->
             <div class="tab-content" id="tab-account" th:classappend="${tab == 'account'} ? 'active'" th:if="${account != null}">

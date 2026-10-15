@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{masterData.title}, ~{::content})}">
+<head><title>Master data changes - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{masterData.title}">Master data changes</h1>
+            <div class="subtitle" th:text="#{masterData.subtitle}">Customers, suppliers, glass and prices changed in a month, reviewed once it has ended</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/master-data/export(month=${month})})}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" sec:authorize="hasAuthority('PERM_REVIEW_MASTER_DATA')"
+                    th:if="${ended and review == null}" th:text="#{masterData.review}">Record the review</button>
+        </div>
+    </div>
+    <div class="section">
+        <!--/* The month, then the button */-->
+        <form th:action="@{/reports/master-data}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{exceptions.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${month}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:if="${review != null}">
+        <strong th:text="#{masterData.reviewedBy(${review.reviewedBy}, ${#temporals.format(review.reviewedAt, 'dd/MM/yyyy HH:mm')}, ${review.changes})}">Reviewed by finance1 on 01/11/2026 09:00 (12 changes)</strong>
+        <span th:if="${review.note != null}" th:text="${'· ' + review.note}">· Two customers share a phone: same owner, accepted</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${review == null and ended}" th:text="#{masterData.notReviewed}">This month's changes have not been reviewed yet.</div>
+    <div class="doc-note" th:if="${!ended}" th:text="#{masterData.notEnded}">The month has not ended: its review is recorded once it has.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{exceptions.summary}">By kind</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{masterData.record}">Record</th>
+                        <th class="num" th:text="#{exceptions.count}">Number</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="e : ${counts}">
+                        <td th:text="#{${'masterData.type.' + e.key}}">Customer</td>
+                        <td class="num" th:text="${e.value}">3</td>
+                    </tr>
+                    <tr th:if="${counts.isEmpty()}">
+                        <td colspan="2"><div class="empty-state"><h3 th:text="#{masterData.empty}">No master data changed this month</h3></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{masterData.changesTitle}">Changes</span>
+                <span class="section-count" th:text="${changes.totalElements}">0</span>
+            </h2>
+        </div>
+        <th:block th:replace="~{audit/history :: timeline-records(${changes})}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${changes}, '/reports/master-data', ${query + '&rpage=' + reviews.number}, 'page')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{masterData.checksTitle}">Checks</h2>
+        </div>
+        <div class="section-body">
+            <h3 class="detail-heading" th:text="#{masterData.phones}">Customers sharing a phone</h3>
+            <div class="table-container" data-cards="off" th:unless="${phones.isEmpty()}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{party.phone}">Phone</th>
+                            <th th:text="#{nav.customers}">Customers</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="d : ${phones}">
+                            <td class="mono nowrap" th:text="${d.value}">+250 788 000 000</td>
+                            <td>
+                                <th:block th:each="c, st : ${d.records}">
+                                    <a th:href="@{/customers/{id}(id=${c.id})}" th:text="${c.name}">Umucyo</a><span th:unless="${st.last}">, </span>
+                                </th:block>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:if="${phones.isEmpty()}" th:text="#{masterData.none}">None.</p>
+
+            <h3 class="detail-heading" th:text="#{masterData.accounts}">Suppliers sharing a bank account</h3>
+            <div class="table-container" data-cards="off" th:unless="${accounts.isEmpty()}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{party.bankAccount}">Bank account</th>
+                            <th th:text="#{nav.suppliers}">Suppliers</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="d : ${accounts}">
+                            <td class="mono nowrap" th:text="${d.value}">0001234567</td>
+                            <td>
+                                <th:block th:each="s, st : ${d.records}">
+                                    <a th:href="@{/suppliers/{id}(id=${s.id})}" th:text="${s.name}">Kigali Glass</a><span th:unless="${st.last}">, </span>
+                                </th:block>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:if="${accounts.isEmpty()}" th:text="#{masterData.none}">None.</p>
+
+            <h3 class="detail-heading" th:text="#{masterData.withoutPapers}">Credit customers without their papers</h3>
+            <div class="table-container" th:unless="${withoutPapers.isEmpty()}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{invoice.customer}">Customer</th>
+                            <th th:text="#{customer.creditLimit}">Credit limit</th>
+                            <th th:text="#{customer.registration}">Registration number</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${withoutPapers}">
+                            <td><a th:href="@{/customers/{id}(id=${c.id}, tab='documents')}" th:text="${c.name}">Umucyo Builders Ltd</a></td>
+                            <td class="nowrap" th:text="${@num.money(c.creditLimit)} + ' RWF'">5,000,000 RWF</td>
+                            <td class="mono" th:text="${c.registrationNumber ?: '—'}">—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:if="${withoutPapers.isEmpty()}" th:text="#{masterData.none}">None.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{masterData.reviewsTitle}">Reviews</span>
+                <span class="section-count" th:text="${reviews.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{exceptions.month}">Month</th>
+                        <th class="num" th:text="#{masterData.changesTitle}">Changes</th>
+                        <th th:text="#{masterData.reviewedCol}">Reviewed</th>
+                        <th th:text="#{exceptions.note}">Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${reviews.content}">
+                        <td><a class="row-link" th:href="@{/reports/master-data(month=${#temporals.format(r.periodStart, 'yyyy-MM')})}" th:text="${#temporals.format(r.periodStart, 'MM/yyyy')}">09/2026</a></td>
+                        <td class="num" th:text="${r.changes}">12</td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm')}">01/10/2026 09:00</span>
+                            <div class="cell-sub" th:text="${r.reviewedBy}">finance1</div>
+                        </td>
+                        <td th:text="${r.note ?: '—'}">—</td>
+                    </tr>
+                    <tr th:if="${reviews.content.isEmpty()}">
+                        <td colspan="4"><div class="empty-state"><h3 th:text="#{masterData.noReviews}">No month reviewed yet</h3></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reviews}, '/reports/master-data', ${query + '&page=' + changes.number}, 'rpage')}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="review-modal" sec:authorize="hasAuthority('PERM_REVIEW_MASTER_DATA')" th:if="${ended and review == null}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title">
+            <div class="modal-header">
+                <h3 id="review-title" th:text="#{masterData.reviewTitle(${month})}">Review of 2026-09</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/reports/master-data/review}" method="post" novalidate>
+                <input type="hidden" name="month" th:value="${month}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{masterData.reviewText}">You confirm you went through the month's changes and the checks above. Note what you found, if anything.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="#{exceptions.note}">Note</label>
+                        <textarea id="review-note" name="note" rows="3" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{masterData.review}">Record the review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

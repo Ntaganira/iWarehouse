@@ -169,7 +169,12 @@ public class ProductService {
     }
 
     private static void apply(Product product, ProductDto dto) {
+        // STC-003: the maximum is never below the reorder level
+        if (dto.getMaxLevelM2() != null && dto.getReorderLevelM2() != null && dto.getMaxLevelM2().compareTo(dto.getReorderLevelM2()) < 0) {
+            throw BusinessException.onField("maxLevelM2", "product.maxLevel.belowReorder");
+        }
         product.setReorderLevelM2(dto.getReorderLevelM2());
+        product.setMaxLevelM2(dto.getMaxLevelM2());
         product.setNotes(StringUtils.hasText(dto.getNotes()) ? dto.getNotes().trim() : null);
     }
 

@@ -50,6 +50,10 @@ public class ProductDto {
     @Digits(integer = 6, fraction = 4, message = "{product.reorder.range}")
     private BigDecimal reorderLevelM2;
 
+    @DecimalMin(value = "0.0001", message = "{product.maxLevel.range}")
+    @Digits(integer = 6, fraction = 4, message = "{product.maxLevel.range}")
+    private BigDecimal maxLevelM2;
+
     @Size(max = 255, message = "{product.notes.size}")
     private String notes;
 

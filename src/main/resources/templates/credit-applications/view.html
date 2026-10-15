@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${app.number}, ~{::content})}">
+<head><title>Credit application - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${app.status.name()},
+        canAsk=${#authorization.expression('hasAuthority(''PERM_REQUEST_CREDIT_TERMS'')')},
+        canAssess=${#authorization.expression('hasAuthority(''PERM_ASSESS_CREDIT'')')},
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_CREDIT_APPLICATION'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_CREDIT_APPLICATION'')')},
+        waiting=${s == 'PENDING_ASSESSMENT' or s == 'PENDING_REVIEW' or s == 'PENDING_APPROVAL'},
+        mayAssess=${s == 'PENDING_ASSESSMENT' and canAssess and !mine},
+        mayReview=${s == 'PENDING_REVIEW' and canReview and !mine and !assessor},
+        mayApprove=${s == 'PENDING_APPROVAL' and canApprove and !mine and !assessor and !reviewer}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${app.number}">CAP-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{creditNote.request.askedBy(${app.requestedBy}, ${#temporals.format(app.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by credit1 on 15/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{credit-applications/list :: applicationStatus(${app.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/credit-applications" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline" data-modal-open="withdraw-modal" th:if="${waiting and canAsk and mine}" th:text="#{creditNote.request.withdraw}">Withdraw</button>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:if="${mayAssess or mayReview or mayApprove}"
+                    th:text="#{creditNote.request.reject}">Reject</button>
+            <button type="button" class="btn btn-primary" data-modal-open="assess-modal" th:if="${mayAssess}" th:text="#{creditApp.assess}">Assess</button>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" th:if="${mayReview}" th:text="#{creditNote.request.review}">Reviewed, send for approval</button>
+            <th:block th:if="${mayApprove}">
+                <th:block th:replace="~{fragments/authority :: approve(@{/credit-applications/{id}/approve(id=${app.id})}, #{creditApp.approveConfirm(${app.number}, ${app.customer.name}, ${@num.money(app.creditLimit)}, ${app.paymentTermsDays})}, #{creditApp.approve}, ${authority})}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="#{creditApp.reason} + ':'">Why:</strong> <span th:text="${app.reason}">Growing orders</span></div>
+    <div class="doc-note is-warning" th:if="${waiting}">
+        <span th:text="#{${'creditApp.waiting.' + s}}">Credit Control assesses it first.</span>
+        <span th:if="${mine}" th:text="#{creditApp.notYourOwn}">You asked for it: other people assess, review and approve it.</span>
+        <span th:if="${assessor or reviewer}" th:text="#{creditApp.notAgain}">You assessed or reviewed it: another person approves it.</span>
+        <th:block th:if="${authority != null}" th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine or assessor or reviewer})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${app.assessedBy != null}">
+        <strong th:text="#{creditApp.assessedBy(${app.assessedBy}, ${#temporals.format(app.assessedAt, 'dd/MM/yyyy HH:mm')})}">Assessed by credit1 on 15/10/2026 11:00:</strong>
+        <span th:text="${app.assessmentNote}">Pays on time; TIN and RDB papers kept</span>
+    </div>
+    <div class="doc-note" th:if="${app.reviewedBy != null}">
+        <strong th:text="#{creditNote.request.reviewedBy(${app.reviewedBy}, ${#temporals.format(app.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by finance1 on 15/10/2026 11:30</strong>
+        <span th:if="${app.reviewNote != null}" th:text="${'· ' + app.reviewNote}">· ok</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED'}">
+        <strong th:text="#{creditNote.request.approvedBy(${app.decidedBy}, ${#temporals.format(app.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by coo1 on 15/10/2026 12:00</strong>
+        <span th:if="${app.decisionNote != null}" th:text="${'· ' + app.decisionNote}">· ok</span>
+        <span th:text="#{creditApp.applied}">The customer's terms are set; the next review is due in a year.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'WITHDRAWN'}">
+        <strong th:text="${s == 'REJECTED'} ? #{creditNote.request.rejectedBy(${app.decidedBy})} : #{creditNote.request.withdrawnBy(${app.decidedBy})}">Rejected by coo1:</strong>
+        <span th:text="${app.decisionNote}">Too many invoices late</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${app.customer.id}, tab='applications')}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${app.customer.name}">Umucyo Builders Ltd</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${app.customer.name}">Umucyo Builders Ltd</span>
+                        <div class="cell-sub mono" th:text="${app.customer.code}">CUS-WH-00001</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditApp.kindLabel}">Asked for</label>
+                    <div class="value" th:text="#{${'creditApp.kind.' + app.kind}}">New</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customer.creditLimit}">Credit limit</label>
+                    <div class="value strong" th:text="${@num.money(app.creditLimit)} + ' RWF'">5,000,000 RWF</div>
+                    <div class="cell-sub" th:text="#{creditApp.was(${@num.money(app.previousLimit) + ' RWF'})}">was 0 RWF</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{party.terms}">Payment terms</label>
+                    <div class="value" th:text="#{party.termsDays(${app.paymentTermsDays})}">30 days</div>
+                    <div class="cell-sub" th:text="#{creditApp.wasDays(${app.previousTermsDays})}">was 0 days</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customer.priceList}">Price list</label>
+                    <div class="value" th:text="${app.priceList != null} ? ${app.priceList.name} : #{creditApp.defaultList}">Contractors</div>
+                    <div class="cell-sub" th:text="${app.previousPriceList != null} ? #{creditApp.was(${app.previousPriceList.name})} : #{creditApp.wasDefault}">was the default list</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.owedWhenAsked}">Owed when asked (RWF)</label>
+                    <div class="value" th:text="${@num.money(app.owedWhenAsked)}">392,038</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.oldestDays}">Oldest overdue</label>
+                    <div class="value" th:text="${app.oldestOverdueDays != null} ? #{writeOff.days(${app.oldestOverdueDays})} : '—'">—</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.request.office}">Office</label>
+                    <div class="value" th:text="#{${'authority.level.' + app.authorityLevel}}">Chief Operating Officer</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('CREDIT_APPLICATION', ${app.id}, ${documents}, '/credit-applications/' + ${app.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/credit-applications/' + ${app.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!-- Credit Control's assessment: its note is required -->
+    <div class="modal-overlay" id="assess-modal" th:if="${mayAssess}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="assess-title">
+            <div class="modal-header">
+                <h3 id="assess-title" th:text="#{creditApp.assessTitle(${app.number})}">Assess CAP-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="assess-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/credit-applications/{id}/assess(id=${app.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{creditApp.assessText}">How the customer pays, their papers and references, and the limit Credit Control supports.</p>
+                    <div class="form-group">
+                        <label for="assess-note" th:text="#{creditApp.assessment}">Assessment</label>
+                        <textarea id="assess-note" name="note" rows="4" maxlength="500" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="assess-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{creditApp.assess}">Assess</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- The Director of Finance's review: a note if they have one -->
+    <div class="modal-overlay" id="review-modal" th:if="${mayReview}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title">
+            <div class="modal-header">
+                <h3 id="review-title" th:text="#{creditApp.reviewTitle(${app.number})}">Review CAP-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/credit-applications/{id}/review(id=${app.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{creditApp.reviewText}">You confirm the assessment and send the application for approval.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="#{exceptions.note}">Note</label>
+                        <input type="text" id="review-note" name="note" maxlength="255" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{creditNote.request.review}">Reviewed, send for approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <th:block th:if="${mayAssess or mayReview or mayApprove}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{creditApp.rejectTitle(${app.number})},
+                @{/credit-applications/{id}/reject(id=${app.id})}, #{creditApp.rejectText}, #{creditNote.request.reject})}"></div>
+    </th:block>
+    <th:block th:if="${waiting and canAsk and mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('withdraw-modal', #{creditApp.withdrawTitle(${app.number})},
+                @{/credit-applications/{id}/withdraw(id=${app.id})}, #{creditApp.withdrawText}, #{creditNote.request.withdraw})}"></div>
+    </th:block>
+    <th:block th:if="${mayApprove}">
+        <div th:replace="~{fragments/authority :: boardModal(@{/credit-applications/{id}/approve(id=${app.id})}, #{creditApp.approve}, ${authority})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

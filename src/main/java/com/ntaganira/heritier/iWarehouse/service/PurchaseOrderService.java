@@ -163,7 +163,7 @@ public class PurchaseOrderService {
     /** Suppliers for the form: active ones, plus the order's own if it was deactivated since. */
     public List<Supplier> suppliersFor(PurchaseOrder current) {
         return supplierRepo.findAll(Sort.by("name")).stream()
-                .filter(s -> s.isEnabled() || (current != null && s.getId().equals(current.getSupplier().getId())))
+                .filter(s -> (s.isEnabled() && s.isApproved()) || (current != null && s.getId().equals(current.getSupplier().getId())))
                 .toList();
     }
 
@@ -216,6 +216,7 @@ public class PurchaseOrderService {
         if (!order.getSupplier().isEnabled()) {
             throw BusinessException.of("po.supplier.inactive", order.getSupplier().getName());
         }
+        SupplierService.requireApproved(order.getSupplier(), null);     // CMP 08: approved suppliers only
         for (PurchaseOrderLine line : order.getLines()) {
             if (!line.getProduct().isEnabled()) {
                 throw BusinessException.of("po.line.product.inactive", line.getLineNo(), line.getProduct().getCode());
@@ -350,6 +351,9 @@ public class PurchaseOrderService {
         boolean unchanged = current != null && current.getSupplier().getId().equals(id);
         if (!supplier.isEnabled() && !unchanged) {
             throw BusinessException.onField("supplierId", "po.supplier.inactive", supplier.getName());
+        }
+        if (!unchanged) {
+            SupplierService.requireApproved(supplier, "supplierId");
         }
         return supplier;
     }

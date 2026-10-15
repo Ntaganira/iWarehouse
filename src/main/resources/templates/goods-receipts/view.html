@@ -122,6 +122,26 @@
                         <div class="value mono" th:text="${receipt.deliveryRef ?: '—'}">MSKU 123456-7</div>
                     </div>
                     <div class="item">
+                        <label th:text="#{receipt.vehiclePlate}">receipt.vehiclePlate</label>
+                        <div class="value mono" th:text="${receipt.vehiclePlate ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{receipt.driverName}">receipt.driverName</label>
+                        <div class="value" th:text="${receipt.driverName ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{receipt.transporter}">receipt.transporter</label>
+                        <div class="value" th:text="${receipt.transporter ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{receipt.invoiceNumber}">receipt.invoiceNumber</label>
+                        <div class="value mono" th:text="${receipt.invoiceNumber ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{receipt.declarationNumber}">receipt.declarationNumber</label>
+                        <div class="value mono" th:text="${receipt.declarationNumber ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
                         <label th:text="#{receipt.postedBy}">Posted</label>
                         <div class="value" th:text="${receipt.postedAt != null} ? ${#temporals.format(receipt.postedAt, 'dd/MM/yyyy HH:mm') + ' · ' + receipt.postedBy} : '—'">—</div>
                     </div>

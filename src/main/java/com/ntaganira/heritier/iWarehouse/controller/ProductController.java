@@ -133,6 +133,7 @@ public class ProductController {
         dto.setCode(product.getCode());
         dto.setTaxCategoryId(product.getTaxCategory().getId());
         dto.setReorderLevelM2(product.getReorderLevelM2() == null ? null : product.getReorderLevelM2().stripTrailingZeros());
+        dto.setMaxLevelM2(product.getMaxLevelM2() == null ? null : product.getMaxLevelM2().stripTrailingZeros());
         dto.setNotes(product.getNotes());
         return form(model, withIdentity(dto, product));
     }

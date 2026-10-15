@@ -1,5 +1,12 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import com.ntaganira.heritier.iWarehouse.config.Countries;
 import com.ntaganira.heritier.iWarehouse.dto.CustomerDto;
 import com.ntaganira.heritier.iWarehouse.dto.SupplierDto;
@@ -10,7 +17,11 @@ import com.ntaganira.heritier.iWarehouse.entity.Supplier;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.Incoterm;
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
+import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
+import com.ntaganira.heritier.iWarehouse.repository.AttachmentRepository;
 import com.ntaganira.heritier.iWarehouse.repository.CurrencyRepository;
 import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PriceListRepository;
@@ -43,6 +54,8 @@ class PartyServicesTest {
     private DocumentNumberService numbers;
     private SupplierService suppliers;
     private CustomerService customers;
+    private SettingService settings;
+    private AttachmentRepository attachmentRepo;
 
     private final Currency usd = currency("USD", true);
     private final Currency gbp = currency("GBP", false);
@@ -66,8 +79,106 @@ class PartyServicesTest {
         when(priceListRepo.findById(contractors.getId())).thenReturn(Optional.of(contractors));
         when(priceListRepo.findById(oldList.getId())).thenReturn(Optional.of(oldList));
         orderRepo = mock(PurchaseOrderRepository.class);
-        suppliers = new SupplierService(supplierRepo, currencyRepo, numbers, new Countries(), orderRepo);
-        customers = new CustomerService(customerRepo, priceListRepo, numbers);
+        settings = mock(SettingService.class);
+        when(settings.getInt(SettingKey.SUPPLIER_REFERENCES_REQUIRED)).thenReturn(2);
+        attachmentRepo = mock(AttachmentRepository.class);
+        suppliers = new SupplierService(supplierRepo, currencyRepo, numbers, new Countries(), orderRepo, settings, attachmentRepo,
+                mock(Notifier.class), Clock.fixed(Instant.parse("2026-10-15T08:00:00Z"), ZoneId.of("Africa/Kigali")));
+        customers = new CustomerService(customerRepo, priceListRepo, numbers, settings);
+    }
+
+    @AfterEach
+    void signOut() {
+        SecurityContextHolder.clearContext();
+    }
+
+    // ---------------------------------------------------------------- the approved supplier register (CMP 08)
+
+    @Test
+    void aNewSupplierWaitsUntilAnotherPersonApprovesItWithItsPapers() {
+        when(settings.getBoolean(SettingKey.APPROVAL_SUPPLIER_ONBOARDING)).thenReturn(true);
+        signIn(3L, "buyer");
+        Supplier s = suppliers.create(supplier("Shandong Float Glass", "CN", "USD", null));
+        s.setId(UUID.randomUUID());
+        s.setCreatedBy("buyer");
+        when(supplierRepo.lockById(s.getId())).thenReturn(Optional.of(s));
+        when(supplierRepo.findById(s.getId())).thenReturn(Optional.of(s));
+        assertThat(s.getApprovalStatus()).isEqualTo(SupplierApprovalStatus.PENDING);
+        assertThatThrownBy(() -> SupplierService.requireApproved(s, null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplier.notApproved"));
+        assertThatThrownBy(() -> suppliers.approve(s.getId(), null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplier.approve.own"));
+
+        signIn(9L, "coo");
+        assertThat(suppliers.missingForApproval(s)).containsExactly("supplier.missing.registration", "supplier.missing.bank",
+                "supplier.missing.references", "supplier.missing.documents");
+        assertThatThrownBy(() -> suppliers.approve(s.getId(), null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplier.missing.registration"));
+        s.setRegistrationNumber("91370000-X");
+        s.setBankName("Bank of China");
+        s.setBankAccount("6217 0000 1234");
+        s.setTradeReferences("Kigali Glass Traders, +250 788 000 001\nHuye Hardware, +250 788 000 002");
+        when(attachmentRepo.countByOwnerTypeAndOwnerIdAndRemovedAtIsNull(AttachmentOwner.SUPPLIER, s.getId())).thenReturn(1L);
+        suppliers.approve(s.getId(), "papers checked");
+        assertThat(s.isApproved()).isTrue();
+        assertThat(s.getApprovedBy()).isEqualTo("coo");
+
+        // New bank details send it back for approval
+        SupplierDto dto = supplier("Shandong Float Glass", "CN", "USD", null);
+        dto.setRegistrationNumber("91370000-X");
+        dto.setBankName("Bank of China");
+        dto.setBankAccount("9999 0000 0000");
+        dto.setTradeReferences(s.getTradeReferences());
+        when(supplierRepo.existsByNameIgnoreCaseAndIdNot(any(), any())).thenReturn(false);
+        suppliers.update(s.getId(), dto);
+        assertThat(s.getApprovalStatus()).isEqualTo(SupplierApprovalStatus.PENDING);
+        assertThat(s.getApprovedBy()).isNull();
+    }
+
+    @Test
+    void withoutOnboardingANewSupplierIsApprovedAtOnce() {
+        Supplier s = suppliers.create(supplier("Kigali Glass Traders", "RW", "USD", null));
+        assertThat(s.isApproved()).isTrue();
+    }
+
+    // ---------------------------------------------------------------- customers: duplicates and terms (BP 11, F-02)
+
+    @Test
+    void aPhoneAlreadyOnAnotherCustomerNeedsAConfirmation() {
+        Customer other = new Customer();
+        other.setId(UUID.randomUUID());
+        other.setCode("CUS-WH-00007");
+        other.setName("Umucyo Builders Ltd");
+        when(customerRepo.findByPhone("+250 788 123 456")).thenReturn(List.of(other));
+        CustomerDto dto = new CustomerDto();
+        dto.setType(CustomerType.ACCOUNT);
+        dto.setName("Umucyo Construction");
+        dto.setPhone("+250 788 123 456");
+        assertThatThrownBy(() -> customers.create(dto, false))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getMessageKey()).isEqualTo("customer.phone.duplicate");
+                    assertThat(e.getField()).isEqualTo("phone");
+                });
+        dto.setConfirmDuplicate(true);
+        assertThat(customers.create(dto, false).getPhone()).isEqualTo("+250 788 123 456");
+    }
+
+    @Test
+    void withCreditApplicationsTheFormNeverSetsTerms() {
+        when(settings.getBoolean(SettingKey.APPROVAL_CREDIT_APPLICATION)).thenReturn(true);
+        CustomerDto dto = new CustomerDto();
+        dto.setType(CustomerType.ACCOUNT);
+        dto.setName("Kigali Glaziers Ltd");
+        dto.setCreditLimit(new BigDecimal("2000000"));
+        dto.setPaymentTermsDays(30);
+        Customer c = customers.create(dto, true);
+        assertThat(c.getCreditLimit()).isEqualByComparingTo("0");
+        assertThat(c.getPaymentTermsDays()).isZero();
+    }
+
+    private static void signIn(long id, String username) {
+        AppUserPrincipal principal = new AppUserPrincipal(id, username, username, "x", true, true, List.of());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
     // ---------------------------------------------------------------- suppliers

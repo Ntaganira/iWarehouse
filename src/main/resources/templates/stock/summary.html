@@ -52,6 +52,14 @@
                 <div class="kpi-trend flat"><span class="vs" th:text="#{summary.reorderHint}">glass to order</span></div>
             </div>
         </div>
+        <div class="kpi-card" th:if="${!#lists.isEmpty(view.overstock)}">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{summary.overstockKpi}">Above maximum level</div>
+                <div class="kpi-value" th:text="${view.overstock.size()}">1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{summary.overstockHint}">glass not to order</span></div>
+            </div>
+        </div>
     </div>
 
     <div class="section" th:if="${!#lists.isEmpty(view.reorder)}">
@@ -81,7 +89,37 @@
                 </tbody>
             </table>
         </div>
-        <th:block th:replace="~{layout/pagination :: pagerParam(${reorderPage}, '/stock/summary', ${query + '&page=' + rowPage.number}, 'rpage')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reorderPage}, '/stock/summary', ${query + '&page=' + rowPage.number + '&opage=' + overstockPage.number}, 'rpage')}"></th:block>
+    </div>
+
+    <div class="section" th:if="${!#lists.isEmpty(view.overstock)}">
+        <div class="section-header">
+            <h2 th:text="#{summary.overstockTitle}">Above maximum level</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{product.name}">Product</th>
+                        <th class="num" th:text="#{summary.held}">Held m²</th>
+                        <th class="num" th:text="#{summary.maxLevel}">Maximum m²</th>
+                        <th class="num" th:text="#{summary.over}">Over m²</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="o : ${overstockPage.content}">
+                        <td>
+                            <th:block th:replace="~{products/list :: productName(${o.product})}"></th:block>
+                            <div class="cell-sub mono" th:text="${o.product.code}">CLR-6</div>
+                        </td>
+                        <td class="num" th:text="${@num.m2(o.heldM2)}">180</td>
+                        <td class="num" th:text="${@num.m2(o.maxM2)}">150</td>
+                        <td class="num strong text-warning" th:text="${@num.m2(o.overM2)}">30</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${overstockPage}, '/stock/summary', ${query + '&page=' + rowPage.number + '&rpage=' + reorderPage.number}, 'opage')}"></th:block>
     </div>
 
     <div class="section">
@@ -145,10 +183,19 @@
                         <th class="num" th:text="${@num.m2(view.total.areaM2)}">274.06</th>
                         <th class="num" th:if="${seeCost}" th:text="${@num.money(view.total.value)}">6,161,000</th>
                     </tr>
+                    <tr th:if="${ledger != null}">
+                        <th colspan="3" th:text="#{summary.ledger}">Inventory account</th>
+                        <th class="num" th:text="${@num.money(ledger)}">6,161,000</th>
+                    </tr>
+                    <tr th:if="${ledger != null}">
+                        <th colspan="3" th:text="#{summary.ledgerDifference}">Difference</th>
+                        <th class="num" th:classappend="${ledger.compareTo(view.total.value) != 0} ? 'text-danger'" th:text="${@num.money(ledger.subtract(view.total.value))}">0</th>
+                    </tr>
                 </tfoot>
             </table>
         </div>
-        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/summary', ${query + '&rpage=' + reorderPage.number}, 'page')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${rowPage}, '/stock/summary', ${query + '&rpage=' + reorderPage.number + '&opage=' + overstockPage.number}, 'page')}"></th:block>
+        <p class="form-note" th:if="${ledger != null}" th:text="#{summary.ledgerNote}">One Inventory account carries all the glass: the value of each site and vehicle above adds up to it.</p>
         <p class="form-note" th:text="#{summary.note}">Units in stock: received, available, reserved, being cut and on vehicles. Value is each glass's m² times its moving average cost, the value the accounts carry.</p>
     </div>
 </div>

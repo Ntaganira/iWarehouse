@@ -33,6 +33,9 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID>, JpaSp
 
     Optional<Customer> findByTin(String tin);
 
+    /** Customers with this phone (BP 11: duplicate or related accounts). */
+    List<Customer> findByPhone(String phone);
+
     Optional<Customer> findByDefaultCustomerTrue();
 
     long countByPriceList_IdAndEnabledTrue(UUID priceListId);

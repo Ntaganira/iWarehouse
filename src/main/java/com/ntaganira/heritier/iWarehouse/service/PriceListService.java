@@ -277,6 +277,19 @@ public class PriceListService {
      */
     @Transactional
     public PriceUpdate updatePrices(UUID listId, Map<UUID, BigDecimal> productPrices, Map<UUID, BigDecimal> servicePrices) {
+        if (settingService.getBoolean(SettingKey.APPROVAL_PRICE_CHANGE)) {
+            throw BusinessException.of("priceChange.required");          // SDP 5: prices change once approved
+        }
+        return writePrices(listId, productPrices, servicePrices);
+    }
+
+    /** Writes the prices of an approved price change (SDP 5), inside the approval's transaction. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public PriceUpdate applyApprovedPrices(UUID listId, Map<UUID, BigDecimal> productPrices, Map<UUID, BigDecimal> servicePrices) {
+        return writePrices(listId, productPrices, servicePrices);
+    }
+
+    private PriceUpdate writePrices(UUID listId, Map<UUID, BigDecimal> productPrices, Map<UUID, BigDecimal> servicePrices) {
         PriceList list = findById(listId);
         int[] counts = new int[3];
 

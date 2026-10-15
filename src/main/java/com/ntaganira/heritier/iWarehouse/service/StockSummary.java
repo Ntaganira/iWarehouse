@@ -46,6 +46,14 @@ public final class StockSummary {
         }
     }
 
+    /** A glass held above its maximum level (STC-003): the m² held, the maximum and how much over. */
+    public record Overstock(Product product, BigDecimal heldM2, BigDecimal maxM2) {
+
+        public BigDecimal getOverM2() {
+            return heldM2.subtract(maxM2);
+        }
+    }
+
     public static List<Row> group(Collection<Fact> facts, GroupBy by, Map<UUID, Product> products, Map<UUID, Location> locations) {
         Map<String, long[]> pieces = new LinkedHashMap<>();
         Map<String, BigDecimal> areas = new HashMap<>();
@@ -118,6 +126,27 @@ public final class StockSummary {
             }
         }
         list.sort(Comparator.comparing(Reorder::getShortM2).reversed().thenComparing(r -> r.product().getCode()));
+        return list;
+    }
+
+    /** Enabled products with a maximum level holding more m² than it (every unit in stock counts), the most over first (STC-003). */
+    public static List<Overstock> overstock(Collection<Fact> facts, Collection<Product> products) {
+        Map<UUID, BigDecimal> held = new HashMap<>();
+        for (Fact f : facts) {
+            held.merge(f.productId(), f.areaM2(), BigDecimal::add);
+        }
+        List<Overstock> list = new ArrayList<>();
+        for (Product p : products) {
+            BigDecimal max = p.getMaxLevelM2();
+            if (!p.isEnabled() || max == null || max.signum() <= 0) {
+                continue;
+            }
+            BigDecimal have = held.getOrDefault(p.getId(), BigDecimal.ZERO);
+            if (have.compareTo(max) > 0) {
+                list.add(new Overstock(p, have, max));
+            }
+        }
+        list.sort(Comparator.comparing(Overstock::getOverM2).reversed().thenComparing(o -> o.product().getCode()));
         return list;
     }
 

@@ -6,8 +6,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * <pre>
@@ -75,4 +78,52 @@ public class Customer extends BaseEntity {
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    // --- Know your customer (SDP 11, F-02 A-B)
+
+    /** The RDB company code, or a sole trader's national ID. */
+    @Column(name = "registration_number", length = 40)
+    private String registrationNumber;
+
+    @Column(length = 60)
+    private String district;
+
+    @Column(name = "country_code", length = 2)
+    @JdbcTypeCode(SqlTypes.CHAR)                         // a CHAR(2) column
+    private String countryCode;
+
+    @Column(name = "bank_name", length = 80)
+    private String bankName;
+
+    @Column(name = "bank_account", length = 40)
+    private String bankAccount;
+
+    /** The mobile money number registered to the customer. */
+    @Column(name = "momo_number", length = 30)
+    private String momoNumber;
+
+    /** Expected purchases a month, RWF. */
+    @Column(name = "expected_monthly", precision = 18, scale = 2)
+    private BigDecimal expectedMonthly;
+
+    @Column(name = "trade_references", length = 500)
+    private String tradeReferences;
+
+    /** A guarantee, a post-dated cheque, a deposit... */
+    @Column(name = "security_offered", length = 255)
+    private String securityOffered;
+
+    // --- The credit review (F-02 C)
+
+    /** The day its last credit application was approved. */
+    @Column(name = "credit_reviewed_on")
+    private LocalDate creditReviewedOn;
+
+    /** When its credit limit is next reviewed; null with credit = never reviewed. */
+    @Column(name = "credit_review_due")
+    private LocalDate creditReviewDue;
+
+    public boolean hasCredit() {
+        return creditLimit.signum() > 0 || paymentTermsDays > 0;
+    }
 }

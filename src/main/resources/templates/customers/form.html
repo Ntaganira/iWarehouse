@@ -46,6 +46,10 @@
                     <input type="tel" id="phone" th:field="*{phone}" maxlength="30" th:placeholder="#{party.phonePh}"
                            th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'">
                     <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                    <label class="checkbox-label duplicate-confirm" th:if="${duplicatePhone}">
+                        <input type="checkbox" class="checkbox" th:field="*{confirmDuplicate}">
+                        <span th:text="#{customer.phone.confirm}">Save anyway: it is a different customer</span>
+                    </label>
                 </div>
                 <div class="form-group">
                     <label for="email" th:text="#{party.email}">Email</label>
@@ -70,6 +74,71 @@
                     <input type="text" id="notes" th:field="*{notes}" maxlength="255"
                            th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
                     <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                </div>
+            </div>
+
+
+            <h3 class="form-section-title" th:text="#{customer.kycSection}">Know your customer</h3>
+            <p class="form-note" th:text="#{customer.kycNote}">Needed before an account customer gets credit (F-02): keep the copies of their papers on the Documents tab.</p>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="registrationNumber" th:text="#{customer.registration}">customer.registration</label>
+                    <input type="text" id="registrationNumber" th:field="*{registrationNumber}" maxlength="40" class="input-code" spellcheck="false" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('registrationNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('registrationNumber')}" th:errors="*{registrationNumber}"></span>
+                    <span class="hint" th:text="#{customer.registrationHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="district" th:text="#{customer.district}">customer.district</label>
+                    <input type="text" id="district" th:field="*{district}" maxlength="60" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('district')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('district')}" th:errors="*{district}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="countryCode" th:text="#{customer.country}">customer.country</label>
+                    <input type="text" id="countryCode" th:field="*{countryCode}" maxlength="2" class="input-code" spellcheck="false" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('countryCode')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('countryCode')}" th:errors="*{countryCode}"></span>
+                    <span class="hint" th:text="#{customer.countryHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="momoNumber" th:text="#{customer.momo}">customer.momo</label>
+                    <input type="tel" id="momoNumber" th:field="*{momoNumber}" maxlength="30" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('momoNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('momoNumber')}" th:errors="*{momoNumber}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bankName" th:text="#{party.bankName}">party.bankName</label>
+                    <input type="text" id="bankName" th:field="*{bankName}" maxlength="80" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('bankName')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('bankName')}" th:errors="*{bankName}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="bankAccount" th:text="#{party.bankAccount}">party.bankAccount</label>
+                    <input type="text" id="bankAccount" th:field="*{bankAccount}" maxlength="40" class="input-code" spellcheck="false" autocomplete="off"
+                           th:classappend="${#fields.hasErrors('bankAccount')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('bankAccount')}" th:errors="*{bankAccount}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="expectedMonthly" th:text="#{customer.expected}">Expected purchases a month</label>
+                    <div class="input-unit">
+                        <input type="number" id="expectedMonthly" th:field="*{expectedMonthly}" min="0" step="1" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('expectedMonthly')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expectedMonthly')}" th:errors="*{expectedMonthly}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="securityOffered" th:text="#{customer.security}">Security offered</label>
+                    <input type="text" id="securityOffered" th:field="*{securityOffered}" maxlength="255" th:placeholder="#{customer.securityPh}"
+                           th:classappend="${#fields.hasErrors('securityOffered')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('securityOffered')}" th:errors="*{securityOffered}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="tradeReferences" th:text="#{party.references}">References</label>
+                    <textarea id="tradeReferences" th:field="*{tradeReferences}" rows="3" maxlength="500" th:placeholder="#{party.referencesPh}"
+                              th:classappend="${#fields.hasErrors('tradeReferences')} ? 'is-invalid'"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('tradeReferences')}" th:errors="*{tradeReferences}"></span>
                 </div>
             </div>
 
@@ -125,7 +194,7 @@
                         <div class="value" th:text="${customerEntity != null and customerEntity.priceList != null} ? ${customerEntity.priceList.name} : #{customer.defaultList(${defaultList.name})}">Default (Retail)</div>
                     </div>
                 </div>
-                <p class="form-note" th:text="#{customer.termsLocked}">Credit limit, payment terms and price list are set by a user allowed to grant credit.</p>
+                <p class="form-note" th:text="${termsByApplication} ? #{customer.termsByApplication} : #{customer.termsLocked}">Credit limit, payment terms and price list are set by a user allowed to grant credit.</p>
                 <input type="hidden" th:field="*{creditLimit}">
                 <input type="hidden" th:field="*{paymentTermsDays}">
             </th:block>

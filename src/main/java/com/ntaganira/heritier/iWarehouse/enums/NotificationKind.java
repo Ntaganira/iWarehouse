@@ -25,5 +25,7 @@ public enum NotificationKind {
     /** A mobile sale the server could not take as it was made, waiting for the supervisor (SYNC-05). */
     SYNC,
     /** The end of the day: a trip back with units missing or unexpected, a float not cleared in time (FLT-10, RPT-06). */
-    EOD
+    EOD,
+    /** A customer's credit limit due for its review: yearly, or an invoice long overdue (F-02 C). */
+    CREDIT
 }

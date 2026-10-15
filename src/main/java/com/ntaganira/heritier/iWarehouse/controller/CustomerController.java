@@ -5,12 +5,15 @@ import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.CustomerDto;
 import com.ntaganira.heritier.iWarehouse.entity.Customer;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.Ageing;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
+import com.ntaganira.heritier.iWarehouse.service.CreditApplicationService;
 import com.ntaganira.heritier.iWarehouse.service.CustomerAccountService;
 import com.ntaganira.heritier.iWarehouse.service.CustomerService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
@@ -56,10 +59,14 @@ public class CustomerController {
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
+    private final AttachmentService attachmentService;
+    private final CreditApplicationService creditApplicationService;
 
     public CustomerController(CustomerService customerService, PriceListService priceListService, CustomerAccountService accountService,
                               TillService tillService, DataChangeService dataChangeService, ActivityLogService activityLogService,
-                              Messages messages) {
+                              Messages messages, AttachmentService attachmentService, CreditApplicationService creditApplicationService) {
+        this.attachmentService = attachmentService;
+        this.creditApplicationService = creditApplicationService;
         this.customerService = customerService;
         this.priceListService = priceListService;
         this.accountService = accountService;
@@ -91,7 +98,7 @@ public class CustomerController {
     public String view(@PathVariable UUID id, @RequestParam(defaultValue = "details") String tab,
                        @RequestParam(defaultValue = "0") int page, Model model) {
         boolean seesAccount = AppUserPrincipal.currentHas("PERM_VIEW_CUSTOMER_ACCOUNT");
-        String open = List.of("details", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
+        String open = List.of("details", "documents", "applications", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
         Customer customer = customerService.findById(id);
         model.addAttribute("customer", customer);
         model.addAttribute("defaultList", priceListService.defaultList());
@@ -105,6 +112,12 @@ public class CustomerController {
             model.addAttribute("myTill", tillService.current().map(tillService::summary).orElse(null));
         }
         model.addAttribute("history", dataChangeService.history("Customer", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.CUSTOMER, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        model.addAttribute("applications", Paging.of(creditApplicationService.ofCustomer(id), Paging.pageOf("applications", open, page)));
+        model.addAttribute("waitingApplication", creditApplicationService.waitingOf(id).orElse(null));
+        model.addAttribute("termsByApplication", customerService.termsByApplication());
+        model.addAttribute("reviewOverdue", customer.hasCredit() && (customer.getCreditReviewDue() == null
+                || !customer.getCreditReviewDue().isAfter(creditApplicationService.today())));
         model.addAttribute("tab", open);
         return "customers/view";
     }
@@ -152,6 +165,15 @@ public class CustomerController {
         dto.setPaymentTermsDays(c.getPaymentTermsDays());
         dto.setPriceListId(c.getPriceList() == null ? null : c.getPriceList().getId());
         dto.setNotes(c.getNotes());
+        dto.setRegistrationNumber(c.getRegistrationNumber());
+        dto.setDistrict(c.getDistrict());
+        dto.setCountryCode(c.getCountryCode());
+        dto.setBankName(c.getBankName());
+        dto.setBankAccount(c.getBankAccount());
+        dto.setMomoNumber(c.getMomoNumber());
+        dto.setTradeReferences(c.getTradeReferences());
+        dto.setSecurityOffered(c.getSecurityOffered());
+        dto.setExpectedMonthly(c.getExpectedMonthly() == null ? null : c.getExpectedMonthly().stripTrailingZeros());
         return form(model, dto);
     }
 
@@ -234,7 +256,8 @@ public class CustomerController {
         model.addAttribute("types", CustomerType.values());
         model.addAttribute("priceLists", customerService.priceListsFor(current));
         model.addAttribute("defaultList", priceListService.defaultList());
-        model.addAttribute("canSetTerms", AppUserPrincipal.currentHas(TERMS));
+        model.addAttribute("canSetTerms", AppUserPrincipal.currentHas(TERMS) && !customerService.termsByApplication());
+        model.addAttribute("termsByApplication", customerService.termsByApplication());
         return "customers/form";
     }
 
@@ -251,6 +274,7 @@ public class CustomerController {
         } else {
             model.addAttribute("flashError", error);
         }
+        model.addAttribute("duplicatePhone", "customer.phone.duplicate".equals(e.getMessageKey()));
         return invalid(model, dto, result);
     }
 }

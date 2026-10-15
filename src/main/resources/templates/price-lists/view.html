@@ -19,6 +19,7 @@
         </div>
         <div class="btn-group">
             <a href="/price-lists" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/price-lists/changes(search=${list.name})}" class="btn btn-outline" th:text="#{priceChange.title}">Price changes</a>
             <th:block sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')">
                 <form th:if="${!list.defaultList and list.enabled}" th:action="@{/price-lists/{id}/default(id=${list.id})}" method="post"
                       class="row-action-form confirm-submit" th:attr="data-confirm=#{pricelist.defaultConfirm(${list.name})}">
@@ -36,6 +37,11 @@
                 <a th:href="@{/price-lists/{id}/prices(id=${list.id})}" class="btn btn-primary" th:text="#{pricelist.editPrices}">Edit prices</a>
             </th:block>
         </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waitingChange != null}">
+        <span th:text="#{priceChange.waitingNote}">A change already waits:</span>
+        <a class="mono" th:href="@{/price-lists/changes/{id}(id=${waitingChange.id})}" th:text="${waitingChange.number}">PCH-WH-2026-000001</a>
     </div>
 
     <div class="section">

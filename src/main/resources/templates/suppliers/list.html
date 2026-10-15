@@ -38,6 +38,7 @@
                     <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All Status</option>
                     <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
                     <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                    <option value="pending" th:selected="${status == 'pending'}" th:text="#{supplier.approval.PENDING}">Waiting for approval</option>
                 </select>
             </form>
         </div>
@@ -73,6 +74,8 @@
                         <td>
                             <span class="badge badge-success" th:if="${s.enabled}" th:text="#{common.active}">Active</span>
                             <span class="badge badge-secondary" th:unless="${s.enabled}" th:text="#{common.inactive}">Inactive</span>
+                            <span class="badge badge-warning" th:if="${s.approvalStatus.name() == 'PENDING'}" th:text="#{supplier.approval.PENDING}">Waiting for approval</span>
+                            <span class="badge badge-danger" th:if="${s.approvalStatus.name() == 'REJECTED'}" th:text="#{supplier.approval.REJECTED}">Rejected</span>
                         </td>
                         <td>
                             <div class="btn-group">

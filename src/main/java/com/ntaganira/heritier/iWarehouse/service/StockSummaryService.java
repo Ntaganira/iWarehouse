@@ -43,7 +43,7 @@ public class StockSummaryService {
 
     /** The summary page: rows, total and products to reorder. */
     public record View(StockSummary.GroupBy groupBy, List<StockSummary.Row> rows, StockSummary.Row total,
-                       List<StockSummary.Reorder> reorder) {
+                       List<StockSummary.Reorder> reorder, List<StockSummary.Overstock> overstock) {
     }
 
     public View summary(StockSummary.GroupBy groupBy, UUID productId) {
@@ -55,7 +55,7 @@ public class StockSummaryService {
         Map<UUID, Product> byId = products.stream().collect(Collectors.toMap(Product::getId, Function.identity()));
         Map<UUID, Location> locations = stockService.locationsById();
         List<StockSummary.Row> rows = StockSummary.group(facts, groupBy, byId, locations);
-        return new View(groupBy, rows, StockSummary.total(rows), StockSummary.reorder(all, products));
+        return new View(groupBy, rows, StockSummary.total(rows), StockSummary.reorder(all, products), StockSummary.overstock(all, products));
     }
 
     /** The stock value of each glass as the summary shows it (m² held x MAC, rounded per glass): what AT-10 checks. */

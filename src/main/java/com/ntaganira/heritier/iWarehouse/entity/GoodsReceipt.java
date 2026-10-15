@@ -52,6 +52,25 @@ public class GoodsReceipt extends BaseEntity {
     @Column(name = "delivery_ref", length = 60)
     private String deliveryRef;
 
+    // --- The delivery's papers (GRN-001, F-06 A)
+
+    @Column(name = "vehicle_plate", length = 20)
+    private String vehiclePlate;
+
+    @Column(name = "driver_name", length = 100)
+    private String driverName;
+
+    @Column(length = 100)
+    private String transporter;
+
+    /** The supplier's invoice or packing list. */
+    @Column(name = "invoice_number", length = 60)
+    private String invoiceNumber;
+
+    /** The import declaration. */
+    @Column(name = "declaration_number", length = 60)
+    private String declarationNumber;
+
     @Column(length = 500)
     private String notes;
 

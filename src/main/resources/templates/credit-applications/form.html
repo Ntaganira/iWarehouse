@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{creditApp.new}, ~{::content})}">
+<head><title>Ask for credit terms - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{creditApp.new}">Ask for credit terms</h1>
+            <div class="subtitle" th:text="${customer.name + ' · ' + customer.code}">Umucyo Builders Ltd · CUS-WH-00001</div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/customers/{id}(id=${customer.id}, tab='applications')}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/credit-applications/new(customer=${customer.id})}" th:object="${applicationDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="doc-note is-warning" th:if="${waiting != null}">
+                <span th:text="#{creditApp.waitingNote}">Credit terms asked, waiting:</span>
+                <a class="mono" th:href="@{/credit-applications/{id}(id=${waiting.id})}" th:text="${waiting.number}">CAP-WH-2026-000001</a>
+            </div>
+            <p class="form-note" th:text="#{creditApp.formNote}">Credit Control assesses the application, the Director of Finance reviews it, then another person approves it within the Delegation of Authority. The customer's terms change only when it is approved.</p>
+
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{creditApp.currentTerms}">In force</label>
+                    <div class="value" th:text="#{creditApp.termsLine(${@num.money(customer.creditLimit)}, ${customer.paymentTermsDays})}">0 RWF, 0 days</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customer.priceList}">Price list</label>
+                    <div class="value" th:text="${customer.priceList != null} ? ${customer.priceList.name} : #{creditApp.defaultList}">The default list</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customer.registration}">Registration number</label>
+                    <div class="value mono" th:text="${customer.registrationNumber ?: '—'}">—</div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="creditLimit" th:text="#{customer.creditLimit}">Credit limit</label>
+                    <div class="input-unit">
+                        <input type="number" id="creditLimit" th:field="*{creditLimit}" min="0" step="1" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('creditLimit')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditLimit')}" th:errors="*{creditLimit}"></span>
+                    <span class="hint" th:text="#{creditApp.limitHint}">The office that approves it depends on this limit</span>
+                </div>
+                <div class="form-group">
+                    <label for="paymentTermsDays" th:text="#{party.terms}">Payment terms</label>
+                    <div class="input-unit">
+                        <input type="number" id="paymentTermsDays" th:field="*{paymentTermsDays}" min="0" max="365" step="1" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('paymentTermsDays')} ? 'is-invalid'">
+                        <span th:text="#{party.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('paymentTermsDays')}" th:errors="*{paymentTermsDays}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="priceListId" th:text="#{customer.priceList}">Price list</label>
+                    <select id="priceListId" th:field="*{priceListId}" th:classappend="${#fields.hasErrors('priceListId')} ? 'is-invalid'">
+                        <option value="" th:text="#{creditApp.defaultList}">The default list</option>
+                        <option th:each="l : ${priceLists}" th:unless="${l.defaultList}" th:value="${l.id}" th:text="${l.name}">Contractors</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('priceListId')}" th:errors="*{priceListId}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="reason" th:text="#{creditApp.reason}">Why</label>
+                    <textarea id="reason" th:field="*{reason}" rows="3" maxlength="500" required th:placeholder="#{creditApp.reasonPh}"
+                              th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                    <span class="hint" th:text="#{creditApp.reasonHint}">Add the papers (financial statements, references, guarantee) as documents once it is saved</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{creditApp.save}">Send the application</button>
+                <a th:href="@{/customers/{id}(id=${customer.id}, tab='applications')}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

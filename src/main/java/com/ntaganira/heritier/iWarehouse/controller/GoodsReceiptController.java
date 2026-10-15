@@ -167,6 +167,11 @@ public class GoodsReceiptController {
         dto.setPurchaseOrderId(receipt.getPurchaseOrder().getId());
         dto.setReceivedDate(receipt.getReceivedDate());
         dto.setDeliveryRef(receipt.getDeliveryRef());
+        dto.setVehiclePlate(receipt.getVehiclePlate());
+        dto.setDriverName(receipt.getDriverName());
+        dto.setTransporter(receipt.getTransporter());
+        dto.setInvoiceNumber(receipt.getInvoiceNumber());
+        dto.setDeclarationNumber(receipt.getDeclarationNumber());
         dto.setNotes(receipt.getNotes());
         for (CrateBatch crate : receipt.getCrates()) {
             GoodsReceiptDto.Crate row = new GoodsReceiptDto.Crate();

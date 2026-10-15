@@ -278,6 +278,55 @@
                                 </dt>
                                 <dd th:text="${settings.approvalReceiptSecondPerson} ? #{settings.onSecondPerson} : #{settings.off}">value</dd>
                             </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalCreditApplication}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalCreditApplicationHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalCreditApplication} ? #{settings.onApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalCreditApplicationReview}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalCreditApplicationReviewHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalCreditApplicationReview} ? #{settings.onReview} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.creditReviewMonths}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.creditReviewMonthsHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.creditReviewMonths}">0</span> <span class="unit" th:text="#{settings.months}">unit</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.creditReviewOverdueDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.creditReviewOverdueDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.creditReviewOverdueDays}">0</span> <span class="unit" th:text="#{settings.days}">unit</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalPriceChange}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalPriceChangeHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalPriceChange} ? #{settings.onApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalSupplierOnboarding}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalSupplierOnboardingHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalSupplierOnboarding} ? #{settings.onApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.supplierReferencesRequired}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.supplierReferencesRequiredHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.supplierReferencesRequired}">0</span></dd>
+                            </div>
                         </dl>
                         <p class="form-note setting-note" th:text="#{settings.zeroMeansAll}">0 means every adjustment or discount needs approval.</p>
                     </div>

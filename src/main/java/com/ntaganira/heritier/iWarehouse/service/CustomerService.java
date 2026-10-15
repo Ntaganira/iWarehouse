@@ -5,6 +5,7 @@ import com.ntaganira.heritier.iWarehouse.entity.Customer;
 import com.ntaganira.heritier.iWarehouse.entity.PriceList;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
@@ -45,8 +46,11 @@ public class CustomerService {
     private final CustomerRepository repo;
     private final PriceListRepository priceListRepo;
     private final DocumentNumberService numbers;
+    private final SettingService settingService;
 
-    public CustomerService(CustomerRepository repo, PriceListRepository priceListRepo, DocumentNumberService numbers) {
+    public CustomerService(CustomerRepository repo, PriceListRepository priceListRepo, DocumentNumberService numbers,
+                           SettingService settingService) {
+        this.settingService = settingService;
         this.repo = repo;
         this.priceListRepo = priceListRepo;
         this.numbers = numbers;
@@ -95,11 +99,12 @@ public class CustomerService {
     public Customer create(CustomerDto dto, boolean canSetTerms) {
         String tin = PartyRules.clean(dto.getTin());
         checkTin(tin, null);
+        checkPhone(dto, null);
         Customer customer = new Customer();
         customer.setCode(numbers.next(DocumentType.CUSTOMER));
         customer.setType(dto.getType());
         apply(customer, dto, tin);
-        if (canSetTerms) {
+        if (canSetTerms && !termsByApplication()) {
             applyTerms(customer, dto);
         }
         return repo.save(customer);
@@ -111,15 +116,17 @@ public class CustomerService {
         if (customer.isDefaultCustomer() && dto.getType() != CustomerType.WALK_IN) {
             throw BusinessException.onField("type", "customer.default.type", customer.getCode());
         }
+        boolean setsTerms = canSetTerms && !termsByApplication();
         boolean losesCredit = !dto.getType().isCreditAllowed() && hasTerms(customer);
-        if (losesCredit && !canSetTerms) {
-            throw BusinessException.onField("type", "customer.type.termsNeeded");
+        if (losesCredit && !setsTerms) {
+            throw BusinessException.onField("type", termsByApplication() ? "customer.type.termsByApplication" : "customer.type.termsNeeded");
         }
         String tin = PartyRules.clean(dto.getTin());
         checkTin(tin, customer);
+        checkPhone(dto, customer);
         customer.setType(dto.getType());
         apply(customer, dto, tin);
-        if (canSetTerms) {
+        if (setsTerms) {
             applyTerms(customer, dto);
         }
         return customer;
@@ -151,6 +158,25 @@ public class CustomerService {
                 });
     }
 
+    /** Whether credit terms change only through an approved credit application (F-02 C-D, Settings). */
+    public boolean termsByApplication() {
+        return settingService.getBoolean(SettingKey.APPROVAL_CREDIT_APPLICATION);
+    }
+
+    /** A phone already on another customer is saved only once confirmed: it may be the same buyer under two names (BP 11). */
+    private void checkPhone(CustomerDto dto, Customer current) {
+        String phone = PartyRules.clean(dto.getPhone());
+        if (phone == null || dto.isConfirmDuplicate()) {
+            return;
+        }
+        repo.findByPhone(phone).stream()
+                .filter(other -> current == null || !other.getId().equals(current.getId()))
+                .findFirst()
+                .ifPresent(other -> {
+                    throw BusinessException.onField("phone", "customer.phone.duplicate", other.getCode(), other.getName());
+                });
+    }
+
     private static void apply(Customer customer, CustomerDto dto, String tin) {
         customer.setName(dto.getName().trim());
         customer.setTin(tin);
@@ -159,10 +185,39 @@ public class CustomerService {
         customer.setContactName(PartyRules.clean(dto.getContactName()));
         customer.setAddress(PartyRules.clean(dto.getAddress()));
         customer.setNotes(PartyRules.clean(dto.getNotes()));
+        customer.setRegistrationNumber(PartyRules.clean(dto.getRegistrationNumber()));
+        customer.setDistrict(PartyRules.clean(dto.getDistrict()));
+        customer.setCountryCode(PartyRules.clean(dto.getCountryCode()));
+        customer.setBankName(PartyRules.clean(dto.getBankName()));
+        customer.setBankAccount(PartyRules.clean(dto.getBankAccount()));
+        customer.setMomoNumber(PartyRules.clean(dto.getMomoNumber()));
+        customer.setExpectedMonthly(dto.getExpectedMonthly());
+        customer.setTradeReferences(PartyRules.clean(dto.getTradeReferences()));
+        customer.setSecurityOffered(PartyRules.clean(dto.getSecurityOffered()));
         if (!customer.getType().isCreditAllowed()) {
             customer.setCreditLimit(BigDecimal.ZERO); // walk-ins pay at the counter (chk_customers_walk_in_cash)
             customer.setPaymentTermsDays(0);
         }
+    }
+
+    /**
+     * Sets the terms an approved credit application gave (F-02 D), with the day they were reviewed and the next review:
+     * the one way terms change while Settings send them through applications. Inside the approval's transaction.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Customer applyApprovedTerms(UUID customerId, BigDecimal creditLimit, int paymentTermsDays, UUID priceListId,
+                                       java.time.LocalDate reviewedOn, java.time.LocalDate nextReview) {
+        Customer customer = findById(customerId);
+        if (!customer.getType().isCreditAllowed() && (creditLimit.signum() > 0 || paymentTermsDays > 0)) {
+            throw BusinessException.of("creditApp.walkIn", customer.getName());
+        }
+        customer.setCreditLimit(creditLimit);
+        customer.setPaymentTermsDays(paymentTermsDays);
+        customer.setPriceList(priceListId == null ? null : priceListRepo.findById(priceListId)
+                .orElseThrow(() -> new NotFoundException("PriceList", priceListId)));
+        customer.setCreditReviewedOn(reviewedOn);
+        customer.setCreditReviewDue(nextReview);
+        return customer;
     }
 
     private void applyTerms(Customer customer, CustomerDto dto) {

@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.PriceListDto;
 import com.ntaganira.heritier.iWarehouse.dto.ProcessingServiceDto;
+import com.ntaganira.heritier.iWarehouse.entity.PriceChange;
 import com.ntaganira.heritier.iWarehouse.entity.PriceList;
 import com.ntaganira.heritier.iWarehouse.entity.ProcessingService;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -11,6 +12,7 @@ import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
+import com.ntaganira.heritier.iWarehouse.service.PriceChangeService;
 import com.ntaganira.heritier.iWarehouse.service.PriceListService;
 import com.ntaganira.heritier.iWarehouse.service.Pricing;
 import jakarta.validation.Valid;
@@ -47,9 +49,12 @@ public class PriceListController {
 
     private final PriceListService priceListService;
     private final ActivityLogService activityLogService;
+    private final PriceChangeService priceChangeService;
     private final Messages messages;
 
-    public PriceListController(PriceListService priceListService, ActivityLogService activityLogService, Messages messages) {
+    public PriceListController(PriceListService priceListService, ActivityLogService activityLogService, Messages messages,
+                               PriceChangeService priceChangeService) {
+        this.priceChangeService = priceChangeService;
         this.priceListService = priceListService;
         this.activityLogService = activityLogService;
         this.messages = messages;
@@ -76,6 +81,7 @@ public class PriceListController {
         model.addAttribute("tab", open);
         model.addAttribute("defaultList", list.isDefaultList() ? list : priceListService.defaultList());
         model.addAttribute("minArea", priceListService.minChargeableArea(list));
+        model.addAttribute("waitingChange", priceChangeService.waitingOn(id).orElse(null));
         // The open tab shows the page asked for; the others start at their first page.
         var productRows = priceListService.productRows(list);
         var serviceRows = priceListService.serviceRows(list);
@@ -132,6 +138,9 @@ public class PriceListController {
             model.addAttribute("flashError", messages.get("price.fixErrors", errors.size()));
             return pricesPage(model, list, params, errors);
         }
+        if (priceChangeService.approvalRequired()) {
+            return askForApproval(list, productPrices, servicePrices, params, model, redirect);
+        }
         PriceListService.PriceUpdate update = priceListService.updatePrices(id, productPrices, servicePrices);
         if (update.total() == 0) {
             redirect.addFlashAttribute("flashSuccess", messages.get("price.nothingChanged"));
@@ -144,6 +153,28 @@ public class PriceListController {
         return "redirect:/price-lists/" + id;
     }
 
+    /** SDP 5: the prices typed become a price change that waits for approval, with the reason given. */
+    private String askForApproval(PriceList list, Map<UUID, BigDecimal> productPrices, Map<UUID, BigDecimal> servicePrices,
+                                  Map<String, String> params, Model model, RedirectAttributes redirect) {
+        try {
+            PriceChange change = priceChangeService.request(list.getId(), productPrices, servicePrices, params.get("reason"));
+            if (change == null) {
+                redirect.addFlashAttribute("flashSuccess", messages.get("price.nothingChanged"));
+                return "redirect:/price-lists/" + list.getId();
+            }
+            activityLogService.record(MODULE, "CREATE_PRICE_CHANGE", "Asked to change prices of " + list.getCode() + " (" + change.getNumber()
+                    + "): " + change.getReason(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("priceChange.created", change.getNumber()));
+            return "redirect:/price-lists/changes/" + change.getId();
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "CREATE_PRICE_CHANGE", "Failed to ask for new prices of " + list.getCode() + ": " + error,
+                    ActivityStatus.FAILED);
+            model.addAttribute("flashError", error);
+            return pricesPage(model, list, params, Map.of());
+        }
+    }
+
     /** {@code typed}: the submitted text per field, shown again when something was wrong. */
     private String pricesPage(Model model, PriceList list, Map<String, String> typed, Map<String, String> errors) {
         model.addAttribute("list", list);
@@ -152,6 +183,8 @@ public class PriceListController {
         model.addAttribute("serviceRows", priceListService.serviceRows(list));
         model.addAttribute("typed", typed);
         model.addAttribute("errors", errors);
+        model.addAttribute("askApproval", priceChangeService.approvalRequired());
+        model.addAttribute("waitingChange", priceChangeService.waitingOn(list.getId()).orElse(null));
         return "price-lists/prices";
     }
 

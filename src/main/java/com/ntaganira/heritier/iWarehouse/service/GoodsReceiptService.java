@@ -230,6 +230,11 @@ public class GoodsReceiptService {
         Map<UUID, Location> locations = stockService.locationsById();
         receipt.setReceivedDate(dto.getReceivedDate());
         receipt.setDeliveryRef(PartyRules.clean(dto.getDeliveryRef()));
+        receipt.setVehiclePlate(PartyRules.clean(dto.getVehiclePlate()));
+        receipt.setDriverName(PartyRules.clean(dto.getDriverName()));
+        receipt.setTransporter(PartyRules.clean(dto.getTransporter()));
+        receipt.setInvoiceNumber(PartyRules.clean(dto.getInvoiceNumber()));
+        receipt.setDeclarationNumber(PartyRules.clean(dto.getDeclarationNumber()));
         receipt.setNotes(PartyRules.clean(dto.getNotes()));
 
         Map<UUID, CrateBatch> existing = receipt.getCrates().stream()

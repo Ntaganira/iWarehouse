@@ -162,6 +162,40 @@ public class SettingsDto {
     @NotNull(message = "{settings.value.required}")
     private Boolean approvalReceiptSecondPerson;
 
+    /** Credit terms change only through an approved credit application (F-02 C-D). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalCreditApplication;
+
+    /** The Director of Finance reviews a credit application after Credit Control (F-02 C). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalCreditApplicationReview;
+
+    /** Months after which an approved credit limit is reviewed (F-02 C). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.creditReviewMonths.range}")
+    @Max(value = 60, message = "{settings.creditReviewMonths.range}")
+    private Integer creditReviewMonths;
+
+    /** Days overdue after which a credit limit is reviewed at once (F-02 C). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.creditReviewOverdueDays.range}")
+    @Max(value = 365, message = "{settings.creditReviewOverdueDays.range}")
+    private Integer creditReviewOverdueDays;
+
+    /** Prices change only once another person approves them (SDP 5). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalPriceChange;
+
+    /** A new supplier, or new bank details, wait for approval (CMP 08). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalSupplierOnboarding;
+
+    /** References a supplier needs before it is approved (CMP 08). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 0, message = "{settings.supplierReferencesRequired.range}")
+    @Max(value = 10, message = "{settings.supplierReferencesRequired.range}")
+    private Integer supplierReferencesRequired;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

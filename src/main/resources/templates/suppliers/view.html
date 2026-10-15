@@ -12,10 +12,19 @@
                 <span th:text="${@countries.name(supplier.countryCode)}">China</span> &middot;
                 <span class="badge badge-success" th:if="${supplier.enabled}" th:text="#{common.active}">Active</span>
                 <span class="badge badge-secondary" th:unless="${supplier.enabled}" th:text="#{common.inactive}">Inactive</span>
+                <span class="badge badge-warning" th:if="${supplier.approvalStatus.name() == 'PENDING'}" th:text="#{supplier.approval.PENDING}">Waiting for approval</span>
+                <span class="badge badge-danger" th:if="${supplier.approvalStatus.name() == 'REJECTED'}" th:text="#{supplier.approval.REJECTED}">Rejected</span>
             </div>
         </div>
         <div class="btn-group">
             <a href="/suppliers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block sec:authorize="hasAuthority('PERM_APPROVE_SUPPLIER')" th:if="${supplier.approvalStatus.name() == 'PENDING' and !lastEditor}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{creditNote.request.reject}">Reject</button>
+                <form th:if="${#lists.isEmpty(missing)}" th:action="@{/suppliers/{id}/approve(id=${supplier.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{supplier.approveConfirm(${supplier.name})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{supplier.approve}">Approve</button>
+                </form>
+            </th:block>
             <a th:href="@{/supplier-invoices/new(supplier=${supplier.id})}" class="btn btn-outline" th:if="${account != null and !#lists.isEmpty(account.uninvoiced)}"
                sec:authorize="hasAuthority('PERM_RECORD_SUPPLIER_INVOICE')" th:text="#{supplierAccount.recordInvoice}">Record an invoice</a>
             <button type="button" class="btn btn-outline" data-modal-open="supplier-pay-modal" th:if="${account != null and !#lists.isEmpty(payCurrencies)}"
@@ -34,12 +43,34 @@
         </div>
     </div>
 
+    <div class="doc-note is-warning" th:if="${supplier.approvalStatus.name() == 'PENDING'}">
+        <span th:text="#{supplier.pendingNote}">Not approved yet: it cannot be ordered from or paid.</span>
+        <span th:if="${lastEditor}" th:text="#{supplier.notYourOwn}">You entered or last changed its details: another person approves it.</span>
+        <th:block th:unless="${#lists.isEmpty(missing)}">
+            <span th:text="#{supplier.missingIntro}">Still missing:</span>
+            <span th:each="m, st : ${missing}" th:text="#{${m + 'Short'}(${referencesRequired})} + ${st.last ? '.' : ','}">bank details,</span>
+        </th:block>
+    </div>
+    <div class="doc-note" th:if="${supplier.approvalStatus.name() == 'APPROVED' and supplier.approvedBy != null}">
+        <strong th:text="#{creditNote.request.approvedBy(${supplier.approvedBy}, ${#temporals.format(supplier.approvedAt, 'dd/MM/yyyy HH:mm')})}">Approved by coo1 on 15/10/2026 11:30</strong>
+        <span th:if="${supplier.approvalNote != null}" th:text="${'· ' + supplier.approvalNote}">· ok</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${supplier.approvalStatus.name() == 'REJECTED'}">
+        <strong th:text="#{creditNote.request.rejectedBy(${supplier.approvedBy})}">Rejected by coo1:</strong>
+        <span th:text="${supplier.approvalNote}">No bank letter</span>
+        <span th:text="#{supplier.rejectedHint}">Correcting its details sends it for approval again.</span>
+    </div>
+
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-details" th:classappend="${tab == 'details'} ? 'active'" th:text="#{product.details}">Details</button>
             <button type="button" class="tab" data-tab="tab-account" th:classappend="${tab == 'account'} ? 'active'" th:if="${account != null}">
                 <span th:text="#{customerAccount.tab}">Account</span>
                 <span class="section-count" th:text="${@num.money(account.balance)}">6,000,000</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
             </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -99,6 +130,23 @@
                     </div>
                 </div>
 
+                <h3 class="detail-heading" th:text="#{supplier.registerSection}">Approved supplier register</h3>
+                <div class="detail-list">
+                    <div class="item">
+                        <label th:text="#{customer.registration}">Registration number</label>
+                        <div class="value mono" th:text="${supplier.registrationNumber ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{party.bankAccount}">Bank account</label>
+                        <div class="value" th:text="${supplier.bankAccount != null} ? ${(supplier.bankName ?: '') + ' ' + supplier.bankAccount} : '—'">—</div>
+                        <div class="cell-sub mono" th:if="${supplier.bankSwift != null}" th:text="${'SWIFT ' + supplier.bankSwift}">SWIFT BKORRWRW</div>
+                    </div>
+                    <div class="item item-full">
+                        <label th:text="#{party.references}">References</label>
+                        <div class="value pre-line" th:text="${supplier.tradeReferences ?: '—'}">—</div>
+                    </div>
+                </div>
+
                 <!-- What the supplier's price covers under this incoterm (for the import cost sheet, PRC-03) -->
                 <div class="incoterm-covers" th:if="${supplier.incoterm != null}">
                     <h3 th:text="#{supplier.coversTitle(${supplier.incoterm})}">Under FOB the supplier's price covers</h3>
@@ -111,6 +159,9 @@
                             th:text="${supplier.incoterm.supplierPaysDuty} ? #{supplier.covers.duty} : #{supplier.notCovered.duty}">Import duty: you pay</li>
                     </ul>
                 </div>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('SUPPLIER', ${supplier.id}, ${documents}, '/suppliers/' + ${supplier.id})}"></th:block>
             </div>
             <!-- The account (ACC-09): what is owed per currency, its ageing, receipts to invoice, the statement -->
             <div class="tab-content" id="tab-account" th:classappend="${tab == 'account'} ? 'active'" th:if="${account != null}">
@@ -270,6 +321,10 @@
             </form>
         </div>
     </div>
+    <th:block sec:authorize="hasAuthority('PERM_APPROVE_SUPPLIER')" th:if="${supplier.approvalStatus.name() == 'PENDING' and !lastEditor}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{supplier.rejectTitle(${supplier.name})},
+                @{/suppliers/{id}/reject(id=${supplier.id})}, #{supplier.rejectText}, #{creditNote.request.reject})}"></div>
+    </th:block>
 </div>
 </body>
 </html>

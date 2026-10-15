@@ -14,6 +14,13 @@
 
     <form th:action="@{/price-lists/{id}/prices(id=${list.id})}" method="post" class="price-form" novalidate>
         <p class="form-note" th:text="${list.defaultList} ? #{pricelist.editNoteDefault} : #{pricelist.editNote(${defaultList.name})}">Type the price in RWF. Leave a price empty when the product is not sold on this list.</p>
+        <div class="doc-note is-warning" th:if="${askApproval}">
+            <span th:text="#{priceChange.formNote}">New prices wait for approval (the Managing Director by default); the list keeps its prices until then.</span>
+            <th:block th:if="${waitingChange != null}">
+                <span th:text="#{priceChange.waitingNote}">A change already waits:</span>
+                <a class="mono" th:href="@{/price-lists/changes/{id}(id=${waitingChange.id})}" th:text="${waitingChange.number}">PCH-WH-2026-000001</a>
+            </th:block>
+        </div>
 
         <div class="section">
             <div class="section-header"><h2 th:text="#{pricelist.glassPerM2}">Glass, per m²</h2></div>
@@ -79,8 +86,18 @@
             </div>
         </div>
 
+        <div class="section" th:if="${askApproval}">
+            <div class="section-body">
+                <div class="form-group">
+                    <label for="reason" th:text="#{priceChange.reason}">Why the prices change</label>
+                    <input type="text" id="reason" name="reason" maxlength="255" required autocomplete="off"
+                           th:value="${typed != null ? typed.get('reason') : ''}" th:placeholder="#{priceChange.reasonPh}">
+                </div>
+            </div>
+        </div>
+
         <div class="form-actions sticky-actions">
-            <button type="submit" class="btn btn-primary" th:text="#{pricelist.savePrices}">Save prices</button>
+            <button type="submit" class="btn btn-primary" th:text="${askApproval} ? #{priceChange.ask} : #{pricelist.savePrices}">Save prices</button>
             <a th:href="@{/price-lists/{id}(id=${list.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
         </div>
     </form>

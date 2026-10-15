@@ -68,6 +68,39 @@ public class CustomerDto {
     @Size(max = 255, message = "{party.notes.size}")
     private String notes;
 
+    // --- Know your customer (SDP 11, F-02 A-B)
+
+    @Size(max = 40, message = "{customer.registration.size}")
+    private String registrationNumber;
+
+    @Size(max = 60, message = "{customer.district.size}")
+    private String district;
+
+    @Pattern(regexp = "^([A-Z]{2})?$", message = "{customer.country.pattern}")
+    private String countryCode;
+
+    @Size(max = 80, message = "{party.bankName.size}")
+    private String bankName;
+
+    @Size(max = 40, message = "{party.bankAccount.size}")
+    private String bankAccount;
+
+    @Pattern(regexp = "^[0-9+()\\s-]{0,30}$", message = "{party.phone.pattern}")
+    private String momoNumber;
+
+    @DecimalMin(value = "0", message = "{customer.expected.range}")
+    @Digits(integer = 16, fraction = 0, message = "{customer.expected.range}")
+    private BigDecimal expectedMonthly;
+
+    @Size(max = 500, message = "{party.references.size}")
+    private String tradeReferences;
+
+    @Size(max = 255, message = "{customer.security.size}")
+    private String securityOffered;
+
+    /** Save although another customer has the same phone (BP 11: duplicates are looked at, not always wrong). */
+    private boolean confirmDuplicate;
+
     public void setTin(String tin) {
         String normalized = PartyRules.normalizeTin(tin);
         this.tin = normalized == null ? "" : normalized;

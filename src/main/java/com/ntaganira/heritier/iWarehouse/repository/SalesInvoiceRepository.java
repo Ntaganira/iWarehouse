@@ -79,6 +79,20 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
             + " group by i.channel order by i.channel")
     List<Object[]> perChannel(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 
+    /** Some invoices with their customers (lists of payments). */
+    @EntityGraph(attributePaths = {"customer"})
+    List<SalesInvoice> findByIdIn(java.util.Collection<UUID> ids);
+
+    /** Invoices issued on a day with their customers (the daily close, F-12). */
+    @EntityGraph(attributePaths = {"customer"})
+    List<SalesInvoice> findByStatusAndInvoiceDateOrderByNumber(com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus status,
+                                                              java.time.LocalDate invoiceDate);
+
+    /** Invoices issued in a period with their customers (EBM against the ledger, U.13). */
+    @EntityGraph(attributePaths = {"customer"})
+    List<SalesInvoice> findByStatusAndInvoiceDateBetweenOrderByNumber(com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus status,
+                                                                     java.time.LocalDate from, java.time.LocalDate to);
+
     /** The mobile sale a phone sent under this UUID (SYNC-03): the same sale sent twice is taken once. */
     Optional<SalesInvoice> findByClientId(UUID clientId);
 

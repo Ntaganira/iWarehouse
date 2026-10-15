@@ -185,6 +185,7 @@ public class ReconciliationService {
         rec.setNotes(note);
         rec.setStatus(ReconciliationStatus.RECONCILED);
         rec.setReconciledBy(AppUserPrincipal.currentUsername());
+        rec.setReconciledById(AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null));
         rec.setReconciledAt(LocalDateTime.now(clock));
         repo.save(rec);
         for (UUID id : chosen) {

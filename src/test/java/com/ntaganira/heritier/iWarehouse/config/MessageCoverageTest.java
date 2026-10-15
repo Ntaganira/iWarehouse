@@ -86,7 +86,10 @@ class MessageCoverageTest {
             Map.entry("delivery.status.", DeliveryNoteStatus.class),
             Map.entry("delivery.kind.", DeliveryLineKind.class),
             Map.entry("cutting.check.", PieceCheckOutcome.class),
-            Map.entry("salesReport.by.", com.ntaganira.heritier.iWarehouse.service.SalesAnalysis.GroupBy.class));
+            Map.entry("salesReport.by.", com.ntaganira.heritier.iWarehouse.service.SalesAnalysis.GroupBy.class),
+            Map.entry("dailyClose.status.", com.ntaganira.heritier.iWarehouse.enums.DailyCloseStatus.class),
+            Map.entry("confirmation.status.", com.ntaganira.heritier.iWarehouse.enums.ConfirmationStatus.class),
+            Map.entry("reconciliation.state.", com.ntaganira.heritier.iWarehouse.service.ReconciliationCompliance.State.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

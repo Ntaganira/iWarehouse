@@ -571,6 +571,15 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    /** Takings banked in full (F-13, SDP 10): Dr Bank / Cr Main Cash Vault, the deposit's amount. */
+    public JournalEntry cashDeposit(CashDeposit deposit) {
+        Journal journal = Journal.of(JournalSource.CASH_DEPOSIT, deposit.getId(), deposit.getNumber(), deposit.getDepositDate(),
+                        "Takings banked, slip " + deposit.getSlipNumber())
+                .debit(AccountKey.BANK, deposit.getAmount())
+                .credit(AccountKey.CASH_VAULT, deposit.getAmount());
+        return journalService.post(journal);
+    }
+
     // ---------------------------------------------------------------- opening
 
     /**

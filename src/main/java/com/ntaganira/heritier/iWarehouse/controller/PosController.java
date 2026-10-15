@@ -164,20 +164,22 @@ public class PosController {
         model.addAttribute("till", till.get());
         model.addAttribute("summary", tillService.summary(till.get()));
         model.addAttribute("sale", salesService.cart(till.get()).filter(s -> !s.getLines().isEmpty()).orElse(null));
+        model.addAttribute("denominations", tillService.denominations());
         return "pos/close";
     }
 
     @PostMapping("/till/close")
     @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
     public String closeTill(@RequestParam(required = false) BigDecimal countedCash, @RequestParam(required = false) String note,
-                            RedirectAttributes redirect) {
+                            @RequestParam Map<String, String> form, RedirectAttributes redirect) {
         Optional<TillSession> till = tillService.current();
         if (till.isEmpty()) {
             redirect.addFlashAttribute("flashError", messages.get("till.notOpen"));
             return "redirect:/pos";
         }
         try {
-            TillSession session = tillService.close(till.get().getId(), countedCash, note);
+            Map<Integer, Integer> counts = counts(form);
+            TillSession session = tillService.close(till.get().getId(), counts.isEmpty() && countedCash != null ? null : counts, countedCash, note);
             activityLogService.record(MODULE, "CLOSE_TILL", "Closed till " + session.getNumber() + ": "
                     + num.money(session.getCountedCash()) + " RWF counted, " + num.money(session.getExpectedCash()) + " expected"
                     + (session.getDifference().signum() == 0 ? "" : ", difference " + num.money(session.getDifference())
@@ -190,6 +192,7 @@ public class PosController {
             fail(redirect, "CLOSE_TILL", "Failed to close till " + till.get().getNumber(), e);
             redirect.addFlashAttribute("countedCash", countedCash == null ? null : countedCash.toPlainString());
             redirect.addFlashAttribute("note", note);
+            redirect.addFlashAttribute("counts", form);
             return "redirect:/pos/till";
         }
     }
@@ -492,5 +495,20 @@ public class PosController {
 
     private static Integer positive(Integer value) {
         return value == null || value <= 0 ? null : value;
+    }
+
+    /** The cash counted note by note: the form's count_5000, count_1000, ... fields (blank = none; not a number = refused). */
+    static Map<Integer, Integer> counts(Map<String, String> form) {
+        Map<Integer, Integer> counts = new java.util.TreeMap<>(java.util.Collections.reverseOrder());
+        form.forEach((name, value) -> {
+            if (name.startsWith("count_") && value != null && !value.isBlank()) {
+                try {
+                    counts.put(Integer.parseInt(name.substring(6)), Integer.parseInt(value.trim()));
+                } catch (NumberFormatException e) {
+                    throw BusinessException.onField("countedCash", "till.count.invalid");
+                }
+            }
+        });
+        return counts;
     }
 }

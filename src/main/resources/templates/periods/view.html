@@ -18,6 +18,8 @@
                th:text="#{nav.trialBalance}">Trial Balance</a>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reopen-modal"
                     th:if="${canReopen}" sec:authorize="hasAuthority('PERM_REOPEN_PERIOD')" th:text="#{period.reopen}">Reopen</button>
+            <button type="button" class="btn btn-primary" data-modal-open="signoff-modal" th:if="${nextOffice != null}"
+                    sec:authorize="hasAuthority('PERM_SIGN_OFF_PERIOD')" th:text="#{period.signOff(#{${'authority.level.' + nextOffice}})}">Sign off as COO</button>
         </div>
     </div>
 
@@ -49,6 +51,43 @@
         </div>
     </div>
 
+    <!--/* The month's accounts signed off by the COO, then the MD (BP 4.2, Annex C) */-->
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{period.signOffsTitle}">Sign-offs</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{period.signOffOffice}">Office</th>
+                        <th th:text="#{period.signOffBy}">Signed off by</th>
+                        <th th:text="#{period.signOffNote}">Note</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${signOffs.all}">
+                        <td th:text="#{${'authority.level.' + s.office}}">COO</td>
+                        <td>
+                            <span th:text="${s.username}">coo1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(s.createdAt, 'dd/MM/yyyy HH:mm')}">06/10/2026 10:00</div>
+                        </td>
+                        <td th:text="${s.note ?: '—'}">Reviewed with the management accounts</td>
+                        <td>
+                            <span class="badge" th:classappend="${signOffs.counts(s)} ? 'badge-success' : 'badge-secondary'"
+                                  th:text="${signOffs.counts(s)} ? #{period.signOffCounts} : #{period.signOffBefore}">In force</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(signOffs.all)}">
+                        <td colspan="4"><div class="empty-state slim" th:text="#{period.noSignOff}">Not signed off yet</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="${signOffs.complete} ? #{period.signOffComplete} : #{period.signOffNoteText}">Once closed, the month is signed off by the COO, then by the MD, before the Board.</p>
+    </div>
+
     <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
         <div class="section-header">
             <h2 th:text="#{user.history}">History</h2>
@@ -56,6 +95,28 @@
         <div class="section-body">
             <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
             <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/accounting/periods/' + period.id}, '')}"></th:block>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="signoff-modal" th:if="${nextOffice != null}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="signoff-title">
+            <div class="modal-header">
+                <h3 id="signoff-title" th:text="#{period.signOffTitle(${#temporals.format(period.periodEnd, 'MMMM yyyy')})}">Sign off the accounts of September 2026</h3>
+                <button type="button" class="modal-close" data-modal-close="signoff-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/accounting/periods/{id}/sign-off(id=${period.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{period.signOffText(#{${'authority.level.' + nextOffice}})}">You sign the month's accounts off as COO.</p>
+                    <div class="form-group">
+                        <label for="signoff-note" th:text="#{period.signOffNote}">Note</label>
+                        <input type="text" id="signoff-note" name="note" maxlength="255" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="signoff-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{period.signOff(#{${'authority.level.' + nextOffice}})}">Sign off as COO</button>
+                </div>
+            </form>
         </div>
     </div>
 

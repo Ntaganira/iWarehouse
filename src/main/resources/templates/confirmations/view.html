@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${confirmation.number}, ~{::content})}">
+<head><title>Balance confirmation - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="c=${confirmation}, base=${'/accounting/confirmations/' + confirmation.id},
+        canSend=${#authorization.expression('hasAuthority(''PERM_CONFIRM_BALANCES'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${c.number}">BC-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{confirmation.sentLine(${c.sentBy}, ${#temporals.format(c.sentAt, 'dd/MM/yyyy HH:mm')})}">Sent by ic1 on 01/10/2026 09:00</span>
+                <th:block th:replace="~{confirmations/list :: confirmationStatus(${c})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/confirmations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a class="btn btn-outline" download th:href="@{/accounting/confirmations/{id}/pdf(id=${c.id})}" th:text="#{confirmation.letter}">Letter (PDF)</a>
+            <button type="button" class="btn btn-primary" data-modal-open="reply-modal" th:if="${c.waiting and canSend}" th:text="#{confirmation.recordReply}">Record the reply</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${c.status.name() == 'DISAGREED'}">
+        <strong th:text="#{confirmation.disputedLine(${@num.money(c.replyBalance)}, ${@num.money(c.difference)})}">The customer states 65,000 RWF: a difference of -20,000.</strong>
+        <span th:text="${c.replyNote}">We paid 20,000 on 10/10</span>
+    </div>
+    <div class="doc-note" th:if="${c.status.name() == 'AGREED'}"
+         th:text="#{confirmation.agreedLine(${#temporals.format(c.repliedOn, 'dd/MM/yyyy')}, ${c.replyRecordedBy})}">Agreed by the customer on 08/10/2026 (recorded by ic1).</div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${c.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${c.customer.name}">Umucyo Builders Ltd</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${c.customer.name}">Umucyo Builders Ltd</span>
+                    </div>
+                    <div class="cell-sub mono" th:text="${c.customer.code}">CUS-WH-00003</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{confirmation.asOf}">Balance on</label>
+                    <div class="value" th:text="${#temporals.format(c.asOf, 'dd/MM/yyyy')}">30/09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{confirmation.balance}">Our balance (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(c.balance)}">85,000</div>
+                </div>
+                <div class="item" th:if="${c.repliedOn != null}">
+                    <label th:text="#{confirmation.repliedOn}">Reply received</label>
+                    <div class="value" th:text="${#temporals.format(c.repliedOn, 'dd/MM/yyyy')}">08/10/2026</div>
+                    <div class="cell-sub" th:text="${c.replyRecordedBy}">ic1</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <p class="tab-intro" th:text="#{confirmation.documentsIntro}">Keep the reply slip signed by the customer.</p>
+                <th:block th:replace="~{fragments/attachments :: documents('BALANCE_CONFIRMATION', ${c.id}, ${documents}, ${base})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="reply-modal" th:if="${c.waiting and canSend}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reply-title">
+            <div class="modal-header">
+                <h3 id="reply-title" th:text="#{confirmation.replyTitle(${c.number})}">The reply to BC-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="reply-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/accounting/confirmations/{id}/reply(id=${c.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="reply-agreed" th:text="#{confirmation.replyIs}">The customer</label>
+                        <select id="reply-agreed" name="agreed">
+                            <option value="true" th:text="#{confirmation.replyAgrees(${@num.money(c.balance)})}">Agrees with 85,000 RWF</option>
+                            <option value="false" th:text="#{confirmation.replyDisputes}">Disputes the balance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reply-on" th:text="#{confirmation.repliedOn}">Reply received</label>
+                        <input type="date" id="reply-on" name="repliedOn" required th:value="${today}" th:attr="max=${today}">
+                    </div>
+                    <div class="form-group">
+                        <label for="reply-balance" th:text="#{confirmation.theirBalance}">Their balance (RWF)</label>
+                        <input type="number" id="reply-balance" name="replyBalance" step="any" inputmode="decimal">
+                        <span class="hint" th:text="#{confirmation.theirBalanceHint}">When they dispute it: the balance they state</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="reply-note" th:text="#{confirmation.replyNote}">Their explanation</label>
+                        <textarea id="reply-note" name="replyNote" rows="2" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="reply-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{confirmation.recordReply}">Record the reply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

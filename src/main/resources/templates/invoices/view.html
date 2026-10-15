@@ -327,6 +327,42 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!--/* Bank transfers: Finance confirms the money arrived before the goods leave (SDP 14) */-->
+                <th:block th:if="${!#lists.isEmpty(transfers)}">
+                    <h3 class="detail-heading" th:text="#{bankTransfer.onInvoice}">Bank transfers</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{pos.pay.reference}">Reference</th>
+                                    <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                                    <th th:text="#{common.status}">Status</th>
+                                    <th><span class="sr-only" th:text="#{bankTransfer.confirm}">Confirm</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="t : ${transfers}">
+                                    <td class="mono" th:text="${t.payment.reference ?: '—'}">FT2610150001</td>
+                                    <td class="num" th:text="${@num.money(t.payment.amount)}">250,000</td>
+                                    <td>
+                                        <span th:if="${t.confirmed}" class="badge badge-success" th:text="#{bankTransfer.confirmed}">Confirmed</span>
+                                        <div class="cell-sub" th:if="${t.confirmed}"
+                                             th:text="${t.confirmation.username + ' · ' + #temporals.format(t.confirmation.createdAt, 'dd/MM/yyyy HH:mm') + (t.confirmation.bankReference != null ? ' · ' + t.confirmation.bankReference : '')}">treasury1 · 15/10/2026 11:00</div>
+                                        <span th:unless="${t.confirmed}" class="badge badge-warning" th:text="#{bankTransfer.waiting}">To confirm</span>
+                                    </td>
+                                    <td>
+                                        <form th:if="${!t.confirmed}" sec:authorize="hasAuthority('PAGE_TRANSFER_CONFIRMATIONS') and hasAuthority('PERM_CONFIRM_TRANSFER')"
+                                              th:action="@{/transfers/{id}/confirm(id=${t.payment.id}, invoice=${invoice.id})}" method="post" class="row-action-form">
+                                            <input type="text" name="bankReference" maxlength="60" th:placeholder="#{bankTransfer.bankReferencePh}" th:aria-label="#{bankTransfer.bankReference}">
+                                            <button type="submit" class="btn btn-primary btn-sm" th:text="#{bankTransfer.confirm}">Confirm</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
             </div>
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>

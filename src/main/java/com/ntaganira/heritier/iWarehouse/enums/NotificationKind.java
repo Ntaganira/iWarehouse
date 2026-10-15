@@ -33,5 +33,8 @@ public enum NotificationKind {
     /** An order sent to the cashier, or released short (F-01, F-04). */
     ORDER,
     /** Goods waiting for release, or a signed delivery note not back (F-04, IMP 9.3). */
-    DELIVERY
+    DELIVERY,
+    /** The day's close: a variance, a close or banking late, a late reconciliation, a disputed balance, the credit list,
+     *  the reporting calendar (F-12, F-13, BP 5.3). */
+    CLOSE
 }

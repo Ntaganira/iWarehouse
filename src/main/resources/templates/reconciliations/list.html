@@ -12,6 +12,42 @@
         <a href="/accounting/reconciliations/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_RECONCILE_ACCOUNT')" th:text="#{reconciliation.new}">Reconcile a statement</a>
     </div>
 
+    <!--/* Each account's months reconciled by the Settings' working day (Annex D: compliance 100 %) */-->
+    <div class="section" th:if="${!#lists.isEmpty(compliance)}">
+        <div class="section-header">
+            <h2 th:text="#{reconciliation.complianceTitle}">Reconciled on time</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{reconciliation.account}">Account</th>
+                        <th class="num" th:text="#{reconciliation.compliance}">On time</th>
+                        <th class="num" th:text="#{reconciliation.monthsMissing}">Months not reconciled</th>
+                        <th th:text="#{reconciliation.lastMonth}">Last month</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${compliance}" th:with="m=${#lists.isEmpty(c.result.months) ? null : c.result.months[0]}">
+                        <td><span class="mono" th:text="${c.account.code}">1030</span> <span th:text="${c.account.name}">Bank</span></td>
+                        <td class="num" th:text="${c.result.percent != null} ? ${c.result.percent + ' %'} : '—'"
+                            th:classappend="${c.result.percent != null and c.result.percent.doubleValue() < 100} ? 'text-danger'">100.0 %</td>
+                        <td class="num" th:classappend="${c.result.missing > 0} ? 'text-danger'" th:text="${c.result.missing}">0</td>
+                        <td>
+                            <th:block th:if="${m != null}">
+                                <span class="badge" th:classappend="${m.state.name() == 'ON_TIME'} ? 'badge-success' : (${m.state.name() == 'PENDING'} ? 'badge-info' : 'badge-danger')"
+                                      th:text="#{${'reconciliation.state.' + m.state}}">On time</span>
+                                <div class="cell-sub" th:text="#{reconciliation.monthDue(${#temporals.format(m.month.atEndOfMonth(), 'MM/yyyy')}, ${#temporals.format(m.due, 'dd/MM/yyyy')})}">09/2026, due 07/10/2026</div>
+                            </th:block>
+                            <span th:if="${m == null}">—</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{reconciliation.complianceNote}">Each month of the last year is reconciled by the fifth working day of the next (Settings). A second person reviews each reconciliation.</p>
+    </div>
+
     <div class="section">
         <div class="section-header">
             <h2>
@@ -47,7 +83,10 @@
                                 <div th:if="${r.outstandingPayments.signum() != 0}" th:text="#{reconciliation.paymentsShort(${@num.money(r.outstandingPayments)})}">- 20,000 out</div>
                             </th:block>
                         </td>
-                        <td><th:block th:replace="~{reconciliations/list :: recStatus(${r.status})}"></th:block></td>
+                        <td>
+                            <th:block th:replace="~{reconciliations/list :: recStatus(${r.status})}"></th:block>
+                            <span class="badge badge-warning" th:if="${r.reconciled and !r.reviewed}" th:text="#{reconciliation.toReview}">To review</span>
+                        </td>
                     </tr>
                     <tr th:if="${reconciliations.totalElements == 0}">
                         <td colspan="6">

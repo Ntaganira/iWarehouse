@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -72,6 +74,11 @@ public class SettingService {
     }
 
     /** Branch used to number documents when the caller gives none (MD-07). */
+    /** When a setting's row was last changed (its creation when never changed); empty while it keeps its default. */
+    public Optional<LocalDateTime> changedAt(SettingKey key) {
+        return settingRepo.findBySettingKey(key.key()).map(s -> s.getUpdatedAt() != null ? s.getUpdatedAt() : s.getCreatedAt());
+    }
+
     public String branchCode() {
         return get(SettingKey.BRANCH_CODE);
     }

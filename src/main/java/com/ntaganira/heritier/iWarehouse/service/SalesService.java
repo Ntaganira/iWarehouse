@@ -84,6 +84,7 @@ public class SalesService {
     private final Clock clock;
     private final CustomerAgeing ageing;
     private final DelegationOfAuthority authority;
+    private final PaymentConfirmationRepository confirmationRepo;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
                         ProductRepository productRepo, CustomerRepository customerRepo, ProcessingServiceRepository serviceRepo,
@@ -93,7 +94,9 @@ public class SalesService {
                         CuttingJobService cuttingJobService,
                         StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
                         DocumentNumberService numbers, SettingService settingService, Notifier notifier, EbmService ebmService,
-                        Clock clock, CustomerAgeing ageing, DelegationOfAuthority authority) {
+                        Clock clock, CustomerAgeing ageing, DelegationOfAuthority authority,
+                        PaymentConfirmationRepository confirmationRepo) {
+        this.confirmationRepo = confirmationRepo;
         this.ageing = ageing;
         this.authority = authority;
         this.notifier = notifier;
@@ -1159,6 +1162,26 @@ public class SalesService {
     }
 
     /**
+     * Goods paid by bank transfer leave once Finance has confirmed every transfer of their invoice (SDP 14, the Settings'
+     * release.transfer-confirmed): a hand-over and a delivery note's release check it.
+     */
+    public void requireTransfersConfirmed(SalesInvoice invoice) {
+        if (!settingService.getBoolean(SettingKey.RELEASE_TRANSFER_CONFIRMED)) {
+            return;
+        }
+        List<SalesPayment> transfers = paymentRepo.findByInvoiceIdAndMethod(invoice.getId(), PaymentMethod.BANK_TRANSFER);
+        if (transfers.isEmpty()) {
+            return;
+        }
+        Set<UUID> confirmed = confirmationRepo.findByInvoiceId(invoice.getId()).stream().map(PaymentConfirmation::getSalesPaymentId)
+                .collect(Collectors.toSet());
+        long waiting = transfers.stream().filter(t -> !confirmed.contains(t.getId())).count();
+        if (waiting > 0) {
+            throw BusinessException.of("delivery.transferUnconfirmed", invoice.getNumber(), waiting);
+        }
+    }
+
+    /**
      * Hands over pieces of an invoice's sizes (SRS 5.3 step 5): each must have been cut by the invoice's own cutting jobs,
      * still be reserved, and its size have pieces left to hand over. The units are sold and their cost at MAC posted.
      */
@@ -1173,6 +1196,7 @@ public class SalesService {
         if (invoice.hasBalanceDue()) {
             throw BusinessException.of("sale.deliver.balanceDue", invoice.getNumber(), invoice.getBalanceDue());
         }
+        requireTransfersConfirmed(invoice);
         Map<UUID, StockUnit> chosen = new LinkedHashMap<>();
         if (unitIds != null && !unitIds.isEmpty()) {
             unitRepo.findAllById(unitIds).forEach(u -> chosen.put(u.getId(), u));

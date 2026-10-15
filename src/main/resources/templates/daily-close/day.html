@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{dailyClose.dayTitle(${#temporals.format(day, 'dd/MM/yyyy')})}, ~{::content})}">
+<head><title>End-of-day report - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="r=${report}, t=${report.totals}, base=${'/daily-close/' + day},
+        canPrepare=${#authorization.expression('hasAuthority(''PERM_PREPARE_DAILY_CLOSE'')')},
+        canSign=${#authorization.expression('hasAuthority(''PERM_SIGN_DAILY_CLOSE'')')},
+        canTest=${#authorization.expression('hasAuthority(''PERM_TEST_DAILY_CLOSE'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{dailyClose.dayTitle(${#temporals.format(day, 'dd/MM/yyyy')})}">End-of-day report 14/10/2026</h1>
+            <div class="subtitle">
+                <a th:href="@{/daily-close/{d}(d=${day.minusDays(1)})}" th:text="#{dailyClose.dayBefore}">‹ Day before</a>
+                <th:block th:if="${day.isBefore(today)}"> · <a th:href="@{/daily-close/{d}(d=${day.plusDays(1)})}" th:text="#{dailyClose.dayAfter}">Day after ›</a></th:block>
+                <th:block th:if="${close != null}"> · <span class="mono" th:text="${close.number}">DC-WH-2026-000001</span></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/daily-close" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/daily-close/{d}/export(d=${day})})}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="sign-modal" th:if="${close != null and !close.signed and canSign and !preparer}"
+                    th:text="#{dailyClose.sign}">Sign the close</button>
+            <button type="button" class="btn btn-primary" data-modal-open="test-modal" th:if="${mayTest and canTest}"
+                    th:text="#{dailyClose.test}">Record the test</button>
+        </div>
+    </div>
+
+    <!--/* Where the close stands */-->
+    <div class="doc-note is-warning" th:if="${close == null}" th:text="#{dailyClose.notPrepared}">This day is not closed yet.</div>
+    <div class="doc-note" th:if="${close != null}" th:classappend="${close.variance and !close.signed} ? 'is-warning' : ''">
+        <strong th:text="#{dailyClose.preparedLine(${close.preparedBy}, ${#temporals.format(close.preparedAt, 'dd/MM/yyyy HH:mm')})}">Prepared by recording1 on 15/10/2026 08:30.</strong>
+        <span th:if="${close.varianceNote != null}" th:text="#{dailyClose.varianceLine(${close.varianceNote})}">Variance: cashier short 1,000</span>
+        <span th:if="${close.signed}" th:text="#{dailyClose.signedLine(${close.signedBy}, ${#temporals.format(close.signedAt, 'dd/MM/yyyy HH:mm')})}">Signed by dof1 on 15/10/2026 09:10.</span>
+        <span th:if="${close.signNote != null}" th:text="${close.signNote}">Seen</span>
+        <span th:if="${close.tested}" th:text="#{dailyClose.testedLine(${close.testedBy}, ${close.testNote})}">Tested by ic1: tills and slips checked.</span>
+        <span th:if="${!close.signed and preparer}" th:text="#{dailyClose.awaitSign}">Another person signs it.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${!#lists.isEmpty(r.openTills)}">
+        <span th:text="#{dailyClose.tillsOpenNote(${r.openTills.size()})}">1 till of this day is still open: the day closes once every till is.</span>
+        <th:block th:each="o : ${r.openTills}"> <a class="mono" th:href="@{/till-sessions/{id}(id=${o.id})}" th:text="${o.number}">TILL-WH-2026-000040</a></th:block>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{dailyClose.kpi.sales}">Sales</div>
+                <div class="kpi-value" th:with="val=${@num.money(r.salesTotal)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">845,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{dailyClose.kpi.invoices(${r.invoices.size()}, ${@num.money(r.collectionsTotal)})}">12 invoices · 40,000 collected</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{dailyClose.kpi.cash}">Cash counted</div>
+                <div class="kpi-value" th:with="val=${@num.money(r.cashCounted)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">540,000</div>
+                <div class="kpi-trend" th:classappend="${r.cashVariance.signum() == 0} ? 'flat' : 'bad'">
+                    <span class="vs" th:text="#{dailyClose.kpi.cashVs(${@num.money(r.cashExpected)}, ${@num.money(r.cashVariance)})}">expected 541,000 · variance -1,000</span>
+                </div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{dailyClose.kpi.momo}">MoMo received</div>
+                <div class="kpi-value" th:with="val=${@num.money(r.momoReceived)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">125,000</div>
+                <div class="kpi-trend" th:classappend="${close == null or close.momoVariance.signum() == 0} ? 'flat' : 'bad'">
+                    <span class="vs" th:if="${close != null and close.momoStatement != null}"
+                          th:text="#{dailyClose.kpi.momoVs(${@num.money(close.momoStatement)}, ${@num.money(close.momoVariance)})}">statement 125,000 · variance 0</span>
+                    <span class="vs" th:unless="${close != null and close.momoStatement != null}" th:text="#{dailyClose.kpi.momoNoStatement}">against the merchant statement</span>
+                </div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{dailyClose.kpi.credit}">Credit granted</div>
+                <div class="kpi-value" th:with="val=${@num.money(r.creditGranted)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">180,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{dailyClose.kpi.creditCount(${r.credits.size()})}">3 invoices for Credit Control</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{dailyClose.kpi.ebm}">EBM receipts</div>
+                <div class="kpi-value" th:text="${r.ebmCount}">13</div>
+                <div class="kpi-trend" th:classappend="${r.ebmUnsigned == 0} ? 'flat' : 'bad'">
+                    <span class="vs" th:if="${r.ebmCount > 0}" th:text="#{dailyClose.kpi.ebmRange(${r.ebmFirst}, ${r.ebmLast}, ${r.ebmUnsigned})}">1041 to 1053 · 0 unsigned</span>
+                    <span class="vs" th:if="${r.ebmCount == 0}" th:text="#{dailyClose.kpi.ebmNone}">none issued</span>
+                </div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="6" y1="18" x2="6" y2="11"></line><line x1="10" y1="18" x2="10" y2="11"></line><line x1="14" y1="18" x2="14" y2="11"></line><line x1="18" y1="18" x2="18" y2="11"></line><polygon points="12 2 20 7 4 7"></polygon></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{dailyClose.kpi.banked}">Banked</div>
+                <div class="kpi-value" th:with="val=${@num.money(r.banked)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">279,000</div>
+                <div class="kpi-trend" th:classappend="${r.banked.compareTo(r.cashToBank) >= 0} ? 'flat' : 'bad'">
+                    <span class="vs" th:text="#{dailyClose.kpi.bankedVs(${@num.money(r.cashToBank)})}">of 279,000 to bank</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--/* Preparing the close (the Sales Recording Officer: decision D4) */-->
+    <div class="section" th:if="${canPrepare and (close == null or !close.signed)}">
+        <div class="section-header">
+            <h2 th:text="${close == null} ? #{dailyClose.prepareTitle} : #{dailyClose.prepareAgainTitle}">Prepare the close</h2>
+        </div>
+        <div class="section-body">
+            <form th:action="@{/daily-close/{d}/prepare(d=${day})}" method="post" class="form-container" novalidate>
+                <p class="form-note" th:text="#{dailyClose.prepareNote}">The figures are kept as they stand now. Enter the MoMo merchant statement's total for the day and explain any difference; the Director of Finance is told at once.</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="momoStatement" th:text="#{dailyClose.momoStatement}">MoMo merchant statement (RWF)</label>
+                        <input type="number" id="momoStatement" name="momoStatement" min="0" step="any" inputmode="decimal"
+                               th:value="${momoStatement != null ? momoStatement : (close != null and close.momoStatement != null ? close.momoStatement.toPlainString() : null)}">
+                        <span class="hint" th:text="#{dailyClose.momoStatementHint(${@num.money(r.momoReceived)})}">MoMo received in the system: 125,000 RWF</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="cashVariance" th:text="#{dailyClose.cashVariance}">Cash variance</label>
+                        <input type="text" id="cashVariance" readonly th:classappend="${r.cashVariance.signum() != 0} ? 'text-danger'"
+                               th:value="#{dailyClose.cashVarianceStatic(${@num.money(r.cashVariance)}, ${r.tills.size()})}">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="varianceNote" th:text="#{dailyClose.varianceNote}">Explanation of the variances</label>
+                        <textarea id="varianceNote" name="varianceNote" rows="2" maxlength="500"
+                                  th:text="${varianceNote != null ? varianceNote : (close != null ? close.varianceNote : null)}"></textarea>
+                        <span class="hint" th:text="#{dailyClose.varianceNoteHint}">Needed when the cash or the MoMo statement differs</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:disabled="${!#lists.isEmpty(r.openTills)}"
+                            th:text="${close == null} ? #{dailyClose.prepare} : #{dailyClose.prepareAgain}">Prepare the close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-channels" th:classappend="${tab == 'channels'} ? 'active'" th:text="#{dailyClose.tab.channels}">By channel</button>
+            <button type="button" class="tab" data-tab="tab-salespeople" th:classappend="${tab == 'salespeople'} ? 'active'">
+                <span th:text="#{dailyClose.tab.salespeople}">By salesperson</span>
+                <span class="section-count" th:text="${salespeople.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-customers" th:classappend="${tab == 'customers'} ? 'active'">
+                <span th:text="#{dailyClose.tab.customers}">By customer</span>
+                <span class="section-count" th:text="${customers.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-collections" th:classappend="${tab == 'collections'} ? 'active'">
+                <span th:text="#{dailyClose.tab.collections}">Collections</span>
+                <span class="section-count" th:text="${collections.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" id="credit" data-tab="tab-credit" th:classappend="${tab == 'credit'} ? 'active'">
+                <span th:text="#{dailyClose.tab.credit}">Credit list</span>
+                <span class="section-count" th:text="${credits.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-tills" th:classappend="${tab == 'tills'} ? 'active'">
+                <span th:text="#{dailyClose.tab.tills}">Tills and banking</span>
+                <span class="section-count" th:text="${tills.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-ebm" th:classappend="${tab == 'ebm'} ? 'active'">
+                <span th:text="#{dailyClose.tab.ebm}">EBM receipts</span>
+                <span class="section-count" th:text="${receipts.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-vans" th:classappend="${tab == 'vans'} ? 'active'">
+                <span th:text="#{dailyClose.tab.vans}">Glass on vehicles</span>
+                <span class="section-count" th:text="${vans.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:if="${close != null}" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:if="${close != null}" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <!--/* The sales by channel, split by how they were paid (shown whole: the day's totals) */-->
+            <div class="tab-content" id="tab-channels" th:classappend="${tab == 'channels'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{dailyClose.channel}">Channel</th>
+                                <th class="num" th:text="#{dailyClose.invoices}">Invoices</th>
+                                <th class="num" th:text="#{dailyClose.cash}">Cash</th>
+                                <th class="num" th:text="#{dailyClose.momo}">MoMo</th>
+                                <th class="num" th:text="#{dailyClose.other}">Card and transfer</th>
+                                <th class="num" th:text="#{dailyClose.credit}">Credit</th>
+                                <th class="num" th:text="#{dailyClose.total}">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${r.channels}">
+                                <td th:text="#{${'order.channel.' + c.channel}}">Counter</td>
+                                <td class="num" th:text="${c.invoices}">10</td>
+                                <td class="num" th:text="${@num.money(c.cash)}">500,000</td>
+                                <td class="num" th:text="${@num.money(c.momo)}">100,000</td>
+                                <td class="num" th:text="${@num.money(c.other)}">0</td>
+                                <td class="num" th:text="${@num.money(c.credit)}">45,000</td>
+                                <td class="num strong" th:text="${@num.money(c.total)}">645,000</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(r.channels)}">
+                                <td colspan="7"><div class="empty-state slim" th:text="#{dailyClose.noSales}">No sale on this day</div></td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:if="${!#lists.isEmpty(r.channels)}">
+                            <tr>
+                                <th th:text="#{dailyClose.total}">Total</th>
+                                <th class="num" th:text="${t.invoices}">12</th>
+                                <th class="num" th:text="${@num.money(t.cash)}">540,000</th>
+                                <th class="num" th:text="${@num.money(t.momo)}">125,000</th>
+                                <th class="num" th:text="${@num.money(t.other)}">0</th>
+                                <th class="num" th:text="${@num.money(t.credit)}">180,000</th>
+                                <th class="num" th:text="${@num.money(t.total)}">845,000</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{dailyClose.channelsNote(${@num.money(r.refundsTotal)}, ${@num.money(r.cashRefunds)}, ${r.notesReleased}, ${r.ebmOverrides})}">Refunds 15,000 (5,000 in cash) · 4 delivery notes released, 0 before the EBM signature.</p>
+            </div>
+
+            <div class="tab-content" id="tab-salespeople" th:classappend="${tab == 'salespeople'} ? 'active'">
+                <th:block th:replace="~{daily-close/day :: partyTable(${salespeople}, #{dailyClose.salesperson})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${salespeople}, ${base}, 'tab=salespeople')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-customers" th:classappend="${tab == 'customers'} ? 'active'">
+                <th:block th:replace="~{daily-close/day :: partyTable(${customers}, #{invoice.customer})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${customers}, ${base}, 'tab=customers')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-collections" th:classappend="${tab == 'collections'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{dailyClose.document}">Document</th>
+                                <th th:text="#{invoice.customer}">Customer</th>
+                                <th th:text="#{invoice.method}">Method</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${collections.content}">
+                                <td><a class="mono" th:href="${c.link}" th:text="${c.document}">RCT-WH-2026-000003</a></td>
+                                <td th:text="${c.customer}">Umucyo Builders Ltd</td>
+                                <td th:text="#{${'payment.method.' + c.method}}">Cash</td>
+                                <td class="num" th:text="${@num.money(c.amount)}">40,000</td>
+                            </tr>
+                            <tr th:if="${collections.totalElements == 0}">
+                                <td colspan="4"><div class="empty-state slim" th:text="#{dailyClose.noCollections}">No balance or account payment taken on this day</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${collections}, ${base}, 'tab=collections')}"></th:block>
+            </div>
+
+            <!--/* The day's credit list for Credit Control (F-12, BP 7.1) */-->
+            <div class="tab-content" id="tab-credit" th:classappend="${tab == 'credit'} ? 'active'">
+                <p class="tab-intro" th:text="#{dailyClose.creditIntro}">Credit granted on this day: on account, or a deposit's balance left to pay. Credit Control receives this list when the day is prepared.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{invoice.number}">Invoice</th>
+                                <th th:text="#{invoice.customer}">Customer</th>
+                                <th th:text="#{dailyClose.salesperson}">Salesperson</th>
+                                <th class="num" th:text="#{dailyClose.credit}">Credit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${credits.content}">
+                                <td><a class="mono" th:href="@{/invoices/{id}(id=${c.invoice.id})}" th:text="${c.invoice.number}">INV-WH-2026-000028</a></td>
+                                <td th:text="${c.invoice.customer.name}">Umucyo Builders Ltd</td>
+                                <td th:text="${c.invoice.salesperson ?: c.invoice.postedBy}">cashier1</td>
+                                <td class="num" th:text="${@num.money(c.amount)}">120,000</td>
+                            </tr>
+                            <tr th:if="${credits.totalElements == 0}">
+                                <td colspan="4"><div class="empty-state slim" th:text="#{dailyClose.noCredit}">No credit granted on this day</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${credits}, ${base}, 'tab=credit')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-tills" th:classappend="${tab == 'tills'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{till.number}">Till</th>
+                                <th class="num" th:text="#{dailyClose.cashExpected}">Expected</th>
+                                <th class="num" th:text="#{dailyClose.cashCounted}">Counted</th>
+                                <th class="num" th:text="#{dailyClose.cashVariance}">Variance</th>
+                                <th class="num" th:text="#{dailyClose.cashToBank}">To bank</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="s : ${tills.content}">
+                                <td>
+                                    <a class="mono" th:href="@{/till-sessions/{id}(id=${s.id})}" th:text="${s.number}">TILL-WH-2026-000040</a>
+                                    <div class="cell-sub" th:text="${s.cashierUsername}">cashier1</div>
+                                </td>
+                                <td class="num" th:text="${@num.money(s.expectedCash)}">300,000</td>
+                                <td class="num" th:text="${@num.money(s.countedCash)}">299,000</td>
+                                <td class="num" th:classappend="${s.difference.signum() != 0} ? 'text-danger'" th:text="${@num.money(s.difference)}">-1,000</td>
+                                <td class="num" th:text="${@num.money(s.cashToBank)}">279,000</td>
+                                <td>
+                                    <span class="badge" th:classappend="${s.verified} ? 'badge-success' : 'badge-warning'"
+                                          th:text="${s.verified} ? #{till.verifiedBadge} : #{till.notVerified}">Verified</span>
+                                    <span class="badge" th:classappend="${s.banked} ? 'badge-success' : 'badge-secondary'"
+                                          th:text="${s.banked} ? #{till.banked} : #{till.notBanked}">Banked</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${tills.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state slim" th:text="#{dailyClose.noTills}">No till closed on this day</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${tills}, ${base}, 'tab=tills')}"></th:block>
+                <p class="form-note" th:if="${!#lists.isEmpty(r.deposits)}">
+                    <span th:text="#{dailyClose.bankedOnDay(${@num.money(r.banked)})}">Banked on this day: 279,000 RWF</span>
+                    <th:block th:each="d : ${r.deposits}"> · <a class="mono" th:href="@{/cash-deposits/{id}(id=${d.id})}" th:text="${d.number}">BNK-WH-2026-000001</a>
+                        <span th:text="#{dailyClose.slip(${d.slipNumber})}">slip BK-1</span></th:block>
+                </p>
+            </div>
+
+            <div class="tab-content" id="tab-ebm" th:classappend="${tab == 'ebm'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num" th:text="#{dailyClose.ebmNumber}">EBM no.</th>
+                                <th th:text="#{dailyClose.document}">Document</th>
+                                <th th:text="#{dailyClose.ebmKind}">Receipt</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="e : ${receipts.content}">
+                                <td class="num mono" th:text="${e.invcNo}">1041</td>
+                                <td class="mono" th:text="${e.documentNumber}">INV-WH-2026-000028</td>
+                                <td th:text="${e.refund} ? #{dailyClose.ebm.refund} : #{dailyClose.ebm.sale}">Sale</td>
+                                <td><span class="badge" th:classappend="${e.signed} ? 'badge-success' : 'badge-warning'" th:text="#{${'ebm.status.' + e.status}}">Signed</span></td>
+                            </tr>
+                            <tr th:if="${receipts.totalElements == 0}">
+                                <td colspan="4"><div class="empty-state slim" th:text="#{dailyClose.kpi.ebmNone}">none issued</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${receipts}, ${base}, 'tab=ebm')}"></th:block>
+            </div>
+
+            <div class="tab-content" id="tab-vans" th:classappend="${tab == 'vans'} ? 'active'">
+                <p class="tab-intro" th:text="#{dailyClose.vansIntro}">The glass on each vehicle now (SDP 15-16).</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{dailyClose.vehicle}">Vehicle</th>
+                                <th class="num" th:text="#{dailyClose.units}">Units</th>
+                                <th class="num" th:text="#{summary.area}">m²</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="v : ${vans.content}">
+                                <td th:text="${v.vehicle}">Isuzu NPR (RAD 512 C)</td>
+                                <td class="num" th:text="${v.units}">14</td>
+                                <td class="num" th:text="${@num.m2(v.m2)}">58.2400</td>
+                            </tr>
+                            <tr th:if="${vans.totalElements == 0}">
+                                <td colspan="3"><div class="empty-state slim" th:text="#{dailyClose.noVans}">No glass on a vehicle</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${vans}, ${base}, 'tab=vans')}"></th:block>
+            </div>
+
+            <th:block th:if="${close != null}">
+                <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                    <p class="tab-intro" th:text="#{dailyClose.documentsIntro}">Keep the MoMo merchant statement and the signed end-of-day report.</p>
+                    <th:block th:replace="~{fragments/attachments :: documents('DAILY_CLOSE', ${close.id}, ${documents}, ${base})}"></th:block>
+                </div>
+                <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                    <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                    <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+                </div>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="sign-modal" th:if="${close != null and !close.signed and canSign and !preparer}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sign-title">
+            <div class="modal-header">
+                <h3 id="sign-title" th:text="#{dailyClose.signTitle(${#temporals.format(day, 'dd/MM/yyyy')})}">Sign the close of 14/10/2026</h3>
+                <button type="button" class="modal-close" data-modal-close="sign-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/daily-close/close/{id}/sign(id=${close.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{dailyClose.signText}">The figures are checked again against the day's documents before the close is signed.</p>
+                    <div class="form-group">
+                        <label for="sign-note" th:text="#{dailyClose.signNote}">Note</label>
+                        <input type="text" id="sign-note" name="signNote" maxlength="255" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="sign-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{dailyClose.sign}">Sign the close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="test-modal" th:if="${mayTest and canTest}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="test-title">
+            <div class="modal-header">
+                <h3 id="test-title" th:text="#{dailyClose.testTitle(${#temporals.format(day, 'dd/MM/yyyy')})}">Test the close of 14/10/2026</h3>
+                <button type="button" class="modal-close" data-modal-close="test-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/daily-close/close/{id}/test(id=${close.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{dailyClose.testText}">Say what you checked: the tills' counts, the deposit slips, the MoMo statement, the EBM receipts.</p>
+                    <div class="form-group">
+                        <label for="test-note" th:text="#{dailyClose.testNote}">What was checked</label>
+                        <textarea id="test-note" name="testNote" rows="3" maxlength="500" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="test-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{dailyClose.test}">Record the test</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!--/* The day's sales by salesperson or by customer */-->
+<th:block th:fragment="partyTable(rows, label)">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th th:text="${label}">Salesperson</th>
+                    <th class="num" th:text="#{dailyClose.invoices}">Invoices</th>
+                    <th class="num" th:text="#{dailyClose.total}">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="p : ${rows.content}">
+                    <td th:text="${p.name}">cashier1</td>
+                    <td class="num" th:text="${p.invoices}">8</td>
+                    <td class="num" th:text="${@num.money(p.total)}">560,000</td>
+                </tr>
+                <tr th:if="${rows.totalElements == 0}">
+                    <td colspan="3"><div class="empty-state slim" th:text="#{dailyClose.noSales}">No sale on this day</div></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</th:block>
+</body>
+</html>

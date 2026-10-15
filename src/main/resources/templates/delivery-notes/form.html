@@ -41,7 +41,7 @@
                             <td th:text="#{delivery.kind.SHEET}">Whole sheet</td>
                             <td class="mono" th:text="${u.product.code}">CLR-6</td>
                             <td class="num nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">3210 × 2250</td>
-                            <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R01</td>
+                            <td class="mono" th:with="place=${locations.get(ready.placeOf(u))}" th:text="${place != null} ? ${place.code} : '—'">WH-A-R01</td>
                         </tr>
                         <tr th:each="u : ${ready.pieces}">
                             <td><input type="checkbox" class="checkbox" name="unitIds" th:value="${u.id}" th:checked="${chosen.contains(u.id)}"
@@ -50,7 +50,7 @@
                             <td th:text="#{delivery.kind.PIECE}">Cut piece</td>
                             <td class="mono" th:text="${u.product.code}">CLR-6</td>
                             <td class="num nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">600 × 400</td>
-                            <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R02</td>
+                            <td class="mono" th:with="place=${locations.get(ready.placeOf(u))}" th:text="${place != null} ? ${place.code} : '—'">WH-A-R02</td>
                         </tr>
                     </tbody>
                 </table>

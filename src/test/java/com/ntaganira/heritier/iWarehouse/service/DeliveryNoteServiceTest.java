@@ -39,6 +39,7 @@ class DeliveryNoteServiceTest {
     private SalesService sales;
     private EbmService ebm;
     private SettingService settings;
+    private UUID siteId;
     private Notifier notifier;
     private AlertStateRepository alerts;
     private DeliveryNoteService service;
@@ -74,7 +75,7 @@ class DeliveryNoteServiceTest {
 
         Location site = location("WH", LocationType.SITE, null);
         Location rack = location("WH-A-R01", LocationType.RACK, site.getId());
-        sheet = unit("U-WH-000038", 3210, 2250, rack, StockStatus.SOLD);
+        sheet = unit("U-WH-000038", 3210, 2250, null, StockStatus.SOLD);                 // sold at payment: no place any more
         piece = unit("U-WH-000090", 600, 400, rack, StockStatus.RESERVED);
         invoice = new SalesInvoice();
         invoice.setId(UUID.randomUUID());
@@ -100,13 +101,16 @@ class DeliveryNoteServiceTest {
         when(sales.piecesOf(invoice)).thenReturn(Map.of(piece.getId(), sizeLine.getId()));
         StockService stock = mock(StockService.class);
         when(stock.locationsById()).thenReturn(Map.of(site.getId(), site, rack.getId(), rack));
+        when(stock.soldFrom(any())).thenReturn(Map.of(sheet.getId(), rack.getId()));           // the rack it left from
         ebm = mock(EbmService.class);
         when(ebm.ofInvoice(invoice.getId())).thenReturn(Optional.empty());
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.DELIVERY_NOTE)).thenReturn("DN-WH-2026-000001", "DN-WH-2026-000002");
         settings = mock(SettingService.class);
         when(settings.getBoolean(SettingKey.EBM_BEFORE_RELEASE)).thenReturn(true);
+        when(settings.getBoolean(SettingKey.SALES_RELEASE_BY_NOTE)).thenReturn(true);
         when(settings.getInt(SettingKey.DELIVERY_SIGNED_COPY_DAYS)).thenReturn(3);
+        siteId = site.getId();
         notifier = mock(Notifier.class);
         alerts = mock(AlertStateRepository.class);
         when(alerts.findById(any())).thenReturn(Optional.empty());
@@ -128,10 +132,25 @@ class DeliveryNoteServiceTest {
         assertThat(n.getVehiclePlate()).isEqualTo("RAD 123 A");
         assertThat(n.getShortReason()).isNull();
         assertThat(lines).extracting(DeliveryNoteLine::getKind).containsExactlyInAnyOrder(DeliveryLineKind.SHEET, DeliveryLineKind.PIECE);
+        assertThat(n.getSiteId()).isEqualTo(siteId);                                             // the store the sheet left from
         verify(notifier).holders("RELEASE_GOODS", 4L, NotificationKind.DELIVERY, "notify.delivery.toRelease", "notify.delivery.toReleaseText",
                 "/delivery-notes/" + n.getId(), "DN-WH-2026-000001", "INV-WH-2026-000031", "2");
         // Units on a note are not the invoice's to release again
         assertThat(service.releasable(invoice).isEmpty()).isTrue();
+    }
+
+    @Test
+    void sheetsSoldBeforeReleaseByNoteLeftAtTheCounter() {
+        invoice.setPostedAt(LocalDateTime.of(2026, 10, 1, 9, 0));
+        when(settings.changedAt(SettingKey.SALES_RELEASE_BY_NOTE)).thenReturn(Optional.of(LocalDateTime.of(2026, 10, 15, 8, 0)));
+        DeliveryNoteService.Releasable ready = service.releasable(invoice);
+        assertThat(ready.sheets()).isEmpty();
+        assertThat(ready.pieces()).containsExactly(piece);
+        // Without release by note, the counter hands sheets over at payment
+        invoice.setPostedAt(LocalDateTime.of(2026, 10, 16, 9, 0));
+        assertThat(service.releasable(invoice).sheets()).containsExactly(sheet);
+        when(settings.getBoolean(SettingKey.SALES_RELEASE_BY_NOTE)).thenReturn(false);
+        assertThat(service.releasable(invoice).sheets()).isEmpty();
     }
 
     @Test

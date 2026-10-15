@@ -8,6 +8,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -44,6 +45,13 @@ public interface JournalEntryRepository extends Repository<JournalEntry, UUID>, 
     List<JournalEntry> findByReversesIdOrderByNumber(UUID reversesId);
 
     /** The date of the first journal (the ledger's first month), null before any. */
+    /** The journals dated in a period, by number (the journal register, F-16). */
+    List<JournalEntry> findByEntryDateBetweenOrderByNumberAsc(LocalDate from, LocalDate to);
+
+    /** Every journal number of a series ("JV-WH-2026-"), whatever its date: a number another month holds is no gap. */
+    @Query("select e.number from JournalEntry e where e.number like concat(:series, '%')")
+    List<String> numbersOfSeries(@Param("series") String series);
+
     @Query("select min(e.entryDate) from JournalEntry e")
     LocalDate firstEntryDate();
 }

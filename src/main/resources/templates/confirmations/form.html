@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{confirmation.new}, ~{::content})}">
+<head><title>Send a confirmation - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{confirmation.new}">Send a confirmation</h1>
+            <div class="subtitle" th:text="#{confirmation.formSubtitle}">The balance on the day comes from the ledger; print the letter with its reply slip and send it</div>
+        </div>
+        <a href="/accounting/confirmations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/accounting/confirmations/new}" method="post" class="form-container" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="customerId" th:text="#{invoice.customer}">Customer</label>
+                    <select id="customerId" name="customerId" data-searchable th:classappend="${errorField == 'customerId'} ? 'is-invalid'">
+                        <option value="" th:text="#{confirmation.chooseCustomer}">Choose the customer</option>
+                        <option th:each="a : ${customers}" th:value="${a.customer.id}" th:selected="${customerId == a.customer.id}"
+                                th:text="${a.customer.name + ' · ' + @num.money(a.balance)}">Umucyo Builders Ltd · 85,000</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'customerId'}" th:text="${flashError}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="asOf" th:text="#{confirmation.asOf}">Balance on</label>
+                    <input type="date" id="asOf" name="asOf" required th:value="${asOf}" th:attr="max=${today}"
+                           th:classappend="${errorField == 'asOf'} ? 'is-invalid'">
+                    <span class="field-error" th:if="${errorField == 'asOf'}" th:text="${flashError}"></span>
+                    <span class="hint" th:text="#{confirmation.asOfHint}">Usually the last day of a month</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-outline" name="all" value="true" th:text="#{confirmation.sendAll}">Send to every customer with a balance</button>
+                <button type="submit" class="btn btn-primary" th:text="#{confirmation.send}">Send</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

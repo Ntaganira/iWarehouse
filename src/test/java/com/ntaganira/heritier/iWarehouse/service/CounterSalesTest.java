@@ -235,7 +235,8 @@ class CounterSalesTest {
         });
         when(unitsBackRepo.findByInvoiceId(any())).thenAnswer(a -> unitsBack.stream()
                 .filter(u -> u.getInvoiceId().equals(a.getArgument(0))).toList());
-        tills = new TillService(tillRepo, invoiceRepo, paymentRepo, creditNoteRepo, mock(CustomerPaymentRepository.class), postings, numbers, CLOCK);
+        tills = new TillService(tillRepo, invoiceRepo, paymentRepo, creditNoteRepo, mock(CustomerPaymentRepository.class), postings, numbers,
+                mock(SettingService.class), CLOCK);
         when(numbers.next(DocumentType.CREDIT_NOTE)).thenAnswer(a -> String.format("CN-WH-2026-%06d", creditNotes.size() + 1));
         ProcessingServiceRepository serviceRepo = mock(ProcessingServiceRepository.class);
         when(serviceRepo.findAllById(any())).thenAnswer(a -> {
@@ -365,7 +366,8 @@ class CounterSalesTest {
         LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
                 jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, creditLineRepo, tills, cuttingJobs, stockService, pricing,
-                postings, journals, numbers, settings, mock(Notifier.class), ebm, CLOCK, mock(CustomerAgeing.class), mock(DelegationOfAuthority.class));
+                postings, journals, numbers, settings, mock(Notifier.class), ebm, CLOCK, mock(CustomerAgeing.class), mock(DelegationOfAuthority.class),
+                mock(PaymentConfirmationRepository.class));
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK, mock(DelegationOfAuthority.class), settings,
                 mock(Notifier.class));
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,

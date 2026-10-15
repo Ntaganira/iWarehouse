@@ -4,11 +4,13 @@ import com.ntaganira.heritier.iWarehouse.audit.AuditContext;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.AccountingPeriod;
+import com.ntaganira.heritier.iWarehouse.entity.PeriodSignOff;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.PeriodService;
+import com.ntaganira.heritier.iWarehouse.service.PeriodSignOffService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -46,9 +48,11 @@ public class PeriodController {
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
+    private final PeriodSignOffService signOffService;
 
     public PeriodController(PeriodService periodService, DataChangeService dataChangeService, ActivityLogService activityLogService,
-                            Messages messages) {
+                            Messages messages, PeriodSignOffService signOffService) {
+        this.signOffService = signOffService;
         this.periodService = periodService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
@@ -90,8 +94,30 @@ public class PeriodController {
         AccountingPeriod period = periodService.findById(id);
         model.addAttribute("period", period);
         model.addAttribute("canReopen", periodService.canReopen(period));
+        // The COO's, then the MD's sign-off (BP 4.2)
+        model.addAttribute("signOffs", signOffService.of(period));
+        model.addAttribute("nextOffice", signOffService.nextFor(period).orElse(null));
         model.addAttribute("history", dataChangeService.history("AccountingPeriod", id.toString(), Paging.page(page), Paging.SIZE));
         return "periods/view";
+    }
+
+    @PostMapping("/{id}/sign-off")
+    @PreAuthorize("hasAuthority('PAGE_PERIODS') and hasAuthority('PERM_SIGN_OFF_PERIOD')")
+    public String signOff(@PathVariable UUID id, @RequestParam(required = false) String note, RedirectAttributes redirect) {
+        AccountingPeriod period = periodService.findById(id);
+        try {
+            PeriodSignOff s = signOffService.signOff(id, note);
+            activityLogService.record(AccountingController.MODULE, "APPROVE_PERIOD", "Signed the accounts of " + period.getPeriodEnd().format(DAY) + " off as "
+                    + s.getOffice() + (s.getNote() == null ? "" : ": " + s.getNote()), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("period.signedOff", period.getPeriodEnd().format(DAY),
+                    messages.get("authority.level." + s.getOffice())));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(AccountingController.MODULE, "APPROVE_PERIOD", "Failed to sign the accounts of " + period.getPeriodEnd().format(DAY) + " off: " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:" + BASE + "/" + id;
     }
 
     @PostMapping("/{id}/reopen")

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${deposit.number}, ~{::content})}">
+<head><title>Deposit - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/cash-deposits/' + deposit.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${deposit.number}">BNK-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{deposit.byOn(${deposit.postedBy}, ${#temporals.format(deposit.postedAt, 'dd/MM/yyyy HH:mm')})}">Banked by treasury1 on 15/10/2026 18:30</div>
+        </div>
+        <a href="/cash-deposits" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{deposit.slip}">Slip number</label>
+                    <div class="value mono" th:text="${deposit.slipNumber}">BK-778812</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{deposit.date}">Date</label>
+                    <div class="value" th:text="${#temporals.format(deposit.depositDate, 'dd/MM/yyyy')}">15/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{deposit.account}">Account</label>
+                    <div class="value" th:text="${deposit.account.code + ' ' + deposit.account.name}">1020 Bank</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{pos.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(deposit.amount)}">279,000</div>
+                </div>
+                <div class="item" th:if="${deposit.notes != null}">
+                    <label th:text="#{deposit.notes}">Notes</label>
+                    <div class="value" th:text="${deposit.notes}">Banked at BK Remera</div>
+                </div>
+            </div>
+            <div class="detail-list" sec:authorize="hasAuthority('PAGE_ACCOUNTING') and hasAuthority('PERM_VIEW_ACCOUNTING')" th:if="${!#lists.isEmpty(journals)}">
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-tills" th:classappend="${tab == 'tills'} ? 'active'">
+                <span th:text="#{deposit.tillsBanked}">Tills banked</span>
+                <span class="section-count" th:text="${tills.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-tills" th:classappend="${tab == 'tills'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{till.number}">Till</th>
+                                <th th:text="#{deposit.closedAt}">Closed</th>
+                                <th class="num" th:text="#{dailyClose.cashCounted}">Counted</th>
+                                <th class="num" th:text="#{till.float}">Float</th>
+                                <th class="num" th:text="#{dailyClose.cashToBank}">Banked</th>
+                                <th th:text="#{till.verifiedBy}">Verified by</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="t : ${tills.content}">
+                                <td>
+                                    <a class="mono" th:href="@{/till-sessions/{id}(id=${t.id})}" th:text="${t.number}">TILL-WH-2026-000040</a>
+                                    <div class="cell-sub" th:text="${t.cashierUsername}">cashier1</div>
+                                </td>
+                                <td class="nowrap" th:text="${#temporals.format(t.closedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 18:00</td>
+                                <td class="num" th:text="${@num.money(t.countedCash)}">299,000</td>
+                                <td class="num" th:text="${@num.money(t.openingFloat)}">20,000</td>
+                                <td class="num" th:text="${@num.money(t.cashToBank)}">279,000</td>
+                                <td th:text="${t.verifiedBy ?: '—'}">treasury1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${tills}, ${base}, 'tab=tills')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <p class="tab-intro" th:text="#{deposit.documentsIntro}">Keep a photo or scan of the slip stamped by the bank.</p>
+                <th:block th:replace="~{fragments/attachments :: documents('CASH_DEPOSIT', ${deposit.id}, ${documents}, ${base})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

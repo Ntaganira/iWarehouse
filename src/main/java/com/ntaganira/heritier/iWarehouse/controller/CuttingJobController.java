@@ -136,7 +136,7 @@ public class CuttingJobController {
         model.addAttribute("checks", jobService.checks(id));
         model.addAttribute("verifyRequired", jobService.verifyRequired());
         model.addAttribute("cutPieces", job.getStatus() == CuttingJobStatus.COMPLETED && job.getVerifiedAt() == null
-                ? jobService.piecesOf(job) : List.of());
+                ? jobService.piecesToVerify(job) : List.of());
         model.addAttribute("cutByMe", job.getCompletedBy() != null && job.getCompletedBy().equals(AppUserPrincipal.currentUsername()));
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.CUTTING_JOB, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

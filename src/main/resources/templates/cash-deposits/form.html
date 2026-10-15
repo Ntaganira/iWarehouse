@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{deposit.new}, ~{::content})}">
+<head><title>Bank the takings - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{deposit.new}">Bank the takings</h1>
+            <div class="subtitle" th:text="#{deposit.formSubtitle}">Tick the tills on the slip and enter its number and amount: their cash less their floats, in full</div>
+        </div>
+        <a href="/cash-deposits" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/cash-deposits/new}" method="post" novalidate>
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{deposit.tillsTitle}">Tills to bank</span>
+                    <span class="section-count" th:text="${tills.size()}">0</span>
+                </h2>
+            </div>
+            <span class="field-error" th:if="${errorField == 'tillIds'}" th:text="${flashError}"></span>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><span class="sr-only" th:text="#{deposit.bank}">Bank</span></th>
+                            <th th:text="#{till.number}">Till</th>
+                            <th th:text="#{deposit.closedAt}">Closed</th>
+                            <th class="num" th:text="#{dailyClose.cashCounted}">Counted</th>
+                            <th class="num" th:text="#{till.float}">Float</th>
+                            <th class="num" th:text="#{dailyClose.cashToBank}">To bank</th>
+                            <th th:text="#{till.verifiedBy}">Verified by</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="t : ${tills}">
+                            <td><input type="checkbox" class="checkbox" name="tillIds" th:value="${t.id}" th:checked="${chosen.contains(t.id)}"
+                                       th:disabled="${verifyRequired and !t.verified}" th:aria-label="${t.number}"></td>
+                            <td>
+                                <a class="mono" th:href="@{/till-sessions/{id}(id=${t.id})}" th:text="${t.number}">TILL-WH-2026-000040</a>
+                                <div class="cell-sub" th:text="${t.cashierUsername}">cashier1</div>
+                            </td>
+                            <td class="nowrap" th:text="${#temporals.format(t.closedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 18:00</td>
+                            <td class="num" th:text="${@num.money(t.countedCash)}">299,000</td>
+                            <td class="num" th:text="${@num.money(t.openingFloat)}">20,000</td>
+                            <td class="num strong" th:text="${@num.money(t.cashToBank)}">279,000</td>
+                            <td>
+                                <span th:if="${t.verified}" th:text="${t.verifiedBy}">treasury1</span>
+                                <span th:unless="${t.verified}" class="badge badge-warning" th:text="#{till.notVerified}">Not verified</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(tills)}">
+                            <td colspan="7"><div class="empty-state slim" th:text="#{deposit.nothing}">No closed till has takings to bank</div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:if="${verifyRequired}" th:text="#{deposit.verifyNote}">A till is banked once Treasury has verified its count.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{deposit.slipTitle}">The deposit slip</h2>
+            </div>
+            <div class="section-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="slipNumber" th:text="#{deposit.slip}">Slip number</label>
+                        <input type="text" id="slipNumber" name="slipNumber" maxlength="40" required autocomplete="off" th:value="${slipNumber}"
+                               th:classappend="${errorField == 'slipNumber'} ? 'is-invalid'">
+                        <span class="field-error" th:if="${errorField == 'slipNumber'}" th:text="${flashError}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount" th:text="#{deposit.amount}">Amount on the slip (RWF)</label>
+                        <input type="number" id="amount" name="amount" min="0" step="any" required inputmode="decimal" th:value="${amount}"
+                               th:classappend="${errorField == 'amount'} ? 'is-invalid'">
+                        <span class="field-error" th:if="${errorField == 'amount'}" th:text="${flashError}"></span>
+                        <span class="hint" th:text="#{deposit.amountHint}">Exactly what the tills ticked hold to bank: nothing kept back</span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="notes" th:text="#{deposit.notes}">Notes</label>
+                        <input type="text" id="notes" name="notes" maxlength="255" th:value="${notes}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <a href="/cash-deposits" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            <button type="submit" class="btn btn-primary" th:disabled="${#lists.isEmpty(tills)}" th:text="#{deposit.save}">Record the deposit</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>

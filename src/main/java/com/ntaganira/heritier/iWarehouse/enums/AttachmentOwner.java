@@ -42,7 +42,13 @@ public enum AttachmentOwner {
     /** The approved cutting drawing (IMP 10 step 1, CUT-006). */
     CUTTING_JOB("PAGE_PRODUCTION", "/cutting-jobs/"),
     /** The delivery note signed by the customer and brought back (IMP 9.3, DN-005). */
-    DELIVERY_NOTE("PAGE_DELIVERY_NOTES", "/delivery-notes/");
+    DELIVERY_NOTE("PAGE_DELIVERY_NOTES", "/delivery-notes/"),
+    /** The bank's stamped deposit slip (F-13). */
+    CASH_DEPOSIT("PAGE_CASH_DEPOSITS", "/cash-deposits/"),
+    /** The customer's signed reply to a balance confirmation (SDP 10). */
+    BALANCE_CONFIRMATION("PAGE_BALANCE_CONFIRMATIONS", "/accounting/confirmations/"),
+    /** The MoMo merchant statement and the signed end-of-day report (F-12). */
+    DAILY_CLOSE("PAGE_DAILY_CLOSES", "/daily-close/");
 
     private final String page;
     private final String path;

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{deposit.title}, ~{::content})}">
+<head><title>Cash banking - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{deposit.title}">Cash Banking</h1>
+            <div class="subtitle" th:text="#{deposit.subtitle}">The tills' takings banked in full the same day, with the deposit slip</div>
+        </div>
+        <div class="btn-group">
+            <a href="/till-sessions" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_TILL_SESSIONS')" th:text="#{nav.tillSessions}">Till sessions</a>
+            <a href="/cash-deposits/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_BANK_CASH')" th:text="#{deposit.new}">Bank the takings</a>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${!#lists.isEmpty(waiting)}"
+         th:text="#{deposit.waitingNote(${waiting.size()})}">2 closed tills have takings not banked yet.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{deposit.sectionTitle}">Deposits</span>
+                <span class="section-count" th:text="${deposits.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{deposit.number}">Deposit</th>
+                        <th th:text="#{deposit.date}">Date</th>
+                        <th th:text="#{deposit.slip}">Slip</th>
+                        <th th:text="#{deposit.account}">Account</th>
+                        <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                        <th th:text="#{deposit.postedBy}">Banked by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${deposits.content}">
+                        <td><a class="row-link strong mono" th:href="@{/cash-deposits/{id}(id=${d.id})}" th:text="${d.number}">BNK-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(d.depositDate, 'dd/MM/yyyy')}">15/10/2026</td>
+                        <td class="mono" th:text="${d.slipNumber}">BK-778812</td>
+                        <td th:text="${d.account.code + ' ' + d.account.name}">1020 Bank</td>
+                        <td class="num" th:text="${@num.money(d.amount)}">279,000</td>
+                        <td th:text="${d.postedBy}">treasury1</td>
+                    </tr>
+                    <tr th:if="${deposits.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{deposit.empty}">Nothing banked yet</h3>
+                                <p th:text="#{deposit.emptyHint}">Bank a closed till's takings with the deposit slip</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${deposits}, '/cash-deposits', '')}"></th:block>
+    </div>
+</div>
+</body>
+</html>

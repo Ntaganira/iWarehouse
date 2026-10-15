@@ -455,6 +455,83 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.close}">Daily close and receivables</h3>
+                <p class="hint" th:text="#{settings.group.closeHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="cashDenominations" th:text="#{settings.cashDenominations}">cashDenominations</label>
+                    <input type="text" id="cashDenominations" th:field="*{cashDenominations}" maxlength="200" required
+                           th:classappend="${#fields.hasErrors('cashDenominations')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('cashDenominations')}" th:errors="*{cashDenominations}"></span>
+                    <span class="hint" th:text="#{settings.cashDenominationsHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="cashVerifyCount" th:text="#{settings.cashVerifyCount}">cashVerifyCount</label>
+                    <select id="cashVerifyCount" th:field="*{cashVerifyCount}" required th:classappend="${#fields.hasErrors('cashVerifyCount')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onCashVerifyCount}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('cashVerifyCount')}" th:errors="*{cashVerifyCount}"></span>
+                    <span class="hint" th:text="#{settings.cashVerifyCountHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="dailyReportBy" th:text="#{settings.dailyReportBy}">dailyReportBy</label>
+                    <input type="time" id="dailyReportBy" th:field="*{dailyReportBy}" required
+                           th:classappend="${#fields.hasErrors('dailyReportBy')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('dailyReportBy')}" th:errors="*{dailyReportBy}"></span>
+                    <span class="hint" th:text="#{settings.dailyReportByHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="reconciliationDueWorkingDay" th:text="#{settings.reconciliationDueWorkingDay}">reconciliationDueWorkingDay</label>
+                    <div class="input-unit">
+                        <input type="number" id="reconciliationDueWorkingDay" th:field="*{reconciliationDueWorkingDay}" step="1" min="1" max="20" required
+                               th:classappend="${#fields.hasErrors('reconciliationDueWorkingDay')} ? 'is-invalid'">
+                        <span th:text="#{settings.workingDayUnit}">working day</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('reconciliationDueWorkingDay')}" th:errors="*{reconciliationDueWorkingDay}"></span>
+                    <span class="hint" th:text="#{settings.reconciliationDueWorkingDayHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="releaseTransferConfirmed" th:text="#{settings.releaseTransferConfirmed}">releaseTransferConfirmed</label>
+                    <select id="releaseTransferConfirmed" th:field="*{releaseTransferConfirmed}" required th:classappend="${#fields.hasErrors('releaseTransferConfirmed')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onReleaseTransferConfirmed}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('releaseTransferConfirmed')}" th:errors="*{releaseTransferConfirmed}"></span>
+                    <span class="hint" th:text="#{settings.releaseTransferConfirmedHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="creditOver90MaxPercent" th:text="#{settings.creditOver90MaxPercent}">creditOver90MaxPercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="creditOver90MaxPercent" th:field="*{creditOver90MaxPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('creditOver90MaxPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditOver90MaxPercent')}" th:errors="*{creditOver90MaxPercent}"></span>
+                    <span class="hint" th:text="#{settings.creditOver90MaxPercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="creditDsoDays" th:text="#{settings.creditDsoDays}">creditDsoDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="creditDsoDays" th:field="*{creditDsoDays}" step="1" min="7" max="365" required
+                               th:classappend="${#fields.hasErrors('creditDsoDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditDsoDays')}" th:errors="*{creditDsoDays}"></span>
+                    <span class="hint" th:text="#{settings.creditDsoDaysHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="accountsWorkingDay" th:text="#{settings.accountsWorkingDay}">accountsWorkingDay</label>
+                    <div class="input-unit">
+                        <input type="number" id="accountsWorkingDay" th:field="*{accountsWorkingDay}" step="1" min="1" max="20" required
+                               th:classappend="${#fields.hasErrors('accountsWorkingDay')} ? 'is-invalid'">
+                        <span th:text="#{settings.workingDayUnit}">working day</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('accountsWorkingDay')}" th:errors="*{accountsWorkingDay}"></span>
+                    <span class="hint" th:text="#{settings.accountsWorkingDayHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

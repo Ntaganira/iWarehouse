@@ -1,6 +1,5 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
-import java.time.LocalDateTime;
 import com.ntaganira.heritier.iWarehouse.entity.CreditNote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,6 +42,14 @@ public interface CreditNoteRepository extends JpaRepository<CreditNote, UUID>, J
     List<CreditNote> findByTillSessionIdOrderByPostedAtAsc(UUID tillSessionId);
 
     /** Cash a till session refunded: it left the drawer. */
+    /** Credit notes of a period (EBM against the ledger, U.13). */
+    @EntityGraph(attributePaths = {"customer"})
+    List<CreditNote> findByCreditDateBetweenOrderByNumber(LocalDate from, LocalDate to);
+
+    /** Credit notes of a day (the daily close's refunds). */
+    @EntityGraph(attributePaths = {"invoice", "customer"})
+    List<CreditNote> findByCreditDateOrderByNumber(LocalDate creditDate);
+
     @Query("select coalesce(sum(c.refundAmount), 0) from CreditNote c where c.tillSessionId = :sessionId"
             + " and c.refundMethod = com.ntaganira.heritier.iWarehouse.enums.PaymentMethod.CASH")
     BigDecimal cashRefundsOfSession(@Param("sessionId") UUID sessionId);

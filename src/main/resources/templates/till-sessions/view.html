@@ -23,6 +23,60 @@
         <span th:if="${till.closeNote != null}" th:text="${'· ' + till.closeNote}">· change given twice</span>
     </div>
 
+    <!--/* The count note by note, Treasury's verification, the deposit that banked it (F-13) */-->
+    <div class="section" th:if="${!till.open}">
+        <div class="section-header">
+            <h2 th:text="#{till.countSection}">Cash count</h2>
+            <div class="btn-group">
+                <a th:if="${till.banked}" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PAGE_CASH_DEPOSITS')"
+                   th:href="@{/cash-deposits/{id}(id=${till.depositId})}" th:text="#{till.bankedLink}">Banked</a>
+                <button type="button" class="btn btn-primary btn-sm" th:if="${canVerify}" data-modal-open="verifyModal"
+                        sec:authorize="hasAuthority('PERM_VERIFY_CASH_COUNT')" th:text="#{till.verify}">Verify the count</button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{till.verifiedBy}">Verified by</label>
+                    <div class="value" th:if="${till.verified}"
+                          th:text="${till.verifiedBy + ' · ' + #temporals.format(till.verifiedAt, 'dd/MM/yyyy HH:mm')}">treasury1 · 09/10/2026 18:30</div>
+                    <div class="value" th:unless="${till.verified}"><span class="badge badge-warning" th:text="#{till.notVerified}">Not verified</span></div>
+                </div>
+                <div class="item" th:if="${till.verifyNote != null}">
+                    <label th:text="#{till.verifyNote}">Verification note</label>
+                    <div class="value" th:text="${till.verifyNote}">Recounted, agrees</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{till.toBank}">To bank (RWF)</label>
+                    <div class="value">
+                        <span th:text="${@num.money(till.cashToBank)}">124,008</span>
+                        <span class="badge" th:classappend="${till.banked} ? 'badge-success' : 'badge-warning'"
+                              th:text="${till.banked} ? #{till.banked} : #{till.notBanked}">Banked</span>
+                    </div>
+                </div>
+            </div>
+            <div class="table-container" th:if="${!count.isEmpty()}">
+                <table data-cards="off">
+                    <thead>
+                        <tr>
+                            <th class="num" th:text="#{till.denomination}">Note or coin</th>
+                            <th class="num" th:text="#{till.pieces}">How many</th>
+                            <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${count}">
+                            <td class="num" th:text="${@num.whole(c.key)}">5,000</td>
+                            <td class="num" th:text="${@num.whole(c.value)}">12</td>
+                            <td class="num" th:text="${@num.whole(c.key * c.value)}">60,000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:if="${count.isEmpty()}" th:text="#{till.noCount}">The cash was counted as one amount.</p>
+        </div>
+    </div>
+
     <div class="section">
         <div class="section-header">
             <h2 th:text="#{till.takings}">What the till took</h2>
@@ -106,6 +160,27 @@
                 <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
                 <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/till-sessions/' + till.id}, 'tab=history')}"></th:block>
             </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="verifyModal" th:if="${canVerify}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="verifyModalTitle">
+            <div class="modal-header">
+                <h3 id="verifyModalTitle" th:text="#{till.verify}">Verify the count</h3>
+                <button type="button" class="modal-close" data-modal-close="verifyModal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/till-sessions/{id}/verify(id=${till.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{till.verifyText(${till.number}, ${@num.money(till.countedCash)})}">Count the cash of TILL-WH-2026-000001 again: 144,008 RWF.</p>
+                    <div class="form-group">
+                        <label for="verifyNote" th:text="#{till.verifyNote}">Verification note</label>
+                        <input type="text" id="verifyNote" name="verifyNote" maxlength="255" th:placeholder="#{till.verifyNotePh}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="verifyModal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{till.verify}">Verify the count</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

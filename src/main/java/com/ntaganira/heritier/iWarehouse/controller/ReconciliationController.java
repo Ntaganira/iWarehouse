@@ -9,6 +9,7 @@ import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
+import com.ntaganira.heritier.iWarehouse.service.ReconciliationReviewService;
 import com.ntaganira.heritier.iWarehouse.service.ReconciliationService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,9 +49,12 @@ public class ReconciliationController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
+    private final ReconciliationReviewService reviewService;
 
     public ReconciliationController(ReconciliationService reconciliationService, DataChangeService dataChangeService,
-                                    ActivityLogService activityLogService, Messages messages, NumberFormats num) {
+                                    ActivityLogService activityLogService, Messages messages, NumberFormats num,
+                                    ReconciliationReviewService reviewService) {
+        this.reviewService = reviewService;
         this.reconciliationService = reconciliationService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
@@ -62,6 +66,8 @@ public class ReconciliationController {
     @PreAuthorize("hasAuthority('PAGE_RECONCILIATIONS') and hasAuthority('PERM_VIEW_ACCOUNTING')")
     public String list(@RequestParam(defaultValue = "0") int page, Model model) {
         model.addAttribute("reconciliations", reconciliationService.findPage(Paging.page(page), Paging.SIZE));
+        // Each account's months reconciled on time (M.16)
+        model.addAttribute("compliance", reviewService.compliance());
         return "reconciliations/list";
     }
 
@@ -121,10 +127,29 @@ public class ReconciliationController {
         model.addAttribute("rec", rec);
         model.addAttribute("lines", Paging.of(reconciliationService.lines(id), Paging.page(page)));
         model.addAttribute("canCancel", reconciliationService.canCancel(rec));
+        model.addAttribute("canReview", rec.isReconciled() && !rec.isReviewed() && !reviewService.isReconciler(rec));
         model.addAttribute("history", dataChangeService.history("BankReconciliation", id.toString(), Paging.page(hpage), Paging.SIZE));
         model.addAttribute("linesQuery", QueryString.of("hpage", hpage > 0 ? String.valueOf(hpage) : null));
         model.addAttribute("historyQuery", QueryString.of("page", page > 0 ? String.valueOf(page) : null));
         return "reconciliations/view";
+    }
+
+    /** Another person reviews a reconciliation in force (P.09). */
+    @PostMapping("/{id}/review")
+    @PreAuthorize("hasAuthority('PAGE_RECONCILIATIONS') and hasAuthority('PERM_REVIEW_RECONCILIATION')")
+    public String review(@PathVariable UUID id, @RequestParam(required = false) String reviewNote, RedirectAttributes redirect) {
+        try {
+            BankReconciliation rec = reviewService.review(id, reviewNote);
+            activityLogService.record(AccountingController.MODULE, "REVIEW_RECONCILIATION", "Reviewed reconciliation " + rec.getNumber()
+                    + (rec.getReviewNote() == null ? "" : ": " + rec.getReviewNote()), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("reconciliation.reviewedMsg", rec.getNumber()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(AccountingController.MODULE, "REVIEW_RECONCILIATION", "Failed to review reconciliation " + id + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:" + BASE + "/" + id;
     }
 
     @PostMapping("/{id}/cancel")

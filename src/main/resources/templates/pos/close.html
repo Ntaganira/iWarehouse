@@ -30,13 +30,43 @@
         <form th:action="@{/pos/till/close}" method="post" class="form-container confirm-submit" novalidate
               th:attr="data-confirm=#{till.closeConfirm(${till.number})}">
             <div class="form-grid">
-                <div class="form-group">
+                <!--/* The cash counted note by note (F-13): the server adds it up again */-->
+                <div class="form-group full-width" th:if="${!#lists.isEmpty(denominations)}">
+                    <label th:text="#{till.countTitle}">Cash counted, note by note</label>
+                    <div class="table-container cash-count">
+                        <table data-cards="off">
+                            <thead>
+                                <tr>
+                                    <th class="num" th:text="#{till.denomination}">Note or coin</th>
+                                    <th th:text="#{till.pieces}">How many</th>
+                                    <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="d : ${denominations}">
+                                    <td class="num" th:text="${@num.whole(d)}">5,000</td>
+                                    <td><input type="number" min="0" step="1" inputmode="numeric" th:name="${'count_' + d}" th:attr="data-value=${d},aria-label=${@num.whole(d)}"
+                                               th:value="${counts != null ? counts.get('count_' + d) : null}"></td>
+                                    <td class="num count-amount">0</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="2" th:text="#{till.countTotal}">Total counted</th>
+                                    <th class="num count-total">0</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <span class="hint" th:text="#{till.countedHint(${@num.money(summary.expectedCash)})}">The till should hold 145,008 RWF: the float and the cash kept from sales</span>
+                </div>
+                <div class="form-group" th:if="${#lists.isEmpty(denominations)}">
                     <label for="countedCash" th:text="#{till.counted}">Cash counted (RWF)</label>
                     <input type="number" id="countedCash" name="countedCash" min="0" step="any" required inputmode="decimal" autofocus
                            th:value="${countedCash}">
                     <span class="hint" th:text="#{till.countedHint(${@num.money(summary.expectedCash)})}">The till should hold 145,008 RWF: the float and the cash kept from sales</span>
                 </div>
-                <div class="form-group">
+                <div class="form-group full-width">
                     <label for="note" th:text="#{till.note}">Note</label>
                     <input type="text" id="note" name="note" maxlength="255" th:value="${note}" th:placeholder="#{till.notePh}">
                     <span class="hint" th:text="#{till.noteHint}">Needed when the cash counted differs from what the till should hold</span>
@@ -48,6 +78,7 @@
             </div>
         </form>
     </div>
+    <script defer src="/js/cash-count.js"></script>
 </div>
 </body>
 </html>

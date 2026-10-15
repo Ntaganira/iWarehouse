@@ -974,6 +974,11 @@ public class CuttingJobService {
         return checkRepo.findByCuttingJobIdOrderByUnitCode(jobId);
     }
 
+    /** The pieces of a completed job still on hand: those a verification measures (pieces handed over long ago are not). */
+    public List<StockUnit> piecesToVerify(CuttingJob job) {
+        return piecesOf(job).stream().filter(u -> StockStatus.onHand().contains(u.getStatus())).toList();
+    }
+
     /** The pieces of a completed job (its PIECE outputs with their units), by label. */
     public List<StockUnit> piecesOf(CuttingJob job) {
         List<UUID> ids = outputRepo.findByCuttingJobIdIn(List.of(job.getId())).stream()
@@ -1019,7 +1024,7 @@ public class CuttingJobService {
         if (me != null && me.equals(job.getCompletedBy())) {
             throw BusinessException.of("cutting.verify.ownCut", job.getNumber());
         }
-        List<StockUnit> pieces = piecesOf(job);
+        List<StockUnit> pieces = piecesToVerify(job);
         if (pieces.isEmpty()) {
             throw BusinessException.of("cutting.verify.noPieces", job.getNumber());
         }

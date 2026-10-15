@@ -21,8 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class NotifierPermissionsTest {
 
     private static final Pattern HOLDERS = Pattern.compile("notifier\\.holders\\(\\s*\"([A-Z0-9_]+)\"");
-    /** The whole statement: a ';' inside a quoted description does not end it. */
-    private static final Pattern PERMISSION_INSERT = Pattern.compile("INSERT INTO permissions(?:'(?:[^']|'')*'|[^';])*;",
+    /**
+     * The whole statement: a ';' inside a quoted description does not end it. Runs of characters are taken at once, so a
+     * long statement does not recurse once per character (a StackOverflowError on V47's).
+     */
+    private static final Pattern PERMISSION_INSERT = Pattern.compile("INSERT INTO permissions(?:'(?:[^']++|'')*+'|[^';]++)*+;",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern FIRST_VALUE = Pattern.compile("\\(\\s*'([A-Z0-9_]+)'");
 

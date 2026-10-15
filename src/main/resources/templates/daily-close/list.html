@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{dailyClose.title}, ~{::content})}">
+<head><title>Daily close - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{dailyClose.title}">Daily Close</h1>
+            <div class="subtitle" th:text="#{dailyClose.subtitle}">Each day's sales, cash, MoMo and credit against what came in, prepared, then signed by the Director of Finance</div>
+        </div>
+        <div class="btn-group">
+            <a class="btn btn-outline" th:href="@{/daily-close/{d}(d=${today})}" th:text="#{dailyClose.openToday}">Today's report</a>
+            <a class="btn btn-primary" th:href="@{/daily-close/{d}(d=${today.minusDays(1)})}" th:text="#{dailyClose.openYesterday}">Yesterday's report</a>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${!#lists.isEmpty(toClose)}">
+        <strong th:text="#{dailyClose.toCloseTitle}">Days of the last week with sales and no close:</strong>
+        <th:block th:each="d, st : ${toClose}">
+            <a th:href="@{/daily-close/{d}(d=${d})}" th:text="${#temporals.format(d, 'dd/MM/yyyy')}">14/10/2026</a><span th:unless="${st.last}">, </span>
+        </th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{dailyClose.sectionTitle}">Daily closes</span>
+                <span class="section-count" th:text="${closes.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/daily-close}" method="get" class="table-toolbar">
+                <label class="filter-field">
+                    <span th:text="#{dailyClose.openDay}">Open a day</span>
+                    <input type="date" name="day" class="toolbar-filter" th:attr="max=${today}" onchange="if (this.value) window.location = '/daily-close/' + this.value">
+                </label>
+                <select name="filter" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${filter == null or filter == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="f : ${filters}" th:value="${f}" th:selected="${f == filter}" th:text="#{${'dailyClose.filter.' + f}}">To sign</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{dailyClose.day}">Day</th>
+                        <th th:text="#{dailyClose.number}">Close</th>
+                        <th class="num" th:text="#{dailyClose.invoices}">Invoices</th>
+                        <th class="num" th:text="#{dailyClose.salesTotal}">Sales (RWF)</th>
+                        <th class="num" th:text="#{dailyClose.cashVariance}">Cash variance</th>
+                        <th class="num" th:text="#{dailyClose.momoVariance}">MoMo variance</th>
+                        <th th:text="#{dailyClose.preparedBy}">Prepared by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${closes.content}">
+                        <td><a class="row-link strong" th:href="@{/daily-close/{d}(d=${c.businessDay})}" th:text="${#temporals.format(c.businessDay, 'dd/MM/yyyy')}">14/10/2026</a></td>
+                        <td class="mono" th:text="${c.number}">DC-WH-2026-000001</td>
+                        <td class="num" th:text="${c.invoices}">12</td>
+                        <td class="num" th:text="${@num.money(c.salesTotal)}">845,000</td>
+                        <td class="num" th:classappend="${c.cashVariance.signum() != 0} ? 'text-danger'" th:text="${@num.money(c.cashVariance)}">0</td>
+                        <td class="num" th:classappend="${c.momoVariance.signum() != 0} ? 'text-danger'" th:text="${@num.money(c.momoVariance)}">0</td>
+                        <td>
+                            <span th:text="${c.preparedBy}">recording1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(c.preparedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 08:30</div>
+                        </td>
+                        <td><th:block th:replace="~{daily-close/list :: closeStatus(${c})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${closes.totalElements == 0}">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3 th:text="#{dailyClose.empty}">No day closed yet</h3>
+                                <p th:text="#{dailyClose.emptyHint}">Open a day's report to prepare its close</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${closes}, '/daily-close', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A close's state: prepared (to sign), signed, tested */-->
+<th:block th:fragment="closeStatus(c)">
+    <span class="badge badge-warning" th:if="${!c.signed}" th:text="#{dailyClose.status.PREPARED}">To sign</span>
+    <span class="badge badge-success" th:if="${c.signed and !c.tested}" th:text="#{dailyClose.status.SIGNED}">Signed</span>
+    <span class="badge badge-info" th:if="${c.tested}" th:text="#{dailyClose.status.TESTED}">Signed and tested</span>
+</th:block>
+</body>
+</html>

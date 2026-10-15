@@ -798,4 +798,18 @@ public class StockService {
         movement.setUsername(user.map(AppUserPrincipal::getUsername).orElse("system"));
         movementRepo.save(movement);
     }
+
+    /** Where sold units left from: the place of their SALE movement (a sheet sold at payment has no place any more). */
+    public Map<UUID, UUID> soldFrom(Collection<UUID> unitIds) {
+        Map<UUID, UUID> from = new HashMap<>();
+        if (unitIds == null || unitIds.isEmpty()) {
+            return from;
+        }
+        for (Object[] r : movementRepo.fromOf(unitIds, MovementType.SALE)) {
+            if (r[1] != null) {
+                from.put((UUID) r[0], (UUID) r[1]);
+            }
+        }
+        return from;
+    }
 }

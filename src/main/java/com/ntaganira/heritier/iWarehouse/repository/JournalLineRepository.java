@@ -86,6 +86,25 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " where l.account.id = :accountId and l.customer is not null")
     List<Object[]> customerEntries(@Param("accountId") UUID accountId);
 
+    /** Rows of (customer id, date, source, debit, credit) of an account's lines naming a customer up to a day (the movement of receivables). */
+    @Query("select l.customer.id, l.entry.entryDate, l.entry.sourceType, l.debit, l.credit from JournalLine l"
+            + " where l.account.id = :accountId and l.customer is not null and l.entry.entryDate <= :to")
+    List<Object[]> customerMovements(@Param("accountId") UUID accountId, @Param("to") LocalDate to);
+
+    /** Debits less credits of an account on one customer's lines dated up to a day (a balance confirmation). */
+    @Query("select coalesce(sum(l.debit), 0) - coalesce(sum(l.credit), 0) from JournalLine l"
+            + " where l.account.id = :accountId and l.customer.id = :customerId and l.entry.entryDate <= :asOf")
+    BigDecimal balanceOfCustomerAt(@Param("accountId") UUID accountId, @Param("customerId") UUID customerId, @Param("asOf") LocalDate asOf);
+
+    /** The date of an account's first line (none: null). */
+    @Query("select min(l.entry.entryDate) from JournalLine l where l.account.id = :accountId")
+    LocalDate firstDateOfAccount(@Param("accountId") UUID accountId);
+
+    /** Rows of (debits, credits) of an account's lines dated in a period. */
+    @Query("select coalesce(sum(l.debit), 0), coalesce(sum(l.credit), 0) from JournalLine l"
+            + " where l.account.id = :accountId and l.entry.entryDate between :from and :to")
+    List<Object[]> movement(@Param("accountId") UUID accountId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
     /** A supplier's lines on an account (their statement, ACC-09), in the order they were posted. */
     @EntityGraph(attributePaths = {"entry"})
     @Query("select l from JournalLine l where l.account.id = :accountId and l.supplier.id = :supplierId"

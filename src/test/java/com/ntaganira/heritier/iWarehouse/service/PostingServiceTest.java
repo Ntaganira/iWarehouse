@@ -354,6 +354,19 @@ class PostingServiceTest {
         assertThat(balance(AccountKey.CASH)).isEqualByComparingTo("0");
         assertThat(balance(AccountKey.CASH_VAULT)).isEqualByComparingTo("110004");     // 130,004 back less the 20,000 float
         assertThat(balance(AccountKey.CASH_OVER_SHORT)).isEqualByComparingTo("1000");
+
+        // Its takings banked in full with the slip (F-13): Dr Bank / Cr Main Cash Vault; the float stays in the vault
+        CashDeposit slip = new CashDeposit();
+        slip.setId(UUID.randomUUID());
+        slip.setNumber("BNK-WH-2026-000001");
+        slip.setSlipNumber("BK-778812");
+        slip.setDepositDate(LocalDate.of(2026, 10, 9));
+        slip.setAmount(new BigDecimal("110004.00"));
+        postings.cashDeposit(slip);
+        Journal banked = last();
+        assertThat(banked.source()).isEqualTo(JournalSource.CASH_DEPOSIT);
+        assertThat(line(banked, AccountKey.BANK).debit()).isEqualByComparingTo("110004");
+        assertThat(balance(AccountKey.CASH_VAULT)).isEqualByComparingTo("0");
         BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
         assertThat(debits).isEqualByComparingTo(credits);

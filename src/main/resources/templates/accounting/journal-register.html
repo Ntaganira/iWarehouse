@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{journalRegister.title}, ~{::content})}">
+<head><title>Journal register - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="r=${register}, c=${register.certification},
+        canCertify=${#authorization.expression('hasAuthority(''PERM_CERTIFY_JOURNAL_REGISTER'')')},
+        canSample=${#authorization.expression('hasAuthority(''PERM_SAMPLE_JOURNALS'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{journalRegister.title}">Journal Register</h1>
+            <div class="subtitle" th:text="#{journalRegister.subtitle}">Each month's journals by number, certified by the Director of Finance and sampled by the Internal Controller</div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/journals" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_ACCOUNTING')" th:text="#{nav.journals}">Journals</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/journal-register/export(month=${monthValue})})}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="certify-modal" th:if="${canCertify and r.closed and c == null}" th:text="#{journalRegister.certify}">Certify the register</button>
+            <button type="button" class="btn btn-primary" data-modal-open="sample-modal" th:if="${canSample and c != null and !c.sampled and !certifiedByMe}" th:text="#{journalRegister.sample}">Record the sample</button>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/accounting/journal-register}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{exceptions.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${monthValue}" th:attr="max=${maxMonth}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:if="${c != null}">
+        <strong th:text="#{journalRegister.certifiedLine(${c.certifiedBy}, ${#temporals.format(c.certifiedAt, 'dd/MM/yyyy HH:mm')})}">Certified by dof1 on 05/11/2026 09:00.</strong>
+        <span th:if="${c.certifyNote != null}" th:text="${c.certifyNote}">Two numbers voided by a failed posting</span>
+        <span th:if="${c.sampled}" th:text="#{journalRegister.sampledLine(${c.sampledBy}, ${c.sampleNote})}">Sampled by ic1: 10 journals checked against their documents.</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${c == null and !r.closed}" th:text="#{journalRegister.notClosedNote}">The month is not closed: it is certified once closed.</div>
+    <div class="doc-note is-warning" th:if="${c == null and r.closed}" th:text="#{journalRegister.toCertify}">This month's register is not certified yet.</div>
+    <div class="doc-note is-danger" th:if="${!#lists.isEmpty(r.gaps)}">
+        <strong th:text="#{journalRegister.gapsTitle}">Numbers no journal holds:</strong>
+        <span th:text="${#strings.listJoin(r.gaps, ', ')}">JV-WH-2026-000140</span>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{journalRegister.kpi.journals}">Journals</div>
+                <div class="kpi-value" th:text="${r.journals.size()}">137</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${r.firstNumber != null} ? #{journalRegister.kpi.range(${r.firstNumber}, ${r.lastNumber})} : '—'">JV-WH-2026-000001 to 000137</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{journalRegister.kpi.total}">Total posted (RWF)</div>
+                <div class="kpi-value" th:with="val=${@num.money(r.total)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">12,500,000</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" th:classappend="${#lists.isEmpty(r.gaps)} ? 'green' : 'red'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{journalRegister.kpi.gaps}">Gaps in the numbering</div>
+                <div class="kpi-value" th:text="${r.gaps.size()}">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{journalRegister.journalsTitle}">Journals of the month</span>
+                <span class="section-count" th:text="${journals.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{journal.number}">Journal</th>
+                        <th th:text="#{journal.date}">Date</th>
+                        <th th:text="#{journal.source}">Source</th>
+                        <th th:text="#{journal.description}">Description</th>
+                        <th class="num" th:text="#{journal.total}">Total (RWF)</th>
+                        <th th:text="#{journal.postedBy}">Posted by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="e : ${journals.content}">
+                        <td><a class="mono" th:href="@{/accounting/journals/{id}(id=${e.id})}" th:text="${e.number}">JV-WH-2026-000137</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(e.entryDate, 'dd/MM/yyyy')}">15/10/2026</td>
+                        <td th:text="#{${'journal.source.' + e.sourceType}}">Sales invoice</td>
+                        <td th:text="${e.description}">Sale INV-WH-2026-000028</td>
+                        <td class="num" th:text="${@num.money(e.total)}">50,000</td>
+                        <td th:text="${e.username}">cashier1</td>
+                    </tr>
+                    <tr th:if="${journals.totalElements == 0}">
+                        <td colspan="6"><div class="empty-state slim" th:text="#{journalRegister.empty}">No journal dated in this month</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${journals}, '/accounting/journal-register', ${journalsQuery})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{journalRegister.certificationsTitle}">Months certified</span>
+                <span class="section-count" th:text="${certifications.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{exceptions.month}">Month</th>
+                        <th class="num" th:text="#{journalRegister.kpi.journals}">Journals</th>
+                        <th th:text="#{journalRegister.numbers}">Numbers</th>
+                        <th th:text="#{journalRegister.certifiedBy}">Certified by</th>
+                        <th th:text="#{journalRegister.sampledBy}">Sampled by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="x : ${certifications.content}">
+                        <td><a class="row-link" th:href="@{/accounting/journal-register(month=${#temporals.format(x.periodEnd, 'yyyy-MM')})}" th:text="${#temporals.format(x.periodEnd, 'MM/yyyy')}">09/2026</a></td>
+                        <td class="num" th:text="${x.journals}">120</td>
+                        <td>
+                            <th:block th:if="${x.firstNumber != null}"><span class="mono" th:text="${x.firstNumber}">JV-WH-2026-000001</span> – <span class="mono" th:text="${x.lastNumber}">JV-WH-2026-000120</span></th:block>
+                            <span th:if="${x.firstNumber == null}">—</span>
+                            <div class="cell-sub" th:if="${x.gaps != null}" th:text="#{journalRegister.gapsShort(${x.gaps})}">gaps: JV-WH-2026-000040</div>
+                        </td>
+                        <td>
+                            <span th:text="${x.certifiedBy}">dof1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(x.certifiedAt, 'dd/MM/yyyy')}">05/10/2026</div>
+                        </td>
+                        <td>
+                            <span th:if="${x.sampled}" th:text="${x.sampledBy}">ic1</span>
+                            <span th:unless="${x.sampled}" class="badge badge-warning" th:text="#{journalRegister.notSampled}">Not sampled</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${certifications.totalElements == 0}">
+                        <td colspan="5"><div class="empty-state slim" th:text="#{journalRegister.noneCertified}">No month certified yet</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${certifications}, '/accounting/journal-register', ${certificationsQuery}, 'spage')}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="certify-modal" th:if="${canCertify and r.closed and c == null}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="certify-title">
+            <div class="modal-header">
+                <h3 id="certify-title" th:text="#{journalRegister.certifyTitle(${#temporals.format(r.month.atEndOfMonth(), 'MM/yyyy')})}">Certify the register of 09/2026</h3>
+                <button type="button" class="modal-close" data-modal-close="certify-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/accounting/journal-register/certify}" method="post" novalidate>
+                <input type="hidden" name="month" th:value="${monthValue}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{journalRegister.certifyText(${r.journals.size()})}">You certify the 137 journals of the month, numbered in sequence.</p>
+                    <div class="form-group">
+                        <label for="certify-note" th:text="#{journalRegister.certifyNote}">Note</label>
+                        <input type="text" id="certify-note" name="certifyNote" maxlength="255" autocomplete="off">
+                        <span class="hint" th:text="#{journalRegister.certifyNoteHint}">Needed when a number is missing: say why</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="certify-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{journalRegister.certify}">Certify the register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="sample-modal" th:if="${canSample and c != null and !c.sampled and !certifiedByMe}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sample-title">
+            <div class="modal-header">
+                <h3 id="sample-title" th:text="#{journalRegister.sampleTitle}">The sample checked</h3>
+                <button type="button" class="modal-close" data-modal-close="sample-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/accounting/journal-register/{id}/sample(id=${c.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="sample-note" th:text="#{journalRegister.sampleNote}">Journals checked and what was found</label>
+                        <textarea id="sample-note" name="sampleNote" rows="3" maxlength="500" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="sample-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{journalRegister.sample}">Record the sample</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

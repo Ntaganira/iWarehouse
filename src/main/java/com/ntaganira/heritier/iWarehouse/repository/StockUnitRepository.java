@@ -87,4 +87,9 @@ public interface StockUnitRepository extends JpaRepository<StockUnit, UUID>, Jpa
             + " and ((u.widthMm = :w and u.heightMm = :h) or (u.widthMm = :h and u.heightMm = :w)) order by u.code")
     List<StockUnit> findOfSize(@Param("productId") UUID productId, @Param("w") int widthMm, @Param("h") int heightMm,
                                @Param("status") StockStatus status);
+
+    /** Rows of (location name, units, mm² of glass) of the units in a state per place: the glass on each vehicle now (the daily close). */
+    @Query("select l.name, count(u), coalesce(sum(u.widthMm * u.heightMm), 0) from StockUnit u join u.location l"
+            + " where u.status = :status group by l.name order by l.name")
+    List<Object[]> countByLocation(@Param("status") StockStatus status);
 }

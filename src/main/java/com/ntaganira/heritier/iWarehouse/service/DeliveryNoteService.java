@@ -91,10 +91,15 @@ public class DeliveryNoteService {
     }
 
     /** What an invoice still has to release: its sheets not on a note, its pieces ready and not on a note. */
-    public record Releasable(List<StockUnit> sheets, List<StockUnit> pieces, Map<UUID, UUID> lineOf) {
+    public record Releasable(List<StockUnit> sheets, List<StockUnit> pieces, Map<UUID, UUID> lineOf, Map<UUID, UUID> soldFrom) {
 
         public boolean isEmpty() {
             return sheets.isEmpty() && pieces.isEmpty();
+        }
+
+        /** Where a unit is: its place, or for a sheet sold at payment the place it left from. */
+        public UUID placeOf(StockUnit unit) {
+            return unit.getLocation() != null ? unit.getLocation().getId() : soldFrom.get(unit.getId());
         }
 
         public int size() {
@@ -175,7 +180,12 @@ public class DeliveryNoteService {
         Set<UUID> onNotes = lineRepo.ofInvoice(invoice.getId(), TAKEN).stream().map(DeliveryNoteLine::getStockUnitId).collect(Collectors.toSet());
         Map<UUID, UUID> lineOf = new HashMap<>();
         List<UUID> sheetIds = new ArrayList<>();
+        // Sheets leave on a note only for sales paid since release by note is on: before, they left at the counter
+        boolean sheetsByNote = sheetsByNote(invoice);
         for (SalesInvoiceLine line : invoice.getLines()) {
+            if (!sheetsByNote) {
+                break;
+            }
             if (line.isStockUnit() && line.getStockUnitId() != null && !onNotes.contains(line.getStockUnitId())) {
                 sheetIds.add(line.getStockUnitId());
                 lineOf.put(line.getStockUnitId(), line.getId());
@@ -186,7 +196,16 @@ public class DeliveryNoteService {
         Map<UUID, UUID> pieceLines = salesService.piecesOf(invoice);
         List<StockUnit> pieces = salesService.readyPieces(invoice).stream().filter(u -> !onNotes.contains(u.getId())).toList();
         pieces.forEach(u -> lineOf.put(u.getId(), pieceLines.get(u.getId())));
-        return new Releasable(sheets, pieces, lineOf);
+        return new Releasable(sheets, pieces, lineOf, stockService.soldFrom(sheetIds));
+    }
+
+    /** Whether an invoice's sheets leave on a delivery note: release by note on, and the invoice paid since it was turned on. */
+    boolean sheetsByNote(SalesInvoice invoice) {
+        if (!settingService.getBoolean(SettingKey.SALES_RELEASE_BY_NOTE)) {
+            return false;
+        }
+        LocalDateTime since = settingService.changedAt(SettingKey.SALES_RELEASE_BY_NOTE).orElse(null);
+        return since == null || invoice.getPostedAt() == null || !invoice.getPostedAt().isBefore(since);
     }
 
     /** The signed EBM receipt of an invoice, the one waiting, or none (issued before the EBM connection). */
@@ -251,7 +270,7 @@ public class DeliveryNoteService {
         DeliveryNote note = new DeliveryNote();
         note.setNumber(numbers.next(DocumentType.DELIVERY_NOTE));
         note.setInvoice(invoice);
-        note.setSiteId(siteOf(byId.get(chosen.iterator().next())));
+        note.setSiteId(siteOf(ready.placeOf(byId.get(chosen.iterator().next()))));
         note.setCollected(form.collected());
         note.setVehiclePlate(form.collected() ? null : plate.toUpperCase(Locale.ROOT));
         note.setDriverName(form.collected() ? null : driver);
@@ -311,6 +330,7 @@ public class DeliveryNoteService {
             note.setEbmOverrideReason(override);
             note.setEbmOverrideBy(AppUserPrincipal.currentUsername());
         }
+        salesService.requireTransfersConfirmed(invoice);
         receipt.filter(EbmReceipt::isSigned).ifPresent(r -> note.setEbmReceipt(r.getRcptNo() != null
                 ? String.valueOf(r.getRcptNo()) : String.valueOf(r.getInvcNo())));
         List<DeliveryNoteLine> lines = lines(id);
@@ -473,11 +493,13 @@ public class DeliveryNoteService {
         return calendar;
     }
 
-    private UUID siteOf(StockUnit unit) {
-        if (unit == null || unit.getLocation() == null) {
+    private UUID siteOf(UUID placeId) {
+        if (placeId == null) {
             return null;
         }
-        return SiteTransferService.siteOf(unit.getLocation(), stockService.locationsById());
+        Map<UUID, Location> places = stockService.locationsById();
+        Location place = places.get(placeId);
+        return place == null ? null : SiteTransferService.siteOf(place, places);
     }
 
     private DeliveryNote lock(UUID id) {

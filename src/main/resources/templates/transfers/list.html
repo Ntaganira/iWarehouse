@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{bankTransfer.title}, ~{::content})}">
+<head><title>Transfers to confirm - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canConfirm=${#authorization.expression('hasAuthority(''PERM_CONFIRM_TRANSFER'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{bankTransfer.title}">Transfers to Confirm</h1>
+            <div class="subtitle" th:text="#{bankTransfer.subtitle}">Bank transfers paid on invoices: Finance confirms the money is on the statement before the goods leave</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{bankTransfer.sectionTitle}">Bank transfers</span>
+                <span class="section-count" th:text="${transfers.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/transfers}" method="get" class="table-toolbar">
+                <select name="show" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="waiting" th:selected="${show == 'waiting'}" th:text="#{bankTransfer.show.waiting}">To confirm</option>
+                    <option value="all" th:selected="${show == 'all'}" th:text="#{bankTransfer.show.all}">All of the last 90 days</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{invoice.number}">Invoice</th>
+                        <th th:text="#{bankTransfer.paidOn}">Paid</th>
+                        <th th:text="#{pos.pay.reference}">Reference</th>
+                        <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th><span class="sr-only" th:text="#{bankTransfer.confirm}">Confirm</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="t : ${transfers.content}">
+                        <td>
+                            <a class="mono" th:href="@{/invoices/{id}(id=${t.payment.invoiceId})}" th:text="${t.invoice != null} ? ${t.invoice.number} : '—'">INV-WH-2026-000031</a>
+                            <div class="cell-sub" th:if="${t.invoice != null}" th:text="${t.invoice.customer.name}">Umucyo Builders Ltd</div>
+                        </td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(t.payment.createdAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:00</span>
+                            <div class="cell-sub" th:text="${t.payment.username}">cashier1</div>
+                        </td>
+                        <td class="mono" th:text="${t.payment.reference ?: '—'}">FT2610150001</td>
+                        <td class="num" th:text="${@num.money(t.payment.amount)}">250,000</td>
+                        <td>
+                            <span th:if="${t.confirmed}" class="badge badge-success" th:text="#{bankTransfer.confirmed}">Confirmed</span>
+                            <div class="cell-sub" th:if="${t.confirmed}"
+                                 th:text="${t.confirmation.username + ' · ' + #temporals.format(t.confirmation.createdAt, 'dd/MM/yyyy HH:mm')}">treasury1 · 15/10/2026 11:00</div>
+                            <span th:unless="${t.confirmed}" class="badge badge-warning" th:text="#{bankTransfer.waiting}">To confirm</span>
+                        </td>
+                        <td>
+                            <form th:if="${!t.confirmed and canConfirm}" th:action="@{/transfers/{id}/confirm(id=${t.payment.id})}" method="post" class="row-action-form">
+                                <input type="text" name="bankReference" maxlength="60" th:placeholder="#{bankTransfer.bankReferencePh}" th:aria-label="#{bankTransfer.bankReference}">
+                                <button type="submit" class="btn btn-primary btn-sm" th:text="#{bankTransfer.confirm}">Confirm</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${transfers.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{bankTransfer.empty}">No transfer to confirm</h3>
+                                <p th:text="#{bankTransfer.emptyHint}">Invoices paid by bank transfer appear here until Finance confirms the money</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${transfers}, '/transfers', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

@@ -75,6 +75,22 @@ public class BankReconciliation extends BaseEntity {
     @Column(name = "reconciled_at", nullable = false, updatable = false)
     private LocalDateTime reconciledAt;
 
+    @Column(name = "reconciled_by_id", updatable = false)
+    private Long reconciledById;
+
+    /** The second person's review (BP Table 9): never who reconciled it. */
+    @Column(name = "reviewed_by", length = 50)
+    private String reviewedBy;
+
+    @Column(name = "reviewed_by_id")
+    private Long reviewedById;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "review_note", length = 255)
+    private String reviewNote;
+
     @Column(name = "cancelled_by", length = 50)
     private String cancelledBy;
 
@@ -83,6 +99,10 @@ public class BankReconciliation extends BaseEntity {
 
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
+
+    public boolean isReviewed() {
+        return reviewedAt != null;
+    }
 
     public boolean isReconciled() {
         return status == ReconciliationStatus.RECONCILED;

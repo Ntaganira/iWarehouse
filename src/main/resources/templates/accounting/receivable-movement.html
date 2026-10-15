@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{movement.title}, ~{::content})}">
+<head><title>Movement of receivables - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${movement.total}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{movement.title}">Movement of Receivables</h1>
+            <div class="subtitle" th:text="#{movement.subtitle}">Each customer's account over the month: opening, new credit, collections, credit notes, write-offs, closing</div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/receivables" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/accounting/receivables/movement/export(month=${monthValue})})}"></th:block>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/accounting/receivables/movement}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{exceptions.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${monthValue}" th:attr="max=${maxMonth}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{movement.opening}">Opening</div>
+                <div class="kpi-value" th:with="val=${@num.money(t.opening)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">1,200,000</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{movement.newCredit}">New credit</div>
+                <div class="kpi-value" th:with="val=${@num.money(t.newCredit)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">800,000</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{movement.collections}">Collections</div>
+                <div class="kpi-value" th:with="val=${@num.money(t.collections)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">700,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{movement.kpi.notes(${@num.money(t.creditNotes)}, ${@num.money(t.writeOffs)})}">credit notes 20,000 · written off 0</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{movement.closing}">Closing</div>
+                <div class="kpi-value" th:with="val=${@num.money(t.closing)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">1,280,000</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{movement.byCustomer}">By customer</span>
+                <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th class="num" th:text="#{movement.opening}">Opening</th>
+                        <th class="num" th:text="#{movement.newCredit}">New credit</th>
+                        <th class="num" th:text="#{movement.collections}">Collections</th>
+                        <th class="num" th:text="#{movement.creditNotes}">Credit notes</th>
+                        <th class="num" th:text="#{movement.writeOffs}">Written off</th>
+                        <th class="num" th:text="#{movement.other}">Other</th>
+                        <th class="num" th:text="#{movement.closing}">Closing</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="m : ${rows.content}" th:with="x=${m.row}">
+                        <td>
+                            <a th:href="@{/customers/{id}(id=${m.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${m.customer.name}">Umucyo Builders Ltd</a>
+                            <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${m.customer.name}">Umucyo Builders Ltd</span>
+                        </td>
+                        <td class="num" th:text="${@num.money(x.opening)}">100,000</td>
+                        <td class="num" th:text="${@num.money(x.newCredit)}">50,000</td>
+                        <td class="num" th:text="${@num.money(x.collections)}">60,000</td>
+                        <td class="num" th:text="${@num.money(x.creditNotes)}">5,000</td>
+                        <td class="num" th:text="${@num.money(x.writeOffs)}">0</td>
+                        <td class="num" th:text="${@num.money(x.other)}">0</td>
+                        <td class="num strong" th:text="${@num.money(x.closing)}">85,000</td>
+                    </tr>
+                    <tr th:if="${rows.totalElements == 0}">
+                        <td colspan="8"><div class="empty-state slim" th:text="#{movement.empty}">No customer account moved in this month</div></td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rows.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{dailyClose.total}">Total</th>
+                        <th class="num" th:text="${@num.money(t.opening)}">1,200,000</th>
+                        <th class="num" th:text="${@num.money(t.newCredit)}">800,000</th>
+                        <th class="num" th:text="${@num.money(t.collections)}">700,000</th>
+                        <th class="num" th:text="${@num.money(t.creditNotes)}">20,000</th>
+                        <th class="num" th:text="${@num.money(t.writeOffs)}">0</th>
+                        <th class="num" th:text="${@num.money(t.other)}">0</th>
+                        <th class="num" th:text="${@num.money(t.closing)}">1,280,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/accounting/receivables/movement', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

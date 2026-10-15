@@ -4634,3 +4634,10 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 @media screen {
   .print-doc-copy + .print-doc-copy { margin-top: 24px; }
 }
+
+/* The daily close and receivables (M14): a field beside a row's action button (a transfer's bank reference);
+   the till's count note by note */
+.row-action-form { gap: 8px; align-items: center; }
+.row-action-form input[type="text"] { height: 30px; width: 160px; min-width: 0; padding: 0 10px; font-size: 13px; }
+.cash-count input[type="number"] { width: 100%; max-width: 140px; height: 38px; }
+.cash-count td, .cash-count th { vertical-align: middle; }

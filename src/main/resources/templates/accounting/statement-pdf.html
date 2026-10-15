@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${customer.name}">Statement</title>
+    <style th:replace="~{reports/pdf-parts :: style(false)}"></style>
+    <style th:fragment="statementStyle">
+        .doc-head { width: 100%; margin-bottom: 10px; }
+        .doc-head td { border: none; padding: 0; vertical-align: top; }
+        .doc-title { font-size: 15pt; font-weight: bold; margin: 0; color: #0b3d61; }
+        .facts td { border: none; padding: 1px 10px 1px 0; }
+        .facts td.label { color: #6b7280; }
+        tr.total td { font-weight: bold; border-top: 1px solid #9ca3af; background: #f9fafb; }
+        .ageing { margin-top: 12px; }
+        p { line-height: 1.45; }
+    </style>
+</head>
+<body>
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+<div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+
+<!--/* A customer's statement for a period (BP 5.1): the balance brought forward, each line with the balance after it, the ageing */-->
+<table class="doc-head">
+    <tr>
+        <td>
+            <div class="doc-title" th:text="#{statementPdf.title}">STATEMENT OF ACCOUNT</div>
+            <div th:text="#{statementPdf.period(${#temporals.format(statement.from, 'dd/MM/yyyy')}, ${#temporals.format(statement.to, 'dd/MM/yyyy')})}">01/07/2026 to 15/10/2026</div>
+        </td>
+        <td>
+            <table class="facts">
+                <tr><td class="label" th:text="#{invoice.customer}">Customer</td><td><strong th:text="${customer.name}">Umucyo Builders Ltd</strong></td></tr>
+                <tr><td class="label" th:text="#{statementPdf.code}">Code</td><td class="mono" th:text="${customer.code}">CUS-WH-00003</td></tr>
+                <tr th:if="${customer.tin != null}"><td class="label" th:text="#{party.tin}">TIN</td><td th:text="${customer.tin}">100123456</td></tr>
+                <tr><td class="label" th:text="#{party.terms}">Payment terms</td><td th:text="#{statementPdf.terms(${customer.paymentTermsDays})}">30 days</td></tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!--/* The statement's lines and ageing, also printed under a reminder (the page's statement) */-->
+<th:block th:fragment="statementTable">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{journal.date}">Date</th>
+                <th th:text="#{statementPdf.document}">Document</th>
+                <th th:text="#{journal.description}">Description</th>
+                <th class="num" th:text="#{statementPdf.charges}">Charges</th>
+                <th class="num" th:text="#{statementPdf.payments}">Payments and credits</th>
+                <th class="num" th:text="#{statementPdf.balance}">Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td th:text="${#temporals.format(statement.from, 'dd/MM/yyyy')}">01/07/2026</td>
+                <td></td>
+                <td th:text="#{statementPdf.opening}">Balance brought forward</td>
+                <td class="num"></td>
+                <td class="num"></td>
+                <td class="num" th:text="${@num.money(statement.opening)}">100,000</td>
+            </tr>
+            <tr th:each="row : ${statement.rows}" th:with="l=${row.line}">
+                <td th:text="${#temporals.format(l.entry.entryDate, 'dd/MM/yyyy')}">09/10/2026</td>
+                <td class="mono" th:text="${l.entry.sourceNumber ?: l.entry.number}">INV-WH-2026-000028</td>
+                <td th:text="#{${'journal.source.' + l.entry.sourceType}}">Sales invoice</td>
+                <td class="num" th:text="${l.debit.signum() != 0} ? ${@num.money(l.debit)} : ''">50,000</td>
+                <td class="num" th:text="${l.credit.signum() != 0} ? ${@num.money(l.credit)} : ''"></td>
+                <td class="num" th:text="${@num.money(row.balance)}">150,000</td>
+            </tr>
+            <tr class="total">
+                <td colspan="5" th:text="#{statementPdf.closing(${#temporals.format(statement.to, 'dd/MM/yyyy')})}">Balance on 15/10/2026</td>
+                <td class="num" th:text="${@num.money(statement.closing)}">85,000</td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="ageing">
+        <thead>
+            <tr>
+                <th class="num" th:text="#{ageing.NOT_DUE}">Not due</th>
+                <th class="num" th:text="#{ageing.DAYS_1_30}">1-30 days</th>
+                <th class="num" th:text="#{ageing.DAYS_31_60}">31-60 days</th>
+                <th class="num" th:text="#{ageing.DAYS_61_90}">61-90 days</th>
+                <th class="num" th:text="#{ageing.OVER_90}">Over 90 days</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="num" th:text="${@num.money(statement.ageing.get('NOT_DUE'))}">35,000</td>
+                <td class="num" th:text="${@num.money(statement.ageing.get('DAYS_1_30'))}">50,000</td>
+                <td class="num" th:text="${@num.money(statement.ageing.get('DAYS_31_60'))}">0</td>
+                <td class="num" th:text="${@num.money(statement.ageing.get('DAYS_61_90'))}">0</td>
+                <td class="num" th:text="${@num.money(statement.ageing.get('OVER_90'))}">0</td>
+            </tr>
+        </tbody>
+    </table>
+</th:block>
+</body>
+</html>

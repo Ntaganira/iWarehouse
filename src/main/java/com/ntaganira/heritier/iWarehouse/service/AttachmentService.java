@@ -51,6 +51,9 @@ public class AttachmentService {
     private final SiteTransferRepository siteTransferRepo;
     private final CuttingJobRepository cuttingJobRepo;
     private final DeliveryNoteRepository deliveryNoteRepo;
+    private final CashDepositRepository cashDepositRepo;
+    private final BalanceConfirmationRepository confirmationRepo;
+    private final DailyCloseRepository dailyCloseRepo;
     private final Clock clock;
 
     public AttachmentService(AttachmentRepository repo, FileStorageService storage, GoodsReceiptRepository receiptRepo,
@@ -60,7 +63,11 @@ public class AttachmentService {
                              CreditNoteRequestRepository creditNoteRequestRepo, ReceivableWriteOffRepository writeOffRepo,
                              CustomerRepository customerRepo, SupplierRepository supplierRepo,
                              CreditApplicationRepository creditApplicationRepo, SiteTransferRepository siteTransferRepo,
-                             CuttingJobRepository cuttingJobRepo, DeliveryNoteRepository deliveryNoteRepo) {
+                             CuttingJobRepository cuttingJobRepo, DeliveryNoteRepository deliveryNoteRepo, CashDepositRepository cashDepositRepo,
+                             BalanceConfirmationRepository confirmationRepo, DailyCloseRepository dailyCloseRepo) {
+        this.cashDepositRepo = cashDepositRepo;
+        this.confirmationRepo = confirmationRepo;
+        this.dailyCloseRepo = dailyCloseRepo;
         this.cuttingJobRepo = cuttingJobRepo;
         this.deliveryNoteRepo = deliveryNoteRepo;
         this.siteTransferRepo = siteTransferRepo;
@@ -158,6 +165,9 @@ public class AttachmentService {
             case SITE_TRANSFER -> siteTransferRepo.existsById(id);
             case CUTTING_JOB -> cuttingJobRepo.existsById(id);
             case DELIVERY_NOTE -> deliveryNoteRepo.existsById(id);
+            case CASH_DEPOSIT -> cashDepositRepo.existsById(id);
+            case BALANCE_CONFIRMATION -> confirmationRepo.existsById(id);
+            case DAILY_CLOSE -> dailyCloseRepo.existsById(id);
         };
         if (!exists) {
             throw new NotFoundException(owner.name(), id);

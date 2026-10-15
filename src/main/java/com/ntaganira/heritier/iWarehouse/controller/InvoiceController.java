@@ -1,8 +1,5 @@
 package com.ntaganira.heritier.iWarehouse.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.MediaType;
-import com.ntaganira.heritier.iWarehouse.service.PdfService;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
@@ -19,6 +16,10 @@ import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.service.*;
+import com.ntaganira.heritier.iWarehouse.service.PdfService;
+import com.ntaganira.heritier.iWarehouse.service.TransferConfirmationService;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -61,13 +62,15 @@ public class InvoiceController {
     private final PdfService pdfService;
     private final EbmService ebmService;
     private final DeliveryNoteService noteService;
+    private final TransferConfirmationService transferService;
 
     public InvoiceController(SalesService salesService, CreditNoteService creditNoteService, JournalService journalService,
                              DataChangeService dataChangeService,
                              SettingService settingService, ActivityLogService activityLogService,
                              Messages messages, NumberFormats num,
                              ReportFiles reportFiles, PdfService pdfService, EbmService ebmService,
-            CompanyLogoService companyLogoService, DeliveryNoteService noteService) {
+            CompanyLogoService companyLogoService, DeliveryNoteService noteService, TransferConfirmationService transferService) {
+        this.transferService = transferService;
         this.noteService = noteService;
         this.ebmService = ebmService;
         this.reportFiles = reportFiles;
@@ -108,6 +111,8 @@ public class InvoiceController {
         model.addAttribute("ebmQr", ebm != null && ebm.isSigned() ? Labels.qrSvg(ebmService.qrData(ebm)) : null);
         List<SalesPayment> payments = salesService.payments(id);
         model.addAttribute("payments", payments);
+        // Bank transfers and Finance's confirmation (SDP 14)
+        model.addAttribute("transfers", transferService.ofInvoice(id));
         // An order paid by a deposit (POS-08): what was paid when it was issued, and the balance
         model.addAttribute("deposit", invoice.hasBalanceDue() || payments.stream().anyMatch(SalesPayment::isBalancePayment));
         model.addAttribute("depositPaid", payments.stream().filter(p -> !p.isBalancePayment()).map(SalesPayment::getAmount)

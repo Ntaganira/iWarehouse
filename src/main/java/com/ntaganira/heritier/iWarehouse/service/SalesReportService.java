@@ -170,14 +170,14 @@ public class SalesReportService {
                     postedBy == null ? "" : names.getOrDefault(postedBy, postedBy), (BigDecimal) r[7], toHandOver > 0, channel, territory));
         }
 
-        // Cost of Goods Sold of each journal of an invoice (sale, hand-over, credit note), with its inventory lines per glass
+        // Cost of Goods Sold of each journal of an invoice (sale, a vehicle's sale, hand-over, credit note), with its inventory lines per glass
         Map<UUID, String> productCodes = new HashMap<>();
         lines.stream().filter(SalesAnalysis.Line::glass).forEach(l -> productCodes.putIfAbsent(l.productId(), l.itemLabel()));
         Map<String, UUID> invoiceOfDoc = new HashMap<>();
         Map<String, BigDecimal> cogsOfDoc = new LinkedHashMap<>();
         Map<String, Map<UUID, BigDecimal>> stockOfDoc = new HashMap<>();
-        for (Object[] r : journalLineRepo.costOfSales(EnumSet.of(JournalSource.SALES_INVOICE, JournalSource.SALES_DELIVERY,
-                JournalSource.CREDIT_NOTE), from)) {
+        for (Object[] r : journalLineRepo.costOfSales(EnumSet.of(JournalSource.SALES_INVOICE, JournalSource.MOBILE_SALE,
+                JournalSource.SALES_DELIVERY, JournalSource.CREDIT_NOTE), from)) {
             UUID invoiceId = r[0] == JournalSource.CREDIT_NOTE ? invoiceOfCredit.get((UUID) r[1]) : (UUID) r[1];
             if (invoiceId == null) {
                 continue;

@@ -59,6 +59,13 @@ public interface EbmReceiptRepository extends JpaRepository<EbmReceipt, UUID>, J
             + " and r.createdAt < :before")
     long countUnsignedBefore(@Param("before") LocalDateTime before);
 
+    /** Receipts queued between two moments, by EBM number: the documents issued that day (the daily close, F-12). */
+    List<EbmReceipt> findByCreatedAtBetweenOrderByInvcNoAsc(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    /** The receipts of some invoices and credit notes (EBM against the ledger, U.13). */
+    @Query("select r from EbmReceipt r where r.invoiceId in :ids or r.creditNoteId in :ids")
+    List<EbmReceipt> findOfDocuments(@Param("ids") java.util.Collection<UUID> ids);
+
     @Query("select min(r.createdAt) from EbmReceipt r")
     LocalDateTime firstReceiptAt();
 

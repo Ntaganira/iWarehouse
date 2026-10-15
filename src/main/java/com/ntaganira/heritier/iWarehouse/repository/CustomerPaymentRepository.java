@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +39,10 @@ public interface CustomerPaymentRepository extends JpaRepository<CustomerPayment
     List<CustomerPayment> findByTillSessionIdOrderByPostedAtAsc(UUID tillSessionId);
 
     /** Cash a till session took on customer accounts: it is in the drawer. */
+    /** Payments on accounts of a day (the daily close's collections). */
+    @EntityGraph(attributePaths = {"customer"})
+    List<CustomerPayment> findByPaymentDateOrderByNumber(LocalDate paymentDate);
+
     @Query("select coalesce(sum(p.amount), 0) from CustomerPayment p where p.tillSessionId = :sessionId")
     BigDecimal cashOfSession(@Param("sessionId") UUID sessionId);
 }

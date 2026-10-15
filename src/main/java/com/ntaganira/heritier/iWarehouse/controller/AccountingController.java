@@ -9,12 +9,13 @@ import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.Ageing;
+import com.ntaganira.heritier.iWarehouse.service.CreditControlService;
 import com.ntaganira.heritier.iWarehouse.service.CustomerAccountService;
 import com.ntaganira.heritier.iWarehouse.service.Excel;
-import com.ntaganira.heritier.iWarehouse.service.SupplierAccountService;
 import com.ntaganira.heritier.iWarehouse.service.JournalService;
 import com.ntaganira.heritier.iWarehouse.service.PostingService;
 import com.ntaganira.heritier.iWarehouse.service.PrintTable;
+import com.ntaganira.heritier.iWarehouse.service.SupplierAccountService;
 import com.ntaganira.heritier.iWarehouse.service.TrialBalance;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -58,10 +59,12 @@ public class AccountingController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final ReportFiles reportFiles;
+    private final CreditControlService creditControl;
 
     public AccountingController(JournalService journalService, PostingService postingService, CustomerAccountService accountService,
                                 SupplierAccountService supplierAccountService, ActivityLogService activityLogService, Messages messages,
-                                ReportFiles reportFiles) {
+                                ReportFiles reportFiles, CreditControlService creditControl) {
+        this.creditControl = creditControl;
         this.reportFiles = reportFiles;
         this.journalService = journalService;
         this.postingService = postingService;
@@ -118,10 +121,12 @@ public class AccountingController {
 
     /** The aged receivables (ACC-09): every customer with a balance, by days past due. */
     @GetMapping("/receivables")
-    @PreAuthorize("hasAuthority('PAGE_RECEIVABLES') and hasAuthority('PERM_VIEW_ACCOUNTING')")
+    @PreAuthorize("hasAuthority('PAGE_RECEIVABLES') and (hasAuthority('PERM_VIEW_ACCOUNTING') or hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT'))")
     public String receivables(@RequestParam(defaultValue = "0") int page, Model model) {
         CustomerAccountService.Receivables receivables = accountService.receivables();
         model.addAttribute("receivables", receivables);
+        // Days sales outstanding and the share more than 90 days overdue (Annex D, F-02)
+        model.addAttribute("kpis", creditControl.kpis(receivables));
         model.addAttribute("rows", Paging.of(receivables.customers(), Paging.page(page)));
         model.addAttribute("buckets", Ageing.Bucket.values());
         model.addAttribute("today", accountService.today());
@@ -130,7 +135,7 @@ public class AccountingController {
 
     /** The aged receivables in Excel or PDF (RPT-07). */
     @GetMapping("/receivables/export")
-    @PreAuthorize("hasAuthority('PAGE_RECEIVABLES') and hasAuthority('PERM_VIEW_ACCOUNTING')")
+    @PreAuthorize("hasAuthority('PAGE_RECEIVABLES') and (hasAuthority('PERM_VIEW_ACCOUNTING') or hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT'))")
     public ResponseEntity<byte[]> receivablesExport(@RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
         CustomerAccountService.Receivables receivables = accountService.receivables();
         LocalDate today = accountService.today();

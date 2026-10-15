@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${confirmation.number}">BC-WH-2026-000001</title>
+    <style th:replace="~{reports/pdf-parts :: style(false)}"></style>
+    <style>
+        .doc-title { font-size: 15pt; font-weight: bold; margin: 0 0 4px 0; color: #0b3d61; }
+        .facts td { border: none; padding: 1px 10px 1px 0; }
+        .facts td.label { color: #6b7280; }
+        p { line-height: 1.45; }
+        .amount { font-size: 13pt; font-weight: bold; }
+        .slip { margin-top: 18px; border-top: 1px dashed #6b7280; padding-top: 12px; }
+        .slip h2 { color: #0b3d61; margin: 0 0 8px 0; }
+        .slip td { border: none; padding: 5px 8px 5px 0; vertical-align: top; }
+        .box { display: inline-block; width: 10px; height: 10px; border: 1px solid #111827; margin-right: 6px; }
+        .line { border-bottom: 0.75px solid #111827; height: 16px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+<div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+
+<!--/* A balance confirmation (SDP 10-11): the letter, then the reply slip the customer signs and returns */-->
+<div class="doc-title" th:text="#{confirmationPdf.title}">CONFIRMATION OF BALANCE</div>
+<table class="facts">
+    <tr><td class="label" th:text="#{confirmation.number}">Confirmation</td><td class="mono" th:text="${confirmation.number}">BC-WH-2026-000001</td></tr>
+    <tr><td class="label" th:text="#{invoice.customer}">Customer</td><td><strong th:text="${confirmation.customer.name}">Umucyo Builders Ltd</strong> <span class="mono" th:text="${confirmation.customer.code}">CUS-WH-00003</span></td></tr>
+    <tr><td class="label" th:text="#{confirmationPdf.date}">Date</td><td th:text="${#temporals.format(confirmation.sentAt, 'dd/MM/yyyy')}">01/10/2026</td></tr>
+</table>
+
+<p th:text="#{confirmationPdf.body1(${#temporals.format(confirmation.asOf, 'dd/MM/yyyy')})}">For our auditors, please confirm the balance of your account with us on 30/09/2026.</p>
+<p>
+    <span th:text="#{confirmationPdf.balance}">Our books show you owe us:</span>
+    <span class="amount" th:text="${@num.money(confirmation.balance) + ' RWF'}">85,000 RWF</span>
+</p>
+<p th:text="#{confirmationPdf.body2}">This is not a request for payment. Please return the slip below, signed, directly to our Internal Controller, whether you agree or not. If you do not agree, give the balance your records show and the details of the difference.</p>
+
+<div class="slip">
+    <h2 th:text="#{confirmationPdf.slipTitle}">REPLY SLIP</h2>
+    <table>
+        <tr><td colspan="2"><span th:text="#{confirmationPdf.slipRef(${confirmation.number}, ${#temporals.format(confirmation.asOf, 'dd/MM/yyyy')}, ${@num.money(confirmation.balance)})}">BC-WH-2026-000001: balance on 30/09/2026 of 85,000 RWF.</span></td></tr>
+        <tr><td colspan="2"><span class="box"></span><span th:text="#{confirmationPdf.agree}">We agree with this balance.</span></td></tr>
+        <tr><td colspan="2"><span class="box"></span><span th:text="#{confirmationPdf.disagree}">We do not agree. Our records show (RWF):</span></td></tr>
+        <tr><td style="width: 30%" th:text="#{confirmationPdf.details}">Details of the difference</td><td><div class="line"></div><div class="line"></div></td></tr>
+        <tr><td th:text="#{confirmationPdf.name}">Name and position</td><td><div class="line"></div></td></tr>
+        <tr><td th:text="#{confirmationPdf.signature}">Signature and stamp</td><td><div class="line"></div></td></tr>
+        <tr><td th:text="#{confirmationPdf.date}">Date</td><td><div class="line"></div></td></tr>
+    </table>
+</div>
+</body>
+</html>

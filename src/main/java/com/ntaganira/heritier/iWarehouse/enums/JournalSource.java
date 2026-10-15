@@ -49,7 +49,9 @@ public enum JournalSource {
     /** A vehicle's running cost (fuel, a service, a repair, parts...), paid, owed to the garage or paid from a driver's float. */
     VEHICLE_COST("/vehicle-costs/"),
     /** A customer's debt written off on approval (F-14): bad debts against the receivable. */
-    RECEIVABLE_WRITE_OFF("/accounting/write-offs/");
+    RECEIVABLE_WRITE_OFF("/accounting/write-offs/"),
+    /** Takings banked from the vault (F-13): Dr Bank / Cr Cash Vault. */
+    CASH_DEPOSIT("/cash-deposits/");
 
     private final String path;
 

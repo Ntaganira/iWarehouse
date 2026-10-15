@@ -6,8 +6,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,7 +26,20 @@ public interface SalesPaymentRepository extends Repository<SalesPayment, UUID> {
 
     SalesPayment save(SalesPayment payment);
 
+    Optional<SalesPayment> findById(UUID id);
+
     List<SalesPayment> findByInvoiceIdOrderByLineNo(UUID invoiceId);
+
+    /** The payments of some invoices (the daily close: what each was paid with at issue). */
+    List<SalesPayment> findByInvoiceIdIn(Collection<UUID> invoiceIds);
+
+    /** Balances of orders paid between two moments (the daily close's collections). */
+    List<SalesPayment> findByBalancePaymentTrueAndCreatedAtBetweenOrderByCreatedAtAsc(LocalDateTime from, LocalDateTime to);
+
+    /** Payments by one method made since a moment, oldest first (bank transfers to confirm, SDP 14). */
+    List<SalesPayment> findByMethodAndCreatedAtAfterOrderByCreatedAtAsc(PaymentMethod method, LocalDateTime since);
+
+    List<SalesPayment> findByInvoiceIdAndMethod(UUID invoiceId, PaymentMethod method);
 
     /** Rows of (method, amount) a till session took: its sales and the balances paid in it (POS-08). */
     @Query("select p.method, coalesce(sum(p.amount), 0) from SalesPayment p where p.tillSessionId = :sessionId group by p.method")

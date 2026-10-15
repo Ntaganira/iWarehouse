@@ -21,6 +21,10 @@ public interface StockMovementRepository extends Repository<StockMovement, UUID>
 
     List<StockMovement> findByStockUnitIdOrderByMovedAtAsc(UUID stockUnitId);
 
+    /** Rows of (unit id, place) of some units' movements of a type: where sold sheets left from (a delivery note's store). */
+    @Query("select m.stockUnitId, m.fromLocationId from StockMovement m where m.stockUnitId in :ids and m.type = :type")
+    List<Object[]> fromOf(@Param("ids") Collection<UUID> ids, @Param("type") MovementType type);
+
     /**
      * The movements of these types since a moment, one row per document and type: (ref type, ref id, ref number, type,
      * first moved at, first username, first user id). Transaction Tickets are raised from them (decision D6).

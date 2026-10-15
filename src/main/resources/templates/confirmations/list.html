@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{confirmation.title}, ~{::content})}">
+<head><title>Balance confirmations - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{confirmation.title}">Balance Confirmations</h1>
+            <div class="subtitle" th:text="#{confirmation.subtitle}">Customers asked to confirm what they owe, independently of the receivables ledger</div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/confirmations/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CONFIRM_BALANCES')" th:text="#{confirmation.new}">Send a confirmation</a>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${disputed > 0}" th:text="#{confirmation.disputedNote(${disputed})}">2 customers dispute their balance.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{confirmation.sectionTitle}">Confirmations</span>
+                <span class="section-count" th:text="${confirmations.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/accounting/confirmations}" method="get" class="table-toolbar">
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'confirmation.status.' + st}}">Sent</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{confirmation.number}">Confirmation</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th th:text="#{confirmation.asOf}">Balance on</th>
+                        <th class="num" th:text="#{confirmation.balance}">Our balance (RWF)</th>
+                        <th class="num" th:text="#{confirmation.theirBalance}">Their balance (RWF)</th>
+                        <th th:text="#{confirmation.sentBy}">Sent by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${confirmations.content}">
+                        <td><a class="row-link strong mono" th:href="@{/accounting/confirmations/{id}(id=${c.id})}" th:text="${c.number}">BC-WH-2026-000001</a></td>
+                        <td th:text="${c.customer.name}">Umucyo Builders Ltd</td>
+                        <td class="nowrap" th:text="${#temporals.format(c.asOf, 'dd/MM/yyyy')}">30/09/2026</td>
+                        <td class="num" th:text="${@num.money(c.balance)}">85,000</td>
+                        <td class="num" th:text="${c.replyBalance != null} ? ${@num.money(c.replyBalance)} : '—'">65,000</td>
+                        <td>
+                            <span th:text="${c.sentBy}">ic1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(c.sentAt, 'dd/MM/yyyy')}">01/10/2026</div>
+                        </td>
+                        <td><th:block th:replace="~{confirmations/list :: confirmationStatus(${c})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${confirmations.totalElements == 0}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{confirmation.empty}">No confirmation sent</h3>
+                                <p th:text="#{confirmation.emptyHint}">Send customers with a balance a confirmation to sign and return</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${confirmations}, '/accounting/confirmations', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<th:block th:fragment="confirmationStatus(c)">
+    <span class="badge" th:classappend="${c.status.name() == 'AGREED'} ? 'badge-success' : (${c.status.name() == 'DISAGREED'} ? 'badge-danger' : 'badge-warning')"
+          th:text="#{${'confirmation.status.' + c.status}}">Sent</span>
+</th:block>
+</body>
+</html>

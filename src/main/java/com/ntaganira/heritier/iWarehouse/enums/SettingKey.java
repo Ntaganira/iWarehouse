@@ -111,6 +111,24 @@ public enum SettingKey {
     /** Cut pieces are verified by another person before release (IMP 10 step 3). */
     CUTTING_VERIFY("cutting.verify", "cuttingVerify", "true"),
 
+    // --- The daily close, cash and receivables (M14)
+    /** The RWF notes and coins counted at the till, largest first (F-13). */
+    CASH_DENOMINATIONS("cash.denominations", "cashDenominations", "5000,2000,1000,500,100,50,20,10,5,1"),
+    /** Treasury verifies a till's count before its cash is banked (F-13). */
+    CASH_VERIFY_COUNT("cash.verify-count", "cashVerifyCount", "true"),
+    /** The day's close is prepared by this time the next day (BP 5.3). HH:mm. */
+    CLOSE_DAILY_REPORT_BY("close.daily-report-by", "dailyReportBy", "10:00"),
+    /** Bank and MoMo accounts are reconciled by this working day of the month (BP Table 9). */
+    RECONCILIATION_DUE_WORKING_DAY("reconciliation.due-working-day", "reconciliationDueWorkingDay", "5"),
+    /** Goods paid by bank transfer leave once Finance confirms the money arrived (SDP 14). */
+    RELEASE_TRANSFER_CONFIRMED("release.transfer-confirmed", "releaseTransferConfirmed", "true"),
+    /** The share of receivables more than 90 days overdue is kept below this (Annex D). */
+    CREDIT_OVER90_MAX_PERCENT("credit.over90-max-percent", "creditOver90MaxPercent", "5"),
+    /** Days of credit sales the days sales outstanding is worked out on. */
+    CREDIT_DSO_DAYS("credit.dso-days", "creditDsoDays", "90"),
+    /** The month's accounts are ready by this working day of the next month (BP 5.3). */
+    CALENDAR_ACCOUNTS_WORKING_DAY("calendar.accounts-working-day", "accountsWorkingDay", "10"),
+
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),
     /** Documents refuse a rate older than this many days, so a forgotten update is noticed (ACC-02). */

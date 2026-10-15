@@ -11,7 +11,38 @@
         </div>
         <div class="btn-group">
             <a href="/customer-payments" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_CUSTOMER_PAYMENTS')" th:text="#{nav.customerPayments}">Customer payments</a>
+            <a href="/accounting/receivables/movement" class="btn btn-outline" th:text="#{movement.link}">Movement</a>
+            <a href="/accounting/receivables/reminders" class="btn btn-outline" th:text="#{reminder.link}">Reminders</a>
             <th:block th:replace="~{fragments/export :: buttons(@{/accounting/receivables/export})}"></th:block>
+        </div>
+    </div>
+
+    <!--/* Days sales outstanding and the share more than 90 days overdue (Annex D, F-02) */-->
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receivables.kpi.dso}">Days sales outstanding</div>
+                <div class="kpi-value" th:text="${kpis.dso != null} ? ${kpis.dso} : '—'">42.1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{receivables.kpi.dsoHint(${kpis.days}, ${@num.money(kpis.creditSales)})}">on 90 days of credit sales: 1,250,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receivables.kpi.overdue}">Overdue</div>
+                <div class="kpi-value" th:with="val=${@num.money(kpis.overdue)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">320,000</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="9" x2="12" y2="13"></line><circle cx="12" cy="12" r="10"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receivables.kpi.over90}">More than 90 days overdue</div>
+                <div class="kpi-value" th:text="${kpis.over90Percent + ' %'}">6.3 %</div>
+                <div class="kpi-trend" th:classappend="${kpis.over90Breached} ? 'bad' : 'flat'">
+                    <span class="vs" th:text="#{receivables.kpi.over90Hint(${@num.money(kpis.over90)}, ${kpis.maxPercent})}">60,000 · kept below 5 %</span>
+                </div>
+            </div>
         </div>
     </div>
 

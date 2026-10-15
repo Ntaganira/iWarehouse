@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -75,7 +76,45 @@ public class TillSession extends BaseEntity {
     @Column(name = "close_note", length = 255)
     private String closeNote;
 
+    /** The cash counted note by note (F-13): "5000:12,1000:3", largest first (CashCount). */
+    @Column(length = 400)
+    private String denominations;
+
+    /** Treasury's verification of the count (F-13): never the cashier. */
+    @Column(name = "verified_by", length = 50)
+    private String verifiedBy;
+
+    @Column(name = "verified_by_id")
+    private Long verifiedById;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "verify_note", length = 255)
+    private String verifyNote;
+
+    /** The deposit that banked its cash (F-13, SDP 10). */
+    @Column(name = "deposit_id")
+    private UUID depositId;
+
     public boolean isOpen() {
         return status == TillStatus.OPEN;
+    }
+
+    public boolean isVerified() {
+        return verifiedAt != null;
+    }
+
+    public boolean isBanked() {
+        return depositId != null;
+    }
+
+    /** What is banked from it: the cash counted less the float, which stays in the vault (never less than nothing). */
+    public BigDecimal getCashToBank() {
+        if (countedCash == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal taken = countedCash.subtract(openingFloat);
+        return taken.signum() < 0 ? BigDecimal.ZERO.setScale(2) : taken;
     }
 }

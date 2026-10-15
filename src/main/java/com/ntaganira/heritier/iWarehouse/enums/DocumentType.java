@@ -66,6 +66,14 @@ public enum DocumentType {
     TRANSACTION_TICKET("TT"),
     /** The delivery note and goods release authority (F-04, DN-005): DN-WH-2026-000001. */
     DELIVERY_NOTE("DN"),
+    /** Takings banked in full with the deposit slip (F-13). */
+    CASH_DEPOSIT("BNK"),
+    /** The day's close: the end-of-day sales report, signed (F-12). */
+    DAILY_CLOSE("DC"),
+    /** A payment reminder to a customer with an overdue balance (BP 5.1). */
+    CUSTOMER_REMINDER("REM"),
+    /** A balance confirmation sent to a customer (SDP 10). */
+    BALANCE_CONFIRMATION("BC"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

@@ -16,10 +16,17 @@
             <a href="/accounting/reconciliations" class="btn btn-outline" th:text="#{common.back}">Back</a>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
                     th:if="${canCancel}" sec:authorize="hasAuthority('PERM_RECONCILE_ACCOUNT')" th:text="#{reconciliation.cancel}">Cancel</button>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" th:if="${canReview}"
+                    sec:authorize="hasAuthority('PERM_REVIEW_RECONCILIATION')" th:text="#{reconciliation.review}">Review</button>
         </div>
     </div>
 
-    <div class="doc-note" th:if="${rec.reconciled}" th:text="#{reconciliation.reconciledNote(${rec.reconciledBy}, ${#temporals.format(rec.reconciledAt, 'dd/MM/yyyy HH:mm')})}">Reconciled by accountant on 09/10/2026 10:30.</div>
+    <div class="doc-note" th:if="${rec.reconciled}" th:classappend="${!rec.reviewed} ? 'is-warning' : ''">
+        <span th:text="#{reconciliation.reconciledNote(${rec.reconciledBy}, ${#temporals.format(rec.reconciledAt, 'dd/MM/yyyy HH:mm')})}">Reconciled by accountant on 09/10/2026 10:30.</span>
+        <span th:if="${rec.reviewed}" th:text="#{reconciliation.reviewedNote(${rec.reviewedBy}, ${#temporals.format(rec.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by dof1 on 10/10/2026 09:00.</span>
+        <span th:if="${rec.reviewNote != null}" th:text="${rec.reviewNote}">Agrees with the statement</span>
+        <span th:unless="${rec.reviewed}" th:text="#{reconciliation.notReviewed}">Not reviewed yet: another person reviews it.</span>
+    </div>
     <div class="doc-note is-danger" th:if="${!rec.reconciled}">
         <strong th:text="#{reconciliation.cancelledBy(${rec.cancelledBy}, ${#temporals.format(rec.cancelledAt, 'dd/MM/yyyy HH:mm')})}">Cancelled by accountant on 10/10/2026 09:00:</strong>
         <span th:text="${rec.cancelReason}">Wrong statement</span>
@@ -114,6 +121,28 @@
         <div class="section-body">
             <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
             <th:block th:replace="~{layout/pagination :: pagerParam(${history}, ${'/accounting/reconciliations/' + rec.id}, ${historyQuery}, 'hpage')}"></th:block>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="review-modal" th:if="${canReview}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title">
+            <div class="modal-header">
+                <h3 id="review-title" th:text="#{reconciliation.reviewTitle(${rec.number})}">Review REC-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/accounting/reconciliations/{id}/review(id=${rec.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{reconciliation.reviewText}">Check the lines cleared against the statement and what is outstanding.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="#{reconciliation.reviewNote}">Note</label>
+                        <input type="text" id="review-note" name="reviewNote" maxlength="255" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{reconciliation.review}">Review</button>
+                </div>
+            </form>
         </div>
     </div>
 

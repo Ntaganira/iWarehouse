@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${reminder.number}">REM-WH-2026-000001</title>
+    <style th:replace="~{reports/pdf-parts :: style(false)}"></style>
+    <style th:replace="~{accounting/statement-pdf :: statementStyle}"></style>
+    <style>
+        .level { font-size: 11pt; font-weight: bold; color: #b91c1c; letter-spacing: 1pt; }
+        .amount { font-size: 13pt; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+<div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+
+<!--/* A payment reminder (BP 5.1): its level by how long the oldest charge is overdue, what is overdue, the statement of the last months */-->
+<table class="doc-head">
+    <tr>
+        <td>
+            <div class="doc-title" th:text="#{reminderPdf.title}">PAYMENT REMINDER</div>
+            <div class="level" th:text="#{${'reminder.level.' + reminder.level}}">Second reminder</div>
+            <div class="mono" th:text="${reminder.number}">REM-WH-2026-000001</div>
+        </td>
+        <td>
+            <table class="facts">
+                <tr><td class="label" th:text="#{invoice.customer}">Customer</td><td><strong th:text="${customer.name}">Umucyo Builders Ltd</strong></td></tr>
+                <tr><td class="label" th:text="#{statementPdf.code}">Code</td><td class="mono" th:text="${customer.code}">CUS-WH-00003</td></tr>
+                <tr><td class="label" th:text="#{confirmationPdf.date}">Date</td><td th:text="${#temporals.format(reminder.asOf, 'dd/MM/yyyy')}">15/10/2026</td></tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<p th:text="#{${'reminderPdf.body' + reminder.level}(${reminder.oldestDays})}">Our records show that part of your account is overdue, the oldest charge by 42 days.</p>
+<p>
+    <span th:text="#{reminderPdf.overdue}">Overdue now:</span>
+    <span class="amount" th:text="${@num.money(reminder.overdue) + ' RWF'}">120,000 RWF</span>
+    <span th:text="#{reminderPdf.ofBalance(${@num.money(reminder.balance)})}">of a balance of 185,000 RWF.</span>
+</p>
+<p th:text="#{reminderPdf.pay}">Please pay it now, or call our Credit Control if you think this is wrong. If you have paid in the last few days, thank you: please ignore this letter.</p>
+
+<th:block th:replace="~{accounting/statement-pdf :: statementTable}"></th:block>
+</body>
+</html>

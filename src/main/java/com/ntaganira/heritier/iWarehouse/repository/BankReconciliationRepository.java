@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,4 +31,10 @@ public interface BankReconciliationRepository extends JpaRepository<BankReconcil
 
     /** The latest reconciliation in force of an account: its statement balance is where the next one starts. */
     Optional<BankReconciliation> findFirstByAccount_IdAndStatusOrderByStatementDateDesc(UUID accountId, ReconciliationStatus status);
+
+    /** An account's reconciliations in a state (its compliance, M.16). */
+    List<BankReconciliation> findByAccount_IdAndStatus(UUID accountId, ReconciliationStatus status);
+
+    /** Reconciliations in force not reviewed yet (P.09). */
+    long countByStatusAndReviewedAtIsNull(ReconciliationStatus status);
 }

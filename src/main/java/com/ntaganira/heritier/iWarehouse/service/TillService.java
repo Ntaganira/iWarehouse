@@ -5,6 +5,7 @@ import com.ntaganira.heritier.iWarehouse.entity.TillSession;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.enums.TillStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +44,8 @@ import java.util.UUID;
  * - Desc      : Till sessions (POS-10). A cashier opens one with a float (it leaves the main cash vault) and
  *               sells in it; closing compares the cash counted with the cash expected (float + cash kept from
  *               sales). A difference needs a note and goes to Cash Over/Short; the cash goes back to the vault.
- *               A till does not close while a sale is being rung up in it.
+ *               A till does not close while a sale is being rung up in it. The cash is counted note by note (F-13,
+ *               the Settings' denominations) and Treasury verifies the count: never the cashier.
  * </pre>
  */
 @Service
@@ -56,11 +59,13 @@ public class TillService {
     private final CustomerPaymentRepository customerPaymentRepo;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
+    private final SettingService settingService;
     private final Clock clock;
 
     public TillService(TillSessionRepository repo, SalesInvoiceRepository invoiceRepo, SalesPaymentRepository paymentRepo,
                        CreditNoteRepository creditNoteRepo, CustomerPaymentRepository customerPaymentRepo, PostingService postingService,
-                       DocumentNumberService numbers, Clock clock) {
+                       DocumentNumberService numbers, SettingService settingService, Clock clock) {
+        this.settingService = settingService;
         this.repo = repo;
         this.invoiceRepo = invoiceRepo;
         this.paymentRepo = paymentRepo;
@@ -121,6 +126,11 @@ public class TillService {
                 refunds == null ? BigDecimal.ZERO : refunds, accounts == null ? BigDecimal.ZERO : accounts);
     }
 
+    /** The notes and coins counted at the till, largest first (F-13). */
+    public List<Integer> denominations() {
+        return CashCount.denominations(settingService.get(SettingKey.CASH_DENOMINATIONS));
+    }
+
     public Page<TillSession> findPage(String search, String status, int page, int size) {
         Specification<TillSession> spec = (root, query, cb) -> {
             Predicate p = cb.conjunction();
@@ -164,14 +174,23 @@ public class TillService {
         return session;
     }
 
-    /**
-     * Closes the signed-in cashier's till with the cash counted. Refused while a sale is being rung up in it
-     * (an empty one is cancelled); a difference needs a note.
-     */
+    /** Closes the till with the cash counted as one amount. */
     @Transactional
     public TillSession close(UUID sessionId, BigDecimal counted, String note) {
+        return close(sessionId, null, counted, note);
+    }
+
+    /**
+     * Closes the signed-in cashier's till with the cash counted: note by note when a count is given (the amount is then
+     * its total, F-13), else the amount. Refused while a sale is being rung up in it (an empty one is cancelled); a
+     * difference needs a note.
+     */
+    @Transactional
+    public TillSession close(UUID sessionId, Map<Integer, Integer> counts, BigDecimal countedCash, String note) {
         TillSession session = repo.lockById(sessionId).orElseThrow(() -> new NotFoundException("TillSession", sessionId));
         requireOwnOpen(session);
+        Map<Integer, Integer> count = counts == null ? Map.of() : CashCount.of(counts, denominations());
+        BigDecimal counted = counts == null ? countedCash : CashCount.total(count);
         if (counted == null || counted.signum() < 0 || counted.stripTrailingZeros().scale() > 2) {
             throw BusinessException.onField("countedCash", "till.counted.invalid");
         }
@@ -200,9 +219,38 @@ public class TillService {
         session.setCountedCash(counted.setScale(2));
         session.setDifference(difference.setScale(2));
         session.setCloseNote(cleanNote);
+        session.setDenominations(CashCount.format(count));
         session.setClosedAt(LocalDateTime.now(clock));
         session.setStatus(TillStatus.CLOSED);
         postingService.tillClosed(session);
+        return session;
+    }
+
+    /**
+     * Treasury verifies a closed till's count (F-13): once, never by its cashier. A difference found on recounting is
+     * recorded in the note; the till's figures stay as closed (its journal is posted).
+     */
+    @Transactional
+    public TillSession verify(UUID sessionId, String note) {
+        TillSession session = repo.lockById(sessionId).orElseThrow(() -> new NotFoundException("TillSession", sessionId));
+        AppUserPrincipal user = AppUserPrincipal.current().orElseThrow(() -> BusinessException.of("till.noUser"));
+        if (session.isOpen()) {
+            throw BusinessException.of("till.verify.open", session.getNumber());
+        }
+        if (session.isVerified()) {
+            throw BusinessException.of("till.verify.done", session.getNumber(), session.getVerifiedBy());
+        }
+        if (session.getCashierId().equals(user.getId())) {
+            throw BusinessException.of("till.verify.own", session.getNumber());
+        }
+        String clean = PartyRules.clean(note);
+        if (clean != null && clean.length() > 255) {
+            throw BusinessException.onField("verifyNote", "till.close.noteSize");
+        }
+        session.setVerifyNote(clean);
+        session.setVerifiedBy(user.getUsername());
+        session.setVerifiedById(user.getId());
+        session.setVerifiedAt(LocalDateTime.now(clock));
         return session;
     }
 

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{reminder.title}, ~{::content})}">
+<head><title>Payment reminders - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canIssue=${#authorization.expression('hasAuthority(''PERM_ISSUE_REMINDER'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{reminder.title}">Payment Reminders</h1>
+            <div class="subtitle" th:text="#{reminder.subtitle}">Customers with overdue balances and the reminder each is due: a reminder, a second reminder, a final notice</div>
+        </div>
+        <a href="/accounting/receivables" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="doc-note" th:if="${issuedId != null}">
+        <span th:text="#{reminder.downloadNote}">The letter is ready:</span>
+        <a download th:href="@{/accounting/receivables/reminders/{id}/pdf(id=${issuedId})}" th:text="#{reminder.download}">download it (PDF)</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{reminder.dueTitle}">Overdue customers</span>
+                <span class="section-count" th:text="${due.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th class="num" th:text="#{reminder.balance}">Balance (RWF)</th>
+                        <th class="num" th:text="#{reminder.overdue}">Overdue (RWF)</th>
+                        <th class="num" th:text="#{reminder.oldestDays}">Oldest (days)</th>
+                        <th th:text="#{reminder.levelDue}">Reminder due</th>
+                        <th th:text="#{reminder.last}">Last sent</th>
+                        <th><span class="sr-only" th:text="#{reminder.issue}">Issue</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${due.content}">
+                        <td>
+                            <a th:href="@{/customers/{id}(id=${d.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${d.customer.name}">Umucyo Builders Ltd</a>
+                            <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${d.customer.name}">Umucyo Builders Ltd</span>
+                        </td>
+                        <td class="num" th:text="${@num.money(d.ageing.balance)}">185,000</td>
+                        <td class="num" th:text="${@num.money(d.ageing.overdue)}">120,000</td>
+                        <td class="num" th:text="${d.oldestDays}">42</td>
+                        <td><span class="badge" th:classappend="${d.level == 3} ? 'badge-danger' : (${d.level == 2} ? 'badge-warning' : 'badge-info')"
+                                  th:text="#{${'reminder.level.' + d.level}}">Second reminder</span></td>
+                        <td>
+                            <th:block th:if="${d.last != null}">
+                                <a class="mono" download th:href="@{/accounting/receivables/reminders/{id}/pdf(id=${d.last.id})}" th:text="${d.last.number}">REM-WH-2026-000001</a>
+                                <div class="cell-sub" th:text="${#temporals.format(d.last.createdAt, 'dd/MM/yyyy')}">02/10/2026</div>
+                            </th:block>
+                            <span th:if="${d.last == null}">—</span>
+                        </td>
+                        <td>
+                            <form th:if="${canIssue}" th:action="@{/accounting/receivables/reminders}" method="post" class="row-action-form">
+                                <input type="hidden" name="customerId" th:value="${d.customer.id}">
+                                <button type="submit" class="btn btn-outline btn-sm" th:text="#{reminder.issue}">Issue</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:if="${due.totalElements == 0}">
+                        <td colspan="7"><div class="empty-state slim" th:text="#{reminder.noneDue}">No customer is overdue</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${due}, '/accounting/receivables/reminders', ${dueQuery})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{reminder.issuedTitle}">Reminders issued</span>
+                <span class="section-count" th:text="${issued.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{reminder.number}">Reminder</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th th:text="#{reminder.level}">Level</th>
+                        <th class="num" th:text="#{reminder.overdue}">Overdue (RWF)</th>
+                        <th th:text="#{reminder.issuedBy}">Issued</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${issued.content}">
+                        <td><a class="mono" download th:href="@{/accounting/receivables/reminders/{id}/pdf(id=${r.id})}" th:text="${r.number}">REM-WH-2026-000001</a></td>
+                        <td th:text="${r.customer.name}">Umucyo Builders Ltd</td>
+                        <td th:text="#{${'reminder.level.' + r.level}}">Reminder</td>
+                        <td class="num" th:text="${@num.money(r.overdue)}">120,000</td>
+                        <td>
+                            <span th:text="${r.username}">credit1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.createdAt, 'dd/MM/yyyy HH:mm')}">02/10/2026 09:00</div>
+                        </td>
+                    </tr>
+                    <tr th:if="${issued.totalElements == 0}">
+                        <td colspan="5"><div class="empty-state slim" th:text="#{reminder.noneIssued}">No reminder issued yet</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${issued}, '/accounting/receivables/reminders', ${issuedQuery}, 'spage')}"></th:block>
+    </div>
+</div>
+</body>
+</html>

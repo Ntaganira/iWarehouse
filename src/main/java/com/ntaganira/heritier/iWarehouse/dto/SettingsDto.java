@@ -253,6 +253,51 @@ public class SettingsDto {
     @NotNull(message = "{settings.value.required}")
     private Boolean cuttingVerify;
 
+    // --- The daily close, cash and receivables (M14)
+
+    /** The RWF notes and coins counted at the till, largest first (F-13). */
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^\\s*\\d{1,6}(\\s*,\\s*\\d{1,6}){0,19}\\s*$", message = "{settings.cashDenominations.pattern}")
+    private String cashDenominations;
+
+    /** Treasury verifies a till's count before its cash is banked (F-13). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean cashVerifyCount;
+
+    /** The day's close is prepared by this time the next day (BP 5.3). */
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d$", message = "{settings.dailyReportBy.pattern}")
+    private String dailyReportBy;
+
+    /** Bank and MoMo accounts are reconciled by this working day of the month (BP Table 9, Annex D). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.workingDay.range}")
+    @Max(value = 20, message = "{settings.workingDay.range}")
+    private Integer reconciliationDueWorkingDay;
+
+    /** Goods paid by bank transfer leave once Finance confirms the money arrived (SDP 14). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean releaseTransferConfirmed;
+
+    /** The share of receivables more than 90 days overdue is kept below this (Annex D). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.creditOver90MaxPercent.range}")
+    @DecimalMax(value = "100", message = "{settings.creditOver90MaxPercent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal creditOver90MaxPercent;
+
+    /** Days of credit sales the days sales outstanding is worked out on. */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 7, message = "{settings.creditDsoDays.range}")
+    @Max(value = 365, message = "{settings.creditDsoDays.range}")
+    private Integer creditDsoDays;
+
+    /** The month's accounts are ready by this working day of the next month (BP 5.3). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.workingDay.range}")
+    @Max(value = 20, message = "{settings.workingDay.range}")
+    private Integer accountsWorkingDay;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

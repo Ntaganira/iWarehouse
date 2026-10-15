@@ -342,6 +342,58 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.stockControls}">Stock controls</h3>
+                <p class="hint" th:text="#{settings.group.stockControlsHint}">Transaction Tickets, transfers between sites and the monthly stock reconciliation</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="ticketEnabled" th:text="#{settings.ticketEnabled}">Transaction Tickets</label>
+                    <select id="ticketEnabled" th:field="*{ticketEnabled}" required th:classappend="${#fields.hasErrors('ticketEnabled')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onTickets}">Raised for every movement</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('ticketEnabled')}" th:errors="*{ticketEnabled}"></span>
+                    <span class="hint" th:text="#{settings.ticketEnabledHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="ticketGateReceipts" th:text="#{settings.ticketGateReceipts}">Goods receipts post from their ticket</label>
+                    <select id="ticketGateReceipts" th:field="*{ticketGateReceipts}" required th:classappend="${#fields.hasErrors('ticketGateReceipts')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onTicketGate}">Posted when Finance posts the ticket</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('ticketGateReceipts')}" th:errors="*{ticketGateReceipts}"></span>
+                    <span class="hint" th:text="#{settings.ticketGateReceiptsHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="transferApproval" th:text="#{settings.transferApproval}">Transfers between sites</label>
+                    <select id="transferApproval" th:field="*{transferApproval}" required th:classappend="${#fields.hasErrors('transferApproval')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onApproval}">Needs approval</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('transferApproval')}" th:errors="*{transferApproval}"></span>
+                    <span class="hint" th:text="#{settings.transferApprovalHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="transferDifferenceHours" th:text="#{settings.transferDifferenceHours}">Transfer late after</label>
+                    <div class="input-unit">
+                        <input type="number" id="transferDifferenceHours" th:field="*{transferDifferenceHours}" step="1" min="1" max="720" required
+                               th:classappend="${#fields.hasErrors('transferDifferenceHours')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.hours}">hours</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('transferDifferenceHours')}" th:errors="*{transferDifferenceHours}"></span>
+                    <span class="hint" th:text="#{settings.transferDifferenceHoursHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="reconciliationTolerancePercent" th:text="#{settings.reconciliationTolerancePercent}">Reconciliation tolerance</label>
+                    <div class="input-unit">
+                        <input type="number" id="reconciliationTolerancePercent" th:field="*{reconciliationTolerancePercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('reconciliationTolerancePercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('reconciliationTolerancePercent')}" th:errors="*{reconciliationTolerancePercent}"></span>
+                    <span class="hint" th:text="#{settings.reconciliationTolerancePercentHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

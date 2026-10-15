@@ -6,6 +6,10 @@ import com.ntaganira.heritier.iWarehouse.enums.CreditApplicationKind;
 import com.ntaganira.heritier.iWarehouse.enums.CreditApplicationStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PriceChangeStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
+import com.ntaganira.heritier.iWarehouse.enums.SiteTransferStatus;
+import com.ntaganira.heritier.iWarehouse.enums.TicketKind;
+import com.ntaganira.heritier.iWarehouse.enums.TicketStatus;
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.CreditNoteRequestStatus;
@@ -67,7 +71,11 @@ class MessageCoverageTest {
             Map.entry("priceChange.status.", PriceChangeStatus.class),
             Map.entry("supplier.approval.", SupplierApprovalStatus.class),
             Map.entry("shipment.costType.", CostType.class),
-            Map.entry("notify.creditReview.", CreditApplicationService.DueReason.class));
+            Map.entry("notify.creditReview.", CreditApplicationService.DueReason.class),
+            Map.entry("notification.kind.", NotificationKind.class),
+            Map.entry("ticket.status.", TicketStatus.class),
+            Map.entry("ticket.kind.", TicketKind.class),
+            Map.entry("siteTransfer.status.", SiteTransferStatus.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

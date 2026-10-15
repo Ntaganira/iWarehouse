@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{stockReview.title}, ~{::content})}">
+<head><title>Daily review - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_DAILY_STOCK'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{stockReview.title}">Daily review</h1>
+            <div class="subtitle" th:text="#{stockReview.subtitle}">The day's stock movements by type and one by one; the warehouse manager signs each day off</div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock" class="btn btn-outline" th:text="#{nav.stock}">Inventory</a>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" th:if="${canReview and review == null}" th:text="#{stockReview.signOff}">Sign the day off</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <th:block th:replace="~{stock/tabs :: tabs('daily')}"></th:block>
+        <form th:action="@{/stock/daily-review}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{stockReview.day}">Day</span>
+                    <input type="date" name="day" class="toolbar-filter" th:value="${#temporals.format(day, 'yyyy-MM-dd')}" th:attr="max=${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="type" class="toolbar-filter" th:aria-label="#{stock.movementType}">
+                    <option value="" th:text="#{stockReview.allTypes}">All movements</option>
+                    <option th:each="t : ${types}" th:value="${t}" th:selected="${t == type}" th:text="#{${'stock.movement.' + t}}">Received</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:if="${review != null}">
+        <strong th:text="#{stockReview.reviewedBy(${review.reviewedBy}, ${#temporals.format(review.reviewedAt, 'dd/MM/yyyy HH:mm')}, ${review.movements})}">Signed off by manager1 on 15/10/2026 18:00 (24 movements).</strong>
+        <span th:if="${review.note != null}" th:text="${review.note}">All agreed to the tickets</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${review == null}" th:text="#{stockReview.notYet(${#temporals.format(day, 'dd/MM/yyyy')})}">The movements of 15/10/2026 are not signed off yet.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{stockReview.byType}">By movement</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{stock.movementType}">Movement</th>
+                        <th class="num" th:text="#{stockRecon.count}">Movements</th>
+                        <th class="num" th:text="#{summary.area}">m²</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{stockRecon.cost}">Cost (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${byType}">
+                        <td><a th:href="@{/stock/daily-review(day=${day}, type=${b.type})}" th:text="#{${'stock.movement.' + b.type}}">Received</a></td>
+                        <td class="num" th:text="${b.count}">12</td>
+                        <td class="num" th:text="${@num.m2(b.areaM2)}">86.67</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(b.cost)}">1,250,000</td>
+                    </tr>
+                    <tr th:if="${byType.isEmpty()}">
+                        <td th:attr="colspan=${seeCost ? 4 : 3}">
+                            <div class="empty-state">
+                                <h3 th:text="#{stockReview.none}">No movements</h3>
+                                <p th:text="#{stockReview.noneHint}">Nothing moved in stock that day</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{stockReview.movements}">Movements</span>
+                <span class="section-count" th:text="${movements.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                        <th th:text="#{stock.movementType}">Movement</th>
+                        <th th:text="#{stock.code}">Label</th>
+                        <th th:text="#{stock.fromTo}">From → to</th>
+                        <th th:text="#{stock.reference}">Reference</th>
+                        <th th:text="#{activity.user}">User</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="m : ${movements.content}" th:with="u=${units.get(m.stockUnitId)}">
+                        <td class="nowrap" th:text="${#temporals.format(m.movedAt, 'dd/MM/yyyy HH:mm:ss')}">15/10/2026 10:30:12</td>
+                        <td th:text="#{${'stock.movement.' + m.type}}">Received</td>
+                        <td>
+                            <a class="mono" th:href="@{/stock/{id}(id=${m.stockUnitId})}" sec:authorize="hasAuthority('PAGE_STOCK')" th:text="${u != null} ? ${u.code} : '—'">U-WH-000001</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${u != null} ? ${u.code} : '—'">U-WH-000001</span>
+                            <div class="cell-sub" th:if="${u != null}" th:text="${u.product.code + ' · ' + u.widthMm + ' × ' + u.heightMm}">CLR-6 · 3210 × 2250</div>
+                        </td>
+                        <td class="mono nowrap" th:text="${(m.fromLocationId != null and locations.get(m.fromLocationId) != null ? locations.get(m.fromLocationId).code : '—')
+                                + ' → ' + (m.toLocationId != null and locations.get(m.toLocationId) != null ? locations.get(m.toLocationId).code : '—')}">WH-A-R01 → WH-A-R02</td>
+                        <td><th:block th:replace="~{stock/view :: refLink(${m.refType}, ${m.refId}, ${m.refNumber})}"></th:block></td>
+                        <td th:text="${m.username}">store1</td>
+                    </tr>
+                    <tr th:if="${movements.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{stockReview.none}">No movements</h3>
+                                <p th:text="#{stockReview.noneHint}">Nothing moved in stock that day</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${movements}, '/stock/daily-review', ${query + '&rpage=' + reviews.number})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{stockReview.daysReviewed}">Days signed off</span>
+                <span class="section-count" th:text="${reviews.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{stockReview.day}">Day</th>
+                        <th class="num" th:text="#{stockRecon.count}">Movements</th>
+                        <th th:text="#{stockReview.signedBy}">Signed off by</th>
+                        <th th:text="#{stockReview.note}">Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${reviews.content}">
+                        <td><a class="row-link" th:href="@{/stock/daily-review(day=${r.day})}" th:text="${#temporals.format(r.day, 'dd/MM/yyyy')}">14/10/2026</a></td>
+                        <td class="num" th:text="${r.movements}">24</td>
+                        <td>
+                            <span th:text="${r.reviewedBy}">manager1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm')}">14/10/2026 18:00</div>
+                        </td>
+                        <td th:text="${r.note ?: '—'}">—</td>
+                    </tr>
+                    <tr th:if="${reviews.totalElements == 0}">
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <h3 th:text="#{stockReview.noReviews}">No day signed off yet</h3>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reviews}, '/stock/daily-review', ${query + '&page=' + movements.number}, 'rpage')}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="review-modal" th:if="${canReview and review == null}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title">
+            <div class="modal-header">
+                <h3 id="review-title" th:text="#{stockReview.signOffTitle(${#temporals.format(day, 'dd/MM/yyyy')})}">Sign 15/10/2026 off</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/stock/daily-review}" method="post" novalidate>
+                <input type="hidden" name="day" th:value="${day}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{stockReview.signOffText}">You went through the day's movements against their documents and tickets. Note anything that needs a follow-up.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="#{ticket.note}">Note (optional)</label>
+                        <textarea id="review-note" name="note" rows="3" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{stockReview.signOff}">Sign the day off</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

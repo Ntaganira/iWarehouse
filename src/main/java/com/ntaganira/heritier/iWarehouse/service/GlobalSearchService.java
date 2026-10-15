@@ -100,6 +100,8 @@ public class GlobalSearchService {
     private final ReceivableWriteOffService writeOffService;
     private final CreditApplicationService creditApplicationService;
     private final PriceChangeService priceChangeService;
+    private final SiteTransferService siteTransferService;
+    private final TicketService ticketService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -113,7 +115,10 @@ public class GlobalSearchService {
                                DriverService driverService, AuditCaseService auditCaseService, UserService userService,
                                EmployeeService employeeService, PayRunService payRunService, VehicleCostService vehicleCostService,
                                Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService,
-                               CreditApplicationService creditApplicationService, PriceChangeService priceChangeService) {
+                               CreditApplicationService creditApplicationService, PriceChangeService priceChangeService,
+                               SiteTransferService siteTransferService, TicketService ticketService) {
+        this.siteTransferService = siteTransferService;
+        this.ticketService = ticketService;
         this.writeOffService = writeOffService;
         this.creditApplicationService = creditApplicationService;
         this.priceChangeService = priceChangeService;
@@ -292,6 +297,14 @@ public class GlobalSearchService {
                 q -> stockTransferService.findPage(q, 0, PER_GROUP),
                 t -> new Hit(t.getNumber(), t.getToLocation() == null ? null : "→ " + t.getToLocation().getCode(), date(t.getPostedAt()),
                         "/stock-transfers/" + t.getId())),
+            new Source<>("nav.siteTransfers", "/site-transfers", null, List.of("PAGE_SITE_TRANSFERS", "PERM_VIEW_SITE_TRANSFER"),
+                q -> siteTransferService.findPage(null, q, 0, PER_GROUP),
+                t -> new Hit(t.getNumber(), t.getFromSite().getName() + " → " + t.getToSite().getName(),
+                        join(date(t.getRequestedAt()), messages.get("siteTransfer.status." + t.getStatus())), "/site-transfers/" + t.getId())),
+            new Source<>("nav.tickets", "/tickets", null, List.of("PAGE_TRANSACTION_TICKETS", "PERM_VIEW_TICKET"),
+                q -> ticketService.findPage(null, null, q, 0, PER_GROUP),
+                t -> new Hit(t.getNumber(), t.getSourceNumber(), join(date(t.getRaisedAt()), messages.get("ticket.status." + t.getStatus())),
+                        "/tickets/" + t.getId())),
             new Source<>("nav.stockAdjustments", "/stock-adjustments", null, List.of("PAGE_STOCK_ADJUSTMENTS", "PERM_VIEW_STOCK_ADJUSTMENT"),
                 q -> stockAdjustmentService.findPage(q, null, 0, PER_GROUP),
                 a -> new Hit(a.getNumber(), a.getReason(), date(a.getPostedAt()), "/stock-adjustments/" + a.getId())),

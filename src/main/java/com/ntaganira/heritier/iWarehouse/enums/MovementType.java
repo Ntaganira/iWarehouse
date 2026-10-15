@@ -44,5 +44,9 @@ public enum MovementType {
     /** Broken on the road, the breakage accepted by the supervisor (FLT-08): BROKEN. */
     BREAKAGE,
     /** Missing after a trip and written off or charged to the driver (FLT-10, FLT-11): LOST. */
-    LOSS
+    LOSS,
+    /** Sent to another site on a transfer (IMP 11.2): AVAILABLE to IN_TRANSIT. */
+    DISPATCH,
+    /** Arrived at the receiving site, its label scanned (IMP 11.2): IN_TRANSIT to AVAILABLE on a rack there. */
+    ARRIVAL
 }

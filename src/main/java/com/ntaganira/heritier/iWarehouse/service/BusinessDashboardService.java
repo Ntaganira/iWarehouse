@@ -8,7 +8,9 @@ import com.ntaganira.heritier.iWarehouse.enums.CreditNoteRequestStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentRequestStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PriceChangeStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SiteTransferStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
+import com.ntaganira.heritier.iWarehouse.enums.TicketStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PurchaseOrderStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TillStatus;
@@ -76,6 +78,8 @@ public class BusinessDashboardService {
     private final CreditApplicationRepository creditApplicationRepo;
     private final PriceChangeRepository priceChangeRepo;
     private final SupplierRepository supplierRepo;
+    private final TransactionTicketRepository ticketRepo;
+    private final SiteTransferRepository siteTransferRepo;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
                                     JournalService journalService, CustomerAccountService customerAccounts,
@@ -87,7 +91,10 @@ public class BusinessDashboardService {
                                     CreditNoteRequestRepository creditNoteRequestRepo, ReceivableWriteOffRepository writeOffRepo,
                                     PurchaseOrderRepository purchaseOrderRepo, SupplierPaymentRequestRepository paymentRequestRepo,
                                     CreditApplicationRepository creditApplicationRepo, PriceChangeRepository priceChangeRepo,
-                                    SupplierRepository supplierRepo) {
+                                    SupplierRepository supplierRepo, TransactionTicketRepository ticketRepo,
+                                    SiteTransferRepository siteTransferRepo) {
+        this.ticketRepo = ticketRepo;
+        this.siteTransferRepo = siteTransferRepo;
         this.creditApplicationRepo = creditApplicationRepo;
         this.priceChangeRepo = priceChangeRepo;
         this.supplierRepo = supplierRepo;
@@ -130,7 +137,7 @@ public class BusinessDashboardService {
                        EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, long auditCases, long floatsToClear,
                        BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet,
                        long creditNotes, long writeOffs, long purchaseOrders, long supplierPayments, long creditApplications,
-                       long priceChanges, long suppliers) {
+                       long priceChanges, long suppliers, long tickets, long siteTransfers) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
@@ -138,7 +145,7 @@ public class BusinessDashboardService {
 
         public long getWaiting() {
             return saleApprovals + adjustments + manualJournals + vehicleCosts + creditNotes + writeOffs + purchaseOrders + supplierPayments
-                    + creditApplications + priceChanges + suppliers;
+                    + creditApplications + priceChanges + suppliers + tickets + siteTransfers;
         }
     }
 
@@ -194,7 +201,9 @@ public class BusinessDashboardService {
                 paymentRequestRepo.countByStatusIn(List.of(PaymentRequestStatus.PREPARED, PaymentRequestStatus.AUTHORISED)),
                 creditApplicationRepo.countByStatusIn(CreditApplicationService.WAITING),
                 priceChangeRepo.countByStatus(PriceChangeStatus.PENDING),
-                supplierRepo.countByApprovalStatus(SupplierApprovalStatus.PENDING));
+                supplierRepo.countByApprovalStatus(SupplierApprovalStatus.PENDING),
+                ticketRepo.countByStatusIn(List.of(TicketStatus.RAISED, TicketStatus.VERIFIED, TicketStatus.COUNTERSIGNED)),
+                siteTransferRepo.countByStatusIn(List.of(SiteTransferStatus.REQUESTED)));
     }
 
     private static long whole(BigDecimal amount) {

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{siteTransfer.newTitle}, ~{::content})}">
+<head><title>Ask for a transfer - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{siteTransfer.newTitle}">Ask for a Transfer</h1>
+            <div class="subtitle" th:text="#{siteTransfer.formSubtitle}">The receiving site asks for glass; the sending site dispatches it by scanning the labels.</div>
+        </div>
+        <a href="/site-transfers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/site-transfers/new}" th:object="${transferDto}" method="post" class="transfer-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="toSiteId" th:text="#{siteTransfer.toSite}">To site (asking)</label>
+                        <select id="toSiteId" th:field="*{toSiteId}" required th:classappend="${#fields.hasErrors('toSiteId')} ? 'is-invalid'">
+                            <option value="" th:text="#{siteTransfer.chooseSite}">Choose a site</option>
+                            <option th:each="s : ${sites}" th:value="${s.id}" th:text="${s.code + ' · ' + s.name}">WH · Kigali warehouse</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('toSiteId')}" th:errors="*{toSiteId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="fromSiteId" th:text="#{siteTransfer.fromSite}">From site (sending)</label>
+                        <select id="fromSiteId" th:field="*{fromSiteId}" required th:classappend="${#fields.hasErrors('fromSiteId')} ? 'is-invalid'">
+                            <option value="" th:text="#{siteTransfer.chooseSite}">Choose a site</option>
+                            <option th:each="s : ${sites}" th:value="${s.id}" th:text="${s.code + ' · ' + s.name}">WH · Kigali warehouse</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('fromSiteId')}" th:errors="*{fromSiteId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="expectedDispatch" th:text="#{siteTransfer.expectedDispatch}">To leave on</label>
+                        <input type="date" id="expectedDispatch" th:field="*{expectedDispatch}" required th:attr="min=${today}"
+                               th:classappend="${#fields.hasErrors('expectedDispatch')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('expectedDispatch')}" th:errors="*{expectedDispatch}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="reason" th:text="#{siteTransfer.reason}">Why</label>
+                        <input type="text" id="reason" th:field="*{reason}" maxlength="255" required th:placeholder="#{siteTransfer.reasonPh}"
+                               th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{siteTransfer.linesTitle}">Glass asked</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{po.addLine}">Add line</span>
+                </button>
+            </div>
+            <span class="field-error" th:if="${#fields.hasErrors('lines')}" th:errors="*{lines}"></span>
+            <div class="table-container">
+                <table class="line-table transfer-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{product.name}">Product</th>
+                            <th class="num" th:text="#{po.width}">Width (mm)</th>
+                            <th class="num" th:text="#{po.height}">Height (mm)</th>
+                            <th class="num" th:text="#{po.sheets}">Sheets</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body">
+                        <tr class="line-row" th:each="line, st : *{lines}">
+                            <td class="line-product">
+                                <select th:field="*{lines[__${st.index}__].productId}" th:aria-label="#{product.name}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].productId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{po.chooseProduct}">Choose glass</option>
+                                    <option th:each="p : ${products}" th:value="${p.id}"
+                                            th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].productId')}" th:errors="*{lines[__${st.index}__].productId}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].widthMm}" min="1" max="10000" step="1" inputmode="numeric"
+                                       th:placeholder="#{siteTransfer.anySize}" th:aria-label="#{po.width}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].widthMm')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].widthMm')}" th:errors="*{lines[__${st.index}__].widthMm}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].heightMm}" min="1" max="10000" step="1" inputmode="numeric"
+                                       th:placeholder="#{siteTransfer.anySize}" th:aria-label="#{po.height}">
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].quantity}" min="1" max="100000" step="1" inputmode="numeric"
+                                       th:aria-label="#{po.sheets}" th:classappend="${#fields.hasErrors('lines[__${st.index}__].quantity')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].quantity')}" th:errors="*{lines[__${st.index}__].quantity}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{siteTransfer.linesNote}">Leave the size empty when any size of the glass will do. The sending site may send fewer sheets than asked, never more.</p>
+        </div>
+
+        <template class="line-template">
+            <tr class="line-row">
+                <td class="line-product">
+                    <select name="lines[{i}].productId" th:aria-label="#{product.name}">
+                        <option value="" th:text="#{po.chooseProduct}">Choose glass</option>
+                        <option th:each="p : ${products}" th:value="${p.id}"
+                                th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                    </select>
+                </td>
+                <td class="num"><input type="number" name="lines[{i}].widthMm" min="1" max="10000" step="1" inputmode="numeric" th:placeholder="#{siteTransfer.anySize}" th:aria-label="#{po.width}"></td>
+                <td class="num"><input type="number" name="lines[{i}].heightMm" min="1" max="10000" step="1" inputmode="numeric" th:placeholder="#{siteTransfer.anySize}" th:aria-label="#{po.height}"></td>
+                <td class="num"><input type="number" name="lines[{i}].quantity" min="1" max="100000" step="1" inputmode="numeric" th:aria-label="#{po.sheets}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{siteTransfer.submit}">Ask for it</button>
+            <a href="/site-transfers" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

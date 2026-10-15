@@ -235,6 +235,8 @@
                                         <span sec:authorize="hasAuthority('PAGE_SUPPLIER_PAYMENTS')"> · <a href="/supplier-payments/requests" th:text="#{dash.biz.supplierPayments(${biz.supplierPayments})}">0 supplier payments</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_CREDIT_APPLICATIONS')"> · <a href="/credit-applications" th:text="#{dash.biz.creditApplications(${biz.creditApplications})}">0 credit applications</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_PRICE_LISTS')"> · <a href="/price-lists/changes?status=PENDING" th:text="#{dash.biz.priceChanges(${biz.priceChanges})}">0 price changes</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_TRANSACTION_TICKETS')"> · <a href="/tickets?status=open" th:text="#{dash.biz.tickets(${biz.tickets})}">0 tickets</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_SITE_TRANSFERS')"> · <a href="/site-transfers?status=REQUESTED" th:text="#{dash.biz.siteTransfers(${biz.siteTransfers})}">0 site transfers</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_SUPPLIERS')"> · <a href="/suppliers?status=pending" th:text="#{dash.biz.suppliersWaiting(${biz.suppliers})}">0 suppliers</a></span>
                                     </div>
                                 </td>

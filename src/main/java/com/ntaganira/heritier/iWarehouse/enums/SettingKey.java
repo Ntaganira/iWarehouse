@@ -86,6 +86,18 @@ public enum SettingKey {
     APPROVAL_SUPPLIER_ONBOARDING("approval.supplier-onboarding", "approvalSupplierOnboarding", "true"),
     /** References a supplier needs before it is approved (CMP 08). */
     SUPPLIER_REFERENCES_REQUIRED("supplier.references-required", "supplierReferencesRequired", "2"),
+    /** Stock movements but sales get a Transaction Ticket (decision D6). */
+    TICKET_ENABLED("ticket.enabled", "ticketEnabled", "true"),
+    /** A goods receipt posts only from its countersigned ticket (Annex I step 4). */
+    TICKET_GATE_RECEIPTS("ticket.gate-receipts", "ticketGateReceipts", "true"),
+    /** Tickets are raised for movements from this day (yyyy-MM-dd): earlier ones were never ticketed. */
+    TICKET_SINCE("ticket.since", null, null),
+    /** A transfer between sites is approved before it leaves (IMP 11.1). */
+    TRANSFER_APPROVAL("transfer.approval", "transferApproval", "true"),
+    /** Hours after dispatch when labels not received are a difference (IMP 11.2). */
+    TRANSFER_DIFFERENCE_HOURS("transfer.difference-hours", "transferDifferenceHours", "24"),
+    /** Stock lost or found above this % of the stock value is flagged on the monthly reconciliation (BP 7.4). */
+    RECONCILIATION_TOLERANCE_PERCENT("reconciliation.tolerance-percent", "reconciliationTolerancePercent", "0.5"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

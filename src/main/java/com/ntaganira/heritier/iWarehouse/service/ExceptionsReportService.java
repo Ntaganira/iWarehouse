@@ -33,7 +33,7 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -63,13 +63,16 @@ public class ExceptionsReportService {
     private final CreditApplicationRepository creditApplicationRepo;
     private final PriceChangeRepository priceChangeRepo;
     private final SupplierRepository supplierRepo;
+    private final SiteTransferRepository siteTransferRepo;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
                                    ManualJournalRepository manualJournalRepo, VehicleCostRepository vehicleCostRepo,
                                    CreditNoteRepository creditNoteRepo, Clock clock, CreditNoteRequestRepository creditNoteRequestRepo,
                                    ReceivableWriteOffRepository writeOffRepo, PurchaseOrderRepository purchaseOrderRepo,
                                    SupplierPaymentRequestRepository paymentRequestRepo, CreditApplicationRepository creditApplicationRepo,
-                                   PriceChangeRepository priceChangeRepo, SupplierRepository supplierRepo) {
+                                   PriceChangeRepository priceChangeRepo, SupplierRepository supplierRepo,
+                                   SiteTransferRepository siteTransferRepo) {
+        this.siteTransferRepo = siteTransferRepo;
         this.creditApplicationRepo = creditApplicationRepo;
         this.priceChangeRepo = priceChangeRepo;
         this.supplierRepo = supplierRepo;
@@ -184,6 +187,15 @@ public class ExceptionsReportService {
             rows.add(new Row(Kind.SUPPLIER, sp.getCode(), "/suppliers/" + sp.getId(), sp.getApprovedAt(), sp.getName(), null, false, null,
                     sp.getUpdatedBy() != null ? sp.getUpdatedBy() : sp.getCreatedBy(), sp.getApprovedBy(),
                     sp.isApproved() ? Outcome.APPROVED : Outcome.REJECTED, sp.getApprovalNote()));
+        }
+        for (SiteTransfer t : siteTransferRepo.findByDecidedAtBetweenOrderByDecidedAtAsc(from, to)) {
+            if (t.getStatus() == SiteTransferStatus.CANCELLED || t.getDecidedAt() == null) {
+                continue;
+            }
+            boolean rejected = t.getStatus() == SiteTransferStatus.REJECTED;
+            rows.add(new Row(Kind.SITE_TRANSFER, t.getNumber(), "/site-transfers/" + t.getId(), t.getDecidedAt(),
+                    t.getFromSite().getName() + " → " + t.getToSite().getName() + " · " + t.getReason(), null, false, null,
+                    t.getRequestedBy(), t.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED, t.getDecisionNote()));
         }
         for (CreditNote n : creditNoteRepo.findByPostedAtBetweenOrderByPostedAtAsc(from, to)) {
             if (n.getRequestId() != null) {

@@ -51,6 +51,8 @@
                             <span th:case="'FLEET'" class="badge badge-warning" th:text="#{notification.kind.FLEET}">Fleet</span>
                             <span th:case="'SYNC'" class="badge badge-danger" th:text="#{notification.kind.SYNC}">Sync</span>
                             <span th:case="'EOD'" class="badge badge-warning" th:text="#{notification.kind.EOD}">End of day</span>
+                            <span th:case="'CREDIT'" class="badge badge-warning" th:text="#{notification.kind.CREDIT}">Credit</span>
+                            <span th:case="'TRANSFER'" class="badge badge-info" th:text="#{notification.kind.TRANSFER}">Transfer</span>
                             <span th:case="*" class="badge badge-secondary" th:text="#{notification.kind.SYSTEM}">System</span>
                         </td>
                         <td class="actions">

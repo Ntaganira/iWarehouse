@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{siteTransfer.noteTitle(${transfer.number})} + ' - ' + #{app.name}">Transfer delivery note - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{siteTransfer.noteTitle(${transfer.number})}">Transfer delivery note STR-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{siteTransfer.noteHint}">A4. The driver carries it; the receiving site signs it on arrival.</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/site-transfers/{id}(id=${transfer.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- The transfer delivery note (TCN-008), black on white: it is printed -->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+                <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+                <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{siteTransfer.noteKind}">TRANSFER DELIVERY NOTE</div>
+                <div class="mono" th:text="${transfer.number}">STR-WH-2026-000001</div>
+            </div>
+        </div>
+
+        <div class="print-doc-parties">
+            <div>
+                <div class="print-doc-label" th:text="#{siteTransfer.fromSite}">From site (sending)</div>
+                <div class="strong" th:text="${transfer.fromSite.name}">Kigali warehouse</div>
+                <div class="print-doc-label" th:text="#{siteTransfer.toSite}">To site (asking)</div>
+                <div class="strong" th:text="${transfer.toSite.name}">Musanze branch</div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{siteTransfer.dispatched}">Dispatched</span>
+                    <span th:text="${transfer.dispatchedAt != null} ? ${#temporals.format(transfer.dispatchedAt, 'dd/MM/yyyy HH:mm')} : '—'">16/10/2026 08:00</span></div>
+                <div><span class="print-doc-label" th:text="#{siteTransfer.vehicle}">Vehicle</span> <strong class="mono" th:text="${transfer.vehiclePlate ?: '—'}">RAD 123 A</strong></div>
+                <div><span class="print-doc-label" th:text="#{siteTransfer.driver}">Driver</span> <span th:text="${transfer.driverName ?: '—'}">Jean Bosco</span></div>
+                <div><span class="print-doc-label" th:text="#{siteTransfer.expectedArrival}">Expected arrival</span>
+                    <strong th:text="${transfer.expectedArrival != null} ? ${#temporals.format(transfer.expectedArrival, 'dd/MM/yyyy HH:mm')} : '—'">16/10/2026 14:00</strong></div>
+                <div th:if="${transfer.receivedAt != null}"><span class="print-doc-label" th:text="#{siteTransfer.arrived}">Received</span>
+                    <span th:text="${#temporals.format(transfer.receivedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 14:10</span></div>
+            </div>
+        </div>
+
+        <div class="print-doc-scroll">
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th th:text="#{stock.code}">Label</th>
+                    <th th:text="#{product.name}">Product</th>
+                    <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                    <th class="num" th:text="#{summary.area}">m²</th>
+                    <th th:text="#{siteTransfer.leftFrom}">Left from</th>
+                    <th th:text="#{siteTransfer.noteCheck}">Received ✓</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="u, st : ${units}" th:with="unit=${unitsById.get(u.stockUnitId)}">
+                    <td th:text="${st.count}">1</td>
+                    <td class="mono" th:text="${u.unitCode}">U-WH-000001</td>
+                    <td><th:block th:if="${unit != null}"><span th:text="${unit.product.code + ' · '}">CLR-6 · </span><th:block th:replace="~{products/list :: productName(${unit.product})}"></th:block></th:block></td>
+                    <td class="num nowrap" th:text="${unit != null} ? ${unit.widthMm + ' × ' + unit.heightMm} : '—'">3210 × 2250</td>
+                    <td class="num" th:text="${unit != null} ? ${@num.m2(unit.areaM2)} : '—'">7.2225</td>
+                    <td class="mono" th:text="${locations.get(u.fromLocationId) != null} ? ${locations.get(u.fromLocationId).code} : '—'">WH-A-R01</td>
+                    <td th:text="${u.received} ? '✓' : ''"></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr class="print-doc-total">
+                    <td colspan="4" th:text="#{siteTransfer.noteTotal(${units.size()})}">4 units</td>
+                    <td class="num" th:text="${@num.m2(totalArea)}">28.89</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+
+        <p class="print-doc-note" th:text="#{siteTransfer.noteReason(${transfer.reason})}">Reason: Stock for the Musanze branch</p>
+        <div class="print-doc-signs">
+            <div><span th:text="#{siteTransfer.signDispatched}">Dispatched by</span><span class="print-doc-signline" th:text="${transfer.dispatchedBy}">store1</span></div>
+            <div><span th:text="#{siteTransfer.signDriver}">Driver</span><span class="print-doc-signline" th:text="${transfer.driverName}">Jean Bosco</span></div>
+            <div><span th:text="#{siteTransfer.signReceived}">Received by</span><span class="print-doc-signline" th:text="${transfer.receivedBy}"></span></div>
+        </div>
+    </div>
+</body>
+</html>

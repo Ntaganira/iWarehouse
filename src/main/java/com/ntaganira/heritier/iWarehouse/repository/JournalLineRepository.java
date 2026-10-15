@@ -136,4 +136,8 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " and e.sourceType in :sources and e.entryDate >= :since group by e.sourceType, e.sourceId, a.systemKey, p.id")
     List<Object[]> costOfSales(@Param("sources") Collection<com.ntaganira.heritier.iWarehouse.enums.JournalSource> sources,
                                @Param("since") java.time.LocalDate since);
+
+    /** An account's balance (debits less credits) up to and including a day. */
+    @Query("select coalesce(sum(l.debit - l.credit), 0) from JournalLine l where l.account.systemKey = :key and l.entry.entryDate <= :day")
+    java.math.BigDecimal balanceAt(@Param("key") com.ntaganira.heritier.iWarehouse.enums.AccountKey key, @Param("day") java.time.LocalDate day);
 }

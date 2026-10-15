@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${transfer.number}, ~{::content})}">
+<head><title>Site transfer - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${transfer.status.name()},
+        canAsk=${#authorization.expression('hasAuthority(''PERM_REQUEST_SITE_TRANSFER'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_SITE_TRANSFER'')')},
+        canDispatch=${#authorization.expression('hasAuthority(''PERM_DISPATCH_SITE_TRANSFER'')')},
+        canReceive=${#authorization.expression('hasAuthority(''PERM_RECEIVE_SITE_TRANSFER'')')},
+        mayDecide=${s == 'REQUESTED' and canApprove and !mine},
+        mayCancel=${(s == 'REQUESTED' or s == 'APPROVED') and ((canAsk and mine) or canApprove)},
+        sent=${transfer.dispatchedAt != null}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${transfer.number}">STR-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{creditNote.request.askedBy(${transfer.requestedBy}, ${#temporals.format(transfer.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by store1 on 15/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{site-transfers/list :: transferStatus(${transfer.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/site-transfers" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${sent}" th:href="@{/site-transfers/{id}/note(id=${transfer.id})}" class="btn btn-outline" th:text="#{siteTransfer.note}">Delivery note</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:if="${mayCancel}" th:text="#{siteTransfer.cancel}">Cancel</button>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:if="${mayDecide}" th:text="#{creditNote.request.reject}">Reject</button>
+            <form th:if="${mayDecide}" th:action="@{/site-transfers/{id}/approve(id=${transfer.id})}" method="post" class="row-action-form confirm-submit"
+                  th:attr="data-confirm=#{siteTransfer.approveConfirm(${transfer.number}, ${transfer.fromSite.name}, ${transfer.toSite.name})}">
+                <button type="submit" class="btn btn-primary" th:text="#{siteTransfer.approve}">Approve</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="#{siteTransfer.reason} + ':'">Why:</strong> <span th:text="${transfer.reason}">Stock for the Musanze branch</span></div>
+    <div class="doc-note is-warning" th:if="${s == 'REQUESTED'}">
+        <span th:text="#{siteTransfer.waitingApproval}">Another person approves it before the sending site dispatches it.</span>
+        <span th:if="${mine}" th:text="#{siteTransfer.yourOwn}">You asked for it: someone else approves it.</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED'}">
+        <strong th:if="${transfer.decidedBy != null}" th:text="#{creditNote.request.approvedBy(${transfer.decidedBy}, ${#temporals.format(transfer.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by coo1 on 15/10/2026 12:00</strong>
+        <span th:if="${transfer.decisionNote != null}" th:text="${'· ' + transfer.decisionNote}">· ok</span>
+        <span th:text="#{siteTransfer.toDispatchNote(${transfer.fromSite.name})}">Kigali warehouse dispatches it: scan the labels as they go on the vehicle.</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${s == 'IN_TRANSIT'}"
+         th:text="#{siteTransfer.inTransitNote(${transfer.toSite.name}, ${received}, ${units.size()})}">In transit: Musanze branch scans each label on arrival. 0 of 4 received.</div>
+    <div class="doc-note" th:if="${s == 'RECEIVED'}">
+        <span th:text="#{siteTransfer.receivedNote(${transfer.receivedBy}, ${#temporals.format(transfer.receivedAt, 'dd/MM/yyyy HH:mm')})}">Every unit arrived; received by store2 on 16/10/2026 14:10.</span>
+        <span th:if="${transfer.differenceNote != null}" th:text="#{siteTransfer.lateNote(${transfer.differenceNote})}">Received short at first: One sheet left at the depot</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'RECEIVED_SHORT'}">
+        <strong th:text="#{siteTransfer.shortBy(${transfer.receivedBy}, ${units.size() - received})}">Received short by store2: 1 unit did not arrive.</strong>
+        <span th:text="${transfer.differenceNote}">One sheet left at the depot</span>
+        <span th:text="#{siteTransfer.shortHint}">The units not received stay in transit: scan one below if it arrives late, or write it off by a stock adjustment.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{creditNote.request.rejectedBy(${transfer.decidedBy})} : #{siteTransfer.cancelledBy(${transfer.decidedBy})}">Rejected by coo1:</strong>
+        <span th:text="${transfer.decisionNote}">Not needed</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{siteTransfer.fromSite}">From site (sending)</label>
+                    <div class="value" th:text="${transfer.fromSite.name}">Kigali warehouse</div>
+                    <div class="cell-sub mono" th:text="${transfer.fromSite.code}">WH</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{siteTransfer.toSite}">To site (asking)</label>
+                    <div class="value" th:text="${transfer.toSite.name}">Musanze branch</div>
+                    <div class="cell-sub mono" th:text="${transfer.toSite.code}">MSZ</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{siteTransfer.expectedDispatch}">To leave on</label>
+                    <div class="value" th:text="${#temporals.format(transfer.expectedDispatch, 'dd/MM/yyyy')}">16/10/2026</div>
+                </div>
+                <div class="item" th:if="${sent}">
+                    <label th:text="#{siteTransfer.vehicle}">Vehicle</label>
+                    <div class="value mono" th:text="${transfer.vehiclePlate}">RAD 123 A</div>
+                    <div class="cell-sub" th:text="${transfer.driverName}">Jean Bosco</div>
+                </div>
+                <div class="item" th:if="${sent}">
+                    <label th:text="#{siteTransfer.dispatched}">Dispatched</label>
+                    <div class="value" th:text="${#temporals.format(transfer.dispatchedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 08:00</div>
+                    <div class="cell-sub" th:text="${transfer.dispatchedBy}">store1</div>
+                </div>
+                <div class="item" th:if="${sent}">
+                    <label th:text="#{siteTransfer.expectedArrival}">Expected arrival</label>
+                    <div class="value" th:text="${#temporals.format(transfer.expectedArrival, 'dd/MM/yyyy HH:mm')}">16/10/2026 14:00</div>
+                </div>
+                <div class="item" th:if="${transfer.receivedAt != null}">
+                    <label th:text="#{siteTransfer.arrived}">Received</label>
+                    <div class="value" th:text="${#temporals.format(transfer.receivedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 14:10</div>
+                    <div class="cell-sub" th:text="${transfer.receivedBy}">store2</div>
+                </div>
+                <div class="item" th:if="${sent}">
+                    <label th:text="#{siteTransfer.unitsSent}">Units</label>
+                    <div class="value" th:text="#{siteTransfer.receivedOf(${received}, ${units.size()})}">4 of 4 received</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dispatch (TRF-007): the sending site scans the labels as they go on the vehicle -->
+    <div class="section count-scan" id="dispatch" th:if="${s == 'APPROVED' and canDispatch}">
+        <div class="section-header">
+            <h2 th:text="#{siteTransfer.dispatchTitle}">Dispatch</h2>
+        </div>
+        <form th:action="@{/site-transfers/{id}/dispatch(id=${transfer.id})}" method="post" class="form-container count-scan-form" novalidate>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="dispatch-codes" th:text="#{siteTransfer.labels}">Labels</label>
+                    <textarea id="dispatch-codes" name="codes" rows="3" maxlength="8000" class="input-code" autocomplete="off" autocapitalize="characters"
+                              spellcheck="false" autofocus th:placeholder="#{siteTransfer.labelsPh}" th:text="${dispatchCodes}"></textarea>
+                    <span class="hint" th:text="#{siteTransfer.labelsHint}">Scan each unit as it goes on the vehicle (one label per line): available units of the sending site, of the glass and size asked</span>
+                </div>
+                <div class="form-group">
+                    <label for="dispatch-vehicle" th:text="#{siteTransfer.vehiclePlate}">Vehicle plate</label>
+                    <input type="text" id="dispatch-vehicle" name="vehiclePlate" maxlength="20" class="input-code" required autocomplete="off" th:value="${dispatchVehicle}">
+                </div>
+                <div class="form-group">
+                    <label for="dispatch-driver" th:text="#{siteTransfer.driver}">Driver</label>
+                    <input type="text" id="dispatch-driver" name="driverName" maxlength="100" required autocomplete="off" th:value="${dispatchDriver}">
+                </div>
+                <div class="form-group">
+                    <label for="dispatch-arrival" th:text="#{siteTransfer.expectedArrival}">Expected arrival</label>
+                    <input type="datetime-local" id="dispatch-arrival" name="expectedArrival" required th:attr="min=${#temporals.format(now, 'yyyy-MM-dd''T''HH:mm')}">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{siteTransfer.dispatch}">Dispatch</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Receiving: a scanner types the label and presses Enter; the page comes back here after each scan -->
+    <div class="section count-scan" id="receive" th:if="${(s == 'IN_TRANSIT' or (s == 'RECEIVED_SHORT' and received < units.size())) and canReceive}">
+        <div class="section-header">
+            <h2 th:text="#{siteTransfer.receiveTitle}">Receive</h2>
+            <span class="badge" th:classappend="${received == units.size()} ? 'badge-success' : 'badge-info'"
+                  th:text="#{siteTransfer.receivedOf(${received}, ${units.size()})}">0 of 4 received</span>
+        </div>
+        <form th:action="@{/site-transfers/{id}/receive(id=${transfer.id})}" method="post" class="form-container count-scan-form" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="receive-place" th:text="#{siteTransfer.place}">Put on</label>
+                    <select id="receive-place" name="locationId" required>
+                        <option value="" th:text="#{cutting.chooseRack}">Choose a rack</option>
+                        <option th:each="l : ${places}" th:value="${l.id}" th:selected="${lastPlace != null and lastPlace == l.id}"
+                                th:text="${l.code + (l.offcut ? ' · ' + #messages.msg('location.offcut') : '')}">MSZ-A-R01</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="receive-code" th:text="#{trip.scanLabel}">Label</label>
+                    <div class="scan-row">
+                        <textarea id="receive-code" name="code" rows="1" maxlength="60" class="input-code scan-codes" autocomplete="off" autocapitalize="characters"
+                                  spellcheck="false" enterkeyhint="go" autofocus data-enter-submits th:placeholder="#{count.labelPh}"></textarea>
+                        <button type="submit" class="btn btn-primary" th:text="#{siteTransfer.receive}">Receive</button>
+                    </div>
+                    <span class="hint" th:text="#{siteTransfer.receiveHint}">Scan each unit as it comes off the vehicle onto the rack chosen</span>
+                </div>
+            </div>
+            <div class="form-actions" th:if="${s == 'IN_TRANSIT'}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="finish-modal" th:text="#{siteTransfer.finishShort}">Finish, some did not arrive</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{siteTransfer.linesTab}">Glass</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-tickets" th:classappend="${tab == 'tickets'} ? 'active'">
+                <span th:text="#{nav.tickets}">Transaction Tickets</span>
+                <span class="section-count" th:text="${tickets.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <h3 class="detail-heading" th:text="#{siteTransfer.linesTitle}">Glass asked</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th th:text="#{product.name}">Product</th>
+                                <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                                <th class="num" th:text="#{siteTransfer.asked}">Asked</th>
+                                <th class="num" th:text="#{siteTransfer.sent}">Sent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines}">
+                                <td class="num" th:text="${l.lineNo}">1</td>
+                                <td>
+                                    <span class="mono" th:text="${l.product.code}">CLR-6</span>
+                                    <div class="cell-sub"><th:block th:replace="~{products/list :: productName(${l.product})}"></th:block></div>
+                                </td>
+                                <td class="num" th:text="${l.sized} ? ${l.widthMm + ' × ' + l.heightMm} : #{siteTransfer.anySize}">3210 × 2250</td>
+                                <td class="num" th:text="${l.quantity}">4</td>
+                                <td class="num" th:text="${sentByLine.getOrDefault(l.lineNo, 0)}">4</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <th:block th:if="${!units.isEmpty()}">
+                    <h3 class="detail-heading" th:text="#{siteTransfer.unitsTitle}">Units sent</h3>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th th:text="#{stock.code}">Label</th>
+                                    <th th:text="#{product.name}">Product</th>
+                                    <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                                    <th th:text="#{siteTransfer.leftFrom}">Left from</th>
+                                    <th th:text="#{siteTransfer.arrivedOn}">Arrived on</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="u : ${units}" th:with="unit=${unitsById.get(u.stockUnitId)}">
+                                    <td>
+                                        <a class="mono" th:href="@{/stock/{id}(id=${u.stockUnitId})}" sec:authorize="hasAuthority('PAGE_STOCK')" th:text="${u.unitCode}">U-WH-000001</a>
+                                        <span class="mono" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${u.unitCode}">U-WH-000001</span>
+                                    </td>
+                                    <td class="mono" th:text="${unit != null} ? ${unit.product.code} : '—'">CLR-6</td>
+                                    <td class="num" th:text="${unit != null} ? ${unit.widthMm + ' × ' + unit.heightMm} : '—'">3210 × 2250</td>
+                                    <td>
+                                        <span class="mono" th:text="${locations.get(u.fromLocationId) != null} ? ${locations.get(u.fromLocationId).code} : '—'">WH-A-R01</span>
+                                        <div class="cell-sub" th:text="${#temporals.format(u.dispatchedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 08:00</div>
+                                    </td>
+                                    <td>
+                                        <th:block th:if="${u.received}">
+                                            <span class="mono" th:text="${locations.get(u.toLocationId) != null} ? ${locations.get(u.toLocationId).code} : '—'">MSZ-A-R01</span>
+                                            <div class="cell-sub" th:text="${#temporals.format(u.receivedAt, 'dd/MM/yyyy HH:mm') + ' · ' + u.receivedBy}">16/10/2026 14:10 · store2</div>
+                                        </th:block>
+                                        <span th:unless="${u.received}" class="badge"
+                                              th:classappend="${s == 'RECEIVED_SHORT'} ? 'badge-danger' : 'badge-secondary'"
+                                              th:text="${s == 'RECEIVED_SHORT'} ? #{siteTransfer.notArrived} : #{trip.notYet}">Not yet</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+            </div>
+            <div class="tab-content" id="tab-tickets" th:classappend="${tab == 'tickets'} ? 'active'">
+                <p class="tab-intro" th:text="#{siteTransfer.ticketsIntro}">The dispatch and the arrival each get a Transaction Ticket, verified, countersigned and posted by three other people.</p>
+                <th:block th:replace="~{tickets/list :: ticketTable(${tickets}, false)}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('SITE_TRANSFER', ${transfer.id}, ${documents}, '/site-transfers/' + ${transfer.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/site-transfers/' + ${transfer.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${mayCancel}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{siteTransfer.cancelTitle(${transfer.number})}, @{/site-transfers/{id}/cancel(id=${transfer.id})}, #{siteTransfer.cancelText}, #{siteTransfer.cancel})}"></div>
+    </th:block>
+    <th:block th:if="${mayDecide}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{siteTransfer.rejectTitle(${transfer.number})}, @{/site-transfers/{id}/reject(id=${transfer.id})}, #{siteTransfer.rejectText}, #{creditNote.request.reject})}"></div>
+    </th:block>
+    <th:block th:if="${s == 'IN_TRANSIT' and canReceive}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('finish-modal', #{siteTransfer.finishTitle(${transfer.number})}, @{/site-transfers/{id}/finish(id=${transfer.id})}, #{siteTransfer.finishText}, #{siteTransfer.finishShort})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

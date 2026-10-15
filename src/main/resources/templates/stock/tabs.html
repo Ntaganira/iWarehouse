@@ -2,12 +2,14 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head><title>Stock reports</title></head>
 <body>
-<!--/* The stock reports' tabs (INV-09, RPT-02), as links: the open one is {active} (summary, offcuts, slow) */-->
+<!--/* The stock reports' tabs (INV-09, RPT-02), as links: the open one is {active} (summary, offcuts, slow, card, daily) */-->
 <th:block th:fragment="tabs(active)">
     <nav class="tabs report-tabs" th:aria-label="#{stockReports.title}">
         <a class="tab" th:classappend="${active == 'summary'} ? 'active'" href="/stock/summary" th:text="#{summary.title}">Stock summary</a>
         <a class="tab" th:classappend="${active == 'offcuts'} ? 'active'" href="/stock/offcut-ageing" th:text="#{offcutAgeing.title}">Off-cut ageing</a>
         <a class="tab" th:classappend="${active == 'slow'} ? 'active'" href="/stock/slow-moving" th:text="#{slowMoving.title}">Slow-moving stock</a>
+        <a class="tab" th:classappend="${active == 'card'} ? 'active'" href="/stock/card" th:text="#{stockCard.title}">Stock card</a>
+        <a class="tab" th:classappend="${active == 'daily'} ? 'active'" href="/stock/daily-review" th:text="#{stockReview.title}">Daily review</a>
     </nav>
 </th:block>
 

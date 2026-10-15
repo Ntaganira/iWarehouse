@@ -23,7 +23,7 @@ public enum StockAction {
     /** Moved to another rack or slot (INV-07). */
     TRANSFER(EnumSet.of(StockStatus.RECEIVED, StockStatus.AVAILABLE, StockStatus.RESERVED)),
     /** Written off as broken or missing, or resized (INV-07). */
-    ADJUST(EnumSet.of(StockStatus.RECEIVED, StockStatus.AVAILABLE, StockStatus.RESERVED)),
+    ADJUST(EnumSet.of(StockStatus.RECEIVED, StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.IN_TRANSIT)),
     /** Reserved for a customer (INV-05). */
     RESERVE(EnumSet.of(StockStatus.AVAILABLE)),
     /** Released from a reservation. */
@@ -37,7 +37,11 @@ public enum StockAction {
     /** Sold from the vehicle on the mobile POS (MPOS-02): on the vehicle only. */
     SELL_FROM_VEHICLE(EnumSet.of(StockStatus.ON_VEHICLE)),
     /** Off the vehicle at the end of the day: back on a rack, broken on the road, or lost (FLT-08..11). */
-    UNLOAD(EnumSet.of(StockStatus.ON_VEHICLE));
+    UNLOAD(EnumSet.of(StockStatus.ON_VEHICLE)),
+    /** Sent to another site on an approved transfer (IMP 11.2): available only. */
+    DISPATCH(EnumSet.of(StockStatus.AVAILABLE)),
+    /** Received at the other site, its label scanned (IMP 11.2): in transit only. */
+    ARRIVE(EnumSet.of(StockStatus.IN_TRANSIT));
 
     private final Set<StockStatus> allowed;
 

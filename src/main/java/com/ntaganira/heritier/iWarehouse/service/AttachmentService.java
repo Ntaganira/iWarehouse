@@ -48,6 +48,7 @@ public class AttachmentService {
     private final CustomerRepository customerRepo;
     private final SupplierRepository supplierRepo;
     private final CreditApplicationRepository creditApplicationRepo;
+    private final SiteTransferRepository siteTransferRepo;
     private final Clock clock;
 
     public AttachmentService(AttachmentRepository repo, FileStorageService storage, GoodsReceiptRepository receiptRepo,
@@ -56,7 +57,8 @@ public class AttachmentService {
                              TripRepository tripRepo, VehicleCostRepository vehicleCostRepo, Clock clock,
                              CreditNoteRequestRepository creditNoteRequestRepo, ReceivableWriteOffRepository writeOffRepo,
                              CustomerRepository customerRepo, SupplierRepository supplierRepo,
-                             CreditApplicationRepository creditApplicationRepo) {
+                             CreditApplicationRepository creditApplicationRepo, SiteTransferRepository siteTransferRepo) {
+        this.siteTransferRepo = siteTransferRepo;
         this.customerRepo = customerRepo;
         this.supplierRepo = supplierRepo;
         this.creditApplicationRepo = creditApplicationRepo;
@@ -148,6 +150,7 @@ public class AttachmentService {
             case CUSTOMER -> customerRepo.existsById(id);
             case SUPPLIER -> supplierRepo.existsById(id);
             case CREDIT_APPLICATION -> creditApplicationRepo.existsById(id);
+            case SITE_TRANSFER -> siteTransferRepo.existsById(id);
         };
         if (!exists) {
             throw new NotFoundException(owner.name(), id);

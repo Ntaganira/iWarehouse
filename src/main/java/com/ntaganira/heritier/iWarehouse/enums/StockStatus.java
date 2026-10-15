@@ -26,7 +26,9 @@ public enum StockStatus {
     ON_VEHICLE,
     SOLD,
     BROKEN,
-    LOST;
+    LOST,
+    /** On its way to another site (IMP 11.2): out of the sending store, not yet in the receiving one; still on hand. */
+    IN_TRANSIT;
 
     /** Still physically held by the business (valued in stock, counted on its rack or vehicle). */
     public boolean isOnHand() {

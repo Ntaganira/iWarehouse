@@ -27,5 +27,7 @@ public enum NotificationKind {
     /** The end of the day: a trip back with units missing or unexpected, a float not cleared in time (FLT-10, RPT-06). */
     EOD,
     /** A customer's credit limit due for its review: yearly, or an invoice long overdue (F-02 C). */
-    CREDIT
+    CREDIT,
+    /** A transfer between sites waiting, or glass that did not arrive (IMP 11.2). */
+    TRANSFER
 }

@@ -196,6 +196,33 @@ public class SettingsDto {
     @Max(value = 10, message = "{settings.supplierReferencesRequired.range}")
     private Integer supplierReferencesRequired;
 
+    // --- Stock controls (M12) ---
+
+    /** Every stock movement but a sale gets a Transaction Ticket (BP 7.4, decision D6). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean ticketEnabled;
+
+    /** A goods receipt posts only from its countersigned ticket (Annex I step 4). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean ticketGateReceipts;
+
+    /** A transfer between sites is approved before it leaves (TRF-007). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean transferApproval;
+
+    /** Hours after the expected arrival that a transfer still in transit is reported (IMP 11). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.transferDifferenceHours.range}")
+    @Max(value = 720, message = "{settings.transferDifferenceHours.range}")
+    private Integer transferDifferenceHours;
+
+    /** Stock written off, broken or lost above this % of the stock value is flagged in the monthly reconciliation. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.reconciliationTolerancePercent.range}")
+    @DecimalMax(value = "100", message = "{settings.reconciliationTolerancePercent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal reconciliationTolerancePercent;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

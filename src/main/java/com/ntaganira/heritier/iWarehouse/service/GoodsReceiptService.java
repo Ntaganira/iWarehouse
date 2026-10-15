@@ -8,6 +8,7 @@ import com.ntaganira.heritier.iWarehouse.entity.Product;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrder;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrderLine;
 import com.ntaganira.heritier.iWarehouse.entity.Supplier;
+import com.ntaganira.heritier.iWarehouse.entity.TransactionTicket;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.GoodsReceiptStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
@@ -67,10 +68,13 @@ public class GoodsReceiptService {
     private final SettingService settingService;
     private final Clock clock;
 
+    private final TicketService ticketService;
+
     public GoodsReceiptService(GoodsReceiptRepository repo, CrateBatchRepository crateRepo,
                                PurchaseOrderRepository orderRepo, ProductRepository productRepo,
                                StockService stockService, PostingService postingService, ExchangeRateService rateService,
-                               DocumentNumberService numbers, SettingService settingService, Clock clock) {
+                               DocumentNumberService numbers, SettingService settingService, Clock clock, TicketService ticketService) {
+        this.ticketService = ticketService;
         this.repo = repo;
         this.crateRepo = crateRepo;
         this.orderRepo = orderRepo;
@@ -207,6 +211,7 @@ public class GoodsReceiptService {
     public GoodsReceipt update(UUID id, GoodsReceiptDto dto) {
         GoodsReceipt receipt = findDetailed(id);
         requireDraft(receipt);
+        requireNoOpenTicket(receipt);
         PurchaseOrder order = orderRepo.findWithLinesById(receipt.getPurchaseOrder().getId())
                 .orElseThrow(() -> new NotFoundException("PurchaseOrder", receipt.getPurchaseOrder().getId()));
         requireReceivable(order);
@@ -220,6 +225,7 @@ public class GoodsReceiptService {
     public GoodsReceipt cancel(UUID id, String reason) {
         GoodsReceipt receipt = findById(id);
         requireDraft(receipt);
+        requireNoOpenTicket(receipt);
         receipt.setStatus(GoodsReceiptStatus.CANCELLED);
         receipt.setCancelReason(reason.trim());
         return receipt;
@@ -286,8 +292,48 @@ public class GoodsReceiptService {
         }
     }
 
+    /**
+     * Raises the Transaction Ticket of a draft that posts through it (Settings' gate), or raises it again once rejected:
+     * its good sheets and m². Who received it raises it; three other people sign it (Annex I).
+     */
+    @Transactional
+    public TransactionTicket raiseTicket(UUID id) {
+        GoodsReceipt receipt = findDetailed(id);
+        requireDraft(receipt);
+        if (!ticketService.gateReceipts()) {
+            throw BusinessException.of("receipt.ticket.notNeeded");
+        }
+        if (receipt.getSheets() <= 0) {
+            throw BusinessException.of("receipt.ticket.noSheets", receipt.getNumber());
+        }
+        BigDecimal area = receipt.getCrates().stream()
+                .map(c -> Pricing.areaM2(c.getWidthMm(), c.getHeightMm()).multiply(BigDecimal.valueOf(c.getSheets())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return ticketService.raiseReceipt(id, receipt.getNumber(), receipt.getSheets(), area);
+    }
+
+    /** A draft whose ticket is being signed does not change: the signers check what it says. Reject the ticket first. */
+    private void requireNoOpenTicket(GoodsReceipt receipt) {
+        ticketService.receiptTicket(receipt.getId()).filter(TransactionTicket::isOpen).ifPresent(t -> {
+            throw BusinessException.of("receipt.ticket.open", receipt.getNumber(), t.getNumber());
+        });
+    }
+
     @Transactional
     public PostResult post(UUID id) {
+        if (ticketService.gateReceipts()) {
+            throw BusinessException.of("receipt.post.byTicket");      // Annex I step 4: the ledger moves only on its ticket
+        }
+        return doPost(id);
+    }
+
+    /** Posts a receipt whose countersigned ticket Finance posts (TicketPostingService), inside its transaction. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    PostResult postFromTicket(UUID id) {
+        return doPost(id);
+    }
+
+    private PostResult doPost(UUID id) {
         // Ids only: the receipt itself is read after the locks, so its status is current.
         UUID orderId = repo.findOrderId(id).orElseThrow(() -> new NotFoundException("GoodsReceipt", id));
         Map<UUID, Product> products = productRepo.lockAllById(repo.findProductIds(id)).stream()

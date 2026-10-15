@@ -20,12 +20,18 @@
         </div>
         <div class="btn-group">
             <a href="/goods-receipts" class="btn btn-outline" th:text="#{common.back}">Back</a>
-            <th:block th:if="${canReceive and s == 'DRAFT'}">
-                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{receipt.cancel}">Cancel receipt</button>
-                <a th:href="@{/goods-receipts/{id}/edit(id=${receipt.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
-                <form th:action="@{/goods-receipts/{id}/post(id=${receipt.id})}" method="post" class="row-action-form confirm-submit"
+            <th:block th:if="${canReceive and s == 'DRAFT'}" th:with="signing=${ticket != null and ticket.open}">
+                <th:block th:unless="${signing}">
+                    <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{receipt.cancel}">Cancel receipt</button>
+                    <a th:href="@{/goods-receipts/{id}/edit(id=${receipt.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                </th:block>
+                <form th:unless="${gate}" th:action="@{/goods-receipts/{id}/post(id=${receipt.id})}" method="post" class="row-action-form confirm-submit"
                       th:attr="data-confirm=#{receipt.postConfirm(${receipt.number}, ${receipt.sheets})}">
                     <button type="submit" class="btn btn-primary" th:text="#{receipt.post}">Post into stock</button>
+                </form>
+                <form th:if="${gate and !signing}" th:action="@{/goods-receipts/{id}/ticket(id=${receipt.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{receipt.ticket.confirm(${receipt.number}, ${receipt.sheets})}">
+                    <button type="submit" class="btn btn-primary" th:text="${ticket == null} ? #{receipt.ticket.raise} : #{receipt.ticket.raiseAgain}">Raise its ticket</button>
                 </form>
             </th:block>
             <th:block th:if="${canPrint and s == 'POSTED' and receipt.sheets > 0}">
@@ -45,7 +51,16 @@
         <span class="mono" sec:authorize="!(hasAuthority('PAGE_SHIPMENTS') and hasAuthority('PERM_VIEW_SHIPMENT'))" th:text="${landing.shipment.number}">SHP-WH-2026-000001</span>
         <span th:text="#{receipt.inShipmentText}">holds the freight, duty and clearing of these crates.</span>
     </div>
-    <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{receipt.draftNote}">Draft: nothing is in stock yet. Check the crates, then post: each good sheet becomes a stock unit on its rack, with a label to print.</div>
+    <div class="doc-note" th:if="${ticket != null}">
+        <strong th:text="#{receipt.ticket.label}">Transaction Ticket:</strong>
+        <a class="mono" th:href="@{/tickets/{id}(id=${ticket.id})}" sec:authorize="hasAuthority('PAGE_TRANSACTION_TICKETS') and hasAuthority('PERM_VIEW_TICKET')" th:text="${ticket.number}">TT-WH-2026-000001</a>
+        <span class="mono" sec:authorize="!(hasAuthority('PAGE_TRANSACTION_TICKETS') and hasAuthority('PERM_VIEW_TICKET'))" th:text="${ticket.number}">TT-WH-2026-000001</span>
+        &middot; <th:block th:replace="~{tickets/list :: ticketStatus(${ticket.status})}"></th:block>
+        <span th:if="${s == 'DRAFT' and ticket.open}" th:text="#{receipt.ticket.signing}">It is being signed: the sheets enter stock when Finance posts it. The receipt cannot change meanwhile.</span>
+        <span th:if="${s == 'DRAFT' and ticket.status.name() == 'REJECTED'}" th:text="#{receipt.ticket.rejected(${ticket.rejectReason})}">Rejected: correct the receipt, then raise its ticket again.</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'DRAFT' and gate and ticket == null}" th:text="#{receipt.ticket.gateNote}">Receipts post through their Transaction Ticket: check the crates, then raise its ticket. Supply Chain verifies it, Commercial countersigns it, and the sheets enter stock when Finance posts it.</div>
+    <div class="doc-note" th:if="${s == 'DRAFT' and !gate}" th:text="#{receipt.draftNote}">Draft: nothing is in stock yet. Check the crates, then post: each good sheet becomes a stock unit on its rack, with a label to print.</div>
 
     <div class="kpi-grid doc-kpis">
         <div class="kpi-card">

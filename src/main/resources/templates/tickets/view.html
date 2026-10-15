@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${ticket.number}, ~{::content})}">
+<head><title>Transaction ticket - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${ticket.status.name()},
+        canVerify=${#authorization.expression('hasAuthority(''PERM_VERIFY_TICKET'')')},
+        canCountersign=${#authorization.expression('hasAuthority(''PERM_COUNTERSIGN_TICKET'')')},
+        canPost=${#authorization.expression('hasAuthority(''PERM_POST_TICKET'')')},
+        seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
+        mayVerify=${s == 'RAISED' and canVerify and !raiser},
+        mayCountersign=${s == 'VERIFIED' and canCountersign and !raiser and !verifier},
+        mayPost=${s == 'COUNTERSIGNED' and canPost and !raiser and !verifier and !countersigner},
+        mayReject=${ticket.open and (canVerify or canCountersign or canPost) and !raiser}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${ticket.number}">TT-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{${'ticket.kind.' + ticket.kind}}">Goods receipt</span>
+                &middot; <th:block th:replace="~{tickets/list :: ticketStatus(${ticket.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/tickets" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:if="${mayReject}" th:text="#{creditNote.request.reject}">Reject</button>
+            <button type="button" class="btn btn-primary" data-modal-open="verify-modal" th:if="${mayVerify}" th:text="#{ticket.verify}">Verify</button>
+            <button type="button" class="btn btn-primary" data-modal-open="countersign-modal" th:if="${mayCountersign}" th:text="#{ticket.countersign}">Countersign</button>
+            <form th:if="${mayPost}" th:action="@{/tickets/{id}/post(id=${ticket.id})}" method="post" class="row-action-form confirm-submit"
+                  th:attr="data-confirm=${ticket.movementPosted} ? #{ticket.postConfirm(${ticket.number})} : #{ticket.postReceiptConfirm(${ticket.number}, ${ticket.sourceNumber})}">
+                <button type="submit" class="btn btn-primary" th:text="#{ticket.post}">Post</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${ticket.open}">
+        <span th:text="#{${'ticket.waiting.' + s}}">Supply Chain verifies it against the glass that moved.</span>
+        <span th:if="${raiser}" th:text="#{ticket.notYourOwn}">You raised it: three other people sign it.</span>
+        <span th:if="${verifier or countersigner}" th:text="#{ticket.notAgain}">You signed it already: someone else takes the next step.</span>
+    </div>
+    <div class="doc-note" th:if="${!ticket.movementPosted and ticket.open}" th:text="#{ticket.receiptWaits(${ticket.sourceNumber})}">The goods receipt waits for this ticket: its sheets enter stock when Finance posts it.</div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED'}">
+        <strong th:text="#{creditNote.request.rejectedBy(${ticket.rejectedBy})}">Rejected by finance1:</strong>
+        <span th:text="${ticket.rejectReason}">The count does not match the crate</span>
+        <span th:if="${ticket.kind.name() == 'RECEIPT' and !ticket.movementPosted}" th:text="#{ticket.raiseAgain}">Correct the goods receipt, then raise its ticket again from it.</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{ticket.source}">Document</label>
+                    <div class="value">
+                        <a class="mono" th:if="${ticket.sourcePath != null}" th:href="${ticket.sourcePath}" th:text="${ticket.sourceNumber}">GRN-WH-2026-000001</a>
+                        <span class="mono" th:unless="${ticket.sourcePath != null}" th:text="${ticket.sourceNumber}">GRN-WH-2026-000001</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ticket.units}">Units</label>
+                    <div class="value" th:text="${ticket.pieces}">12</div>
+                    <div class="cell-sub" th:text="${@num.m2(ticket.areaM2) + ' m²'}">86.67 m²</div>
+                </div>
+                <div class="item" th:if="${seeCost}">
+                    <label th:text="#{ticket.value}">Cost (RWF)</label>
+                    <div class="value" th:text="${ticket.movementPosted} ? ${@num.money(ticket.value)} : #{ticket.valueOnPosting}">1,250,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ticket.raised}">Raised</label>
+                    <div class="value" th:text="${#temporals.format(ticket.raisedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</div>
+                    <div class="cell-sub" th:text="${ticket.raisedBy}">store1</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ticket.verifiedLabel}">Verified (Supply Chain)</label>
+                    <div class="value" th:text="${ticket.verifiedAt != null} ? ${#temporals.format(ticket.verifiedAt, 'dd/MM/yyyy HH:mm')} : '—'">15/10/2026 11:00</div>
+                    <div class="cell-sub" th:if="${ticket.verifiedBy != null}" th:text="${ticket.verifiedBy + (ticket.verifyNote != null ? ' · ' + ticket.verifyNote : '')}">supply1</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ticket.countersignedLabel}">Countersigned (Commercial)</label>
+                    <div class="value" th:text="${ticket.countersignedAt != null} ? ${#temporals.format(ticket.countersignedAt, 'dd/MM/yyyy HH:mm')} : '—'">15/10/2026 11:30</div>
+                    <div class="cell-sub" th:if="${ticket.countersignedBy != null}" th:text="${ticket.countersignedBy + (ticket.countersignNote != null ? ' · ' + ticket.countersignNote : '')}">sales1</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{ticket.postedLabel}">Posted (Finance)</label>
+                    <div class="value" th:text="${ticket.postedAt != null} ? ${#temporals.format(ticket.postedAt, 'dd/MM/yyyy HH:mm')} : '—'">15/10/2026 12:00</div>
+                    <div class="cell-sub" th:if="${ticket.postedBy != null}" th:text="${ticket.postedBy}">finance1</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-units" th:classappend="${tab == 'units'} ? 'active'">
+                <span th:text="#{ticket.unitsTab}">Units moved</span>
+                <span class="section-count" th:text="${moved.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-units" th:classappend="${tab == 'units'} ? 'active'">
+                <p class="form-note" th:if="${moved.isEmpty() and !ticket.movementPosted}" th:text="#{ticket.noMovementsYet}">No stock has moved yet: the sheets of the goods receipt are created when this ticket is posted.</p>
+                <div class="table-container" th:unless="${moved.isEmpty()}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{summary.group.PRODUCT}">Glass</th>
+                                <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                                <th class="num" th:text="#{summary.area}">m²</th>
+                                <th th:text="#{stock.movementType}">Movement</th>
+                                <th th:text="#{stock.fromTo}">From → to</th>
+                                <th th:text="#{activity.dateTime}">Date &amp; Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="m : ${moved}">
+                                <td>
+                                    <a class="mono" th:href="@{/stock/{id}(id=${m.unitId})}" sec:authorize="hasAuthority('PAGE_STOCK')" th:text="${m.unitCode}">U-WH-000001</a>
+                                    <span class="mono" sec:authorize="!hasAuthority('PAGE_STOCK')" th:text="${m.unitCode}">U-WH-000001</span>
+                                </td>
+                                <td class="mono" th:text="${m.productCode}">CLR-6</td>
+                                <td class="num nowrap" th:text="${m.widthMm + ' × ' + m.heightMm}">3210 × 2250</td>
+                                <td class="num" th:text="${@num.m2(m.areaM2)}">7.2225</td>
+                                <td th:text="#{${'stock.movement.' + m.type}}">Receipt</td>
+                                <td class="mono nowrap" th:text="${(m.fromLocationId != null and locations.get(m.fromLocationId) != null ? locations.get(m.fromLocationId).code : '—')
+                                        + ' → ' + (m.toLocationId != null and locations.get(m.toLocationId) != null ? locations.get(m.toLocationId).code : '—')}">WH-A-R01 → WH-A-R02</td>
+                                <td>
+                                    <span class="nowrap" th:text="${#temporals.format(m.at, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                                    <div class="cell-sub" th:text="${m.username}">store1</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/tickets/' + ${ticket.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signing: a note if the signer has one -->
+    <div class="modal-overlay" id="verify-modal" th:if="${mayVerify}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="verify-title">
+            <div class="modal-header">
+                <h3 id="verify-title" th:text="#{ticket.verifyTitle(${ticket.number})}">Verify TT-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="verify-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/tickets/{id}/verify(id=${ticket.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{ticket.verifyText}">You checked the glass that moved against the ticket: the units, sizes and places.</p>
+                    <div class="form-group">
+                        <label for="verify-note" th:text="#{ticket.note}">Note (optional)</label>
+                        <input type="text" id="verify-note" name="note" maxlength="255" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="verify-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{ticket.verify}">Verify</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="modal-overlay" id="countersign-modal" th:if="${mayCountersign}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="countersign-title">
+            <div class="modal-header">
+                <h3 id="countersign-title" th:text="#{ticket.countersignTitle(${ticket.number})}">Countersign TT-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="countersign-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/tickets/{id}/countersign(id=${ticket.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{ticket.countersignText}">The movement answers to an order, a request or a return you know of.</p>
+                    <div class="form-group">
+                        <label for="countersign-note" th:text="#{ticket.note}">Note (optional)</label>
+                        <input type="text" id="countersign-note" name="note" maxlength="255" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="countersign-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{ticket.countersign}">Countersign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <th:block th:if="${mayReject}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{ticket.rejectTitle(${ticket.number})}, @{/tickets/{id}/reject(id=${ticket.id})}, #{ticket.rejectText}, #{creditNote.request.reject})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

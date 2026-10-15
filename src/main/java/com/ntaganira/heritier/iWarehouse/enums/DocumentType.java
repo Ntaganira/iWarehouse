@@ -60,6 +60,10 @@ public enum DocumentType {
     CREDIT_APPLICATION("CAP"),
     /** Prices of a price list changed, waiting for approval (SDP 5): PCH-WH-2026-000001. */
     PRICE_CHANGE("PCH"),
+    /** Glass sent from one site to another (IMP 11, TRF-007): STR-WH-2026-000001. */
+    SITE_TRANSFER("STR"),
+    /** The ticket of a stock movement, verified, countersigned and posted (F-05, Annex I): TT-WH-2026-000001. */
+    TRANSACTION_TICKET("TT"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

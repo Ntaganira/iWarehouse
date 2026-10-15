@@ -1,7 +1,8 @@
 /*
  * iWarehouse - forms with editable rows: purchase order lines (PRC-01), goods receipt crates (PRC-02),
  * shipment bills (PRC-03), quotation lines (POS-03: whole sheets have no processing, holes or mark) and
- * manual journal lines (ACC-05: a debit or a credit per line, the totals and whether they balance).
+ * manual journal lines (ACC-05: a debit or a credit per line, the totals and whether they balance) and the glass a
+ * transfer between sites asks for (IMP 11: a glass, a size if it matters, the sheets).
  * Add and remove rows, keep the row numbers in the field names continuous (lines[0], lines[1]...), drop
  * empty rows before sending, and show live m² and amounts. The server checks everything again; these
  * figures are only a preview (the order total is rounded once, like the server does).
@@ -9,14 +10,15 @@
 (function () {
     'use strict';
 
-    const form = document.querySelector('form.po-form, form.receipt-form, form.shipment-form, form.quote-form, form.journal-form');
+    const form = document.querySelector('form.po-form, form.receipt-form, form.shipment-form, form.quote-form, form.journal-form, form.transfer-form');
     if (!form) return;
 
     const isOrder = form.classList.contains('po-form');
     const isShipment = form.classList.contains('shipment-form');
     const isQuote = form.classList.contains('quote-form');
     const isJournal = form.classList.contains('journal-form');
-    const prefix = isOrder || isQuote || isJournal ? 'lines' : (isShipment ? 'costs' : 'crates');
+    const isTransfer = form.classList.contains('transfer-form');
+    const prefix = isOrder || isQuote || isJournal || isTransfer ? 'lines' : (isShipment ? 'costs' : 'crates');
     const body = form.querySelector('tbody.line-body');
     const template = form.querySelector('template.line-template');
     const addButton = form.querySelector('.line-add');
@@ -54,6 +56,9 @@
         if (isOrder) {
             return !field(row, 'productId').value && ['widthMm', 'heightMm', 'quantity', 'pricePerM2']
                 .every(n => !field(row, n).value);
+        }
+        if (isTransfer) {
+            return !field(row, 'productId').value && ['widthMm', 'heightMm', 'quantity'].every(n => !field(row, n).value);
         }
         if (isJournal) {
             return !field(row, 'accountId').value && !field(row, 'debit').value && !field(row, 'credit').value
@@ -221,7 +226,7 @@
     // ---------------------------------------------------------------- shared
 
     function recalc() {
-        if (isShipment) return; // bills are in several currencies: the shipment page shows them in RWF
+        if (isShipment || isTransfer) return; // bills are in several currencies; a transfer has no amounts
         if (isJournal) recalcJournal(); else if (isQuote) recalcQuote(); else if (isOrder) recalcOrder(); else recalcReceipt();
     }
 
@@ -245,7 +250,7 @@
     body.addEventListener('change', (e) => {
         if (isQuote && e.target.matches('[data-quote-kind]')) {
             onKind(e.target.closest('tr'));
-        } else if (!isOrder && !isShipment && !isQuote && !isJournal && e.target.matches('select[name$="].poLineId"]')) {
+        } else if (!isOrder && !isShipment && !isQuote && !isJournal && !isTransfer && e.target.matches('select[name$="].poLineId"]')) {
             onLineChange(e.target);
         } else {
             recalc();
@@ -273,7 +278,7 @@
     if (isQuote) {
         rows().forEach(onKind);
     }
-    if (!isOrder && !isShipment && !isQuote && !isJournal) {
+    if (!isOrder && !isShipment && !isQuote && !isJournal && !isTransfer) {
         body.querySelectorAll('select[name$="].poLineId"]').forEach(select => {
             const option = select.selectedOptions[0];
             if (option && option.dataset.w) {

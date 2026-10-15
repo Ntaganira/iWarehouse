@@ -8,6 +8,7 @@ import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.GoodsReceiptDto;
 import com.ntaganira.heritier.iWarehouse.entity.CrateBatch;
 import com.ntaganira.heritier.iWarehouse.entity.GoodsReceipt;
+import com.ntaganira.heritier.iWarehouse.entity.TransactionTicket;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrder;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
@@ -21,6 +22,7 @@ import com.ntaganira.heritier.iWarehouse.service.GoodsReceiptService;
 import com.ntaganira.heritier.iWarehouse.service.PurchaseOrderService;
 import com.ntaganira.heritier.iWarehouse.service.ShipmentService;
 import com.ntaganira.heritier.iWarehouse.service.StockService;
+import com.ntaganira.heritier.iWarehouse.service.TicketService;
 import jakarta.validation.Validator;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -65,13 +67,15 @@ public class GoodsReceiptController {
     private final ActivityLogService activityLogService;
     private final SpringValidatorAdapter validator;
     private final Messages messages;
+    private final TicketService ticketService;
 
     public GoodsReceiptController(GoodsReceiptService receiptService, PurchaseOrderService orderService,
                                   StockService stockService, ShipmentService shipmentService,
                                   DataChangeService dataChangeService, JournalService journalService,
                                   ActivityLogService activityLogService, Validator validator, Messages messages,
-            AttachmentService attachmentService) {
+            AttachmentService attachmentService, TicketService ticketService) {
         this.attachmentService = attachmentService;
+        this.ticketService = ticketService;
         this.receiptService = receiptService;
         this.orderService = orderService;
         this.stockService = stockService;
@@ -114,6 +118,9 @@ public class GoodsReceiptController {
         model.addAttribute("history", dataChangeService.historyWithChildren("GoodsReceipt", id.toString(),
                 "CrateBatch", "goodsReceipt", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.GOODS_RECEIPT, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        // Annex I: with the Settings' gate a draft posts through its Transaction Ticket
+        model.addAttribute("gate", ticketService.gateReceipts());
+        model.addAttribute("ticket", ticketService.receiptTicket(id).orElse(null));
         model.addAttribute("tab", open);
         return "goods-receipts/view";
     }
@@ -236,6 +243,24 @@ public class GoodsReceiptController {
             redirect.addFlashAttribute("flashError", error);
             return "redirect:/goods-receipts/" + id;
         }
+    }
+
+    /** Raises the receipt's Transaction Ticket (or raises it again once rejected) when receipts post through it. */
+    @PostMapping("/{id}/ticket")
+    @PreAuthorize("hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_RECEIVE_GOODS')")
+    public String raiseTicket(@PathVariable UUID id, RedirectAttributes redirect) {
+        try {
+            TransactionTicket ticket = receiptService.raiseTicket(id);
+            activityLogService.record(MODULE, "CREATE_TICKET", "Raised ticket " + ticket.getNumber() + " for goods receipt "
+                    + ticket.getSourceNumber() + ": " + ticket.getPieces() + " sheet(s)", ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("receipt.ticket.raised", ticket.getNumber()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "CREATE_TICKET", "Failed to raise the ticket of goods receipt " + numberOf(id)
+                    + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/goods-receipts/" + id;
     }
 
     @PostMapping("/{id}/cancel")

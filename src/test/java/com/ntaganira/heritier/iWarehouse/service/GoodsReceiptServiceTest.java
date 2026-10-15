@@ -48,6 +48,7 @@ class GoodsReceiptServiceTest {
     private final Location slot = location("WH-A-R01-S01", LocationType.SLOT, rack1.getId(), null, null, false);
     private PurchaseOrder order;
     private SettingService settings;
+    private TicketService tickets;
     private PurchaseOrderLine line1;
     private PurchaseOrderLine line2;
 
@@ -58,6 +59,8 @@ class GoodsReceiptServiceTest {
         productRepo = mock(ProductRepository.class);
         rateService = mock(ExchangeRateService.class);
         settings = mock(SettingService.class);
+        tickets = mock(TicketService.class);
+        when(tickets.receiptTicket(any())).thenReturn(Optional.empty());
         when(settings.getDecimal(SettingKey.GLASS_DENSITY)).thenReturn(new BigDecimal("2.5"));
         // Real static helpers (rackOf, receivingLocations) over mocked data.
         stockService = mock(StockService.class);
@@ -83,7 +86,7 @@ class GoodsReceiptServiceTest {
 
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
         service = new GoodsReceiptService(repo, mock(CrateBatchRepository.class), orderRepo, productRepo, stockService,
-                mock(PostingService.class), rateService, mock(DocumentNumberService.class), settings, clock);
+                mock(PostingService.class), rateService, mock(DocumentNumberService.class), settings, clock, tickets);
     }
 
     // ---------------------------------------------------------------- checks
@@ -279,6 +282,56 @@ class GoodsReceiptServiceTest {
                 .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.notDraft"));
         assertThatThrownBy(() -> service.cancel(receipt.getId(), "typo"))
                 .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.notDraft"));
+    }
+
+    // ---------------------------------------------------------------- Transaction Tickets (Annex I, D6)
+
+    @Test
+    void withTheGateAReceiptPostsOnlyThroughItsTicket() {
+        when(tickets.gateReceipts()).thenReturn(true);
+        GoodsReceipt receipt = draft(crate(line1, "C-01", 10, 0, rack2));
+        stubPosting(receipt);
+        assertThatThrownBy(() -> service.post(receipt.getId()))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.post.byTicket"));
+        verify(productRepo, never()).lockAllById(any());
+    }
+
+    @Test
+    void itsTicketCarriesTheGoodSheetsAndTheirArea() {
+        when(tickets.gateReceipts()).thenReturn(true);
+        GoodsReceipt receipt = draft(crate(line1, "C-01", 18, 2, rack1), crate(line2, "C-02", 10, 0, rack2));
+        when(repo.findWithCratesById(receipt.getId())).thenReturn(Optional.of(receipt));
+        service.raiseTicket(receipt.getId());
+        // 28 good sheets of 3210 x 2250 mm (7.2225 m² each); the broken ones never enter stock
+        verify(tickets).raiseReceipt(receipt.getId(), "GRN-WH-2026-000001", 28, new BigDecimal("202.2300"));
+    }
+
+    @Test
+    void withoutTheGateThereIsNoReceiptTicketToRaise() {
+        when(tickets.gateReceipts()).thenReturn(false);
+        GoodsReceipt receipt = draft(crate(line1, "C-01", 10, 0, rack2));
+        when(repo.findWithCratesById(receipt.getId())).thenReturn(Optional.of(receipt));
+        assertThatThrownBy(() -> service.raiseTicket(receipt.getId()))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.ticket.notNeeded"));
+    }
+
+    @Test
+    void aReceiptBeingSignedNeitherChangesNorIsCancelled() {
+        GoodsReceipt receipt = draft(crate(line1, "C-01", 10, 0, rack2));
+        when(repo.findWithCratesById(receipt.getId())).thenReturn(Optional.of(receipt));
+        when(repo.findById(receipt.getId())).thenReturn(Optional.of(receipt));
+        TransactionTicket ticket = new TransactionTicket();
+        ticket.setNumber("TT-WH-2026-000001");
+        ticket.setStatus(TicketStatus.VERIFIED);
+        when(tickets.receiptTicket(receipt.getId())).thenReturn(Optional.of(ticket));
+        assertThatThrownBy(() -> service.cancel(receipt.getId(), "typo"))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.ticket.open"));
+        assertThatThrownBy(() -> service.update(receipt.getId(), new GoodsReceiptDto()))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.ticket.open"));
+        // Rejected, the receipt is corrected again
+        ticket.setStatus(TicketStatus.REJECTED);
+        service.cancel(receipt.getId(), "typo");
+        assertThat(receipt.getStatus()).isEqualTo(GoodsReceiptStatus.CANCELLED);
     }
 
     // ---------------------------------------------------------------- helpers

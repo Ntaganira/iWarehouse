@@ -89,6 +89,8 @@ public class StockService {
     public static final String REF_TRIP = "TRIP";
     /** A unit missing after a trip, settled on its audit case (FLT-10). */
     public static final String REF_AUDIT_CASE = "AUDIT_CASE";
+    /** A transfer between sites (IMP 11). */
+    public static final String REF_SITE_TRANSFER = "SITE_TRANSFER";
     /** Status filter value for every status; empty means "in stock". */
     public static final String ALL_STATUSES = "all";
 
@@ -285,10 +287,14 @@ public class StockService {
         return null;
     }
 
-    /** Pieces and kg held on each rack now, keyed by rack id; slots count towards their rack (MD-03). */
+    /**
+     * Pieces and kg held on each rack now, keyed by rack id; slots count towards their rack (MD-03). Glass in transit to
+     * another site keeps the rack it left as its location but is no longer on it.
+     */
     public Map<UUID, RackLoad> rackLoads(Map<UUID, Location> byId) {
         Map<UUID, RackLoad> loads = new HashMap<>();
-        for (Object[] row : unitRepo.loadByLocation(StockStatus.onHand())) {
+        List<StockStatus> onRacks = StockStatus.onHand().stream().filter(s -> s != StockStatus.IN_TRANSIT).toList();
+        for (Object[] row : unitRepo.loadByLocation(onRacks)) {
             Location rack = rackOf(byId.get((UUID) row[0]), byId);
             if (rack != null) {
                 loads.merge(rack.getId(), new RackLoad(((Number) row[1]).longValue(), (BigDecimal) row[2]),
@@ -532,6 +538,28 @@ public class StockService {
         unit.setStatus(StockStatus.AVAILABLE);
         unit.setLocation(location);
         record(unit, MovementType.UNLOAD, from, StockStatus.ON_VEHICLE, LocalDateTime.now(clock), null, refType, refId, refNumber);
+    }
+
+    /**
+     * A unit sent to another site on an approved transfer (IMP 11.2): IN_TRANSIT, still on hand at its own cost and still
+     * on the rack it left until it arrives; nothing else may move, cut, sell or load it meanwhile.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void dispatch(StockUnit unit, UUID transferId, String transferNumber) {
+        requireAllowed(unit, StockAction.DISPATCH);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setStatus(StockStatus.IN_TRANSIT);
+        record(unit, MovementType.DISPATCH, from, StockStatus.AVAILABLE, LocalDateTime.now(clock), null, REF_SITE_TRANSFER, transferId, transferNumber);
+    }
+
+    /** A unit arrived at the other site, its label scanned (IMP 11.2): AVAILABLE on the rack or slot chosen there. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void arrive(StockUnit unit, Location location, UUID transferId, String transferNumber) {
+        requireAllowed(unit, StockAction.ARRIVE);
+        UUID from = unit.getLocation() == null ? null : unit.getLocation().getId();
+        unit.setStatus(StockStatus.AVAILABLE);
+        unit.setLocation(location);
+        record(unit, MovementType.ARRIVAL, from, StockStatus.IN_TRANSIT, LocalDateTime.now(clock), null, REF_SITE_TRANSFER, transferId, transferNumber);
     }
 
     /** A unit broken on the road, its breakage accepted (FLT-08): BROKEN, off the vehicle; it leaves stock. */

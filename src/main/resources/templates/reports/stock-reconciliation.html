@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{stockRecon.title}, ~{::content})}">
+<head><title>Stock reconciliation - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="v=${recon.vehicles}, st=${recon.sites},
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_STOCK_RECONCILIATION'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{stockRecon.title}">Stock reconciliation</h1>
+            <div class="subtitle" th:text="#{stockRecon.subtitle}">The month's stock movements against vehicles, sites, tickets and the inventory account, signed off each month</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/stock-reconciliation/export(month=${monthValue})})}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" th:if="${canReview and ended and review == null}" th:text="#{stockRecon.signOff}">Sign the month off</button>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/reports/stock-reconciliation}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{exceptions.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${monthValue}" th:attr="max=${maxMonth}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:if="${review != null}">
+        <strong th:text="#{stockRecon.reviewedBy(${review.reviewedBy}, ${#temporals.format(review.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Signed off by finance1 on 02/11/2026 09:00.</strong>
+        <span th:if="${review.note != null}" th:text="${review.note}">Two sheets written off after the count</span>
+        <span th:text="#{stockRecon.keptFigures(${@num.money(review.varianceValue)}, ${@num.m2(review.variancePercent)})}">Figures kept: 25,000 RWF written off (0.12 % of the stock value).</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${review == null and !ended}" th:text="#{stockRecon.running}">The month is not over: the figures move until it ends; it is signed off once ended.</div>
+    <div class="doc-note is-warning" th:if="${review == null and ended}" th:text="#{stockRecon.toSign}">This month is not signed off yet.</div>
+    <div class="doc-note is-danger" th:if="${recon.aboveTolerance}"
+         th:text="#{stockRecon.above(${@num.m2(recon.percent)}, ${@num.m2(recon.tolerance)})}">Glass written off, broken or lost is 0.80 % of the stock value, above the 0.5 % tolerance: the Internal Controller is told when it is signed off.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{stockRecon.kpi.vehicles}">Loaded on vehicles</div>
+                <div class="kpi-value" th:text="${v.loaded}">40</div>
+                <div class="kpi-trend" th:classappend="${v.difference == 0} ? 'flat' : 'bad'"><span class="vs" th:text="#{stockRecon.kpi.missing(${v.difference})}">0 not accounted for</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{stockRecon.kpi.sites}">Sent to other sites</div>
+                <div class="kpi-value" th:text="${st.dispatched}">8</div>
+                <div class="kpi-trend" th:classappend="${st.difference == 0} ? 'flat' : 'bad'"><span class="vs" th:text="#{stockRecon.kpi.notArrived(${st.difference}, ${st.inTransit})}">0 not arrived · 2 in transit</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1"></rect></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{stockRecon.kpi.tickets}">Tickets still open</div>
+                <div class="kpi-value" th:text="${recon.ticketsOpen}">3</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{stockRecon.kpi.ticketsOf(${recon.ticketsRaised})}">of 25 raised</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{stockRecon.kpi.variance}">Written off, broken or lost</div>
+                <div class="kpi-value" th:with="val=${@num.money(recon.lostValue)}" th:classappend="${#strings.length(val) > 9} ? 'is-long'" th:text="${val}">25,000</div>
+                <div class="kpi-trend" th:classappend="${recon.aboveTolerance} ? 'bad' : 'flat'"><span class="vs" th:text="#{stockRecon.kpi.percent(${@num.m2(recon.percent)}, ${@num.m2(recon.tolerance)})}">0.12 % of stock (tolerance 0.5 %)</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{stockRecon.byType}">Movements by type</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{stock.movementType}">Movement</th>
+                        <th class="num" th:text="#{stockRecon.count}">Movements</th>
+                        <th class="num" th:text="#{summary.area}">m²</th>
+                        <th class="num" th:text="#{stockRecon.cost}">Cost (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${recon.byType}">
+                        <td th:text="#{${'stock.movement.' + b.type}}">Received</td>
+                        <td class="num" th:text="${b.count}">12</td>
+                        <td class="num" th:text="${@num.m2(b.areaM2)}">86.67</td>
+                        <td class="num" th:text="${@num.money(b.cost)}">1,250,000</td>
+                    </tr>
+                    <tr th:if="${recon.byType.isEmpty()}">
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <h3 th:text="#{stockReview.none}">No movements</h3>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{stockRecon.checks}">Checks</h2>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{stockRecon.loaded}">Units loaded on vehicles</label>
+                    <div class="value" th:text="${v.loaded}">40</div>
+                    <div class="cell-sub" th:text="#{stockRecon.vehicleSplit(${v.sold}, ${v.returned}, ${v.broken}, ${v.onTheRoad})}">32 sold · 6 back · 1 broken · 0 on the road</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stockRecon.missing}">Missing (audit cases)</label>
+                    <div class="value" th:classappend="${v.difference != 0} ? 'text-danger'" th:text="${v.difference}">1</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stockRecon.dispatched}">Units sent to other sites</label>
+                    <div class="value" th:text="${st.dispatched}">8</div>
+                    <div class="cell-sub" th:text="#{stockRecon.siteSplit(${st.arrived}, ${st.inTransit})}">6 arrived · 2 in transit</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stockRecon.notArrived}">Received short</label>
+                    <div class="value" th:classappend="${st.difference != 0} ? 'text-danger'" th:text="${st.difference}">0</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stockRecon.ticketsOpen}">Tickets still open</label>
+                    <div class="value">
+                        <a th:href="@{/tickets(status='open')}" sec:authorize="hasAuthority('PAGE_TRANSACTION_TICKETS') and hasAuthority('PERM_VIEW_TICKET')" th:text="${recon.ticketsOpen}">3</a>
+                        <span sec:authorize="!(hasAuthority('PAGE_TRANSACTION_TICKETS') and hasAuthority('PERM_VIEW_TICKET'))" th:text="${recon.ticketsOpen}">3</span>
+                    </div>
+                    <div class="cell-sub" th:text="#{stockRecon.kpi.ticketsOf(${recon.ticketsRaised})}">of 25 raised</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stockRecon.lostValue}">Written off, broken or lost (RWF)</label>
+                    <div class="value" th:text="${@num.money(recon.lostValue)}">25,000</div>
+                    <div class="cell-sub" th:text="#{stockRecon.lostUnitsSub(${recon.lostUnits})}">2 units</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{stockRecon.stockValue}">Inventory account at the month's end (RWF)</label>
+                    <div class="value" th:text="${@num.money(recon.stockValue)}">20,800,000</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{stockRecon.monthsReviewed}">Months signed off</span>
+                <span class="section-count" th:text="${reviews.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{exceptions.month}">Month</th>
+                        <th class="num" th:text="#{stockRecon.lostValue}">Written off, broken or lost (RWF)</th>
+                        <th class="num" th:text="#{stockRecon.percentShort}">% of stock</th>
+                        <th class="num" th:text="#{stockRecon.ticketsOpen}">Tickets still open</th>
+                        <th th:text="#{stockReview.signedBy}">Signed off by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${reviews.content}">
+                        <td>
+                            <a class="row-link" th:href="@{/reports/stock-reconciliation(month=${#temporals.format(r.periodStart, 'yyyy-MM')})}" th:text="${#temporals.format(r.periodStart, 'MM/yyyy')}">09/2026</a>
+                            <span class="badge badge-danger" th:if="${r.aboveTolerance}" th:text="#{stockRecon.aboveBadge}">Above tolerance</span>
+                        </td>
+                        <td class="num" th:text="${@num.money(r.varianceValue)}">25,000</td>
+                        <td class="num" th:text="${@num.m2(r.variancePercent)}">0.12</td>
+                        <td class="num" th:text="${r.ticketsOpen}">0</td>
+                        <td>
+                            <span th:text="${r.reviewedBy}">finance1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm')}">02/10/2026 09:00</div>
+                        </td>
+                    </tr>
+                    <tr th:if="${reviews.totalElements == 0}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{stockRecon.noReviews}">No month signed off yet</h3>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${reviews}, '/reports/stock-reconciliation', ${query})}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="review-modal" th:if="${canReview and ended and review == null}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title">
+            <div class="modal-header">
+                <h3 id="review-title" th:text="#{stockRecon.signOffTitle(${#temporals.format(month.atDay(1), 'MM/yyyy')})}">Sign 09/2026 off</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/reports/stock-reconciliation}" method="post" novalidate>
+                <input type="hidden" name="month" th:value="${monthValue}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="${recon.aboveTolerance} ? #{stockRecon.signOffAbove} : #{stockRecon.signOffText}">The figures are kept as they are now. Note what explains any difference.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="${recon.aboveTolerance} ? #{stockRecon.noteRequired} : #{ticket.note}">Note (optional)</label>
+                        <textarea id="review-note" name="note" rows="3" maxlength="500" th:attr="required=${recon.aboveTolerance} ? 'required' : null"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{stockRecon.signOff}">Sign the month off</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

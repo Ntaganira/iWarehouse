@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{ticket.title}, ~{::content})}">
+<head><title>Transaction tickets - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{ticket.title}">Transaction Tickets</h1>
+            <div class="subtitle" th:text="#{ticket.subtitle}">Every stock movement but a sale: raised by whoever moved the glass, verified by Supply Chain, countersigned by Commercial, posted by Finance</div>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:unless="${enabled}" th:text="#{ticket.off}">Transaction Tickets are off in Settings: no new tickets are raised.</div>
+    <div class="doc-note" th:if="${gate}" th:text="#{ticket.gateNote}">Goods receipts post only from their ticket: once Finance posts the ticket, the sheets enter stock.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{ticket.sectionTitle}">Tickets</span>
+                <span class="section-count" th:text="${tickets.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/tickets}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{ticket.searchPh}" th:aria-label="#{ticket.searchPh}">
+                </div>
+                <select name="kind" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{ticket.kind}">
+                    <option value="" th:selected="${kind == null or kind == ''}" th:text="#{ticket.allKinds}">All movements</option>
+                    <option th:each="k : ${kinds}" th:value="${k}" th:selected="${k.name() == kind}" th:text="#{${'ticket.kind.' + k}}">Goods receipt</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="open" th:selected="${status == 'open'}" th:text="#{ticket.open}">To sign</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'ticket.status.' + st}}">Raised</option>
+                </select>
+            </form>
+        </div>
+        <th:block th:replace="~{tickets/list :: ticketTable(${tickets.content}, true)}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${tickets}, '/tickets', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Transaction Tickets: number, movement, document (when the list is not a document's), units, raised, status */-->
+<div th:fragment="ticketTable(rows, showSource)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{ticket.number}">Ticket</th>
+                <th th:if="${showSource}" th:text="#{ticket.source}">Document</th>
+                <th class="num" th:text="#{ticket.units}">Units</th>
+                <th class="num" th:text="#{summary.area}">m²</th>
+                <th th:text="#{ticket.raised}">Raised</th>
+                <th th:text="#{common.status}">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="t : ${rows}">
+                <td>
+                    <a class="row-link strong mono" th:href="@{/tickets/{id}(id=${t.id})}" th:text="${t.number}">TT-WH-2026-000001</a>
+                    <div class="cell-sub" th:text="#{${'ticket.kind.' + t.kind}}">Goods receipt</div>
+                </td>
+                <td th:if="${showSource}">
+                    <a class="mono" th:if="${t.sourcePath != null}" th:href="${t.sourcePath}" th:text="${t.sourceNumber}">GRN-WH-2026-000001</a>
+                    <span class="mono" th:unless="${t.sourcePath != null}" th:text="${t.sourceNumber}">GRN-WH-2026-000001</span>
+                </td>
+                <td class="num" th:text="${t.pieces}">12</td>
+                <td class="num" th:text="${@num.m2(t.areaM2)}">86.67</td>
+                <td>
+                    <span class="nowrap" th:text="${#temporals.format(t.raisedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                    <div class="cell-sub" th:text="${t.raisedBy}">store1</div>
+                </td>
+                <td><th:block th:replace="~{tickets/list :: ticketStatus(${t.status})}"></th:block></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(rows)}">
+                <td th:attr="colspan=${showSource ? 6 : 5}">
+                    <div class="empty-state">
+                        <h3 th:text="#{ticket.empty}">No tickets</h3>
+                        <p th:text="#{ticket.emptyHint}">A ticket is raised for each stock movement but sales</p>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!--/* Status badge of a Transaction Ticket. */-->
+<th:block th:fragment="ticketStatus(s)" th:switch="${s.name()}">
+    <span th:case="'RAISED'" class="badge badge-warning" th:text="#{ticket.status.RAISED}">To verify</span>
+    <span th:case="'VERIFIED'" class="badge badge-info" th:text="#{ticket.status.VERIFIED}">To countersign</span>
+    <span th:case="'COUNTERSIGNED'" class="badge badge-confirmed" th:text="#{ticket.status.COUNTERSIGNED}">To post</span>
+    <span th:case="'POSTED'" class="badge badge-success" th:text="#{ticket.status.POSTED}">Posted</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{${'ticket.status.' + s}}">Rejected</span>
+</th:block>
+</body>
+</html>

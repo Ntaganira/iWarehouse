@@ -91,4 +91,8 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     @Query("select t from Trip t where t.status in :statuses and t.returnedAt >= :from and t.returnedAt < :to order by t.returnedAt, t.number")
     List<Trip> findReturnedBetween(@Param("statuses") Collection<TripStatus> statuses, @Param("from") java.time.LocalDateTime from,
                                    @Param("to") java.time.LocalDateTime to);
+
+    /** Lines of the trips that left in a period: (outcome, trip status, count) (the monthly stock reconciliation). */
+    @Query("select l.outcome, t.status, count(l) from TripLine l join l.trip t where t.departedAt between :from and :to group by l.outcome, t.status")
+    List<Object[]> lineOutcomesDepartedBetween(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 }

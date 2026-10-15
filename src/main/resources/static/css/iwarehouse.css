@@ -4615,3 +4615,13 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
 
 /* A record's reference in a multi-record history may be a bare id with nothing to break on: let it wrap */
 table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
+
+/* Transfers between sites (M12): the request lines keep room for the glass; the delivery note's signatures */
+.transfer-line-table .line-product { min-width: 260px; }
+.transfer-line-table td.num { width: 120px; }
+.print-doc-signs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; margin-top: 14mm; font-size: 9pt; }
+.print-doc-signs > div { display: flex; flex-direction: column; gap: 2mm; }
+.print-doc-signline { min-height: 10mm; padding-top: 1mm; border-bottom: 1px solid #000; }
+@media (max-width: 640px) {
+  .print-doc-signs { grid-template-columns: 1fr; gap: 4mm; }
+}

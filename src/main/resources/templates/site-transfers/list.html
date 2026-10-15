@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{siteTransfer.title}, ~{::content})}">
+<head><title>Site transfers - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{siteTransfer.title}">Site Transfers</h1>
+            <div class="subtitle" th:text="#{siteTransfer.subtitle}">Glass sent from one site to another: asked, approved, dispatched in transit and received label by label</div>
+        </div>
+        <div class="btn-group">
+            <a href="/site-transfers/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_REQUEST_SITE_TRANSFER')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{siteTransfer.new}">Ask for a transfer</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{siteTransfer.sectionTitle}">Transfers</span>
+                <span class="section-count" th:text="${transfers.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/site-transfers}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{siteTransfer.searchPh}" th:aria-label="#{siteTransfer.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="open" th:selected="${status == 'open'}" th:text="#{siteTransfer.open}">Open</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'siteTransfer.status.' + st}}">In transit</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{siteTransfer.number}">Transfer</th>
+                        <th th:text="#{siteTransfer.route}">From → to</th>
+                        <th th:text="#{creditNote.request.asked}">Asked</th>
+                        <th th:text="#{siteTransfer.expectedDispatch}">To leave on</th>
+                        <th th:text="#{siteTransfer.vehicle}">Vehicle</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="t : ${transfers.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/site-transfers/{id}(id=${t.id})}" th:text="${t.number}">STR-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${t.reason}">Stock for the Musanze branch</div>
+                        </td>
+                        <td>
+                            <span th:text="${t.fromSite.name}">Kigali warehouse</span> →
+                            <span th:text="${t.toSite.name}">Musanze branch</span>
+                        </td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(t.requestedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${t.requestedBy}">store1</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(t.expectedDispatch, 'dd/MM/yyyy')}">16/10/2026</td>
+                        <td>
+                            <span class="mono" th:text="${t.vehiclePlate ?: '—'}">RAD 123 A</span>
+                            <div class="cell-sub" th:if="${t.expectedArrival != null}" th:text="#{siteTransfer.arrivesOn(${#temporals.format(t.expectedArrival, 'dd/MM/yyyy HH:mm')})}">arrives 16/10/2026 14:00</div>
+                        </td>
+                        <td><th:block th:replace="~{site-transfers/list :: transferStatus(${t.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${transfers.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{siteTransfer.empty}">No transfers</h3>
+                                <p th:text="#{siteTransfer.emptyHint}">The receiving site asks for glass; the sending site dispatches it</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${transfers}, '/site-transfers', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a transfer between sites. */-->
+<th:block th:fragment="transferStatus(s)" th:switch="${s.name()}">
+    <span th:case="'REQUESTED'" class="badge badge-warning" th:text="#{siteTransfer.status.REQUESTED}">Waiting for approval</span>
+    <span th:case="'APPROVED'" class="badge badge-info" th:text="#{siteTransfer.status.APPROVED}">To dispatch</span>
+    <span th:case="'IN_TRANSIT'" class="badge badge-confirmed" th:text="#{siteTransfer.status.IN_TRANSIT}">In transit</span>
+    <span th:case="'RECEIVED'" class="badge badge-success" th:text="#{siteTransfer.status.RECEIVED}">Received</span>
+    <span th:case="'RECEIVED_SHORT'" class="badge badge-danger" th:text="#{siteTransfer.status.RECEIVED_SHORT}">Received short</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{siteTransfer.status.REJECTED}">Rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{${'siteTransfer.status.' + s}}">Cancelled</span>
+</th:block>
+</body>
+</html>

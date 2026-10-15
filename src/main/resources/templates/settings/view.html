@@ -334,6 +334,52 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.stockControls}">Stock controls</div>
+                                <div class="role-card-desc" th:text="#{settings.group.stockControlsHint}">Transaction Tickets, transfers between sites and the monthly stock reconciliation</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ticketEnabled}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.ticketEnabledHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.ticketEnabled} ? #{settings.onTickets} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ticketGateReceipts}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.ticketGateReceiptsHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.ticketGateReceipts} ? #{settings.onTicketGate} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.transferApproval}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.transferApprovalHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.transferApproval} ? #{settings.onApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.transferDifferenceHours}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.transferDifferenceHoursHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.transferDifferenceHours}">24</span> <span class="unit" th:text="#{settings.unit.hours}">hours</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.reconciliationTolerancePercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.reconciliationTolerancePercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.m2(settings.reconciliationTolerancePercent)}">0.5</span> <span class="unit">%</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

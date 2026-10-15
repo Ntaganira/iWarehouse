@@ -180,7 +180,7 @@ class StockServiceTest {
         assertThat(StockService.parseStatus("")).isNull();
         assertThat(StockService.parseStatus("all")).isNull();
         assertThat(StockStatus.onHand()).containsExactly(StockStatus.RECEIVED, StockStatus.AVAILABLE, StockStatus.RESERVED,
-                StockStatus.IN_CUTTING, StockStatus.ON_VEHICLE);
+                StockStatus.IN_CUTTING, StockStatus.ON_VEHICLE, StockStatus.IN_TRANSIT);
     }
 
     private static Location location(String code, LocationType type, UUID parentId, boolean offcut, boolean enabled) {

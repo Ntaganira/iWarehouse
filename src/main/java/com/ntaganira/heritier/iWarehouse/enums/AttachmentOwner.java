@@ -36,7 +36,9 @@ public enum AttachmentOwner {
     /** A supplier's onboarding papers: registration, TIN certificate, bank letter, references (CMP 08). */
     SUPPLIER("PAGE_SUPPLIERS", "/suppliers/"),
     /** The papers behind a credit application: financial statements, references, the guarantee (F-02). */
-    CREDIT_APPLICATION("PAGE_CREDIT_APPLICATIONS", "/credit-applications/");
+    CREDIT_APPLICATION("PAGE_CREDIT_APPLICATIONS", "/credit-applications/"),
+    /** A transfer's delivery note, signed when it left and when it arrived (TCN-008). */
+    SITE_TRANSFER("PAGE_SITE_TRANSFERS", "/site-transfers/");
 
     private final String page;
     private final String path;

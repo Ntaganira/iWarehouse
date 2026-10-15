@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  The Delegation of Authority on an approval page (Board Paper Annex E). The controller puts the request's check in the
+  model as "authority" (DelegationOfAuthority.Check) while it waits.
+-->
+
+<!-- Inside the page's waiting note: the office it needs, and why the signed-in user cannot decide it -->
+<th:block th:fragment="needs(authority, canApprove, mine)">
+    <th:block th:if="${authority != null}" th:with="office=#{${'authority.level.' + authority.required}}">
+        <span th:text="#{authority.needs(${office})}">It needs the approval of the Chief Operating Officer or above.</span>
+        <span th:if="${authority.board}" th:text="#{authority.boardNote}">Only the Board may decide it: give the resolution in the note.</span>
+        <span th:if="${canApprove and !mine and !authority.allowed}" th:text="#{authority.notYours}">Your office cannot decide this amount.</span>
+    </th:block>
+</th:block>
+
+<!-- The page header's Approve: a confirmed form, or (Board decisions) a button opening boardModal; nothing when the office is too low -->
+<th:block th:fragment="approve(action, confirm, label, authority)">
+    <form th:if="${authority == null or (authority.allowed and !authority.board)}" th:action="${action}" method="post"
+          class="row-action-form confirm-submit" th:attr="data-confirm=${confirm}">
+        <button type="submit" class="btn btn-primary" th:text="${label}">Approve</button>
+    </form>
+    <button type="button" class="btn btn-primary" data-modal-open="board-approve-modal" th:if="${authority != null and authority.allowed and authority.board}"
+            th:text="${label}">Approve</button>
+</th:block>
+
+<!-- A decision only the Board takes: recorded with its resolution in the note -->
+<div th:fragment="boardModal(action, label, authority)" th:if="${authority != null and authority.allowed and authority.board}"
+     class="modal-overlay" id="board-approve-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="board-approve-title">
+        <div class="modal-header">
+            <h3 id="board-approve-title" th:text="#{authority.boardTitle}">A decision of the Board</h3>
+            <button type="button" class="modal-close" data-modal-close="board-approve-modal" th:aria-label="#{common.cancel}">&times;</button>
+        </div>
+        <form th:action="${action}" method="post" novalidate>
+            <div class="modal-body">
+                <p class="text-muted" th:text="#{authority.boardText}">This is above every office below the Board. Record the Board's resolution: its number and date.</p>
+                <div class="form-group">
+                    <label for="board-note" th:text="#{authority.boardResolution.label}">The Board's resolution</label>
+                    <input type="text" id="board-note" name="note" maxlength="200" required autocomplete="off">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" data-modal-close="board-approve-modal" th:text="#{common.confirmCancel}">Not now</button>
+                <button type="submit" class="btn btn-primary" th:text="${label}">Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

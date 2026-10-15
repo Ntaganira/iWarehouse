@@ -6,6 +6,7 @@ import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.Excel;
+import com.ntaganira.heritier.iWarehouse.service.ExceptionsReportService;
 import com.ntaganira.heritier.iWarehouse.service.SalesAnalysis;
 import com.ntaganira.heritier.iWarehouse.service.SalesReportService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,13 +46,18 @@ public class ReportController {
     static final String MODULE = "Reports";
     private static final String SALES = "hasAuthority('PAGE_SALES_REPORTS') and hasAuthority('PERM_VIEW_SALES_REPORTS')";
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final String EXCEPTIONS = "hasAuthority('PAGE_EXCEPTIONS_REPORT') and hasAuthority('PERM_VIEW_EXCEPTIONS_REPORT')";
+    private static final DateTimeFormatter AT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final SalesReportService salesReports;
     private final ActivityLogService activityLogService;
     private final ReportFiles reportFiles;
     private final Messages messages;
+    private final ExceptionsReportService exceptionsReports;
 
-    public ReportController(SalesReportService salesReports, ActivityLogService activityLogService, ReportFiles reportFiles, Messages messages) {
+    public ReportController(SalesReportService salesReports, ActivityLogService activityLogService, ReportFiles reportFiles, Messages messages,
+                            ExceptionsReportService exceptionsReports) {
+        this.exceptionsReports = exceptionsReports;
         this.salesReports = salesReports;
         this.activityLogService = activityLogService;
         this.reportFiles = reportFiles;
@@ -61,6 +68,40 @@ public class ReportController {
     @PreAuthorize("hasAuthority('PAGE_REPORTS')")
     public String index() {
         return "reports/index";
+    }
+
+    // ---------------------------------------------------------------- the month's exceptions (F-03, F-14, Board Paper Table 9)
+
+    @GetMapping("/exceptions")
+    @PreAuthorize(EXCEPTIONS)
+    public String exceptions(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+                             @RequestParam(defaultValue = "0") int page, Model model) {
+        YearMonth m = month == null ? exceptionsReports.thisMonth() : month;
+        ExceptionsReportService.Report report = exceptionsReports.of(m);
+        model.addAttribute("report", report);
+        model.addAttribute("rows", Paging.of(report.rows(), Paging.page(page)));
+        model.addAttribute("kinds", ExceptionsReportService.Kind.values());
+        model.addAttribute("month", m);
+        model.addAttribute("query", QueryString.of("month", m.toString()));
+        return "reports/exceptions";
+    }
+
+    @GetMapping("/exceptions/export")
+    @PreAuthorize(EXCEPTIONS)
+    public ResponseEntity<byte[]> exceptionsExport(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+                                                   @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
+        YearMonth m = month == null ? exceptionsReports.thisMonth() : month;
+        ExceptionsReportService.Report report = exceptionsReports.of(m);
+        Excel.Builder sheet = Excel.sheet(m("exceptions.title"), m("exceptions.title"), m("exceptions.of", m.toString()),
+                m("exceptions.when"), m("exceptions.kind"), m("exceptions.number"), m("exceptions.subject"), m("exceptions.amount"),
+                m("authority.office"), m("exceptions.requestedBy"), m("exceptions.decidedBy"), m("exceptions.outcome"), m("exceptions.note"));
+        for (ExceptionsReportService.Row r : report.rows()) {
+            sheet.row(r.at().format(AT), m("exceptions.kind." + r.kind()), r.number(), r.subject(), r.amount(),
+                    r.office() == null ? "" : m("authority.level." + r.office()), r.requestedBy(), r.decidedBy(),
+                    m("exceptions.outcome." + r.outcome()), r.note() == null ? "" : r.note());
+        }
+        activityLogService.record(MODULE, "EXPORT_EXCEPTIONS", "Exported the exceptions of " + m + " to " + format.label(), ActivityStatus.SUCCESS);
+        return reportFiles.download(format, "exceptions-" + m, sheet.build());
     }
 
     // ---------------------------------------------------------------- sales (RPT-05)

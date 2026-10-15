@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{writeOff.title}, ~{::content})}">
+<head><title>Write-offs - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{writeOff.title}">Receivable write-offs</h1>
+            <div class="subtitle" th:text="#{writeOff.subtitle}">Debts given up, prepared by Credit Control and approved within the Delegation of Authority</div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/receivables" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_RECEIVABLES')" th:text="#{nav.receivables}">Receivables</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{writeOff.sectionTitle}">Write-offs</span>
+                <span class="section-count" th:text="${writeOffs.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/accounting/write-offs}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{writeOff.searchPh}" th:aria-label="#{writeOff.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'writeOff.status.' + st}}">Waiting for review</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{writeOff.number}">Write-off</th>
+                        <th th:text="#{creditNote.request.asked}">Asked</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th class="num" th:text="#{writeOff.amount}">Amount (RWF)</th>
+                        <th th:text="#{creditNote.request.office}">Office</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="w : ${writeOffs.content}">
+                        <td><a class="row-link strong mono" th:href="@{/accounting/write-offs/{id}(id=${w.id})}" th:text="${w.number}">RWO-WH-2026-000001</a></td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(w.requestedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${w.requestedBy}">credit1</div>
+                        </td>
+                        <td>
+                            <span th:text="${w.customer.name}">Umucyo Construction</span>
+                            <div class="cell-sub" th:text="${w.reason}">Company closed</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(w.amount)}">250,000</td>
+                        <td th:text="#{${'authority.level.' + w.authorityLevel}}">Chief Operating Officer</td>
+                        <td><th:block th:replace="~{write-offs/list :: writeOffStatus(${w.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${writeOffs.content.isEmpty()}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{writeOff.empty}">No write-offs</h3>
+                                <p th:text="#{writeOff.emptyHint}">A write-off is prepared from the customer's account</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${writeOffs}, '/accounting/write-offs', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a write-off. */-->
+<th:block th:fragment="writeOffStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING_REVIEW'" class="badge badge-warning" th:text="#{writeOff.status.PENDING_REVIEW}">Waiting for review</span>
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{writeOff.status.PENDING_APPROVAL}">Waiting for approval</span>
+    <span th:case="'POSTED'" class="badge badge-success" th:text="#{writeOff.status.POSTED}">Written off</span>
+    <span th:case="'WITHDRAWN'" class="badge badge-secondary" th:text="#{writeOff.status.WITHDRAWN}">Withdrawn</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{writeOff.status.REJECTED}">Rejected</span>
+</th:block>
+</body>
+</html>

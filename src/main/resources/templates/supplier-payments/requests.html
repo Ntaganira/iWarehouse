@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{supplierPayment.request.title}, ~{::content})}">
+<head><title>Payment requests - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{supplierPayment.request.title}">Payment requests</h1>
+            <div class="subtitle" th:text="#{supplierPayment.request.subtitle}">Supplier payments prepared by Treasury, paid once authorised</div>
+        </div>
+        <div class="btn-group">
+            <a href="/supplier-payments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{creditNote.request.sectionTitle}">Requests</span>
+                <span class="section-count" th:text="${requests.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/supplier-payments/requests}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{supplierPayment.request.searchPh}" th:aria-label="#{supplierPayment.request.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'supplierPayment.request.status.' + st}}">Prepared</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{supplierPayment.request.number}">Request</th>
+                        <th th:text="#{supplierPayment.request.preparedCol}">Prepared</th>
+                        <th th:text="#{supplierInvoice.supplier}">Supplier</th>
+                        <th class="num" th:text="#{supplierAccount.amountCcy}">Amount</th>
+                        <th class="num" th:text="#{supplierPayment.request.rwf}">About (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${requests.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/supplier-payments/requests/{id}(id=${r.id})}" th:text="${r.number}">PRQ-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${r.dual} ? #{supplierPayment.request.two} : #{supplierPayment.request.one}">Two authorisations</div>
+                        </td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(r.preparedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${r.preparedBy}">treasury1</div>
+                        </td>
+                        <td th:text="${r.supplier.name}">Shandong Float Glass Co.</td>
+                        <td class="num nowrap" th:text="${@num.amount(r.amount, 2) + ' ' + r.currencyCode}">1,200.00 USD</td>
+                        <td class="num" th:text="${@num.money(r.baseEstimate)}">1,620,000</td>
+                        <td><th:block th:replace="~{supplier-payments/requests :: requestStatus(${r.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${requests.content.isEmpty()}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{supplierPayment.request.empty}">No payment requests</h3>
+                                <p th:text="#{supplierPayment.request.emptyHint}">A payment is prepared from the supplier's account</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${requests}, '/supplier-payments/requests', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a payment request. */-->
+<th:block th:fragment="requestStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PREPARED'" class="badge badge-warning" th:text="#{supplierPayment.request.status.PREPARED}">Waiting for authorisation</span>
+    <span th:case="'AUTHORISED'" class="badge badge-info" th:text="#{supplierPayment.request.status.AUTHORISED}">Waiting for the second authorisation</span>
+    <span th:case="'PAID'" class="badge badge-success" th:text="#{supplierPayment.request.status.PAID}">Paid</span>
+    <span th:case="'CANCELLED'" class="badge badge-secondary" th:text="#{supplierPayment.request.status.CANCELLED}">Cancelled</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{supplierPayment.request.status.REJECTED}">Rejected</span>
+</th:block>
+</body>
+</html>

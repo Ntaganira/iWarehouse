@@ -9,8 +9,11 @@ import com.ntaganira.heritier.iWarehouse.repository.GoodsReceiptRepository;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PurchaseOrderRepository;
 import com.ntaganira.heritier.iWarehouse.service.ExchangeRateService.AppliedRate;
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -44,6 +47,7 @@ class GoodsReceiptServiceTest {
     private final Location offcut = location("WH-A-OC", LocationType.RACK, zone.getId(), 1000, 100, true);
     private final Location slot = location("WH-A-R01-S01", LocationType.SLOT, rack1.getId(), null, null, false);
     private PurchaseOrder order;
+    private SettingService settings;
     private PurchaseOrderLine line1;
     private PurchaseOrderLine line2;
 
@@ -53,7 +57,7 @@ class GoodsReceiptServiceTest {
         orderRepo = mock(PurchaseOrderRepository.class);
         productRepo = mock(ProductRepository.class);
         rateService = mock(ExchangeRateService.class);
-        SettingService settings = mock(SettingService.class);
+        settings = mock(SettingService.class);
         when(settings.getDecimal(SettingKey.GLASS_DENSITY)).thenReturn(new BigDecimal("2.5"));
         // Real static helpers (rackOf, receivingLocations) over mocked data.
         stockService = mock(StockService.class);
@@ -236,6 +240,33 @@ class GoodsReceiptServiceTest {
         assertThat(receipt.getStatus()).isEqualTo(GoodsReceiptStatus.DRAFT);
         verify(stockService, never()).receive(any(), any(), any(), any());
         assertThat(line1.getReceivedQty()).isZero();
+    }
+
+    @Test
+    void anotherPersonPostsTheReceiptThanWhoEnteredIt() {   // CMP 06: receiving and approving apart
+        when(settings.getBoolean(SettingKey.APPROVAL_RECEIPT_SECOND_PERSON)).thenReturn(true);
+        GoodsReceipt receipt = draft(crate(line1, "C-01", 10, 0, rack2));
+        stubPosting(receipt);
+        when(stockService.heldArea(any())).thenReturn(BigDecimal.ZERO);
+        when(rateService.rateFor("USD", TODAY)).thenReturn(new AppliedRate("USD", new BigDecimal("1450"), TODAY, RateSource.BNR));
+        when(stockService.receive(any(), any(), any(), any())).thenReturn(List.of());
+        receipt.setCreatedBy("storekeeper");
+        receipt.setUpdatedBy("supervisor");
+        for (String who : List.of("storekeeper", "supervisor")) {
+            signIn(who);
+            assertThatThrownBy(() -> service.post(receipt.getId()))
+                    .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("receipt.post.secondPerson"));
+        }
+        assertThat(receipt.getStatus()).isEqualTo(GoodsReceiptStatus.DRAFT);
+        signIn("manager");
+        service.post(receipt.getId());
+        assertThat(receipt.getStatus()).isEqualTo(GoodsReceiptStatus.POSTED);
+        SecurityContextHolder.clearContext();
+    }
+
+    private static void signIn(String username) {
+        AppUserPrincipal principal = new AppUserPrincipal((long) username.length(), username, username, "x", true, true, List.of());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
     @Test

@@ -76,6 +76,7 @@
 <!--/* Status badge of a request. */-->
 <th:block th:fragment="approvalStatus(s)" th:switch="${s.name()}">
     <span th:case="'PENDING'" class="badge badge-warning" th:text="#{saleApproval.status.PENDING}">Waiting</span>
+    <span th:case="'RECOMMENDED'" class="badge badge-info" th:text="#{saleApproval.status.RECOMMENDED}">Recommended</span>
     <span th:case="'APPROVED'" class="badge badge-success" th:text="#{saleApproval.status.APPROVED}">Approved</span>
     <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{saleApproval.status.REJECTED}">Rejected</span>
     <span th:case="*" class="badge badge-secondary" th:text="#{saleApproval.status.WITHDRAWN}">Withdrawn</span>
@@ -86,6 +87,11 @@
     <th:block th:if="${a.price}">
         <span class="nowrap" th:text="${@num.money(a.listPrice) + ' → ' + @num.money(a.requestedPrice)}">27,000 → 24,000</span>
         <div class="cell-sub" th:text="#{saleApproval.discountOf(${@num.m2(a.discountPercent)}, ${@num.m2(a.limitPercent)})}">11.11% off (limit 5%)</div>
+    </th:block>
+    <div class="cell-sub text-danger" th:if="${a.price and a.belowCost}" th:text="#{saleApproval.belowCostShort}">Below cost</div>
+    <th:block th:if="${a.terms}">
+        <span class="nowrap" th:text="#{saleApproval.termsOf(${a.extraDays})}">30 more days</span>
+        <div class="cell-sub" th:text="#{saleApproval.onSale(${@num.money(a.amountAfter)})}">on a sale of 450,000 RWF</div>
     </th:block>
     <th:block th:if="${a.credit}">
         <span class="nowrap" th:text="#{saleApproval.creditOf(${@num.money(a.creditAmount)})}">Credit 300,000 RWF</span>

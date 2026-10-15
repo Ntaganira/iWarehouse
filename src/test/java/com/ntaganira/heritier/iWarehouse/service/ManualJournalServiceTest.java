@@ -96,7 +96,7 @@ class ManualJournalServiceTest {
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.MANUAL_JOURNAL)).thenReturn("MJ-WH-2026-000001");
         service = new ManualJournalService(repo, lineRepo, accountRepo, mock(JournalEntryRepository.class), journals, numbers,
-                mock(PeriodLock.class), mock(Notifier.class), CLOCK);
+                mock(PeriodLock.class), mock(Notifier.class), CLOCK, mock(DelegationOfAuthority.class));
     }
 
     @AfterEach

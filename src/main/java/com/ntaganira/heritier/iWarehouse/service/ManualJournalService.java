@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
 import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.dto.ManualJournalDto;
 import com.ntaganira.heritier.iWarehouse.entity.Account;
@@ -66,10 +67,12 @@ public class ManualJournalService {
     private final PeriodLock periods;
     private final Notifier notifier;
     private final Clock clock;
+    private final DelegationOfAuthority authority;
 
     public ManualJournalService(ManualJournalRepository repo, ManualJournalLineRepository lineRepo, AccountRepository accountRepo,
                                 JournalEntryRepository entryRepo, JournalService journalService, DocumentNumberService numbers,
-                                PeriodLock periods, Notifier notifier, Clock clock) {
+                                PeriodLock periods, Notifier notifier, Clock clock, DelegationOfAuthority authority) {
+        this.authority = authority;
         this.notifier = notifier;
         this.repo = repo;
         this.lineRepo = lineRepo;
@@ -154,6 +157,11 @@ public class ManualJournalService {
             dto.getLines().add(new ManualJournalDto.Line());
         }
         return dto;
+    }
+
+    /** What the journal needs from the Delegation of Authority and whether the signed-in user may approve it. */
+    public DelegationOfAuthority.Check authorityOf(ManualJournal journal) {
+        return authority.check(AuthorityDecision.MANUAL_JOURNAL, journal.getTotal());
     }
 
     public boolean isRequester(ManualJournal journal) {
@@ -244,6 +252,8 @@ public class ManualJournalService {
         if (isRequester(journal)) {
             throw BusinessException.of("manualJournal.ownApproval", journal.getNumber());
         }
+        // The office its amount needs (F-15: the Director of Finance, the COO above the threshold)
+        authority.require(AuthorityDecision.MANUAL_JOURNAL, journal.getTotal(), PartyRules.clean(note));
         List<JournalService.AccountLine> lines = new ArrayList<>();
         for (ManualJournalLine l : lines(id)) {
             requireUsable(l.getAccount(), null);

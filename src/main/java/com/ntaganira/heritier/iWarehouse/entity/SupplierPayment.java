@@ -11,6 +11,7 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -87,4 +88,8 @@ public class SupplierPayment extends BaseEntity {
 
     @Column(name = "posted_by", nullable = false, length = 50, updatable = false)
     private String postedBy;
+
+    /** The request it paid, when payments are authorised first (CMP 07). */
+    @Column(name = "request_id", updatable = false)
+    private UUID requestId;
 }

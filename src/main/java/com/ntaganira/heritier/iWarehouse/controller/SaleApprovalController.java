@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -76,6 +77,9 @@ public class SaleApprovalController {
         model.addAttribute("approval", approval);
         model.addAttribute("line", approvalService.lineOf(approval).orElse(null));
         model.addAttribute("mine", SaleApprovalService.isRequester(approval));
+        model.addAttribute("recommender", SaleApprovalService.isRecommender(approval));
+        model.addAttribute("recommendRequired", approvalService.recommendationRequired());
+        model.addAttribute("authority", approvalService.authorityOf(approval));
         model.addAttribute("history", dataChangeService.history("SaleApproval", id.toString(), Paging.pageOf("history", open, page),
                 Paging.SIZE));
         model.addAttribute("tab", open);
@@ -84,17 +88,39 @@ public class SaleApprovalController {
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasAuthority('PAGE_SALE_APPROVALS') and hasAuthority('PERM_APPROVE_SALE')")
-    public String approve(@PathVariable UUID id, @RequestParam(required = false) String note, RedirectAttributes redirect) {
+    public String approve(@PathVariable UUID id, @RequestParam(required = false) String note,
+                          @RequestParam(required = false) BigDecimal inPart, RedirectAttributes redirect) {
         try {
             String reason = approvalService.findDetailed(id).getReason();
             // The line's new price carries the requester's reason (Audit rule 4)
-            SaleApproval approval = AuditContext.withReason(reason, () -> approvalService.approve(id, note));
+            SaleApproval approval = AuditContext.withReason(reason, () -> approvalService.approve(id, note, inPart));
             activityLogService.record(PosController.MODULE, "APPROVE_SALE_APPROVAL", "Approved " + approval.getNumber() + " of "
                     + approval.getRequestedBy() + ": " + describe(approval), ActivityStatus.SUCCESS);
             redirect.addFlashAttribute("flashSuccess", messages.get("saleApproval.approvedMsg", approval.getNumber()));
         } catch (BusinessException e) {
             String error = messages.get(e.getMessageKey(), e.getArgs());
             activityLogService.record(PosController.MODULE, "APPROVE_SALE_APPROVAL", "Failed to approve " + numberOf(id) + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/sale-approvals/" + id;
+    }
+
+    @PostMapping("/{id}/recommend")
+    @PreAuthorize("hasAuthority('PAGE_SALE_APPROVALS') and hasAuthority('PERM_RECOMMEND_SALE_APPROVAL')")
+    public String recommend(@PathVariable UUID id, @RequestParam(required = false) String note, RedirectAttributes redirect) {
+        if (StringUtils.hasText(note) && note.trim().length() > REASON_MAX) {
+            redirect.addFlashAttribute("flashError", messages.get("sale.price.reasonSize"));
+            return "redirect:/sale-approvals/" + id;
+        }
+        try {
+            SaleApproval approval = approvalService.recommend(id, note);
+            activityLogService.record(PosController.MODULE, "RECOMMEND_SALE_APPROVAL", "Recommended " + approval.getNumber() + " of "
+                    + approval.getRequestedBy() + ": " + describe(approval), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("saleApproval.recommendedMsg", approval.getNumber()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(PosController.MODULE, "RECOMMEND_SALE_APPROVAL", "Failed to recommend " + numberOf(id) + ": " + error,
                     ActivityStatus.FAILED);
             redirect.addFlashAttribute("flashError", error);
         }
@@ -122,14 +148,26 @@ public class SaleApprovalController {
         return "redirect:/sale-approvals/" + id;
     }
 
-    /** "U-WH-000012 · CLR-6 3210 x 2250: 27,000 to 24,000 (11.11% off)" or "credit 300,000 RWF for ACME (over by 120,000)". */
+    /**
+     * "U-WH-000012 · CLR-6 3210 x 2250: 27,000 to 24,000 (11.11% off)", "credit 300,000 RWF for ACME (over by 120,000)" or
+     * "30 more days for ACME on a sale of 450,000 RWF", with what was approved in part and the office it needed.
+     */
     private String describe(SaleApproval a) {
+        String office = a.getAuthorityLevel() == null ? "" : ", needs " + a.getAuthorityLevel();
         if (a.isPrice()) {
             return a.getSubject() + ": " + num.money(a.getListPrice()) + " to " + num.money(a.getRequestedPrice()) + " ("
-                    + num.m2(a.getDiscountPercent()) + "% off, limit " + num.m2(a.getLimitPercent()) + "%)";
+                    + num.m2(a.getDiscountPercent()) + "% off, limit " + num.m2(a.getLimitPercent()) + "%"
+                    + (a.isBelowCost() ? ", below cost " + num.money(a.getCostAmount()) : "")
+                    + (a.getApprovedPrice() != null ? ", approved at " + num.money(a.getApprovedPrice()) : "") + office + ")";
+        }
+        if (a.isTerms()) {
+            return a.getExtraDays() + " more days for " + a.getSubject() + " on a sale of " + num.money(a.getAmountAfter()) + " RWF"
+                    + (a.getOverdueAmount() != null ? " (overdue " + num.money(a.getOverdueAmount()) + ")" : "") + office;
         }
         return "credit " + num.money(a.getCreditAmount()) + " RWF for " + a.getSubject() + " (over the limit by "
-                + num.money(a.getOverLimit()) + " RWF)";
+                + num.money(a.getOverLimit()) + " RWF"
+                + (a.getOverdueAmount() != null ? ", overdue " + num.money(a.getOverdueAmount()) : "")
+                + (a.getApprovedCredit() != null ? ", approved " + num.money(a.getApprovedCredit()) : "") + office + ")";
     }
 
     private String numberOf(UUID id) {

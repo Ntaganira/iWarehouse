@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
 import com.ntaganira.heritier.iWarehouse.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -22,6 +23,11 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
 
     List<User> findByRoles_IdOrderByFullNameAsc(Long roleId);
+
+    /** Every user with their roles and the roles' rights: the access review (no paging, so the graph is safe). */
+    @EntityGraph(attributePaths = {"roles", "roles.permissions"})
+    @Query("select u from User u order by u.fullName")
+    List<User> findAllWithRights();
 
     /** Enabled users holding the role, other than excludeId (keeps at least one administrator). */
     @Query("select count(u) from User u join u.roles r"

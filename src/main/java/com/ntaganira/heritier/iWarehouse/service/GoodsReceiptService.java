@@ -267,6 +267,20 @@ public class GoodsReceiptService {
      * the order, are locked first, so receipts of the same product or order are posted one at a time
      * and each sees the stock and quantities the previous one left.
      */
+    /**
+     * Posted by someone other than who drafted it or last changed it (F-06: received and counted by one officer, verified by
+     * another), when Settings ask for it.
+     */
+    private void requireSecondPerson(GoodsReceipt receipt) {
+        if (!settingService.getBoolean(SettingKey.APPROVAL_RECEIPT_SECOND_PERSON)) {
+            return;
+        }
+        String me = AppUserPrincipal.currentUsername();
+        if (me != null && (me.equals(receipt.getCreatedBy()) || me.equals(receipt.getUpdatedBy()))) {
+            throw BusinessException.of("receipt.post.secondPerson", receipt.getNumber());
+        }
+    }
+
     @Transactional
     public PostResult post(UUID id) {
         // Ids only: the receipt itself is read after the locks, so its status is current.
@@ -277,6 +291,7 @@ public class GoodsReceiptService {
         GoodsReceipt receipt = findDetailed(id);
         requireDraft(receipt);
         requireReceivable(order);
+        requireSecondPerson(receipt);
         if (receipt.getCrates().isEmpty()) {
             throw BusinessException.of("receipt.crates.required");
         }

@@ -282,7 +282,7 @@ public class JournalService {
         return lineRepo.findCustomerLines(receivableAccount().getId(), customerId);
     }
 
-    /** Rows of (customer id, date, debit, credit) of the receivable account's lines that name a customer. */
+    /** Rows of (customer id, date, debit, credit, source id) of the receivable account's lines that name a customer. */
     public List<Object[]> receivableEntries() {
         return lineRepo.customerEntries(receivableAccount().getId());
     }

@@ -48,4 +48,15 @@ public final class Discounts {
     public static boolean needsApproval(BigDecimal discountPercent, BigDecimal limitPercent) {
         return discountPercent.signum() > 0 && discountPercent.compareTo(limitPercent) > 0;
     }
+
+    /**
+     * A line's amount without its VAT (lines are charged VAT included), 2 decimals: what it is compared with the cost of
+     * its glass (SDP 8: below cost needs approval). No rate: the amount itself.
+     */
+    public static BigDecimal netOf(BigDecimal amount, BigDecimal vatRatePercent) {
+        if (vatRatePercent == null || vatRatePercent.signum() <= 0) {
+            return amount.setScale(2, RoundingMode.HALF_UP);
+        }
+        return amount.multiply(HUNDRED).divide(HUNDRED.add(vatRatePercent), 2, RoundingMode.HALF_UP);
+    }
 }

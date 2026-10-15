@@ -28,6 +28,9 @@ public class CreditNoteDto {
 
     private UUID invoiceId;
 
+    /** The approved request it issues (F-14); none when credit notes are issued at once. */
+    private UUID requestId;
+
     private List<Item> items = new ArrayList<>();
 
     /** Cancelling an order: the pieces of each size given up. */

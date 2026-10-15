@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.Incoterm;
 import com.ntaganira.heritier.iWarehouse.enums.PurchaseOrderStatus;
 import jakarta.persistence.*;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -73,6 +75,33 @@ public class PurchaseOrder extends BaseEntity {
     /** Why the order was cancelled or closed short. */
     @Column(name = "closed_reason", length = 255)
     private String closedReason;
+
+    /** RWF at the day's rate when it was placed above the approval limit (CMP 06). */
+    @Column(name = "approval_amount", precision = 18, scale = 2)
+    private BigDecimal approvalAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "authority_level", length = 10)
+    private AuthorityLevel authorityLevel;
+
+    @Column(name = "submitted_by", length = 50)
+    private String submittedBy;
+
+    @Column(name = "submitted_by_id")
+    private Long submittedById;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
+    @Column(name = "approved_by", length = 50)
+    private String approvedBy;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    /** The approver's note, or why the order was sent back. */
+    @Column(name = "approval_note", length = 255)
+    private String approvalNote;
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo")

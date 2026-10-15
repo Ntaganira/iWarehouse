@@ -7,10 +7,12 @@ import com.ntaganira.heritier.iWarehouse.dto.CreditNoteDto;
 import com.ntaganira.heritier.iWarehouse.ebm.EbmCodes;
 import com.ntaganira.heritier.iWarehouse.entity.CreditNote;
 import com.ntaganira.heritier.iWarehouse.entity.CreditNoteLine;
+import com.ntaganira.heritier.iWarehouse.entity.CreditNoteRequest;
 import com.ntaganira.heritier.iWarehouse.entity.EbmReceipt;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoice;
 import com.ntaganira.heritier.iWarehouse.entity.SalesInvoiceLine;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.CreditNoteKind;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus;
@@ -83,6 +85,7 @@ public class CreditNoteController {
     @PreAuthorize("hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')")
     public String list(@RequestParam(required = false) String search, @RequestParam(defaultValue = "0") int page, Model model) {
         model.addAttribute("creditNotes", creditNoteService.findPage(search, Paging.page(page), Paging.SIZE));
+        model.addAttribute("waitingRequests", creditNoteService.waitingRequests());
         model.addAttribute("search", search);
         model.addAttribute("paginationQuery", QueryString.of("search", search));
         return "credit-notes/list";
@@ -152,6 +155,9 @@ public class CreditNoteController {
     public String issue(@ModelAttribute("creditNoteDto") CreditNoteDto dto, BindingResult result, Model model, RedirectAttributes redirect) {
         SalesInvoice sale = issued(dto.getInvoiceId());
         try {
+            if (creditNoteService.approvalRequired()) {
+                return asked(creditNoteService.request(dto, CreditNoteKind.RETURN), sale, redirect);
+            }
             return issued(creditNoteService.issue(dto), sale, redirect);
         } catch (BusinessException e) {
             rejected(e, sale, result, model);
@@ -172,6 +178,9 @@ public class CreditNoteController {
     public String cancel(@ModelAttribute("creditNoteDto") CreditNoteDto dto, BindingResult result, Model model, RedirectAttributes redirect) {
         SalesInvoice sale = issued(dto.getInvoiceId());
         try {
+            if (creditNoteService.approvalRequired()) {
+                return asked(creditNoteService.request(dto, CreditNoteKind.CANCEL), sale, redirect);
+            }
             return issued(creditNoteService.cancelPieces(dto), sale, redirect);
         } catch (BusinessException e) {
             rejected(e, sale, result, model);
@@ -193,9 +202,19 @@ public class CreditNoteController {
         return "redirect:/credit-notes/" + note.getId();
     }
 
+    /** With approval required (F-14) the form asks for the credit note: it waits for review and approval. */
+    private String asked(CreditNoteRequest r, SalesInvoice sale, RedirectAttributes redirect) {
+        activityLogService.record(PosController.MODULE, "CREATE_CREDIT_NOTE_REQUEST", "Asked for a credit note " + r.getNumber()
+                + (r.getKind() == CreditNoteKind.CANCEL ? " (pieces given up)" : "") + " on " + sale.getNumber() + ": "
+                + num.money(r.getTotalAmount()) + " RWF: " + r.getReason(), ActivityStatus.SUCCESS);
+        redirect.addFlashAttribute("flashSuccess", messages.get("creditNote.request.created", r.getNumber(), num.money(r.getTotalAmount())));
+        return "redirect:/credit-notes/requests/" + r.getId();
+    }
+
     private void rejected(BusinessException e, SalesInvoice sale, BindingResult result, Model model) {
         String error = messages.get(e.getMessageKey(), e.getArgs());
-        activityLogService.record(PosController.MODULE, "CREATE_CREDIT_NOTE", "Failed to issue a credit note on " + sale.getNumber()
+        activityLogService.record(PosController.MODULE, creditNoteService.approvalRequired() ? "CREATE_CREDIT_NOTE_REQUEST" : "CREATE_CREDIT_NOTE",
+                (creditNoteService.approvalRequired() ? "Failed to ask for a credit note on " : "Failed to issue a credit note on ") + sale.getNumber()
                 + ": " + error, ActivityStatus.FAILED);
         if (e.getField() != null) {
             result.rejectValue(e.getField(), e.getMessageKey(), e.getArgs(), error);
@@ -234,6 +253,7 @@ public class CreditNoteController {
         model.addAttribute("refundMethods", methods);
         model.addAttribute("refundReasons", EbmCodes.REFUND_REASONS);
         model.addAttribute("myTill", tillService.current().map(tillService::summary).orElse(null));
+        model.addAttribute("askOnly", creditNoteService.approvalRequired());
         if (!model.containsAttribute("formErrors")) {
             model.addAttribute("formErrors", new BeanPropertyBindingResult(dto, "creditNoteDto").getFieldErrors());
         }

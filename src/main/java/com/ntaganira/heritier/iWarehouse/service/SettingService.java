@@ -62,6 +62,15 @@ public class SettingService {
         return getDecimal(key).intValueExact();
     }
 
+    /** A yes/no setting: "true" (any case) is yes; anything else, or nothing stored, takes the default. */
+    public boolean getBoolean(SettingKey key) {
+        String value = get(key);
+        if (value == null || value.isBlank()) {
+            value = key.defaultValue();
+        }
+        return "true".equalsIgnoreCase(value == null ? "" : value.trim());
+    }
+
     /** Branch used to number documents when the caller gives none (MD-07). */
     public String branchCode() {
         return get(SettingKey.BRANCH_CODE);

@@ -65,11 +65,14 @@ public class VehicleCostService {
     private final SettingService settings;
     private final Notifier notifier;
     private final Clock clock;
+    private final DelegationOfAuthority authority;
 
     public VehicleCostService(VehicleCostRepository repo, VehicleRepository vehicleRepo, TripRepository tripRepo, SupplierRepository supplierRepo,
                               CurrencyRepository currencyRepo, VehicleServicePlanRepository planRepo, FloatClearanceRepository clearanceRepo,
                               FloatService floatService, PostingService postingService, JournalService journalService,
-                              DocumentNumberService numbers, PeriodLock periods, SettingService settings, Notifier notifier, Clock clock) {
+                              DocumentNumberService numbers, PeriodLock periods, SettingService settings, Notifier notifier, Clock clock,
+                              DelegationOfAuthority authority) {
+        this.authority = authority;
         this.repo = repo;
         this.vehicleRepo = vehicleRepo;
         this.tripRepo = tripRepo;
@@ -146,6 +149,11 @@ public class VehicleCostService {
 
     public long pendingCount() {
         return repo.countByStatus(VehicleCostStatus.PENDING_APPROVAL);
+    }
+
+    /** What the cost needs from the Delegation of Authority and whether the signed-in user may approve it. */
+    public DelegationOfAuthority.Check authorityOf(VehicleCost cost) {
+        return authority.check(AuthorityDecision.VEHICLE_COST, cost.getAmount());
     }
 
     public BigDecimal approvalLimit() {
@@ -373,6 +381,8 @@ public class VehicleCostService {
         if (isRequester(cost)) {
             throw BusinessException.of("vehicleCost.ownApproval", cost.getNumber());
         }
+        // The office its amount needs (Board Paper Annex E: operating expenditure)
+        authority.require(AuthorityDecision.VEHICLE_COST, cost.getAmount(), PartyRules.clean(note));
         if (cost.getPayment() == VehicleCostPayment.DRIVER_FLOAT && clearanceRepo.existsByTrip_Id(cost.getTrip().getId())) {
             throw BusinessException.of("vehicleCost.float.cleared", cost.getTrip().getNumber());
         }

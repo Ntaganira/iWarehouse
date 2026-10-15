@@ -135,7 +135,7 @@ class StockCountServiceTest {
         stockService = new StockService(unitRepo, movementRepo, mock(StockCostEntryRepository.class), adjustmentLineRepo, countRepo, mock(SalesInvoiceLineRepository.class), mock(TripRepository.class),
                 locationRepo, numbers, clock);
         StockAdjustmentService adjustmentService = new StockAdjustmentService(adjustmentRepo, unitRepo, productRepo, stockService,
-                mock(PostingService.class), numbers, settings, mock(Notifier.class), clock);
+                mock(PostingService.class), numbers, settings, mock(Notifier.class), clock, mock(DelegationOfAuthority.class));
         service = new StockCountService(countRepo, lineRepo, unitRepo, productRepo, stockService, adjustmentService, numbers, clock);
         signIn(7L, "supervisor1");
     }

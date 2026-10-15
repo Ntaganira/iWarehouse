@@ -99,6 +99,7 @@ public class SupplierController {
             model.addAttribute("buckets", Ageing.Bucket.values());
             model.addAttribute("payCurrencies", account.open().stream().filter(o -> o.getAmount().signum() > 0).toList());
             model.addAttribute("payMethods", SupplierPaymentController.methods());
+            model.addAttribute("payPrepared", accountService.authorisationRequired());
         }
         model.addAttribute("history", dataChangeService.history("Supplier", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);

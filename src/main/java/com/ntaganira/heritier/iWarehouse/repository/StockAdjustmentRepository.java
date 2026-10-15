@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
+import java.util.List;
+import java.time.LocalDateTime;
 import com.ntaganira.heritier.iWarehouse.entity.StockAdjustment;
 import com.ntaganira.heritier.iWarehouse.enums.AdjustmentStatus;
 import jakarta.persistence.LockModeType;
@@ -26,4 +28,7 @@ public interface StockAdjustmentRepository extends JpaRepository<StockAdjustment
     Optional<StockAdjustment> lockById(@Param("id") UUID id);
 
     long countByStatus(AdjustmentStatus status);
+
+    /** Adjustments another person decided in a period (the exceptions report). */
+    List<StockAdjustment> findByDecidedAtBetweenOrderByDecidedAtAsc(LocalDateTime from, LocalDateTime to);
 }

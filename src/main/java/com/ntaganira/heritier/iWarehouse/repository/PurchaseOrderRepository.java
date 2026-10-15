@@ -13,7 +13,9 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,4 +33,10 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, UU
     Optional<PurchaseOrder> lockById(@Param("id") UUID id);
 
     long countBySupplier_IdAndStatusIn(UUID supplierId, Collection<PurchaseOrderStatus> statuses);
+
+    /** Orders approved in a period (the exceptions report). */
+    @EntityGraph(attributePaths = {"supplier"})
+    long countByStatus(PurchaseOrderStatus status);
+
+    List<PurchaseOrder> findByApprovedAtBetweenOrderByApprovedAtAsc(LocalDateTime from, LocalDateTime to);
 }

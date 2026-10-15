@@ -1,14 +1,23 @@
 package com.ntaganira.heritier.iWarehouse.config;
 
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
+import com.ntaganira.heritier.iWarehouse.enums.CreditNoteRequestStatus;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.MovementType;
+import com.ntaganira.heritier.iWarehouse.enums.PaymentRequestStatus;
+import com.ntaganira.heritier.iWarehouse.enums.PurchaseOrderStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalKind;
+import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.StockStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SyncConflictReason;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostCategory;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostPayment;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
+import com.ntaganira.heritier.iWarehouse.enums.WriteOffStatus;
+import com.ntaganira.heritier.iWarehouse.service.ExceptionsReportService;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -27,16 +36,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class MessageCoverageTest {
 
-    private static final Map<String, Class<? extends Enum<?>>> LABELLED = Map.of(
-            "journal.source.", JournalSource.class,
-            "stock.movement.", MovementType.class,
-            "account.key.", AccountKey.class,
-            "doc.type.", DocumentType.class,
-            "stock.status.", StockStatus.class,
-            "sync.reason.", SyncConflictReason.class,
-            "vehicleCost.category.", VehicleCostCategory.class,
-            "vehicleCost.payment.", VehicleCostPayment.class,
-            "vehicleCost.status.", VehicleCostStatus.class);
+    private static final Map<String, Class<? extends Enum<?>>> LABELLED = Map.ofEntries(
+            Map.entry("journal.source.", JournalSource.class),
+            Map.entry("stock.movement.", MovementType.class),
+            Map.entry("account.key.", AccountKey.class),
+            Map.entry("doc.type.", DocumentType.class),
+            Map.entry("stock.status.", StockStatus.class),
+            Map.entry("sync.reason.", SyncConflictReason.class),
+            Map.entry("vehicleCost.category.", VehicleCostCategory.class),
+            Map.entry("vehicleCost.payment.", VehicleCostPayment.class),
+            Map.entry("vehicleCost.status.", VehicleCostStatus.class),
+            Map.entry("authority.level.", AuthorityLevel.class),
+            Map.entry("authority.decision.", AuthorityDecision.class),
+            Map.entry("saleApproval.kind.", SaleApprovalKind.class),
+            Map.entry("saleApproval.status.", SaleApprovalStatus.class),
+            Map.entry("exceptions.kind.", ExceptionsReportService.Kind.class),
+            Map.entry("exceptions.outcome.", ExceptionsReportService.Outcome.class),
+            Map.entry("creditNote.request.status.", CreditNoteRequestStatus.class),
+            Map.entry("writeOff.status.", WriteOffStatus.class),
+            Map.entry("supplierPayment.request.status.", PaymentRequestStatus.class),
+            Map.entry("po.status.", PurchaseOrderStatus.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

@@ -4604,3 +4604,11 @@ button.profile-menu-item { width: 100%; border: 0; background: none; font-family
   .tabs::-webkit-scrollbar { display: none; }
   .tab { flex: 0 0 auto; white-space: nowrap; margin-bottom: 0; }
 }
+
+/* The Delegation of Authority form (M10): a cell per office, its tick above its limit; the table scrolls in its box on phones */
+.authority-form td { min-width: 180px; vertical-align: top; }
+.authority-form td:first-child { min-width: 200px; }
+.authority-form .checkbox-item { margin-bottom: 6px; }
+/* A tab toolbar's button keeps its label on one line beside a long intro (M10) */
+.tab-toolbar > .btn { flex-shrink: 0; white-space: nowrap; }
+.authority-table td:first-child { min-width: 200px; }

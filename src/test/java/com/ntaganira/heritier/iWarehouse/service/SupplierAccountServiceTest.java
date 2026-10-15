@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
@@ -42,6 +43,9 @@ class SupplierAccountServiceTest {
     private SupplierInvoiceRepository invoiceRepo;
     private PostingService postings;
     private ExchangeRateService rates;
+    private SupplierPaymentRequestRepository requestRepo;
+    private DelegationOfAuthority authority;
+    private SettingService settings;
     private SupplierAccountService service;
 
     @BeforeEach
@@ -95,8 +99,24 @@ class SupplierAccountServiceTest {
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.SUPPLIER_INVOICE)).thenReturn("SINV-WH-2026-000001");
         when(numbers.next(DocumentType.SUPPLIER_PAYMENT)).thenReturn("SPAY-WH-2026-000001");
+        when(numbers.next(DocumentType.SUPPLIER_PAYMENT_REQUEST)).thenReturn("PRQ-WH-2026-000001");
+        requestRepo = mock(SupplierPaymentRequestRepository.class);
+        when(requestRepo.save(any())).thenAnswer(a -> {
+            SupplierPaymentRequest r = a.getArgument(0);
+            r.setId(UUID.randomUUID());
+            when(requestRepo.lockById(r.getId())).thenReturn(Optional.of(r));
+            when(requestRepo.findDetailedById(r.getId())).thenReturn(Optional.of(r));
+            return r;
+        });
+        authority = mock(DelegationOfAuthority.class);
+        settings = mock(SettingService.class);
         service = new SupplierAccountService(invoiceRepo, lineRepo, paymentRepo, supplierRepo, receiptRepo, currencyRepo, journals, rates,
-                postings, numbers, mock(PeriodLock.class), CLOCK);
+                postings, numbers, mock(PeriodLock.class), CLOCK, requestRepo, authority, settings, mock(Notifier.class));
+    }
+
+    private static void signIn(long id, String username) {
+        AppUserPrincipal principal = new AppUserPrincipal(id, username, username, "x", true, true, List.of());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
     @AfterEach
@@ -159,6 +179,66 @@ class SupplierAccountServiceTest {
         assertThat(payment.getFxGainLoss()).isEqualByComparingTo("-115000");           // paid more RWF than booked: a loss
         assertThat(payment.getRateSource()).isEqualTo(RateSource.BNR);
         verify(postings).supplierPayment(payment);
+    }
+
+    @Test
+    void aPaymentAboveTheDualLimitIsPaidOnlyOnceTwoOtherPeopleAuthoriseIt() {   // CMP 07, Board Paper Table 6
+        payable.add(apLine("2026-09-05", "USD", "3000", "1300", "3900000"));
+        when(settings.getBoolean(SettingKey.APPROVAL_SUPPLIER_PAYMENT_AUTHORISE)).thenReturn(true);
+        when(settings.getDecimal(SettingKey.APPROVAL_SUPPLIER_PAYMENT_DUAL_LIMIT)).thenReturn(new BigDecimal("500000"));
+        when(authority.required(eq(AuthorityDecision.SUPPLIER_PAYMENT), any())).thenReturn(AuthorityLevel.COO);
+        SupplierAccountService.PaymentForm form = new SupplierAccountService.PaymentForm("USD", new BigDecimal("1000"),
+                PaymentMethod.BANK_TRANSFER, "SWIFT-9", null);
+        assertThatThrownBy(() -> service.pay(shandong.getId(), form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplierPayment.request.required"));
+
+        SupplierPaymentRequest r = service.prepare(shandong.getId(), form);                // 1,000 USD at 1,340 = 1,340,000 RWF
+        assertThat(r.getStatus()).isEqualTo(PaymentRequestStatus.PREPARED);
+        assertThat(r.getBaseEstimate()).isEqualByComparingTo("1340000");
+        assertThat(r.isDual()).isTrue();
+        assertThat(r.getAuthorityLevel()).isEqualTo(AuthorityLevel.COO);
+        when(requestRepo.findBySupplier_IdAndStatusIn(eq(shandong.getId()), any())).thenReturn(List.of(r));
+        assertThatThrownBy(() -> service.prepare(shandong.getId(), new SupplierAccountService.PaymentForm("USD", new BigDecimal("2500"),
+                PaymentMethod.BANK_TRANSFER, "SWIFT-10", null)))                         // 3,000 owed, 1,000 already waits
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplierPayment.request.tooMuch"));
+
+        assertThatThrownBy(() -> service.authorise(r.getId(), null))                       // the preparer
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplierPayment.request.ownAuthorise"));
+        signIn(8L, "director");
+        when(authority.currentLevel()).thenReturn(Optional.of(AuthorityLevel.DIRECTOR));
+        service.authorise(r.getId(), "invoice SH-2210 checked");
+        assertThat(r.getStatus()).isEqualTo(PaymentRequestStatus.AUTHORISED);
+        assertThat(r.getFirstBy()).isEqualTo("director");
+        assertThat(r.getFirstLevel()).isEqualTo(AuthorityLevel.DIRECTOR);
+        verify(postings, never()).supplierPayment(any());
+        assertThatThrownBy(() -> service.authorise(r.getId(), null))                       // the same person again
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("supplierPayment.request.twice"));
+
+        signIn(9L, "coo");
+        when(authority.currentLevel()).thenReturn(Optional.of(AuthorityLevel.COO));
+        service.authorise(r.getId(), null);
+        assertThat(r.getStatus()).isEqualTo(PaymentRequestStatus.PAID);
+        assertThat(r.getSecondBy()).isEqualTo("coo");
+        assertThat(r.getPaymentId()).isNotNull();
+        verify(postings).supplierPayment(argThat(p -> r.getId().equals(p.getRequestId()) && p.getAmount().compareTo(new BigDecimal("1000")) == 0));
+    }
+
+    @Test
+    void theLastAuthorisationNeedsTheOfficeTheAmountNeeds() {   // Board Paper Annex E
+        payable.add(apLine("2026-09-05", "USD", "3000", "1300", "3900000"));
+        when(settings.getBoolean(SettingKey.APPROVAL_SUPPLIER_PAYMENT_AUTHORISE)).thenReturn(true);
+        when(settings.getDecimal(SettingKey.APPROVAL_SUPPLIER_PAYMENT_DUAL_LIMIT)).thenReturn(new BigDecimal("5000000"));
+        when(authority.required(eq(AuthorityDecision.SUPPLIER_PAYMENT), any())).thenReturn(AuthorityLevel.COO);
+        SupplierPaymentRequest r = service.prepare(shandong.getId(), new SupplierAccountService.PaymentForm("USD", new BigDecimal("1000"),
+                PaymentMethod.BANK_TRANSFER, "SWIFT-9", null));
+        assertThat(r.isDual()).isFalse();
+        signIn(8L, "director");
+        assertThatThrownBy(() -> service.authorise(r.getId(), null))                       // no office at all
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("authority.tooLow"));
+        when(authority.currentLevel()).thenReturn(Optional.of(AuthorityLevel.DIRECTOR));
+        assertThatThrownBy(() -> service.authorise(r.getId(), null))                       // below the COO
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("authority.tooLow"));
+        assertThat(r.getStatus()).isEqualTo(PaymentRequestStatus.PREPARED);
     }
 
     @Test

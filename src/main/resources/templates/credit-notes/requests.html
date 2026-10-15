@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{creditNote.request.title}, ~{::content})}">
+<head><title>Credit note requests - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{creditNote.request.title}">Credit note requests</h1>
+            <div class="subtitle" th:text="#{creditNote.request.subtitle}">Returns and pieces given up, reviewed and approved before the credit note is issued</div>
+        </div>
+        <div class="btn-group">
+            <a href="/credit-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{creditNote.request.sectionTitle}">Requests</span>
+                <span class="section-count" th:text="${requests.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/credit-notes/requests}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{creditNote.request.searchPh}" th:aria-label="#{creditNote.request.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'creditNote.request.status.' + st}}">Waiting for review</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{creditNote.request.number}">Request</th>
+                        <th th:text="#{creditNote.request.asked}">Asked</th>
+                        <th th:text="#{creditNote.invoice}">Invoice</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th class="num" th:text="#{invoice.total}">Total (RWF)</th>
+                        <th th:text="#{creditNote.request.office}">Office</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${requests.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/credit-notes/requests/{id}(id=${r.id})}" th:text="${r.number}">CNR-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="#{${'creditNote.kindShort.' + r.kind}}">Return</div>
+                        </td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(r.requestedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${r.requestedBy}">cashier1</div>
+                        </td>
+                        <td><a class="mono" th:href="@{/invoices/{id}(id=${r.invoice.id})}" th:text="${r.invoice.number}">INV-WH-2026-000001</a></td>
+                        <td>
+                            <span th:text="${r.customer.name}">Jean Habimana</span>
+                            <div class="cell-sub" th:text="${r.reason}">Wrong size</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(r.totalAmount)}">27,000</td>
+                        <td th:text="#{${'authority.level.' + r.authorityLevel}}">Chief Operating Officer</td>
+                        <td><th:block th:replace="~{credit-notes/requests :: requestStatus(${r.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${requests.content.isEmpty()}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{creditNote.request.empty}">No credit note requests</h3>
+                                <p th:text="#{creditNote.request.emptyHint}">Returns and pieces given up are asked for from the invoice</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${requests}, '/credit-notes/requests', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a credit note request. */-->
+<th:block th:fragment="requestStatus(s)" th:switch="${s.name()}">
+    <span th:case="'PENDING_REVIEW'" class="badge badge-warning" th:text="#{creditNote.request.status.PENDING_REVIEW}">Waiting for review</span>
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{creditNote.request.status.PENDING_APPROVAL}">Waiting for approval</span>
+    <span th:case="'APPROVED'" class="badge badge-info" th:text="#{creditNote.request.status.APPROVED}">Approved, to issue</span>
+    <span th:case="'ISSUED'" class="badge badge-success" th:text="#{creditNote.request.status.ISSUED}">Issued</span>
+    <span th:case="'WITHDRAWN'" class="badge badge-secondary" th:text="#{creditNote.request.status.WITHDRAWN}">Withdrawn</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{creditNote.request.status.REJECTED}">Rejected</span>
+</th:block>
+</body>
+</html>

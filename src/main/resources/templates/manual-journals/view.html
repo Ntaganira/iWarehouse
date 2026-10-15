@@ -22,10 +22,7 @@
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canCreate and mine}" th:text="#{manualJournal.cancel}">Withdraw</button>
                 <th:block th:if="${canApprove and !mine}">
                     <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{manualJournal.reject}">Reject</button>
-                    <form th:action="@{/accounting/manual-journals/{id}/approve(id=${mj.id})}" method="post" class="row-action-form confirm-submit"
-                          th:attr="data-confirm=#{manualJournal.approveConfirm(${mj.number}, ${@num.money(mj.total)}, ${#temporals.format(mj.entryDate, 'dd/MM/yyyy')})}">
-                        <button type="submit" class="btn btn-primary" th:text="#{manualJournal.approve}">Approve and post</button>
-                    </form>
+                    <th:block th:replace="~{fragments/authority :: approve(@{/accounting/manual-journals/{id}/approve(id=${mj.id})}, #{manualJournal.approveConfirm(${mj.number}, ${@num.money(mj.total)}, ${#temporals.format(mj.entryDate, 'dd/MM/yyyy')})}, #{manualJournal.approve}, ${authority})}"></th:block>
                 </th:block>
             </th:block>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reverse-modal" th:if="${s == 'POSTED' and canReverse}"
@@ -36,6 +33,7 @@
     <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
         <span th:text="#{manualJournal.waitingNote}">Nothing is posted until another person with approval rights approves it.</span>
         <span th:if="${mine}" th:text="#{manualJournal.notYourOwn}">You cannot approve your own manual journal.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine})}"></th:block>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
         <strong th:text="${s == 'REJECTED'} ? #{manualJournal.rejectedBy(${mj.decidedBy})} : #{manualJournal.cancelledBy(${mj.decidedBy})}">Rejected by owner:</strong>
@@ -160,6 +158,7 @@
             </form>
         </div>
     </div>
+    <div th:replace="~{fragments/authority :: boardModal(@{/accounting/manual-journals/{id}/approve(id=${mj.id})}, #{manualJournal.approve}, ${authority})}"></div>
 </div>
 </body>
 </html>

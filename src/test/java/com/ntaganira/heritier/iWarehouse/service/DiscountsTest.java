@@ -39,4 +39,12 @@ class DiscountsTest {
         assertThat(Discounts.needsApproval(new BigDecimal("0.01"), BigDecimal.ZERO)).isTrue();
         assertThat(Discounts.needsApproval(BigDecimal.ZERO, BigDecimal.ZERO)).isFalse();
     }
+
+    @Test
+    void aLinesAmountWithoutItsVatIsComparedWithTheCostOfItsGlass() {
+        assertThat(Discounts.netOf(new BigDecimal("118000"), new BigDecimal("18"))).isEqualByComparingTo("100000.00");
+        assertThat(Discounts.netOf(new BigDecimal("195008"), new BigDecimal("18"))).isEqualByComparingTo("165261.02");
+        assertThat(Discounts.netOf(new BigDecimal("50000"), BigDecimal.ZERO)).isEqualByComparingTo("50000");
+        assertThat(Discounts.netOf(new BigDecimal("50000"), null)).isEqualByComparingTo("50000");
+    }
 }

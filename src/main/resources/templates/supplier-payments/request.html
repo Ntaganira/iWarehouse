@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${prq.number}, ~{::content})}">
+<head><title>Payment request - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${prq.status.name()},
+        canAuthorise=${#authorization.expression('hasAuthority(''PERM_AUTHORISE_SUPPLIER_PAYMENT'')')},
+        canPay=${#authorization.expression('hasAuthority(''PERM_PAY_SUPPLIER'')')},
+        waiting=${s == 'PREPARED' or s == 'AUTHORISED'},
+        mayAuthorise=${(s == 'PREPARED' or s == 'AUTHORISED') and canAuthorise and !mine and !first and hasOffice}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${prq.number}">PRQ-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{supplierPayment.request.preparedBy(${prq.preparedBy}, ${#temporals.format(prq.preparedAt, 'dd/MM/yyyy HH:mm')})}">prepared by treasury1 on 15/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{supplier-payments/requests :: requestStatus(${prq.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/supplier-payments/requests" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${waiting and canPay and mine}" th:text="#{supplierPayment.request.cancel}">Cancel</button>
+            <th:block th:if="${mayAuthorise}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{creditNote.request.reject}">Reject</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/supplier-payments/requests/{id}/authorise(id=${prq.id})},
+                        ${s == 'PREPARED' and prq.dual} ? #{supplierPayment.request.firstConfirm(${prq.number})} : #{supplierPayment.request.payConfirm(${prq.number}, ${@num.amount(prq.amount, 2) + ' ' + prq.currencyCode}, ${prq.supplier.name})},
+                        ${s == 'PREPARED' and prq.dual} ? #{supplierPayment.request.authoriseFirst} : #{supplierPayment.request.authorisePay}, ${authority})}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waiting}">
+        <span th:text="${prq.dual} ? #{supplierPayment.request.waitingTwo(${@num.money(prq.baseEstimate)})} : #{supplierPayment.request.waitingOne}">Two people authorise it: above the Settings amount. Nothing is paid until the last one does.</span>
+        <span th:if="${needed != null}" th:text="#{supplierPayment.request.office(#{${'authority.level.' + needed.required}})}">One of them must be the Chief Operating Officer or above.</span>
+        <span th:if="${needed != null and needed.board}" th:text="#{authority.boardNote}">Only the Board may decide it: give the resolution in the note.</span>
+        <span th:if="${mine}" th:text="#{supplierPayment.request.notYourOwn}">You prepared it: other people authorise it.</span>
+        <span th:if="${first}" th:text="#{supplierPayment.request.firstYours}">You gave the first authorisation: another person gives the second.</span>
+        <span th:if="${canAuthorise and !mine and !first and !hasOffice}" th:text="#{supplierPayment.request.noOffice}">Authorising needs an office in the Delegation of Authority.</span>
+        <span th:if="${mayAuthorise and authority != null and !authority.allowed}" th:text="#{authority.notYours}">Your office cannot decide this amount.</span>
+    </div>
+    <div class="doc-note" th:if="${prq.firstBy != null}">
+        <strong th:text="#{supplierPayment.request.firstBy(${prq.firstBy}, #{${'authority.level.' + prq.firstLevel}}, ${#temporals.format(prq.firstAt, 'dd/MM/yyyy HH:mm')})}">Authorised by director1 (Director) on 15/10/2026 11:00</strong>
+        <span th:if="${prq.firstNote != null}" th:text="${'· ' + prq.firstNote}">· ok</span>
+    </div>
+    <div class="doc-note" th:if="${prq.secondBy != null}">
+        <strong th:text="#{supplierPayment.request.secondBy(${prq.secondBy}, ${#temporals.format(prq.secondAt, 'dd/MM/yyyy HH:mm')})}">Second authorisation by owner on 15/10/2026 11:30</strong>
+        <span th:if="${prq.secondNote != null}" th:text="${'· ' + prq.secondNote}">· ok</span>
+    </div>
+    <div class="doc-note" th:if="${payment != null}">
+        <strong th:text="#{supplierPayment.request.paidAs}">Paid:</strong>
+        <a class="mono" th:href="@{/supplier-payments/{id}(id=${payment.id})}" th:text="${payment.number}">SPAY-WH-2026-000003</a>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{creditNote.request.rejectedBy(${prq.decidedBy})} : #{supplierPayment.request.cancelledBy(${prq.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${prq.decisionNote}">Wait for the credit note</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{supplierInvoice.supplier}">Supplier</label>
+                    <div class="value">
+                        <a th:href="@{/suppliers/{id}(id=${prq.supplier.id}, tab='account')}" sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:text="${prq.supplier.name}">Shandong Float Glass Co.</a>
+                        <span sec:authorize="!hasAuthority('PAGE_SUPPLIERS')" th:text="${prq.supplier.name}">Shandong Float Glass Co.</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierAccount.amountCcy}">Amount</label>
+                    <div class="value strong" th:text="${@num.amount(prq.amount, 2) + ' ' + prq.currencyCode}">4,500.00 USD</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierPayment.request.rwf}">About (RWF)</label>
+                    <div class="value" th:text="${@num.money(prq.baseEstimate)}">6,075,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.method}">Method</label>
+                    <div class="value">
+                        <span th:text="#{${'supplierPayment.method.' + prq.method}}">Bank transfer</span>
+                        <span class="mono" th:if="${prq.reference != null}" th:text="${' · ' + prq.reference}">· SWIFT-881</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{supplierPayment.request.authorisations}">Authorisations</label>
+                    <div class="value" th:text="${prq.dual} ? #{supplierPayment.request.two} : #{supplierPayment.request.one}">Two authorisations</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.request.office}">Office</label>
+                    <div class="value" th:text="#{${'authority.level.' + prq.authorityLevel}}">Chief Operating Officer</div>
+                </div>
+                <div class="item item-full" th:if="${prq.notes != null}">
+                    <label th:text="#{customerAccount.notes}">Notes</label>
+                    <div class="value" th:text="${prq.notes}">Invoice SH-2210</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, '/supplier-payments/requests/' + ${prq.id}, '')}"></th:block>
+        </div>
+    </div>
+
+    <th:block th:if="${mayAuthorise}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{supplierPayment.request.rejectTitle(${prq.number})},
+                @{/supplier-payments/requests/{id}/reject(id=${prq.id})}, #{supplierPayment.request.rejectText}, #{creditNote.request.reject})}"></div>
+    </th:block>
+    <th:block th:if="${waiting and canPay and mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{supplierPayment.request.cancelTitle(${prq.number})},
+                @{/supplier-payments/requests/{id}/cancel(id=${prq.id})}, #{supplierPayment.request.cancelText}, #{supplierPayment.request.cancel})}"></div>
+    </th:block>
+    <th:block th:if="${mayAuthorise}">
+        <div th:replace="~{fragments/authority :: boardModal(@{/supplier-payments/requests/{id}/authorise(id=${prq.id})}, #{supplierPayment.request.authorisePay}, ${authority})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

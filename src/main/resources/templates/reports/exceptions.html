@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{exceptions.title}, ~{::content})}">
+<head><title>Exceptions report - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{exceptions.title}">Exceptions report</h1>
+            <div class="subtitle" th:text="#{exceptions.subtitle}">The month's approvals, credit notes and adjustments, for the Management Committee</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/exceptions/export(month=${month})})}"></th:block>
+        </div>
+    </div>
+    <div class="section">
+        <!--/* The month, then the button */-->
+        <form th:action="@{/reports/exceptions}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{exceptions.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${month}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{exceptions.summary}">By kind</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{exceptions.kind}">Kind</th>
+                        <th class="num" th:text="#{exceptions.count}">Number</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="k : ${kinds}" th:with="n=${report.counts.get(k)}">
+                        <td th:text="#{${'exceptions.kind.' + k}}">Credit note</td>
+                        <td class="num" th:text="${n == null ? 0 : n}">3</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{exceptions.list}">Exceptions</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{exceptions.when}">Decided</th>
+                        <th th:text="#{exceptions.number}">Number</th>
+                        <th th:text="#{exceptions.subject}">About</th>
+                        <th class="num" th:text="#{exceptions.amount}">Amount</th>
+                        <th th:text="#{exceptions.people}">Asked · decided</th>
+                        <th th:text="#{exceptions.outcome}">Outcome</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td class="nowrap" th:text="${#temporals.format(r.at, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:02</td>
+                        <td>
+                            <a class="mono" th:href="${r.link}" th:text="${r.number}">CN-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="#{${'exceptions.kind.' + r.kind}}">Credit note</div>
+                        </td>
+                        <td>
+                            <span th:text="${r.subject}">INV-WH-2026-000008 · ACME · broken in transit</span>
+                            <div class="cell-sub" th:if="${r.note != null}" th:text="${r.note}">ok</div>
+                        </td>
+                        <td class="num nowrap">
+                            <span th:text="${r.percent} ? ${@num.m2(r.amount) + ' %'} : ${@num.money(r.amount)}">120,000</span>
+                            <div class="cell-sub" th:if="${r.office != null}" th:text="#{${'authority.level.' + r.office}}">COO</div>
+                        </td>
+                        <td>
+                            <span th:text="${r.requestedBy}">cashier1</span>
+                            <div class="cell-sub" th:text="${r.decidedBy}">owner</div>
+                        </td>
+                        <td>
+                            <span class="badge" th:classappend="${r.outcome.name() == 'REJECTED'} ? 'badge-danger' : 'badge-success'"
+                                  th:text="#{${'exceptions.outcome.' + r.outcome}}">Approved</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(rows.content)}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{exceptions.empty}">No exceptions this month</h3>
+                                <p th:text="#{exceptions.emptyHint}">Approvals, credit notes and adjustments decided in the month appear here.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/reports/exceptions', ${query})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

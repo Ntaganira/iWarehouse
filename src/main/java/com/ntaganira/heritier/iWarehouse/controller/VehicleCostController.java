@@ -128,6 +128,7 @@ public class VehicleCostController {
         model.addAttribute("cost", cost);
         model.addAttribute("journals", costService.journals(cost));
         model.addAttribute("mine", costService.isRequester(cost));
+        model.addAttribute("authority", cost.getStatus() == VehicleCostStatus.PENDING_APPROVAL ? costService.authorityOf(cost) : null);
         model.addAttribute("limit", costService.approvalLimit());
         model.addAttribute("today", costService.today());
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.VEHICLE_COST, id, Paging.pageOf("documents", open, page), Paging.SIZE));

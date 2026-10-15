@@ -107,6 +107,8 @@ public class PurchaseOrderController {
         model.addAttribute("decimals", currencyDecimals().getOrDefault(order.getCurrencyCode(), 2));
         model.addAttribute("receipts", receipts);
         model.addAttribute("draftReceipts", receipts.stream().filter(r -> r.getStatus() == GoodsReceiptStatus.DRAFT).count());
+        model.addAttribute("submitter", PurchaseOrderService.isSubmitter(order));
+        model.addAttribute("authority", order.getStatus() == PurchaseOrderStatus.PENDING_APPROVAL ? orderService.authorityOf(order) : null);
         model.addAttribute("history", dataChangeService.historyWithChildren("PurchaseOrder", id.toString(),
                 "PurchaseOrderLine", "purchaseOrder", Paging.page(page), Paging.SIZE));
         model.addAttribute("tab", List.of("lines", "receipts", "history").contains(tab) ? tab : "lines");
@@ -203,14 +205,57 @@ public class PurchaseOrderController {
         try {
             PurchaseOrder order = orderService.place(id);
             PurchaseOrders.Totals t = orderService.totals(order);
-            activityLogService.record(MODULE, "PLACE_PURCHASE_ORDER", "Placed purchase order " + order.getNumber()
-                    + " with " + order.getSupplier().getName() + ": " + t.sheets() + " sheets, "
-                    + t.amount().toPlainString() + " " + order.getCurrencyCode(), ActivityStatus.SUCCESS);
-            redirect.addFlashAttribute("flashSuccess", messages.get("po.placedMsg", order.getNumber(), order.getSupplier().getName()));
+            boolean waits = order.getStatus() == PurchaseOrderStatus.PENDING_APPROVAL;
+            activityLogService.record(MODULE, "PLACE_PURCHASE_ORDER", (waits ? "Submitted purchase order " : "Placed purchase order ")
+                    + order.getNumber() + " with " + order.getSupplier().getName() + ": " + t.sheets() + " sheets, "
+                    + t.amount().toPlainString() + " " + order.getCurrencyCode()
+                    + (waits ? ", waiting for approval (" + order.getApprovalAmount().toPlainString() + " RWF)" : ""), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", waits ? messages.get("po.submittedMsg", order.getNumber())
+                    : messages.get("po.placedMsg", order.getNumber(), order.getSupplier().getName()));
         } catch (BusinessException e) {
             String error = messages.get(e.getMessageKey(), e.getArgs());
             activityLogService.record(MODULE, "PLACE_PURCHASE_ORDER", "Failed to place purchase order " + numberOf(id)
                     + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/purchase-orders/" + id;
+    }
+
+    /** Another person approves an order waiting, within the Delegation of Authority (CMP 06): it is placed. */
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAuthority('PAGE_PROCUREMENT') and hasAuthority('PERM_APPROVE_PURCHASE_ORDER')")
+    public String approve(@PathVariable UUID id, @RequestParam(required = false) String note, RedirectAttributes redirect) {
+        try {
+            PurchaseOrder order = orderService.approve(id, note);
+            activityLogService.record(MODULE, "APPROVE_PURCHASE_ORDER", "Approved purchase order " + order.getNumber() + " of "
+                    + order.getSubmittedBy() + " with " + order.getSupplier().getName() + ": " + order.getApprovalAmount().toPlainString() + " RWF"
+                    + (order.getApprovalNote() != null ? " (" + order.getApprovalNote() + ")" : ""), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("po.approvedMsg", order.getNumber(), order.getSupplier().getName()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "APPROVE_PURCHASE_ORDER", "Failed to approve purchase order " + numberOf(id)
+                    + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/purchase-orders/" + id;
+    }
+
+    /** Another person sends an order waiting back to draft, with the reason. */
+    @PostMapping("/{id}/send-back")
+    @PreAuthorize("hasAuthority('PAGE_PROCUREMENT') and hasAuthority('PERM_APPROVE_PURCHASE_ORDER')")
+    public String sendBack(@PathVariable UUID id, @RequestParam(required = false) String reason, RedirectAttributes redirect) {
+        if (!reasonOk(reason, redirect)) {
+            return "redirect:/purchase-orders/" + id;
+        }
+        try {
+            PurchaseOrder order = AuditContext.withReason(reason.trim(), () -> orderService.sendBack(id, reason));
+            activityLogService.record(MODULE, "REJECT_PURCHASE_ORDER", "Sent purchase order " + order.getNumber() + " back to "
+                    + order.getSubmittedBy() + ": " + reason.trim(), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("po.sentBackMsg", order.getNumber()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "REJECT_PURCHASE_ORDER", "Failed to send purchase order " + numberOf(id)
+                    + " back: " + error, ActivityStatus.FAILED);
             redirect.addFlashAttribute("flashError", error);
         }
         return "redirect:/purchase-orders/" + id;

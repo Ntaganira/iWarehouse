@@ -52,5 +52,7 @@ public enum AccountKey {
     /** Vehicle costs (V41): fuel; services, repairs, parts and tyres; washing, parking, tolls and the rest. */
     VEHICLE_FUEL,
     VEHICLE_MAINTENANCE,
-    VEHICLE_OTHER
+    VEHICLE_OTHER,
+    /** Receivables written off on approval (V43, F-14). */
+    BAD_DEBTS
 }

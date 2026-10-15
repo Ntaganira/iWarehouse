@@ -98,6 +98,7 @@ public class PosController {
         model.addAttribute("customer", customer);
         model.addAttribute("totals", sale == null ? Vat.Totals.NONE : salesService.totals(sale));
         model.addAttribute("credit", customer == null ? null : salesService.credit(customer));
+        model.addAttribute("overdue", customer == null ? null : salesService.overdue(customer));
         // Approval requests (POS-05, POS-06): the latest of each line, those waiting, the credit approved
         List<SaleApproval> approvals = salesService.approvals(sale);
         Map<UUID, SaleApproval> lineApprovals = new HashMap<>();
@@ -105,6 +106,8 @@ public class PosController {
         model.addAttribute("lineApprovals", lineApprovals);
         model.addAttribute("waiting", approvals.stream().filter(SaleApproval::isPending).toList());
         model.addAttribute("creditApproval", approvals.stream().filter(a -> a.isCredit() && !a.isPending()).reduce((a, b) -> b)
+                .filter(a -> a.getStatus() != SaleApprovalStatus.WITHDRAWN).orElse(null));
+        model.addAttribute("termsApproval", approvals.stream().filter(a -> a.isTerms() && !a.isPending()).reduce((a, b) -> b)
                 .filter(a -> a.getStatus() != SaleApprovalStatus.WITHDRAWN).orElse(null));
         model.addAttribute("approvalState", approvalState(approvals));
         model.addAttribute("discountLimit", salesService.discountLimit());
@@ -301,8 +304,9 @@ public class PosController {
                 activityLogService.record(MODULE, "CREATE_SALE_APPROVAL", "Asked " + a.getNumber() + " for " + what + ": "
                         + num.money(a.getListPrice()) + " to " + num.money(a.getRequestedPrice()) + " (" + num.m2(a.getDiscountPercent())
                         + "% off, limit " + num.m2(a.getLimitPercent()) + "%): " + a.getReason(), ActivityStatus.SUCCESS);
-                redirect.addFlashAttribute("flashWarning", messages.get("sale.price.asked", a.getNumber(), num.m2(a.getDiscountPercent()),
-                        num.m2(a.getLimitPercent())));
+                redirect.addFlashAttribute("flashWarning", a.isBelowCost()
+                        ? messages.get("sale.price.askedBelowCost", a.getNumber(), num.money(a.getCostAmount()))
+                        : messages.get("sale.price.asked", a.getNumber(), num.m2(a.getDiscountPercent()), num.m2(a.getLimitPercent())));
             } else if (change.line().isPriceChanged()) {
                 activityLogService.record(MODULE, "UPDATE_SALE", "Changed the price of " + what + " from " + num.money(change.listPrice())
                         + " to " + num.money(change.price()) + " (" + num.m2(change.discount()) + "% off): " + change.line().getPriceReason(),
@@ -347,6 +351,29 @@ public class PosController {
             redirect.addFlashAttribute("payForm", form);
             redirect.addFlashAttribute("payField", e.getField());
             redirect.addFlashAttribute("creditOver", true);
+        }
+        return "redirect:/pos";
+    }
+
+    /** Asks a manager for longer payment terms on this invoice (F-03). */
+    @PostMapping("/terms-approval")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String termsApproval(@RequestParam(required = false) Integer extraDays, @RequestParam(required = false) String termsReason,
+                                RedirectAttributes redirect) {
+        try {
+            SaleApproval a = AuditContext.withReason(termsReason == null ? null : termsReason.trim(),
+                    () -> salesService.requestTerms(extraDays, termsReason));
+            activityLogService.record(MODULE, "CREATE_SALE_APPROVAL", "Asked " + a.getNumber() + " for " + a.getExtraDays()
+                    + " more days to pay for " + a.getSubject() + " on a sale of " + num.money(a.getAmountAfter()) + " RWF: " + a.getReason(),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashWarning", messages.get("sale.terms.asked", a.getNumber(), a.getExtraDays()));
+        } catch (BusinessException e) {
+            fail(redirect, "CREATE_SALE_APPROVAL", "Failed to ask for longer terms", e);
+            Map<String, String> form = new HashMap<>();
+            form.put("extraDays", extraDays == null ? "" : extraDays.toString());
+            form.put("termsReason", termsReason);
+            redirect.addFlashAttribute("termsForm", form);
+            redirect.addFlashAttribute("termsField", e.getField());
         }
         return "redirect:/pos";
     }

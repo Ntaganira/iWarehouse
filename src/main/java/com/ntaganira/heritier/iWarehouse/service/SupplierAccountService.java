@@ -2,10 +2,15 @@ package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.GoodsReceiptStatus;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
+import com.ntaganira.heritier.iWarehouse.enums.PaymentRequestStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.*;
@@ -60,11 +65,21 @@ public class SupplierAccountService {
     private final DocumentNumberService numbers;
     private final PeriodLock periods;
     private final Clock clock;
+    private final SupplierPaymentRequestRepository requestRepo;
+    private final DelegationOfAuthority authority;
+    private final SettingService settingService;
+    private final Notifier notifier;
 
     public SupplierAccountService(SupplierInvoiceRepository invoiceRepo, SupplierInvoiceLineRepository invoiceLineRepo,
                                   SupplierPaymentRepository paymentRepo, SupplierRepository supplierRepo, GoodsReceiptRepository receiptRepo,
                                   CurrencyRepository currencyRepo, JournalService journalService, ExchangeRateService rates,
-                                  PostingService postingService, DocumentNumberService numbers, PeriodLock periods, Clock clock) {
+                                  PostingService postingService, DocumentNumberService numbers, PeriodLock periods, Clock clock,
+                                  SupplierPaymentRequestRepository requestRepo, DelegationOfAuthority authority, SettingService settingService,
+                                  Notifier notifier) {
+        this.requestRepo = requestRepo;
+        this.authority = authority;
+        this.settingService = settingService;
+        this.notifier = notifier;
         this.invoiceRepo = invoiceRepo;
         this.invoiceLineRepo = invoiceLineRepo;
         this.paymentRepo = paymentRepo;
@@ -313,6 +328,18 @@ public class SupplierAccountService {
      */
     @Transactional
     public SupplierPayment pay(UUID supplierId, PaymentForm form) {
+        if (authorisationRequired()) {
+            throw BusinessException.of("supplierPayment.request.required");
+        }
+        return pay(supplierId, form, null);
+    }
+
+    /** A payment's form checked against what is owed: the supplier (locked), method, amount, what is open, reference, notes. */
+    private record Checked(Supplier supplier, PaymentMethod method, String currency, BigDecimal amount, Payables.Open open,
+                           String reference, String notes) {
+    }
+
+    private Checked check(UUID supplierId, PaymentForm form) {
         PaymentMethod method = form.method();
         if (method != PaymentMethod.BANK_TRANSFER && method != PaymentMethod.CASH && method != PaymentMethod.MOBILE_MONEY) {
             throw BusinessException.onField("method", "supplierPayment.method.required");
@@ -341,6 +368,18 @@ public class SupplierAccountService {
         if (notes != null && notes.length() > 255) {
             throw BusinessException.onField("notes", "supplierPayment.notesSize");
         }
+        return new Checked(supplier, method, currency, amount, open, reference, notes);
+    }
+
+    private SupplierPayment pay(UUID supplierId, PaymentForm form, UUID requestId) {
+        Checked c = check(supplierId, form);
+        Supplier supplier = c.supplier();
+        PaymentMethod method = c.method();
+        String currency = c.currency();
+        Payables.Open open = c.open();
+        BigDecimal amount = c.amount();
+        String reference = c.reference();
+        String notes = c.notes();
         LocalDate today = today();
         Payables.Settlement settled = Payables.settle(open, amount);
         SupplierPayment payment = new SupplierPayment();
@@ -365,9 +404,217 @@ public class SupplierAccountService {
         payment.setNumber(numbers.next(DocumentType.SUPPLIER_PAYMENT));
         payment.setPostedAt(LocalDateTime.now(clock));
         payment.setPostedBy(AppUserPrincipal.currentUsername());
+        payment.setRequestId(requestId);
         paymentRepo.save(payment);
         postingService.supplierPayment(payment);
         return payment;
+    }
+
+    // ---------------------------------------------------------------- prepared, then authorised (CMP 07)
+
+    /** Whether payments are prepared, then authorised by another person (Settings). */
+    public boolean authorisationRequired() {
+        return settingService.getBoolean(SettingKey.APPROVAL_SUPPLIER_PAYMENT_AUTHORISE);
+    }
+
+    public SupplierPaymentRequest findRequest(UUID id) {
+        return requestRepo.findDetailedById(id).orElseThrow(() -> new NotFoundException("SupplierPaymentRequest", id));
+    }
+
+    public Page<SupplierPaymentRequest> findRequests(String status, String search, int page, int size) {
+        Specification<SupplierPaymentRequest> spec = (root, query, cb) -> {
+            List<Predicate> p = new ArrayList<>();
+            if (StringUtils.hasText(status)) {
+                try {
+                    p.add(cb.equal(root.get("status"), PaymentRequestStatus.valueOf(status)));
+                } catch (IllegalArgumentException ignored) {
+                    // an unknown status filters nothing
+                }
+            }
+            if (StringUtils.hasText(search)) {
+                String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+                p.add(cb.or(cb.like(cb.lower(root.get("number")), term), cb.like(cb.lower(root.get("supplier").get("name")), term),
+                        cb.like(cb.lower(root.get("preparedBy")), term)));
+            }
+            return cb.and(p.toArray(Predicate[]::new));
+        };
+        return requestRepo.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Order.desc("preparedAt"), Sort.Order.desc("number"))));
+    }
+
+    public long waitingRequests() {
+        return requestRepo.countByStatusIn(List.of(PaymentRequestStatus.PREPARED, PaymentRequestStatus.AUTHORISED));
+    }
+
+    public DelegationOfAuthority.Check authorityOf(SupplierPaymentRequest r) {
+        return authority.check(AuthorityDecision.SUPPLIER_PAYMENT, r.getBaseEstimate());
+    }
+
+    public static boolean isPreparer(SupplierPaymentRequest r) {
+        return AppUserPrincipal.current().map(u -> u.getId().equals(r.getPreparedById())).orElse(false);
+    }
+
+    public static boolean isFirstAuthoriser(SupplierPaymentRequest r) {
+        return r.getFirstById() != null && AppUserPrincipal.current().map(u -> u.getId().equals(r.getFirstById())).orElse(false);
+    }
+
+    /**
+     * Treasury prepares a payment: checked against what is owed (less what other requests still waiting would pay), worked
+     * out in RWF at today's rate; two authorisations above the Settings amount, one otherwise. The authorisers are told.
+     */
+    @Transactional
+    public SupplierPaymentRequest prepare(UUID supplierId, PaymentForm form) {
+        Checked c = check(supplierId, form);
+        BigDecimal waiting = requestRepo.findBySupplier_IdAndStatusIn(supplierId, List.of(PaymentRequestStatus.PREPARED, PaymentRequestStatus.AUTHORISED))
+                .stream().filter(r -> r.getCurrencyCode().equals(c.currency())).map(SupplierPaymentRequest::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (waiting.add(c.amount()).compareTo(c.open().getAmount()) > 0) {
+            throw BusinessException.onField("amount", "supplierPayment.request.tooMuch", c.open().getAmount(), c.currency(), waiting);
+        }
+        BigDecimal base = inRwf(c.currency(), c.amount());
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        SupplierPaymentRequest r = new SupplierPaymentRequest();
+        r.setNumber(numbers.next(DocumentType.SUPPLIER_PAYMENT_REQUEST));
+        r.setSupplier(c.supplier());
+        r.setCurrencyCode(c.currency());
+        r.setAmount(c.amount().setScale(2, RoundingMode.HALF_UP));
+        r.setMethod(c.method());
+        r.setReference(c.method().needsReference() ? c.reference() : null);
+        r.setNotes(c.notes());
+        r.setBaseEstimate(base);
+        r.setAuthorityLevel(authority.required(AuthorityDecision.SUPPLIER_PAYMENT, base));
+        r.setAuthorisations(base.compareTo(settingService.getDecimal(SettingKey.APPROVAL_SUPPLIER_PAYMENT_DUAL_LIMIT)) > 0 ? 2 : 1);
+        r.setStatus(PaymentRequestStatus.PREPARED);
+        r.setPreparedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        r.setPreparedById(user.map(AppUserPrincipal::getId).orElse(null));
+        r.setPreparedAt(LocalDateTime.now(clock));
+        requestRepo.save(r);
+        notifier.holders("AUTHORISE_SUPPLIER_PAYMENT", r.getPreparedById(), NotificationKind.APPROVAL, "notify.paymentRequest.waiting",
+                "notify.paymentRequest.waitingText", "/supplier-payments/requests/" + r.getId(), r.getNumber(), r.getSupplier().getName(),
+                r.getAmount().toPlainString() + " " + r.getCurrencyCode());
+        return r;
+    }
+
+    /**
+     * Another person authorises it (not who prepared it, nor the first authoriser). The last authorisation pays it, at today's
+     * rate: by then one of the authorisers must hold the office the amount needs (the Board's with its resolution).
+     */
+    @Transactional
+    public SupplierPaymentRequest authorise(UUID id, String note) {
+        SupplierPaymentRequest found = findRequest(id);
+        supplierRepo.lockById(found.getSupplier().getId());
+        SupplierPaymentRequest r = lockRequest(id);
+        if (!r.isWaiting()) {
+            throw BusinessException.of("supplierPayment.request.notWaiting", r.getNumber());
+        }
+        if (isPreparer(r)) {
+            throw BusinessException.of("supplierPayment.request.ownAuthorise", r.getNumber());
+        }
+        if (isFirstAuthoriser(r)) {
+            throw BusinessException.of("supplierPayment.request.twice", r.getNumber());
+        }
+        Optional<AuthorityLevel> held = authority.currentLevel();
+        if (held.isEmpty()) {
+            throw BusinessException.of("authority.tooLow", DelegationOfAuthority.label(AuthorityLevel.DIRECTOR), r.getNumber());
+        }
+        String clean = PartyRules.clean(note);
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        LocalDateTime now = LocalDateTime.now(clock);
+        boolean last = r.getStatus() == PaymentRequestStatus.AUTHORISED || !r.isDual();
+        if (!last) {
+            r.setFirstBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            r.setFirstById(user.map(AppUserPrincipal::getId).orElse(null));
+            r.setFirstLevel(held.get());
+            r.setFirstAt(now);
+            r.setFirstNote(clean);
+            r.setStatus(PaymentRequestStatus.AUTHORISED);
+            notifier.holders("AUTHORISE_SUPPLIER_PAYMENT", r.getFirstById(), NotificationKind.APPROVAL, "notify.paymentRequest.second",
+                    "notify.paymentRequest.waitingText", "/supplier-payments/requests/" + r.getId(), r.getNumber(), r.getSupplier().getName(),
+                    r.getAmount().toPlainString() + " " + r.getCurrencyCode());
+            return r;
+        }
+        // The office the amount needs today, held by one of the authorisers
+        BigDecimal base = inRwf(r.getCurrencyCode(), r.getAmount());
+        AuthorityLevel required = authority.required(AuthorityDecision.SUPPLIER_PAYMENT, base);
+        AuthorityLevel best = r.getFirstLevel() != null && r.getFirstLevel().compareTo(held.get()) > 0 ? r.getFirstLevel() : held.get();
+        if (!best.atLeast(required)) {
+            throw BusinessException.of("authority.tooLow", DelegationOfAuthority.label(required), base.setScale(0, RoundingMode.HALF_UP) + " RWF");
+        }
+        if (required == AuthorityLevel.BOARD && clean == null && r.getFirstNote() == null) {
+            throw BusinessException.onField("note", "authority.boardResolution", r.getNumber());
+        }
+        if (r.isDual()) {
+            r.setSecondBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            r.setSecondById(user.map(AppUserPrincipal::getId).orElse(null));
+            r.setSecondAt(now);
+            r.setSecondNote(clean);
+        } else {
+            r.setFirstBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            r.setFirstById(user.map(AppUserPrincipal::getId).orElse(null));
+            r.setFirstLevel(held.get());
+            r.setFirstAt(now);
+            r.setFirstNote(clean);
+        }
+        SupplierPayment payment = pay(r.getSupplier().getId(), new PaymentForm(r.getCurrencyCode(), r.getAmount(), r.getMethod(),
+                r.getReference(), r.getNotes()), r.getId());
+        r.setPaymentId(payment.getId());
+        r.setDecidedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        r.setDecidedAt(now);
+        r.setStatus(PaymentRequestStatus.PAID);
+        notifier.user(r.getPreparedById(), NotificationKind.DECISION, "notify.paymentRequest.paid", "notify.decidedBy",
+                "/supplier-payments/" + payment.getId(), r.getNumber(), payment.getPostedBy());
+        return r;
+    }
+
+    /** An authoriser rejects it (not who prepared it), with a reason: nothing is paid. */
+    @Transactional
+    public SupplierPaymentRequest reject(UUID id, String reason) {
+        SupplierPaymentRequest r = lockRequest(id);
+        if (!r.isWaiting()) {
+            throw BusinessException.of("supplierPayment.request.notWaiting", r.getNumber());
+        }
+        if (isPreparer(r)) {
+            throw BusinessException.of("supplierPayment.request.ownReject", r.getNumber());
+        }
+        closeRequest(r, PaymentRequestStatus.REJECTED, reason);
+        notifier.user(r.getPreparedById(), NotificationKind.DECISION, "notify.paymentRequest.rejected", "notify.decidedBy",
+                "/supplier-payments/requests/" + r.getId(), r.getNumber(), r.getDecidedBy());
+        return r;
+    }
+
+    /** Whoever prepared it takes it back, with a reason. */
+    @Transactional
+    public SupplierPaymentRequest cancel(UUID id, String reason) {
+        SupplierPaymentRequest r = lockRequest(id);
+        if (!r.isWaiting()) {
+            throw BusinessException.of("supplierPayment.request.notWaiting", r.getNumber());
+        }
+        if (!isPreparer(r)) {
+            throw BusinessException.of("supplierPayment.request.notYours", r.getNumber());
+        }
+        closeRequest(r, PaymentRequestStatus.CANCELLED, reason);
+        return r;
+    }
+
+    private void closeRequest(SupplierPaymentRequest r, PaymentRequestStatus status, String reason) {
+        String why = PartyRules.clean(reason);
+        if (why == null || why.length() > 255) {
+            throw BusinessException.of("po.reason.required");
+        }
+        r.setDecidedBy(AppUserPrincipal.currentUsername());
+        r.setDecidedAt(LocalDateTime.now(clock));
+        r.setDecisionNote(why);
+        r.setStatus(status);
+    }
+
+    private SupplierPaymentRequest lockRequest(UUID id) {
+        requestRepo.lockById(id).orElseThrow(() -> new NotFoundException("SupplierPaymentRequest", id));
+        return findRequest(id);
+    }
+
+    /** An amount in RWF at today's rate (RWF as it is). */
+    private BigDecimal inRwf(String currency, BigDecimal amount) {
+        BigDecimal rwf = currency.equals(baseCurrency()) ? amount : rates.rateFor(currency, today()).toBase(amount);
+        return rwf.setScale(2, RoundingMode.HALF_UP);
     }
 
     // ---------------------------------------------------------------- helpers

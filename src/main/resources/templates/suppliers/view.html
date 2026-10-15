@@ -19,7 +19,7 @@
             <a th:href="@{/supplier-invoices/new(supplier=${supplier.id})}" class="btn btn-outline" th:if="${account != null and !#lists.isEmpty(account.uninvoiced)}"
                sec:authorize="hasAuthority('PERM_RECORD_SUPPLIER_INVOICE')" th:text="#{supplierAccount.recordInvoice}">Record an invoice</a>
             <button type="button" class="btn btn-outline" data-modal-open="supplier-pay-modal" th:if="${account != null and !#lists.isEmpty(payCurrencies)}"
-                    sec:authorize="hasAuthority('PERM_PAY_SUPPLIER')" th:text="#{supplierAccount.pay}">Pay</button>
+                    sec:authorize="hasAuthority('PERM_PAY_SUPPLIER')" th:text="${payPrepared} ? #{supplierPayment.request.prepare} : #{supplierAccount.pay}">Pay</button>
             <th:block sec:authorize="hasAuthority('PERM_MANAGE_SUPPLIER')">
                 <form th:if="${supplier.enabled}" th:action="@{/suppliers/{id}/disable(id=${supplier.id})}" method="post"
                       class="row-action-form confirm-submit danger" th:attr="data-confirm=#{supplier.disableConfirm(${supplier.name})}">
@@ -229,6 +229,7 @@
                 <input type="hidden" name="supplierId" th:value="${supplier.id}">
                 <div class="modal-body">
                     <p class="text-muted" th:text="#{supplierAccount.payText}">At today's rate; it settles the oldest items first and the difference with what they were booked at is the FX gain or loss.</p>
+                    <p class="text-muted" th:if="${payPrepared}" th:text="#{supplierPayment.request.prepareText}">Prepared here, paid once another person authorises it (two people above the Settings amount).</p>
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="sp-currency" th:text="#{supplierAccount.currency}">Currency</label>
@@ -264,7 +265,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" data-modal-close="supplier-pay-modal" th:text="#{common.confirmCancel}">Not now</button>
-                    <button type="submit" class="btn btn-primary" th:text="#{supplierAccount.pay}">Pay</button>
+                    <button type="submit" class="btn btn-primary" th:text="${payPrepared} ? #{supplierPayment.request.prepare} : #{supplierAccount.pay}">Pay</button>
                 </div>
             </form>
         </div>

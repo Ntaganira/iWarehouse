@@ -8,10 +8,10 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 - Build the milestones in order, top to bottom: each one needs the ones above it. Inside a milestone, build the items in order too.
 - Priorities: **M** must, **S** should, **C** could. Sizes: (S) a day or less, (M) a few days, (L) a week or more.
 - When an item lands: tick it, add the date and one line saying where it lives (screen, migration, main class), then move the finished milestone to the Done log at the end. Put anything the owner must decide under "Questions for the business".
-- **Next migration: V42.** Stop the app before writing it (CLAUDE.md, Database).
+- **Next migration: V44.** Stop the app before writing it (CLAUDE.md, Database).
 - A module is done when it meets the definition of done below.
 
-## Where we are (2026-10-13)
+## Where we are (2026-10-15)
 
 | Area | State | Where |
 |---|---|---|
@@ -36,9 +36,11 @@ The road from today's code to a fully working warehouse, sales and fleet system 
 | Payroll (owner's request, not in SRS v2.1) | Done | V40, `/payroll/*` |
 | Vehicle costs and service plans (owner's request, not in SRS v2.1) | Done | V41, `/vehicle-costs`, the vehicle's Costs, Mileage and Service plans tabs, the trip's Costs tab, the fleet report's per-vehicle view |
 | The mobile POS as an Android and iOS app, High Bytes POS (Flutter; owner's choice) | **In progress**: written, to be tried on a phone | `mobile/` (see below) |
-| Hardening and go-live | **Next** (M10) | — |
+| Client controls, step 1 (M10 of the coverage plan): approvals and the Delegation of Authority | Done | V42–V43, Settings › Delegation of authority, `/sale-approvals`, `/credit-notes/requests`, `/accounting/write-offs`, `/purchase-orders`, `/supplier-payments/requests`, `/users/access-review`, `/reports/exceptions` |
+| Client controls, steps 2–9 (M11–M18 of the coverage plan) | **Next** (M11) | see "Client controls" below |
+| Hardening and go-live | After the client controls | — |
 
-Unit tests: 547, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
+Unit tests: 563, all passing. Acceptance tests (SRS 8.1): AT-01 to AT-10 pass (AT-10 for every event of the posting matrix built).
 
 ## Definition of done for a module
 
@@ -136,7 +138,7 @@ Goal: every unit and every franc that left in the morning is accounted for at ni
 - [x] Float clearance by the accountant: cash to the main vault or bank; shortage to Driver Shortage Receivable, overage to Cash Over/Short (ACC-06, ACC-07) (M) — 2026-10-11: `/floats` (Driver Floats, Accounting): the trips back with cash to count, the clearances, what each driver holds and owes (from the ledger). Clear the float (CLEAR_FLOAT, once the cash is declared): counted, into the vault or the bank (with its slip); FC-WH-2026-000001, posted when saved and never changed: Dr vault/bank counted, Cr Driver Float the trip's cash sales, a shortage Dr Driver Shortage Receivable naming the driver, an overage Cr Cash Over/Short. A float not cleared 24 hours (Settings) after its trip came back is reported to the accountant once. AT-07 checked in the browser: 1,000 RWF short on the driver's receivable. The trip closes once stock and cash are settled (its case resolved or escalated, its cash declared, its float cleared when it took cash)
 - [x] Fleet reports: sales per trip and driver, EoD discrepancies, breakage rate per driver, floats outstanding (RPT-04) (M) — 2026-10-11: `/reports/fleet` (Reports): per trip (loaded, sold, broken, missing, sales, cash, the float), per driver with the breakage rate (broken over loaded), the end-of-day differences and how they were settled, the floats outstanding today; Excel and PDF. The dashboard counts the audit cases to settle and the floats to count
 
-## M10 — Hardening and go-live
+## Hardening and go-live (called M10 before the coverage plan took M10–M18)
 
 - [ ] Account lockout after 5 failed logins (`users.failed_login_attempts`, `locked_until`) (NFR-09) (M)
 - [x] Profile page and change password (NFR-09) (S) — 2026-10-11 (V38): the avatar in the header opens My account (My profile, Change password, Logout; keyboard and Escape). `/profile`, for every signed-in user: the photo (squared and shrunk in the browser, drawn again as a 256 px JPEG by the server, so no file is kept as sent; MinIO, served by `/profile/photo`; removed back to the initials), the name, email, phone and a new job title (also on the user form), the password (the current one first, typed twice, not the same). Audited and logged (UPDATE_PROFILE, UPDATE_PROFILE_PHOTO, CHANGE_PASSWORD with failures); the header shows the new name and photo at once
@@ -219,6 +221,24 @@ The web app (`/m/`) stays.
 - [ ] Replace the install illustration (Figure "Installing the app on Android") with screenshots from a real phone once the test APK is installed: allowing the source, Install, the icon on the home screen
 
 ---
+
+## Client controls: the restructuring documents (2026-10-15), to 90 % coverage
+
+The owner's goal (2026-10-15): cover at least 90 % of the 264 requirements in the client's documents (Board Paper, the
+16-form control manual, the restructuring analysis; register in the coverage document on the Desktop, v1.0). Rules the
+client has not decided (D1–D14) are built as settings set to the coverage document's recommendation. Coverage after
+each step, of 264:
+
+- [x] **M10 — approvals and the Delegation of Authority (36 %)** — 2026-10-15 (V42, V43). Offices Director, COO, MD and Board with limits per decision (Settings › Delegation of authority, PERM_MANAGE_AUTHORITY; the Board records its resolution); every approval page shows the office it needs. Counter: a price below cost needs approval (MD), credit blocked while an invoice is overdue (grace days), longer terms asked and kept on the invoice, approval in part, optional recommendation step; the phone's below-cost sales become sync conflicts. Credit notes asked, reviewed by Finance, approved, then issued (CNR). Receivable write-offs prepared, reviewed, approved, posted to Bad Debts (RWO, account 6210). Purchase orders above the limit approved or sent back. Goods receipts posted by another person. Supplier payments prepared and authorised, two people above 500,000 RWF (PRQ). Access review every 92 days, the monthly exceptions report, 15 roles of the new structure, and the dashboard and search know the new requests. Eleven settings, set to the coverage document’s recommendations (the recommendation step off, every purchase order approved)
+- [ ] M11 — master data, KYC and price approval (40 %)
+- [ ] M12 — Transaction Ticket, transfers in transit, stock card (46 %)
+- [ ] M13 — Order Desk, release, delivery note, EBM before goods, channels and territories (55 %)
+- [ ] M14 — daily close, cash count and banking, statements and confirmations, period sign-off (63 %)
+- [ ] M15 — the field cycle on the server, the web app and High Bytes POS (68 %)
+- [ ] M16 — damage register, counts, variance and inventory reports, KPIs (80 %)
+- [ ] M17 — expenditure, petty cash, advances, cost centres (86 %)
+- [ ] M18 — budgets, fixed assets, targets, cash flow (91.3 %)
+- [ ] Then: the coverage document v1.1 with the new figures
 
 ## Questions for the business
 
@@ -334,6 +354,7 @@ Answers change what gets built; record each answer next to the question.
 - Ledger started on 2026-10-09: opening stock JV-WH-2026-000001 (7,135,242.24 RWF), then ADJ-WH-2026-000006 (U-WH-000060 written off as broken, approved by owner38648) and its journal JV-WH-2026-000002. Account 5190 "Office rent (test)", deactivated. Go-live starts the ledger again from an empty database
 - Labels printed for WH-A-OC, WH-A-R01, WH-A-R02 and WH-A-R04 by qa-admin on 2026-10-09: their codes are fixed (the real racks get their own codes and labels at go-live)
 - Stock counts CNT-WH-2026-000001..7: -000003 counted WH-A-R04 (U-WH-000001 moved there from WH-A-R01 by the count; its adjustment ADJ-WH-2026-000005 rejected, so nothing was written off), the others cancelled
+- M10 of the coverage plan, 2026-10-15 (qa-admin asking, owner38648 approving, manual-admin reviewing and authorising first): Settings › Delegation of authority: the COO's discount limit set to 5 % for a check and put back to 7 %; Umucyo Builders Ltd's payment terms set to 0 days for the overdue check and put back to 30. Counter: tills TILL-WH-2026-000037..39 (closed) and TILL-WH-2026-000040 (left open by qa-admin, no sale: close it), APR-WH-2026-000012 and -000016 (5 % asked, approved in part at 3 %: 22,310/m²), -000013 and -000017 (below cost, withdrawn with their sales), -000014 and -000018 (credit for Umucyo while overdue, approved), -000015 and -000019 (longer terms, approved); INV-WH-2026-000026 and -000027 (Umucyo, 190,138 each on credit, 30 extra days); ADJ-WH-2026-000011 (rejected); an access review signed by owner38648. Credit notes: CNR-WH-2026-000001 (U-WH-000052, withdrawn), CNR-WH-2026-000002 (U-WH-000078 of MINV-WH-2026-000037, issued as CN-WH-2026-000006: back on WH-A-R01, 195,008 refunded by mobile money), CNR-WH-2026-000003 (U-WH-000077 of MINV-WH-2026-000033, rejected). RWO-WH-2026-000001 (1,000 of what Umucyo owes, posted to Bad Debts). PO-WH-2026-000018 (Kigali Glass Traders, 2 sheets CLR-6, sent back once, approved, ordered, nothing received: cancel it). PRQ-WH-2026-000001 (Kigali Glass Traders, 20,000, paid as SPAY-WH-2026-000002) and PRQ-WH-2026-000002 (Kigali Auto Garage Ltd, 15,000, two authorisations with the dual limit lowered to 10,000 for the check and put back to 500,000, paid as SPAY-WH-2026-000003). Journals JV-WH-2026-000128..133, their notifications and EBM refund receipt (simulator)
 - Automated-check user qa-admin (ADMIN role, created 2026-10-08 so scripted browser checks never sign the real admin out: one session per user) — disable before go-live
 - User manual screenshots on 2026-10-12 (user manual-admin, ADMIN role, made for them — disable before go-live; named "Grace Mukamana" until 2026-10-13, then "NTAGANIRA Heritier" with the user's own photo in MinIO and the email heritier.ntaganira@example.com): trips TRP-WH-2026-000009 (four CLR-8 sheets, no price on the trip, all brought back, 0 declared, closed) and -000010 (U-WH-000027 sold from the phone on MINV-WH-2026-000029, 195,008 cash declared on the phone, U-WH-000079 missing then found: AC-WH-2026-000005; FC-WH-2026-000003 exact; closed), phone "Jean’s phone" signed in twice for driver-m7; ADJ-WH-2026-000008 (qa-admin, U-WH-000028, rejected); CUT-WH-2026-000014 cut from U-WH-000076 (the pieces of INV-WH-2026-000011 now wait to be handed over); GRN-WH-2026-000007 (2 CLR-6 sheets on PO-WH-2026-000012, posted, not invoiced); MJ-WH-2026-000005 (withdrawn); PAY-WH-2026-000003 (November, cancelled); tills TILL-WH-2026-000031..33 (opened and closed exact, sales cancelled) with APR-WH-2026-000008 and -000009 (withdrawn). Dark-theme shots the same day: TRP-WH-2026-000011 (U-WH-000077 sold on MINV-WH-2026-000033, U-WH-000083 missing then found: AC-WH-2026-000006; FC-WH-2026-000004 exact; closed), ADJ-WH-2026-000009 (rejected), CUT-WH-2026-000016 (U-WH-000082 taken, put back, cancelled), MJ-WH-2026-000006 (withdrawn), PAY-WH-2026-000004 (cancelled), TILL-WH-2026-000034 with APR-WH-2026-000010 (withdrawn). Shots again at 80 % zoom: TRP-WH-2026-000012 (U-WH-000078 sold on MINV-WH-2026-000037, U-WH-000084 missing then found: AC-WH-2026-000007; FC-WH-2026-000005 exact; closed), ADJ-WH-2026-000010 (rejected), CUT-WH-2026-000017 (cancelled), MJ-WH-2026-000007 (withdrawn), PAY-WH-2026-000005 (cancelled), TILL-WH-2026-000035 with APR-WH-2026-000011 (withdrawn). Shots again after the app was renamed High Bytes: TRP-WH-2026-000016 (Huye, Nyanza: U-WH-000053..55, nothing sold, all back where they left from, 0 declared at the office, closed), phone "Jean’s phone" signed in again for driver-m7. On 2026-10-13, so the manual names no "Grace": test employee EMP-WH-0003 renamed Claire Uwamahoro (was Grace Mukamana; PAY-WH-2026-000001's lines keep the old name, as a paid run does), PAY-WH-2026-000006 (November draft for a screenshot, cancelled)
 - For My day and the test APK on 2026-10-14 (manual-admin): trip TRP-WH-2026-000018 (RAC123A, driver-m7, Musanze, Rubavu, U-WH-000053..55 loaded, departed at 45,470 km, still on the road: return or cancel it before go-live); the web app signed in for driver-m7 as phone "Edge check (My day)" (an api_devices token; the trip's prices frozen and invoice numbers given to it)

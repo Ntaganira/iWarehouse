@@ -123,6 +123,7 @@ public class ManualJournalController {
         model.addAttribute("lines", lines);
         model.addAttribute("journals", journalService.journals(journal));
         model.addAttribute("mine", journalService.isRequester(journal));
+        model.addAttribute("authority", journal.getStatus() == ManualJournalStatus.PENDING_APPROVAL ? journalService.authorityOf(journal) : null);
         model.addAttribute("today", journalService.today());
         model.addAttribute("history", dataChangeService.history("ManualJournal", id.toString(), Paging.page(page), Paging.SIZE));
         return "manual-journals/view";

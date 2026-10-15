@@ -105,6 +105,7 @@ public class StockAdjustmentController {
         model.addAttribute("units", adjustmentService.unitsOf(adjustment));
         model.addAttribute("limit", adjustmentService.approvalLimit());
         model.addAttribute("mine", isMine(adjustment));
+        model.addAttribute("authority", adjustment.getStatus() == AdjustmentStatus.PENDING_APPROVAL ? adjustmentService.authorityOf(adjustment) : null);
         String open = List.of("documents", "history").contains(tab) ? tab : "lines";
         model.addAttribute("history", dataChangeService.historyWithChildren("StockAdjustment", id.toString(),
                 List.of("StockAdjustmentLine"), "adjustment", Paging.pageOf("history", open, page), Paging.SIZE));

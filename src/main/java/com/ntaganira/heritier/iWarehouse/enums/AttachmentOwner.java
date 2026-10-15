@@ -26,7 +26,11 @@ public enum AttachmentOwner {
     /** The photos of breakage on the road (FLT-08) and any paper of the trip. */
     TRIP("PAGE_FLEET", "/trips/"),
     /** The receipt or invoice of a vehicle cost. */
-    VEHICLE_COST("PAGE_VEHICLE_COSTS", "/vehicle-costs/");
+    VEHICLE_COST("PAGE_VEHICLE_COSTS", "/vehicle-costs/"),
+    /** The evidence for a credit note asked (F-14). */
+    CREDIT_NOTE_REQUEST("PAGE_CREDIT_NOTES", "/credit-notes/requests/"),
+    /** The evidence for a write-off: letters sent, a court ruling, the customer's closure (F-14). */
+    RECEIVABLE_WRITE_OFF("PAGE_RECEIVABLE_WRITE_OFFS", "/accounting/write-offs/");
 
     private final String page;
     private final String path;

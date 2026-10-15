@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
+import java.time.LocalDateTime;
 import com.ntaganira.heritier.iWarehouse.entity.VehicleCost;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostPayment;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
@@ -83,4 +84,8 @@ public interface VehicleCostRepository extends JpaRepository<VehicleCost, UUID>,
 
     /** A vehicle's costs that recorded an odometer reading (its mileage log). */
     List<VehicleCost> findByVehicle_IdAndOdometerKmIsNotNullAndStatusIn(UUID vehicleId, Collection<VehicleCostStatus> statuses);
+
+    /** Vehicle costs another person decided in a period (the exceptions report). */
+    @EntityGraph(attributePaths = {"vehicle"})
+    List<VehicleCost> findByDecidedAtBetweenOrderByDecidedAtAsc(LocalDateTime from, LocalDateTime to);
 }

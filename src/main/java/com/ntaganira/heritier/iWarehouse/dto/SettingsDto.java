@@ -113,6 +113,55 @@ public class SettingsDto {
     @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
     private BigDecimal discountApprovalPercent;
 
+    /** A discount that takes a line below what its glass cost needs approval (SDP 8). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalBelowCost;
+
+    /** Counter exceptions are recommended before they are decided (F-03). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalSaleRecommend;
+
+    /** Customers with invoices overdue get no credit until a manager approves it (SDP 11). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean creditBlockOverdue;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 0, message = "{settings.creditOverdueGraceDays.range}")
+    @Max(value = 90, message = "{settings.creditOverdueGraceDays.range}")
+    private Integer creditOverdueGraceDays;
+
+    /** Credit notes are asked for and approved before they are issued (F-14). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalCreditNoteRequired;
+
+    /** Finance reviews credit note requests before they are approved (F-14). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalCreditNoteReview;
+
+    /** Finance reviews receivable write-offs before they are approved (F-14). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalWriteOffReview;
+
+    /** RWF above which a purchase order is approved before it goes to the supplier (CMP 06). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.amount.range}")
+    @Digits(integer = 16, fraction = 0, message = "{settings.amount.digits}")
+    private BigDecimal approvalPurchaseOrderLimit;
+
+    /** Supplier payments are prepared, then authorised by another person (CMP 07). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalSupplierPaymentAuthorise;
+
+    /** RWF above which a supplier payment needs two authorisations (CMP 07). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.amount.range}")
+    @Digits(integer = 16, fraction = 0, message = "{settings.amount.digits}")
+    private BigDecimal approvalSupplierPaymentDualLimit;
+
+    /** Goods receipts are posted by another person than who entered them (CMP 06). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean approvalReceiptSecondPerson;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

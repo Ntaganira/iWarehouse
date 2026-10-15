@@ -93,6 +93,7 @@
 <!--/* Status badge of a purchase order. */-->
 <th:block th:fragment="poStatus(s)" th:switch="${s.name()}">
     <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{po.status.DRAFT}">Draft</span>
+    <span th:case="'PENDING_APPROVAL'" class="badge badge-warning" th:text="#{po.status.PENDING_APPROVAL}">Waiting for approval</span>
     <span th:case="'ORDERED'" class="badge badge-info" th:text="#{po.status.ORDERED}">Ordered</span>
     <span th:case="'PARTIALLY_RECEIVED'" class="badge badge-warning" th:text="#{po.status.PARTIALLY_RECEIVED}">Partly received</span>
     <span th:case="'RECEIVED'" class="badge badge-success" th:text="#{po.status.RECEIVED}">Received</span>

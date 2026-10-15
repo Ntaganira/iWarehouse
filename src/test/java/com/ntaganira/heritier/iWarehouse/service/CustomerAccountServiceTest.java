@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.repository.SalesInvoiceRepository;
 import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
@@ -71,7 +72,8 @@ class CustomerAccountServiceTest {
         postings = mock(PostingService.class);
         DocumentNumberService numbers = mock(DocumentNumberService.class);
         when(numbers.next(DocumentType.RECEIPT)).thenReturn("RCT-WH-2026-000001");
-        service = new CustomerAccountService(repo, customerRepo, journals, tills, postings, numbers, CLOCK);
+        service = new CustomerAccountService(repo, customerRepo, journals, tills, postings, numbers, CLOCK,
+                new CustomerAgeing(journals, mock(SalesInvoiceRepository.class), CLOCK));
     }
 
     @AfterEach

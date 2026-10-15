@@ -21,10 +21,7 @@
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canRecord and mine}" th:text="#{vehicleCost.cancel}">Withdraw</button>
                 <th:block th:if="${canApprove and !mine}">
                     <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{vehicleCost.reject}">Reject</button>
-                    <form th:action="@{/vehicle-costs/{id}/approve(id=${cost.id})}" method="post" class="row-action-form confirm-submit"
-                          th:attr="data-confirm=#{vehicleCost.approveConfirm(${cost.number}, ${@num.money(cost.amount)}, ${cost.vehicle.plate})}">
-                        <button type="submit" class="btn btn-primary" th:text="#{vehicleCost.approve}">Approve and post</button>
-                    </form>
+                    <th:block th:replace="~{fragments/authority :: approve(@{/vehicle-costs/{id}/approve(id=${cost.id})}, #{vehicleCost.approveConfirm(${cost.number}, ${@num.money(cost.amount)}, ${cost.vehicle.plate})}, #{vehicleCost.approve}, ${authority})}"></th:block>
                 </th:block>
             </th:block>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reverse-modal" th:if="${s == 'POSTED' and canReverse}"
@@ -35,6 +32,7 @@
     <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
         <span th:text="#{vehicleCost.waitingNote(${@num.money(limit)})}">Above the 100,000 RWF limit: nothing is posted until another person with approval rights approves it.</span>
         <span th:if="${mine}" th:text="#{vehicleCost.notYourOwn}">You cannot approve a cost you recorded.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine})}"></th:block>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
         <strong th:text="${s == 'REJECTED'} ? #{vehicleCost.rejectedBy(${cost.decidedBy})} : #{vehicleCost.cancelledBy(${cost.decidedBy})}">Rejected by owner:</strong>
@@ -178,6 +176,7 @@
             </form>
         </div>
     </div>
+    <div th:replace="~{fragments/authority :: boardModal(@{/vehicle-costs/{id}/approve(id=${cost.id})}, #{vehicleCost.approve}, ${authority})}"></div>
 </div>
 </body>
 </html>

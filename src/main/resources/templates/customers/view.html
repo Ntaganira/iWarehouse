@@ -21,6 +21,8 @@
             <a href="/customers" class="btn btn-outline" th:text="#{common.back}">Back</a>
             <button type="button" class="btn btn-outline" data-modal-open="payment-modal" th:if="${account != null and account.balance.signum() > 0}"
                     sec:authorize="hasAuthority('PERM_RECEIVE_CUSTOMER_PAYMENT')" th:text="#{customerAccount.takePayment}">Take a payment</button>
+            <a th:if="${account != null and account.balance.signum() > 0}" th:href="@{/accounting/write-offs/new(customer=${customer.id})}" class="btn btn-outline"
+               sec:authorize="hasAuthority('PAGE_RECEIVABLE_WRITE_OFFS') and hasAuthority('PERM_PREPARE_WRITE_OFF')" th:text="#{writeOff.action}">Write off</a>
             <th:block sec:authorize="hasAuthority('PERM_MANAGE_CUSTOMER')">
                 <form th:if="${customer.enabled and !customer.defaultCustomer}" th:action="@{/customers/{id}/disable(id=${customer.id})}" method="post"
                       class="row-action-form confirm-submit danger" th:attr="data-confirm=#{customer.disableConfirm(${customer.name})}">

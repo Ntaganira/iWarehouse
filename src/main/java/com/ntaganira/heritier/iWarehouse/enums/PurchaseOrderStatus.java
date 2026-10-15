@@ -15,6 +15,8 @@ package com.ntaganira.heritier.iWarehouse.enums;
 public enum PurchaseOrderStatus {
 
     DRAFT,
+    /** Placed above the Settings limit: waits for another person's approval before it is sent (CMP 06). */
+    PENDING_APPROVAL,
     ORDERED,
     PARTIALLY_RECEIVED,
     RECEIVED,
@@ -30,8 +32,8 @@ public enum PurchaseOrderStatus {
         return this == ORDERED || this == PARTIALLY_RECEIVED;
     }
 
-    /** Not finished yet: a draft or an order still waiting for sheets. */
+    /** Not finished yet: a draft, an order waiting for approval or one still waiting for sheets. */
     public boolean isOpen() {
-        return this == DRAFT || isReceivable();
+        return this == DRAFT || this == PENDING_APPROVAL || isReceivable();
     }
 }

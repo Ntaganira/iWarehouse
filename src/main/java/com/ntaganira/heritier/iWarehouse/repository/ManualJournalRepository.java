@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
+import java.util.List;
+import java.time.LocalDateTime;
 import com.ntaganira.heritier.iWarehouse.entity.ManualJournal;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import jakarta.persistence.LockModeType;
@@ -34,4 +36,7 @@ public interface ManualJournalRepository extends JpaRepository<ManualJournal, UU
 
     /** Manual journals of a status dated on or before a day (those waiting stop the month's close). */
     long countByStatusAndEntryDateLessThanEqual(ManualJournalStatus status, LocalDate day);
+
+    /** Manual journals decided in a period (the exceptions report). */
+    List<ManualJournal> findByDecidedAtBetweenOrderByDecidedAtAsc(LocalDateTime from, LocalDateTime to);
 }

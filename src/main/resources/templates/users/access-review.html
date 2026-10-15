@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{accessReview.title}, ~{::content})}">
+<head><title>Access review - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{accessReview.title}">Access review</h1>
+            <div class="subtitle" th:text="#{accessReview.subtitle}">Who holds which rights, checked every quarter</div>
+        </div>
+        <div class="btn-group">
+            <a href="/users" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons('/users/access-review/export')}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" sec:authorize="hasAuthority('PERM_REVIEW_ACCESS')"
+                    th:text="#{accessReview.record}">Record the review</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${due}">
+        <span th:text="${latest == null} ? #{accessReview.never} : #{accessReview.dueSince(${#temporals.format(latest.reviewedAt, 'dd/MM/yyyy')}, ${everyDays})}">No access review has been recorded yet.</span>
+        <span th:text="#{accessReview.howTo}">Check each user's roles against their post and the segregation matrix, disable those who left, then record what you checked and changed.</span>
+    </div>
+    <div class="doc-note" th:if="${!due and latest != null}"
+         th:text="#{accessReview.lastOn(${#temporals.format(latest.reviewedAt, 'dd/MM/yyyy')}, ${latest.reviewedBy})}">Last reviewed on 15/10/2026 by owner.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{accessReview.users}">Users and their rights</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{user.fullName}">Full name</th>
+                        <th th:text="#{user.roles}">Roles</th>
+                        <th class="num" th:text="#{accessReview.rights}">Rights</th>
+                        <th th:text="#{accessReview.lastSignIn}">Last sign-in</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="u : ${users.content}">
+                        <td>
+                            <a class="row-link strong" sec:authorize="hasAuthority('PERM_VIEW_USER')" th:href="@{/users/{id}(id=${u.user.id})}" th:text="${u.user.fullName}">Grace Mukamana</a>
+                            <div class="cell-sub mono" th:text="${u.user.username}">grace</div>
+                        </td>
+                        <td th:text="${#lists.isEmpty(u.roles)} ? #{accessReview.noRole} : ${#strings.listJoin(u.roles, ', ')}">Cashier</td>
+                        <td class="num" th:text="${u.rights}">18</td>
+                        <td class="nowrap" th:text="${u.lastSignIn == null} ? #{accessReview.neverSignedIn} : ${#temporals.format(u.lastSignIn, 'dd/MM/yyyy HH:mm')}">15/10/2026 08:12</td>
+                        <td>
+                            <span class="badge" th:classappend="${u.user.enabled} ? 'badge-success' : 'badge-secondary'"
+                                  th:text="${u.user.enabled} ? #{common.active} : #{common.inactive}">Active</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(users.content)}">
+                        <td colspan="5"><div class="empty-state"><h3 th:text="#{accessReview.noUsers}">No users found</h3></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${users}, '/users/access-review', ${'spage=' + spage})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{accessReview.past}">Reviews recorded</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{accessReview.on}">On</th>
+                        <th th:text="#{accessReview.by}">By</th>
+                        <th class="num" th:text="#{accessReview.usersCount}">Users</th>
+                        <th class="num" th:text="#{accessReview.enabledCount}">Enabled</th>
+                        <th th:text="#{accessReview.note}">What was checked and changed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${reviews.content}">
+                        <td class="nowrap" th:text="${#temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 09:30</td>
+                        <td th:text="${r.reviewedBy}">owner</td>
+                        <td class="num" th:text="${r.usersCount}">24</td>
+                        <td class="num" th:text="${r.enabledCount}">21</td>
+                        <td th:text="${r.note}">Checked every role against its post; disabled two who left.</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(reviews.content)}">
+                        <td colspan="5"><div class="empty-state"><h3 th:text="#{accessReview.none}">No review recorded yet</h3></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${reviews}, '/users/access-review', ${'page=' + page}, 'spage')}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="review-modal" sec:authorize="hasAuthority('PERM_REVIEW_ACCESS')">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-modal-title">
+            <div class="modal-header">
+                <h3 id="review-modal-title" th:text="#{accessReview.record}">Record the review</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/users/access-review}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{accessReview.recordText}">Say what you checked and what you changed: it is kept with today's number of users.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="#{accessReview.note}">What was checked and changed</label>
+                        <textarea id="review-note" name="note" rows="4" maxlength="500" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{accessReview.record}">Record the review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

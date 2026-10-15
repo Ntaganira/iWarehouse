@@ -12,6 +12,10 @@ import java.util.List;
 
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long>, JpaSpecificationExecutor<ActivityLog> {
 
+    /** Rows of (username, last time) of an action that succeeded: the access review's last sign-in. */
+    @Query("select l.username, max(l.createdAt) from ActivityLog l where l.action = :action and l.status = :status group by l.username")
+    List<Object[]> lastOf(@Param("action") String action, @Param("status") ActivityStatus status);
+
     @Query("select distinct l.module from ActivityLog l order by l.module")
     List<String> findDistinctModules();
 

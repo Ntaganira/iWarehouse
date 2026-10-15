@@ -609,6 +609,29 @@ class PostingServiceTest {
     }
 
     @Test
+    void aWriteOffMovesWhatTheCustomerOwesToBadDebts() {   // F-14, Board Paper 11.2
+        Customer builders = new Customer();
+        builders.setId(UUID.randomUUID());
+        builders.setName("Umucyo Builders");
+        ReceivableWriteOff writeOff = new ReceivableWriteOff();
+        writeOff.setId(UUID.randomUUID());
+        writeOff.setNumber("RWO-WH-2026-000001");
+        writeOff.setCustomer(builders);
+        writeOff.setAmount(new BigDecimal("85000.00"));
+        writeOff.setReason("Company closed");
+
+        postings.receivableWriteOff(writeOff, LocalDate.of(2026, 10, 15));
+
+        Journal journal = last();
+        assertThat(journal.source()).isEqualTo(JournalSource.RECEIVABLE_WRITE_OFF);
+        assertThat(line(journal, AccountKey.BAD_DEBTS).debit()).isEqualByComparingTo("85000");
+        assertThat(line(journal, AccountKey.BAD_DEBTS).memo()).isEqualTo("Company closed");
+        assertThat(line(journal, AccountKey.RECEIVABLE).credit()).isEqualByComparingTo("85000");
+        assertThat(line(journal, AccountKey.RECEIVABLE).customerId()).isEqualTo(builders.getId());
+        assertThat(journal.debits()).isEqualByComparingTo(journal.credits());
+    }
+
+    @Test
     void aPayRunPostsItsCostsAndWhatItOwesAndThePaymentClearsTheNetPay() {   // payroll, ACC-07, AT-10
         UUID driver = UUID.randomUUID();
         PayRun run = new PayRun();

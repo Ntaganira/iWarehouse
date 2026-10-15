@@ -3,8 +3,11 @@
       th:replace="~{layout/sidebar :: html(${approval.number}, ~{::content})}">
 <head><title>Sale approval - iWarehouse</title></head>
 <body>
-<div th:fragment="content" th:with="s=${approval.status.name()}, sale=${approval.invoice},
-        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_SALE'')')}">
+<div th:fragment="content" th:with="s=${approval.status.name()}, sale=${approval.invoice}, waitingNow=${approval.pending},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_SALE'')')},
+        canRecommend=${#authorization.expression('hasAuthority(''PERM_RECOMMEND_SALE_APPROVAL'')')},
+        readyToDecide=${!recommendRequired or s == 'RECOMMENDED'},
+        mayDecide=${waitingNow and canApprove and !mine and !recommender and (!recommendRequired or s == 'RECOMMENDED') and authority.allowed}">
     <div class="page-header">
         <div>
             <h1 class="mono" th:text="${approval.number}">APR-WH-2026-000001</h1>
@@ -15,20 +18,30 @@
         </div>
         <div class="btn-group">
             <a href="/sale-approvals" class="btn btn-outline" th:text="#{common.back}">Back</a>
-            <th:block th:if="${s == 'PENDING' and canApprove and !mine}">
-                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{adjustment.reject}">Reject</button>
-                <form th:action="@{/sale-approvals/{id}/approve(id=${approval.id})}" method="post" class="row-action-form confirm-submit"
-                      th:attr="data-confirm=${approval.price} ? #{saleApproval.approvePriceConfirm(${approval.number}, ${@num.money(approval.requestedPrice)}, ${@num.m2(approval.discountPercent)})} : #{saleApproval.approveCreditConfirm(${approval.number}, ${@num.money(approval.creditAmount)})}">
-                    <button type="submit" class="btn btn-primary" th:text="#{saleApproval.approve}">Approve</button>
-                </form>
-            </th:block>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal"
+                    th:if="${waitingNow and canApprove and !mine}" th:text="#{adjustment.reject}">Reject</button>
+            <form th:if="${s == 'PENDING' and recommendRequired and canRecommend and !mine}" th:action="@{/sale-approvals/{id}/recommend(id=${approval.id})}"
+                  method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{saleApproval.recommendConfirm(${approval.number})}">
+                <button type="submit" class="btn btn-outline" th:text="#{saleApproval.recommend}">Recommend</button>
+            </form>
+            <button type="button" class="btn btn-primary" data-modal-open="approve-modal" th:if="${mayDecide}" th:text="#{saleApproval.approve}">Approve</button>
         </div>
     </div>
 
     <div class="doc-note"><strong th:text="#{adjustment.reason} + ':'">Reason:</strong> <span th:text="${approval.reason}">Regular customer</span></div>
-    <div class="doc-note is-warning" th:if="${s == 'PENDING'}">
-        <span th:text="${approval.price} ? #{saleApproval.waitingPrice(${@num.m2(approval.discountPercent)}, ${@num.m2(approval.limitPercent)})} : #{saleApproval.waitingCredit(${@num.money(approval.overLimit)})}">11.11% off, above the cashier's 5% limit: another person with approval rights decides. The sale cannot be paid meanwhile.</span>
+    <div class="doc-note is-warning" th:if="${waitingNow}">
+        <span th:text="${approval.price} ? (${approval.belowCost} ? #{saleApproval.waitingBelowCost(${@num.money(approval.costAmount)})} : #{saleApproval.waitingPrice(${@num.m2(approval.discountPercent)}, ${@num.m2(approval.limitPercent)})})
+                : (${approval.terms} ? #{saleApproval.waitingTerms(${approval.extraDays})} : #{saleApproval.waitingCredit(${@num.money(approval.overLimit)})})">11.11% off, above the cashier's 5% limit: another person with approval rights decides. The sale cannot be paid meanwhile.</span>
+        <span th:with="office=#{${'authority.level.' + authority.required}}" th:text="#{authority.needs(${office})}">It needs the approval of the COO or above.</span>
+        <span th:if="${authority.board}" th:text="#{authority.boardNote}">Only the Board may decide it: give the resolution in the note.</span>
+        <span th:if="${canApprove and !mine and !authority.allowed}" th:text="#{authority.notYours}">Your office cannot decide this amount.</span>
+        <span th:if="${recommendRequired and s == 'PENDING'}" th:text="#{saleApproval.needsRecommendation}">It is recommended first, then decided by someone else.</span>
         <span th:if="${mine}" th:text="#{saleApproval.notYourOwn}">You cannot decide your own request.</span>
+        <span th:if="${recommender}" th:text="#{saleApproval.notAfterRecommending}">You recommended it: someone else decides.</span>
+    </div>
+    <div class="doc-note" th:if="${approval.recommendedBy != null}">
+        <strong th:text="#{saleApproval.recommendedOn(${approval.recommendedBy}, ${#temporals.format(approval.recommendedAt, 'dd/MM/yyyy HH:mm')})}">Recommended by commercial on 09/10/2026 16:21</strong>
+        <span th:if="${approval.recommendationNote != null}" th:text="${'· ' + approval.recommendationNote}">· good customer</span>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'WITHDRAWN'}">
         <strong th:text="${s == 'REJECTED'} ? #{adjustment.rejectedBy(${approval.decidedBy})} : #{adjustment.cancelledBy(${approval.decidedBy})}">Rejected by owner:</strong>
@@ -36,6 +49,8 @@
     </div>
     <div class="doc-note" th:if="${s == 'APPROVED'}">
         <strong th:text="#{saleApproval.approvedOn(${approval.decidedBy}, ${#temporals.format(approval.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 09/10/2026 16:22</strong>
+        <span th:if="${approval.approvedPrice != null}" th:text="#{saleApproval.approvedPriceInPart(${@num.money(approval.approvedPrice)})}">in part, at 25,000</span>
+        <span th:if="${approval.approvedCredit != null}" th:text="#{saleApproval.approvedCreditInPart(${@num.money(approval.approvedCredit)})}">in part, up to 200,000 RWF</span>
         <span th:if="${approval.decisionNote != null}" th:text="${'· ' + approval.decisionNote}">· ok</span>
     </div>
 
@@ -52,6 +67,10 @@
                     <div class="item item-full">
                         <label th:text="#{saleApproval.what}">For</label>
                         <div class="value strong" th:text="${approval.subject}">U-WH-000012 · CLR-6 3210 x 2250</div>
+                    </div>
+                    <div class="item" th:if="${approval.authorityLevel != null}">
+                        <label th:text="#{authority.office}">Office needed</label>
+                        <div class="value" th:text="#{${'authority.level.' + approval.authorityLevel}}">Chief Operating Officer</div>
                     </div>
                     <th:block th:if="${approval.price}">
                         <div class="item">
@@ -70,6 +89,10 @@
                             <label th:text="#{saleApproval.lineAmount}">Line amount (RWF)</label>
                             <div class="value" th:text="${@num.money(approval.amountBefore) + ' → ' + @num.money(approval.amountAfter)}">195,008 → 173,340</div>
                         </div>
+                        <div class="item" th:if="${approval.belowCost}">
+                            <label th:text="#{saleApproval.cost}">Cost of the glass (net of VAT)</label>
+                            <div class="value text-danger" th:text="${@num.money(approval.costAmount) + ' RWF'}">150,000 RWF</div>
+                        </div>
                     </th:block>
                     <th:block th:if="${approval.credit}">
                         <div class="item">
@@ -87,6 +110,30 @@
                         <div class="item">
                             <label th:text="#{saleApproval.overLimit}">Over the limit</label>
                             <div class="value" th:text="${@num.money(approval.overLimit) + ' RWF'}">120,000 RWF</div>
+                        </div>
+                    </th:block>
+                    <th:block th:if="${approval.terms}">
+                        <div class="item">
+                            <label th:text="#{saleApproval.extraDays}">Days added to the terms</label>
+                            <div class="value strong" th:text="${approval.extraDays}">30</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.saleAmount}">Sale (RWF)</label>
+                            <div class="value" th:text="${@num.money(approval.amountAfter)}">450,000</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.customerTerms}">Customer's terms</label>
+                            <div class="value" th:text="#{saleApproval.termsDays(${approval.customer.paymentTermsDays})}">30 days</div>
+                        </div>
+                    </th:block>
+                    <th:block th:if="${approval.overdueAmount != null}">
+                        <div class="item">
+                            <label th:text="#{saleApproval.overdue}">Overdue when asked</label>
+                            <div class="value text-danger" th:text="${@num.money(approval.overdueAmount) + ' RWF'}">120,000 RWF</div>
+                        </div>
+                        <div class="item">
+                            <label th:text="#{saleApproval.oldestOverdue}">Oldest invoice late</label>
+                            <div class="value" th:text="#{saleApproval.daysLate(${approval.oldestOverdueDays})}">35 days</div>
                         </div>
                     </th:block>
                 </div>
@@ -131,7 +178,40 @@
             </div>
         </div>
     </div>
-    <th:block th:if="${s == 'PENDING' and canApprove and !mine}">
+
+    <!-- Approving, as asked or in part, with a note (the Board's resolution when only the Board may decide) -->
+    <div class="modal-overlay" id="approve-modal" th:if="${mayDecide}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="approve-modal-title">
+            <div class="modal-header">
+                <h3 id="approve-modal-title" th:text="#{saleApproval.approveTitle(${approval.number})}">Approve APR-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="approve-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/sale-approvals/{id}/approve(id=${approval.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="${approval.price} ? #{saleApproval.approvePriceConfirm(${approval.number}, ${@num.money(approval.requestedPrice)}, ${@num.m2(approval.discountPercent)})}
+                            : (${approval.terms} ? #{saleApproval.approveTermsConfirm(${approval.number}, ${approval.extraDays})} : #{saleApproval.approveCreditConfirm(${approval.number}, ${@num.money(approval.creditAmount)})})">Approve APR-WH-2026-000001: 24,000 (11.11% off)?</p>
+                    <div class="form-grid">
+                        <div class="form-group" th:if="${approval.price or approval.credit}">
+                            <label for="approve-in-part" th:text="${approval.price} ? #{saleApproval.inPartPrice} : #{saleApproval.inPartCredit}">Approve in part: price</label>
+                            <input type="number" id="approve-in-part" name="inPart" step="0.01" min="0.01" inputmode="decimal"
+                                   th:placeholder="${approval.price} ? ${@num.plain(approval.requestedPrice)} : ${@num.plain(approval.creditAmount)}">
+                            <span class="hint" th:text="${approval.price} ? #{saleApproval.inPartPriceHint(${@num.money(approval.listPrice)})} : #{saleApproval.inPartCreditHint}">Leave it blank to approve as asked; a price below the list price of 27,000.</span>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="approve-note" th:text="${authority.board} ? #{authority.boardResolution.label} : #{saleApproval.note}">Note</label>
+                            <input type="text" id="approve-note" name="note" maxlength="200" autocomplete="off" th:required="${authority.board}">
+                            <span class="hint" th:if="${authority.board}" th:text="#{authority.boardNote}">Only the Board may decide it: give the resolution in the note.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="approve-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{saleApproval.approve}">Approve</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <th:block th:if="${waitingNow and canApprove and !mine}">
         <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{saleApproval.rejectTitle(${approval.number})},
                 @{/sale-approvals/{id}/reject(id=${approval.id})}, #{saleApproval.rejectText}, #{adjustment.reject})}"></div>
     </th:block>

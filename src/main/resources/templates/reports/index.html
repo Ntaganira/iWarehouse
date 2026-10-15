@@ -51,6 +51,12 @@
             <th:block sec:authorize="hasAuthority('PAGE_VAT_REPORT')"><a th:replace="~{reports/index :: tile('/accounting/vat-report', 'neutral', #{vatReport.title}, 'chart')}">VAT report</a></th:block>
         </div>
     </div>
+    <div class="section" sec:authorize="hasAuthority('PAGE_EXCEPTIONS_REPORT') and hasAuthority('PERM_VIEW_EXCEPTIONS_REPORT')">
+        <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.control}">Control</h2></div></div>
+        <div class="quick-grid">
+            <a th:replace="~{reports/index :: tile('/reports/exceptions', 'orange', #{exceptions.title}, 'chart')}">Exceptions report</a>
+        </div>
+    </div>
     <p class="form-note" th:text="#{reports.note}">Each report opens with this month up to today; its Excel and PDF buttons export what it shows.</p>
 </div>
 

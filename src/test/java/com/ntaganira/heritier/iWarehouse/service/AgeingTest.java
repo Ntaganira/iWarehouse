@@ -66,6 +66,15 @@ class AgeingTest {
         return new Ageing.Entry(LocalDate.parse(date), new BigDecimal(amount), BigDecimal.ZERO);
     }
 
+    @Test
+    void anInvoiceApprovedWithLongerTermsFallsDueThatMuchLater() {
+        // Both charged on 01/09 with 30-day terms: the second was approved with 45 more days (F-03), so it is not due yet
+        Ageing.Result r = Ageing.of(List.of(charge("2026-09-01", "100000"),
+                new Ageing.Entry(LocalDate.parse("2026-09-01"), new BigDecimal("50000"), BigDecimal.ZERO, 45)), 30, TODAY);
+        assertThat(r.get(Ageing.Bucket.NOT_DUE)).isEqualByComparingTo("50000");
+        assertThat(r.getOverdue()).isEqualByComparingTo("100000");
+    }
+
     private static Ageing.Entry credit(String date, String amount) {
         return new Ageing.Entry(LocalDate.parse(date), BigDecimal.ZERO, new BigDecimal(amount));
     }

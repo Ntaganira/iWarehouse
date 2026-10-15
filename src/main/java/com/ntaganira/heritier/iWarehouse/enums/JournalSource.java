@@ -47,7 +47,9 @@ public enum JournalSource {
     /** A pay run's salaries paid. */
     PAYROLL_PAYMENT("/payroll/runs/"),
     /** A vehicle's running cost (fuel, a service, a repair, parts...), paid, owed to the garage or paid from a driver's float. */
-    VEHICLE_COST("/vehicle-costs/");
+    VEHICLE_COST("/vehicle-costs/"),
+    /** A customer's debt written off on approval (F-14): bad debts against the receivable. */
+    RECEIVABLE_WRITE_OFF("/accounting/write-offs/");
 
     private final String path;
 

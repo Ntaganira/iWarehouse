@@ -474,6 +474,18 @@ public class PostingService {
     }
 
     /**
+     * A customer's debt written off on approval (F-14): Dr Bad Debts / Cr the receivable naming the customer, on the day it
+     * is approved. The ageing settles it against their oldest charges, as a payment would.
+     */
+    public JournalEntry receivableWriteOff(ReceivableWriteOff writeOff, LocalDate day) {
+        Journal journal = Journal.of(JournalSource.RECEIVABLE_WRITE_OFF, writeOff.getId(), writeOff.getNumber(), day,
+                        "Write-off " + writeOff.getNumber() + " of " + writeOff.getCustomer().getName())
+                .add(AccountKey.BAD_DEBTS, writeOff.getAmount(), null, null, null, writeOff.getReason(), null)
+                .add(AccountKey.RECEIVABLE, writeOff.getAmount().negate(), null, null, writeOff.getCustomer().getId(), null, null);
+        return journalService.post(journal);
+    }
+
+    /**
      * A supplier's invoice matched to its goods receipts (ACC-09, SRS 4.9.1): per receipt, Dr Goods Received Not Invoiced / Cr
      * Accounts Payable at the receipt's own value and rate, in the supplier's currency: GRNI clears exactly and the payable
      * keeps what the receipt was booked at (the FX is realised when it is paid).

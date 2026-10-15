@@ -3,7 +3,8 @@
       th:replace="~{layout/sidebar :: html(${order.number}, ~{::content})}">
 <head><title>Purchase Order - iWarehouse</title></head>
 <body>
-<div th:fragment="content" th:with="s=${order.status}, canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_PURCHASE_ORDER'')')}">
+<div th:fragment="content" th:with="s=${order.status}, canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_PURCHASE_ORDER'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_PURCHASE_ORDER'')')}">
     <div class="page-header">
         <div>
             <h1 class="mono" th:text="${order.number}">PO-WH-2026-000001</h1>
@@ -19,7 +20,7 @@
             <a href="/purchase-orders" class="btn btn-outline" th:text="#{common.back}">Back</a>
             <th:block th:if="${canManage}">
                 <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
-                        th:if="${(s.name() == 'DRAFT' or (s.name() == 'ORDERED' and totals.received == 0)) and draftReceipts == 0}" th:text="#{po.cancel}">Cancel order</button>
+                        th:if="${(s.name() == 'DRAFT' or s.name() == 'PENDING_APPROVAL' or (s.name() == 'ORDERED' and totals.received == 0)) and draftReceipts == 0}" th:text="#{po.cancel}">Cancel order</button>
                 <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="close-modal"
                         th:if="${s.name() == 'PARTIALLY_RECEIVED' and draftReceipts == 0}" th:text="#{po.close}">Close short</button>
                 <a th:if="${s.editable}" th:href="@{/purchase-orders/{id}/edit(id=${order.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
@@ -27,6 +28,10 @@
                       class="row-action-form confirm-submit" th:attr="data-confirm=#{po.placeConfirm(${order.number}, ${order.supplier.name})}">
                     <button type="submit" class="btn btn-primary" th:text="#{po.place}">Place order</button>
                 </form>
+            </th:block>
+            <th:block th:if="${s.name() == 'PENDING_APPROVAL' and canApprove and !submitter}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="send-back-modal" th:text="#{po.sendBack}">Send back</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/purchase-orders/{id}/approve(id=${order.id})}, #{po.approveConfirm(${order.number}, ${order.supplier.name}, ${@num.money(order.approvalAmount)})}, #{po.approve}, ${authority})}"></th:block>
             </th:block>
             <a th:if="${s.receivable and totals.outstanding > 0}" sec:authorize="hasAuthority('PAGE_RECEIVING') and hasAuthority('PERM_RECEIVE_GOODS')"
                th:href="@{/goods-receipts/new(po=${order.id})}" class="btn btn-primary" th:text="#{po.receive}">Receive crates</a>
@@ -38,6 +43,18 @@
         <span th:text="${order.closedReason}">Supplier out of stock</span>
     </div>
     <div class="doc-note" th:if="${s.editable}" th:text="#{po.draftNote}">Draft: check it, then place it with the supplier. Once placed it can no longer be changed.</div>
+    <div class="doc-note is-danger" th:if="${s.editable and order.approvalNote != null}">
+        <strong th:text="#{po.sentBackNote}">Sent back:</strong> <span th:text="${order.approvalNote}">Ask for a better price</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${s.name() == 'PENDING_APPROVAL'}">
+        <span th:text="#{po.waitingNote(${order.submittedBy}, ${@num.money(order.approvalAmount)})}">Submitted by buyer1: 12,500,000 RWF at today's rate, above the limit. Another person approves it before it goes to the supplier.</span>
+        <span th:if="${submitter}" th:text="#{po.notYourOwn}">You cannot approve your own order.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${submitter})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${order.approvedBy != null and !s.editable and s.name() != 'PENDING_APPROVAL'}">
+        <strong th:text="#{po.approvedNote(${order.approvedBy}, ${#temporals.format(order.approvedAt, 'dd/MM/yyyy HH:mm')}, ${@num.money(order.approvalAmount)})}">Approved by owner on 15/10/2026 11:30 (12,500,000 RWF)</strong>
+        <span th:if="${order.approvalNote != null}" th:text="${'· ' + order.approvalNote}">· ok</span>
+    </div>
     <div class="doc-note" th:if="${draftReceipts > 0}" th:text="#{po.draftReceiptsNote(${draftReceipts})}">1 draft receipt waits to be posted.</div>
 
     <div class="kpi-grid doc-kpis">
@@ -218,6 +235,11 @@
         <div th:replace="~{fragments/reason-modal :: reasonModal('close-modal', #{po.closeTitle(${order.number})},
                 @{/purchase-orders/{id}/close(id=${order.id})}, #{po.closeText(${totals.outstanding})}, #{po.close})}"></div>
     </th:block>
+    <th:block th:if="${s.name() == 'PENDING_APPROVAL' and canApprove and !submitter}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('send-back-modal', #{po.sendBackTitle(${order.number})},
+                @{/purchase-orders/{id}/send-back(id=${order.id})}, #{po.sendBackText}, #{po.sendBack})}"></div>
+    </th:block>
+    <div th:replace="~{fragments/authority :: boardModal(@{/purchase-orders/{id}/approve(id=${order.id})}, #{po.approve}, ${authority})}"></div>
 </div>
 </body>
 </html>

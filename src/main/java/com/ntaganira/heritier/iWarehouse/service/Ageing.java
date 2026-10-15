@@ -24,8 +24,15 @@ public final class Ageing {
     private Ageing() {
     }
 
-    /** An entry of the account: its date and amounts (one of them zero). */
-    public record Entry(LocalDate date, BigDecimal debit, BigDecimal credit) {
+    /**
+     * An entry of the account: its date and amounts (one of them zero), and the days a charge is given beyond the terms
+     * (an invoice approved with extended terms, F-03).
+     */
+    public record Entry(LocalDate date, BigDecimal debit, BigDecimal credit, int extraDays) {
+
+        public Entry(LocalDate date, BigDecimal debit, BigDecimal credit) {
+            this(date, debit, credit, 0);
+        }
     }
 
     /** Days past due, as the reports group them. */
@@ -80,7 +87,7 @@ public final class Ageing {
                 waiting = waiting.subtract(used);
                 charge = charge.subtract(used);
                 if (charge.signum() > 0) {
-                    open.addLast(new Open(e.date().plusDays(termsDays), charge));
+                    open.addLast(new Open(e.date().plusDays(termsDays + (long) e.extraDays()), charge));
                 }
             } else if (net.signum() < 0) {
                 BigDecimal credit = net.negate();

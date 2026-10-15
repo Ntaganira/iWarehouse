@@ -1,0 +1,49 @@
+package com.ntaganira.heritier.iWarehouse.enums;
+
+/**
+ * <pre>
+ * - Project   : iWarehouse - Glass Warehouse &amp; Mobile POS (ERP-Lite)
+ * - Package   : com.ntaganira.heritier.iWarehouse.enums
+ * - File      : AuthorityDecision.java
+ * - Date      : 2026. 10. 15.
+ * - User      : Hntaganira
+ * - Desc      : What the Delegation of Authority sets limits for (Board Paper Annex E, Cost Management Policy 05): each
+ *               decision that waits for another person's approval. Its amount is RWF, but for a discount, which is the
+ *               percentage off the list price. A new kind of approval = a constant here, its rows in authority_limits and
+ *               chk_authority_limits_decision, and its texts (authority.decision.*).
+ * </pre>
+ */
+public enum AuthorityDecision {
+
+    /** A price cut beyond the seller's own limit (SDP 8, F-03): the % off the list price. */
+    DISCOUNT(true),
+    /** A price below what the glass cost (SDP 8): the sale's amount at stake. */
+    BELOW_COST(false),
+    /** Credit beyond what a customer has left, or for a customer with overdue invoices, or longer terms (F-03). */
+    CREDIT_EXCEPTION(false),
+    /** A credit note to a customer (F-14). */
+    CREDIT_NOTE(false),
+    /** A receivable written off (F-14). */
+    RECEIVABLE_WRITE_OFF(false),
+    /** A stock write-off or adjustment (F-07, F-08, INV-07). */
+    STOCK_ADJUSTMENT(false),
+    /** A purchase order to a supplier, in RWF at today's rate (CMP 06). */
+    PURCHASE_ORDER(false),
+    /** A single payment to a supplier, in RWF (CMP 07). */
+    SUPPLIER_PAYMENT(false),
+    /** A manual journal (F-15). */
+    MANUAL_JOURNAL(false),
+    /** Operating expenditure on a vehicle. */
+    VEHICLE_COST(false);
+
+    private final boolean percent;
+
+    AuthorityDecision(boolean percent) {
+        this.percent = percent;
+    }
+
+    /** Its limits are percentages, not RWF. */
+    public boolean isPercent() {
+        return percent;
+    }
+}

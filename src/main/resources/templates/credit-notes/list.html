@@ -9,7 +9,13 @@
             <h1 th:text="#{creditNote.title}">Credit notes</h1>
             <div class="subtitle" th:text="#{creditNote.subtitle}">Glass brought back against an invoice, and what was refunded</div>
         </div>
-        <a href="/invoices" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')" th:text="#{nav.invoices}">Invoices</a>
+        <div class="btn-group">
+            <a href="/invoices" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_VIEW_INVOICE')" th:text="#{nav.invoices}">Invoices</a>
+            <a href="/credit-notes/requests" class="btn btn-primary">
+                <span th:text="#{creditNote.request.title}">Credit note requests</span>
+                <span class="section-count" th:if="${waitingRequests > 0}" th:text="${waitingRequests}">2</span>
+            </a>
+        </div>
     </div>
 
     <div class="section">

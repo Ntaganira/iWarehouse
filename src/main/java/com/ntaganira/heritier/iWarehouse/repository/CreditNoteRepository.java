@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
+import java.time.LocalDateTime;
 import com.ntaganira.heritier.iWarehouse.entity.CreditNote;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,4 +49,8 @@ public interface CreditNoteRepository extends JpaRepository<CreditNote, UUID>, J
     @Query("select cn.id, i.id, cn.netAmount from CreditNote cn join cn.invoice i"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     List<Object[]> ofInvoicesIssuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
+
+    /** Credit notes issued in a period (the exceptions report). */
+    @EntityGraph(attributePaths = {"invoice", "customer"})
+    List<CreditNote> findByPostedAtBetweenOrderByPostedAtAsc(LocalDateTime from, LocalDateTime to);
 }

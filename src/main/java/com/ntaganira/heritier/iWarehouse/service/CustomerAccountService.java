@@ -53,10 +53,13 @@ public class CustomerAccountService {
     private final TillService tillService;
     private final PostingService postingService;
     private final DocumentNumberService numbers;
+    private final CustomerAgeing ageing;
     private final Clock clock;
 
     public CustomerAccountService(CustomerPaymentRepository repo, CustomerRepository customerRepo, JournalService journalService,
-                                  TillService tillService, PostingService postingService, DocumentNumberService numbers, Clock clock) {
+                                  TillService tillService, PostingService postingService, DocumentNumberService numbers, Clock clock,
+                                  CustomerAgeing ageing) {
+        this.ageing = ageing;
         this.repo = repo;
         this.customerRepo = customerRepo;
         this.journalService = journalService;
@@ -97,9 +100,7 @@ public class CustomerAccountService {
             rows.add(new StatementRow(l, balance));
         }
         Collections.reverse(rows);
-        Ageing.Result ageing = Ageing.of(lines.stream().map(l -> new Ageing.Entry(l.getEntry().getEntryDate(), l.getDebit(), l.getCredit()))
-                .toList(), customer.getPaymentTermsDays(), today());
-        return new Account(rows, balance, ageing);
+        return new Account(rows, balance, ageing.of(customer, lines));
     }
 
     /** What the customer owes now. */
@@ -108,11 +109,7 @@ public class CustomerAccountService {
     }
 
     public Receivables receivables() {
-        Map<UUID, List<Ageing.Entry>> byCustomer = new HashMap<>();
-        for (Object[] row : journalService.receivableEntries()) {
-            byCustomer.computeIfAbsent((UUID) row[0], k -> new ArrayList<>())
-                    .add(new Ageing.Entry((LocalDate) row[1], (BigDecimal) row[2], (BigDecimal) row[3]));
-        }
+        Map<UUID, List<Ageing.Entry>> byCustomer = ageing.entries();
         Map<UUID, Customer> customers = customerRepo.findAllById(byCustomer.keySet()).stream()
                 .collect(Collectors.toMap(Customer::getId, Function.identity()));
         LocalDate today = today();

@@ -175,6 +175,8 @@
                             </select>
                             <span class="hint" th:if="${credit != null and credit.allowed}"
                                   th:text="#{pos.creditAvailable(${@num.money(credit.available)}, ${@num.money(credit.limit)})}">Credit available: 500,000 of 5,000,000 RWF</span>
+                            <span class="hint text-danger" th:if="${overdue != null and overdue.any()}"
+                                  th:text="#{pos.overdue(${@num.money(overdue.amount)}, ${overdue.oldestDays})}">Overdue: 120,000 RWF, the oldest 35 days late. Credit needs a manager's approval.</span>
                             <span class="hint" th:if="${customer != null and customer.priceList != null}" th:text="#{pos.priceList(${customer.priceList.name})}">Price list: Contractor</span>
                         </div>
                         <div class="form-group">
@@ -264,19 +266,26 @@
 
                 <div class="doc-note is-warning pos-waiting" th:unless="${#lists.isEmpty(waiting)}" th:attr="data-approvals-state=${approvalState}">
                     <strong th:text="#{pos.waitingTitle}">Waiting for a manager:</strong>
-                    <th:block th:each="a, st : ${waiting}"><span class="mono" th:text="${a.number}">APR-WH-2026-000001</span> <span th:text="${a.price} ? #{pos.waitingPrice(${@num.m2(a.discountPercent)})} : #{pos.waitingCredit(${@num.money(a.creditAmount)})}">(11.11% off)</span><th:block th:unless="${st.last}">, </th:block></th:block>.
+                    <th:block th:each="a, st : ${waiting}"><span class="mono" th:text="${a.number}">APR-WH-2026-000001</span> <span th:text="${a.price} ? (${a.belowCost} ? #{pos.waitingBelowCost(${@num.m2(a.discountPercent)})} : #{pos.waitingPrice(${@num.m2(a.discountPercent)})}) : (${a.terms} ? #{pos.waitingTerms(${a.extraDays})} : #{pos.waitingCredit(${@num.money(a.creditAmount)})})">(11.11% off)</span><th:block th:unless="${st.last}">, </th:block></th:block>.
                     <span th:text="#{pos.waitingHint}">The sale can be paid once they are decided; this page updates by itself.</span>
-                    <th:block th:each="a : ${waiting}" th:if="${a.credit}">
-                        <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'withdraw-' + a.number}" th:text="#{pos.withdrawCredit}">Withdraw the credit request</button>
+                    <th:block th:each="a : ${waiting}" th:if="${a.credit or a.terms}">
+                        <button type="button" class="btn btn-outline btn-sm" th:attr="data-modal-open=${'withdraw-' + a.number}"
+                                th:text="${a.terms} ? #{pos.withdrawTerms} : #{pos.withdrawCredit}">Withdraw the credit request</button>
                     </th:block>
                 </div>
                 <div class="doc-note" th:if="${creditApproval != null and creditApproval.approved}"
-                     th:text="#{pos.creditApproved(${@num.money(creditApproval.creditAmount)}, ${creditApproval.decidedBy}, ${creditApproval.number})}">Credit up to 300,000 RWF approved by owner (APR-WH-2026-000002).</div>
+                     th:text="#{pos.creditApproved(${@num.money(creditApproval.effectiveCredit)}, ${creditApproval.decidedBy}, ${creditApproval.number})}">Credit up to 300,000 RWF approved by owner (APR-WH-2026-000002).</div>
                 <div class="doc-note is-danger" th:if="${creditApproval != null and creditApproval.status.name() == 'REJECTED'}"
                      th:text="#{pos.creditRefused(${creditApproval.number}, ${creditApproval.decidedBy}, ${creditApproval.decisionNote})}">Credit refused (APR-WH-2026-000002) by owner: pays on account first.</div>
+                <div class="doc-note" th:if="${termsApproval != null and termsApproval.approved}"
+                     th:text="#{pos.termsApproved(${termsApproval.extraDays}, ${termsApproval.decidedBy}, ${termsApproval.number})}">30 more days to pay approved by owner (APR-WH-2026-000003).</div>
+                <div class="doc-note is-danger" th:if="${termsApproval != null and termsApproval.status.name() == 'REJECTED'}"
+                     th:text="#{pos.termsRefused(${termsApproval.number}, ${termsApproval.decidedBy}, ${termsApproval.decisionNote})}">Longer terms refused (APR-WH-2026-000003) by owner.</div>
 
                 <div class="form-actions pos-actions">
                     <button type="button" class="btn btn-primary" data-modal-open="pay-modal" th:disabled="${empty or !#lists.isEmpty(waiting)}" th:text="#{pos.pay}">Pay</button>
+                    <button type="button" class="btn btn-outline" data-modal-open="terms-modal" th:if="${!empty and credit != null and credit.allowed}"
+                            th:text="#{pos.termsAsk}">Ask for longer terms</button>
                     <form th:if="${!empty}" th:action="@{/pos/cancel}" method="post" class="row-action-form confirm-submit danger"
                           th:attr="data-confirm=#{pos.cancelConfirm}">
                         <button type="submit" class="btn btn-outline btn-danger-outline" th:text="#{pos.cancelSale}">Cancel the sale</button>
@@ -340,7 +349,7 @@
                                        th:value="${payForm != null ? payForm.get('credit') : ''}" th:classappend="${payField == 'credit'} ? 'is-invalid'">
                                 <span class="hint" th:text="#{pos.creditAvailable(${@num.money(credit.available)}, ${@num.money(credit.limit)})}">Credit available</span>
                                 <span class="hint" th:if="${creditApproval != null and creditApproval.approved}"
-                                      th:text="#{pos.creditApprovedHint(${@num.money(creditApproval.creditAmount)}, ${creditApproval.number})}">Approved on this sale: up to 300,000 (APR-WH-2026-000002)</span>
+                                      th:text="#{pos.creditApprovedHint(${@num.money(creditApproval.effectiveCredit)}, ${creditApproval.number})}">Approved on this sale: up to 300,000 (APR-WH-2026-000002)</span>
                             </div>
                             <div class="form-group full-width" th:if="${creditOver == true and credit != null and credit.allowed}">
                                 <label for="pay-credit-reason" th:text="#{pos.creditReason}">Why the customer needs more credit</label>
@@ -436,8 +445,41 @@
             </div>
         </div>
 
-        <!-- Withdrawing a credit request still waiting -->
-        <th:block th:each="a : ${waiting}" th:if="${a.credit}">
+        <!-- Longer payment terms for this invoice (F-03), for a customer on account -->
+        <div class="modal-overlay" id="terms-modal" th:if="${credit != null and credit.allowed}" th:classappend="${termsForm != null} ? 'open'">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
+                <div class="modal-header">
+                    <h3 id="terms-modal-title" th:text="#{pos.termsTitle}">Longer payment terms</h3>
+                    <button type="button" class="modal-close" data-modal-close="terms-modal" th:aria-label="#{common.cancel}">&times;</button>
+                </div>
+                <form th:action="@{/pos/terms-approval}" method="post" novalidate>
+                    <div class="modal-body">
+                        <p class="text-muted" th:text="#{pos.termsText(${customer.paymentTermsDays})}">The customer pays in 30 days. Ask a manager for more days on this invoice.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="terms-days" th:text="#{pos.termsDays}">Days added</label>
+                                <input type="number" id="terms-days" name="extraDays" min="1" max="365" step="1" required inputmode="numeric"
+                                       th:value="${termsForm != null} ? ${termsForm.get('extraDays')} : ''"
+                                       th:classappend="${termsField == 'extraDays'} ? 'is-invalid'">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="terms-reason" th:text="#{pos.termsReason}">Why the customer needs longer</label>
+                                <input type="text" id="terms-reason" name="termsReason" maxlength="200" required autocomplete="off"
+                                       th:value="${termsForm != null} ? ${termsForm.get('termsReason')} : ''"
+                                       th:classappend="${termsField == 'termsReason'} ? 'is-invalid'">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" data-modal-close="terms-modal" th:text="#{common.confirmCancel}">Not now</button>
+                        <button type="submit" class="btn btn-primary" th:text="#{pos.creditAsk}">Ask a manager</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Withdrawing a credit or terms request still waiting -->
+        <th:block th:each="a : ${waiting}" th:if="${a.credit or a.terms}">
             <div th:replace="~{fragments/reason-modal :: reasonModal(${'withdraw-' + a.number}, #{pos.withdrawTitle(${a.number})},
                     @{/pos/approvals/{id}/withdraw(id=${a.id})}, #{pos.withdrawText}, #{pos.withdraw})}"></div>
         </th:block>

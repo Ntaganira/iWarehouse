@@ -95,6 +95,10 @@ public class CreditNote extends BaseEntity {
     @Column(name = "posted_by", nullable = false, length = 50, updatable = false)
     private String postedBy;
 
+    /** The request it was issued from, when credit notes are approved first (F-14). */
+    @Column(name = "request_id", updatable = false)
+    private UUID requestId;
+
     public boolean isCancel() {
         return kind == CreditNoteKind.CANCEL;
     }

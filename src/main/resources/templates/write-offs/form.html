@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{writeOff.new}, ~{::content})}">
+<head><title>Write off a debt - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{writeOff.new}">Write off a debt</h1>
+            <div class="subtitle" th:text="#{writeOff.newSubtitle(${customer.name}, ${@num.money(owed)})}">Umucyo Construction owes 392,038 RWF</div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/customers/{id}(id=${customer.id}, tab='account')}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/accounting/write-offs/new(customer=${customer.id})}" th:object="${writeOffDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="doc-note is-warning" th:if="${!open.isEmpty()}">
+                <span th:text="#{writeOff.openAlready}">A write-off of this customer already waits:</span>
+                <a class="mono" th:each="o, st : ${open}" th:href="@{/accounting/write-offs/{id}(id=${o.id})}" th:text="${o.number + (st.last ? '' : ',')}">RWO-WH-2026-000001</a>
+            </div>
+            <p class="form-note" th:text="#{writeOff.formNote}">Credit Control prepares it; Finance reviews it, then another person approves it within the Delegation of Authority. Approving posts it to bad debts; nothing changes before.</p>
+
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{customerAccount.balance}">Owed (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(owed)}">392,038</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{customerAccount.overdue}">Overdue (RWF)</label>
+                    <div class="value" th:text="${@num.money(overdue.amount)}">0</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.oldestDays}">Oldest overdue</label>
+                    <div class="value" th:text="${overdue.any()} ? #{writeOff.days(${overdue.oldestDays})} : '—'">120 days</div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="amount" th:text="#{writeOff.amount}">Amount (RWF)</label>
+                    <input type="number" id="amount" th:field="*{amount}" step="0.01" min="0.01" th:attr="max=${owed}" required inputmode="decimal"
+                           th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+                    <span class="hint" th:text="#{writeOff.amountHint}">At most what the customer owes</span>
+                </div>
+                <div class="form-group">
+                    <label for="invoiceId" th:text="#{writeOff.invoice}">Invoice</label>
+                    <select id="invoiceId" th:field="*{invoiceId}" th:classappend="${#fields.hasErrors('invoiceId')} ? 'is-invalid'">
+                        <option value="" th:text="#{writeOff.noInvoice}">The whole account</option>
+                        <option th:each="i : ${invoices}" th:value="${i.id}"
+                                th:text="${i.number + ' · ' + #temporals.format(i.invoiceDate, 'dd/MM/yyyy') + ' · ' + @num.money(i.totalAmount)}">INV-WH-2026-000027 · 15/10/2026 · 120,000</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('invoiceId')}" th:errors="*{invoiceId}"></span>
+                    <span class="hint" th:text="#{writeOff.invoiceHint}">The invoice it is mainly about, if one</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="reason" th:text="#{writeOff.reason}">Why it cannot be recovered</label>
+                    <input type="text" id="reason" th:field="*{reason}" maxlength="255" required th:placeholder="#{writeOff.reasonPh}"
+                           th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="recoveryAction" th:text="#{writeOff.recovery}">Recovery tried</label>
+                    <textarea id="recoveryAction" th:field="*{recoveryAction}" rows="3" maxlength="500" th:placeholder="#{writeOff.recoveryPh}"
+                              th:classappend="${#fields.hasErrors('recoveryAction')} ? 'is-invalid'"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('recoveryAction')}" th:errors="*{recoveryAction}"></span>
+                    <span class="hint" th:text="#{writeOff.recoveryHint}">Reminders, calls, letters, the lawyer: add the papers as documents once it is saved</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{writeOff.save}">Ask for the write-off</button>
+                <a th:href="@{/customers/{id}(id=${customer.id}, tab='account')}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

@@ -4,11 +4,15 @@ import com.ntaganira.heritier.iWarehouse.dto.Trend;
 import com.ntaganira.heritier.iWarehouse.entity.Account;
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
 import com.ntaganira.heritier.iWarehouse.enums.AdjustmentStatus;
+import com.ntaganira.heritier.iWarehouse.enums.CreditNoteRequestStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
+import com.ntaganira.heritier.iWarehouse.enums.PaymentRequestStatus;
+import com.ntaganira.heritier.iWarehouse.enums.PurchaseOrderStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TillStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TripStatus;
 import com.ntaganira.heritier.iWarehouse.enums.VehicleCostStatus;
+import com.ntaganira.heritier.iWarehouse.enums.WriteOffStatus;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +67,10 @@ public class BusinessDashboardService {
     private final VehicleCostRepository vehicleCostRepo;
     private final ServicePlanService servicePlans;
     private final Clock clock;
+    private final CreditNoteRequestRepository creditNoteRequestRepo;
+    private final ReceivableWriteOffRepository writeOffRepo;
+    private final PurchaseOrderRepository purchaseOrderRepo;
+    private final SupplierPaymentRequestRepository paymentRequestRepo;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
                                     JournalService journalService, CustomerAccountService customerAccounts,
@@ -70,7 +78,13 @@ public class BusinessDashboardService {
                                     StockAdjustmentRepository adjustmentRepo, ManualJournalRepository manualJournalRepo,
                                     TillSessionRepository tillRepo, EbmService ebmService, FleetAlertService fleetAlerts,
                                     TripRepository tripRepo, AuditCaseService auditCases, FloatService floats,
-                                    VehicleCostRepository vehicleCostRepo, ServicePlanService servicePlans, Clock clock) {
+                                    VehicleCostRepository vehicleCostRepo, ServicePlanService servicePlans, Clock clock,
+                                    CreditNoteRequestRepository creditNoteRequestRepo, ReceivableWriteOffRepository writeOffRepo,
+                                    PurchaseOrderRepository purchaseOrderRepo, SupplierPaymentRequestRepository paymentRequestRepo) {
+        this.creditNoteRequestRepo = creditNoteRequestRepo;
+        this.writeOffRepo = writeOffRepo;
+        this.purchaseOrderRepo = purchaseOrderRepo;
+        this.paymentRequestRepo = paymentRequestRepo;
         this.invoiceRepo = invoiceRepo;
         this.salesReports = salesReports;
         this.stockSummary = stockSummary;
@@ -104,14 +118,15 @@ public class BusinessDashboardService {
                        BigDecimal receivable, BigDecimal overdue, long customersOwing, BigDecimal payable, long suppliersOwed,
                        List<StockSummary.Reorder> reorder, long saleApprovals, long adjustments, long manualJournals, long openTills,
                        EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, long auditCases, long floatsToClear,
-                       BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet) {
+                       BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet,
+                       long creditNotes, long writeOffs, long purchaseOrders, long supplierPayments) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
         }
 
         public long getWaiting() {
-            return saleApprovals + adjustments + manualJournals + vehicleCosts;
+            return saleApprovals + adjustments + manualJournals + vehicleCosts + creditNotes + writeOffs + purchaseOrders + supplierPayments;
         }
     }
 
@@ -154,13 +169,17 @@ public class BusinessDashboardService {
                 salesReports.report(today, today, SalesAnalysis.GroupBy.SALESPERSON, null, null, null).rows(),
                 stockSummary.summary(StockSummary.GroupBy.PRODUCT, null).total(), cash, cashTotal,
                 receivables.total(), overdue, receivables.customers().size(), payables.total(), payables.suppliers().size(),
-                stockSummary.reorder(), saleApprovalRepo.countByStatus(SaleApprovalStatus.PENDING),
+                stockSummary.reorder(), saleApprovalRepo.countByStatusIn(SaleApprovalStatus.WAITING),
                 adjustmentRepo.countByStatus(AdjustmentStatus.PENDING_APPROVAL), manualJournalRepo.countByStatus(ManualJournalStatus.PENDING_APPROVAL),
                 tillRepo.countByStatus(TillStatus.OPEN), ebmService.backlog(), fleetAlerts.dueCount(),
                 tripRepo.countByStatus(TripStatus.DEPARTED), auditCases.unresolvedCount(), toClear.size(),
                 toClear.stream().map(FloatService.ToClear::expected).reduce(BigDecimal.ZERO, BigDecimal::add),
                 vehicleCostRepo.countByStatus(VehicleCostStatus.PENDING_APPROVAL), servicePlans.dueCount(),
-                perDay.keySet().stream().map(LocalDate::toString).toList(), new ArrayList<>(perDay.values()));
+                perDay.keySet().stream().map(LocalDate::toString).toList(), new ArrayList<>(perDay.values()),
+                creditNoteRequestRepo.countByStatusIn(List.of(CreditNoteRequestStatus.PENDING_REVIEW, CreditNoteRequestStatus.PENDING_APPROVAL)),
+                writeOffRepo.countByStatusIn(List.of(WriteOffStatus.PENDING_REVIEW, WriteOffStatus.PENDING_APPROVAL)),
+                purchaseOrderRepo.countByStatus(PurchaseOrderStatus.PENDING_APPROVAL),
+                paymentRequestRepo.countByStatusIn(List.of(PaymentRequestStatus.PREPARED, PaymentRequestStatus.AUTHORISED)));
     }
 
     private static long whole(BigDecimal amount) {

@@ -229,6 +229,10 @@
                                         <span sec:authorize="hasAuthority('PAGE_STOCK_ADJUSTMENTS')"> · <a href="/stock-adjustments" th:text="#{dash.biz.adjustments(${biz.adjustments})}">0 stock adjustments</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_MANUAL_JOURNALS')"> · <a href="/accounting/manual-journals" th:text="#{dash.biz.manualJournals(${biz.manualJournals})}">0 manual journals</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_VEHICLE_COSTS')"> · <a href="/vehicle-costs?status=PENDING_APPROVAL" th:text="#{dash.biz.vehicleCosts(${biz.vehicleCosts})}">0 vehicle costs</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_CREDIT_NOTES') and hasAuthority('PERM_VIEW_CREDIT_NOTE')"> · <a href="/credit-notes/requests" th:text="#{dash.biz.creditNotes(${biz.creditNotes})}">0 credit notes</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_RECEIVABLE_WRITE_OFFS') and hasAuthority('PERM_VIEW_WRITE_OFF')"> · <a href="/accounting/write-offs" th:text="#{dash.biz.writeOffs(${biz.writeOffs})}">0 write-offs</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_PROCUREMENT')"> · <a href="/purchase-orders?status=PENDING_APPROVAL" th:text="#{dash.biz.purchaseOrders(${biz.purchaseOrders})}">0 purchase orders</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_SUPPLIER_PAYMENTS')"> · <a href="/supplier-payments/requests" th:text="#{dash.biz.supplierPayments(${biz.supplierPayments})}">0 supplier payments</a></span>
                                     </div>
                                 </td>
                                 <td class="num" th:classappend="${biz.waiting > 0} ? 'strong'" th:text="${biz.waiting}">0</td>

@@ -187,7 +187,7 @@ class MobileSaleServiceTest {
                 mock(DocumentNumberService.class), CLOCK);
         service = new MobileSaleService(invoiceRepo, paymentRepo, conflictRepo, numberRepo, tripRepo, driverRepo, deviceRepo, unitRepo,
                 productRepo, customerRepo, priceListRepo, tripService, stockService, postingService, ebmService, pricing, notifier,
-                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK);
+                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK, mock(SettingService.class));
     }
 
     @AfterEach

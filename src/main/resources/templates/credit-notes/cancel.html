@@ -27,6 +27,7 @@
           class="credit-note-form" novalidate>
         <input type="hidden" th:field="*{invoiceId}">
         <div th:replace="~{layout/errors :: error-summary}"></div>
+        <div class="doc-note is-warning" th:if="${askOnly}" th:text="#{creditNote.request.formNote}">Credit notes are asked for first: Finance reviews this request and another person approves it, then it is issued.</div>
 
         <div class="section">
             <div class="section-header">
@@ -105,7 +106,8 @@
                         </select>
                         <span class="field-error" th:if="${#fields.hasErrors('refundMethod')}" th:errors="*{refundMethod}"></span>
                         <span class="hint" th:if="${invoice.hasBalanceDue()}" th:text="#{creditNote.balanceHint(${@num.money(invoice.balanceDue)})}">The credit comes off the 6,500 RWF still due first</span>
-                        <span class="hint" th:if="${myTill != null}" th:text="#{creditNote.tillHint(${myTill.session.number}, ${@num.money(myTill.expectedCash)})}">Cash comes out of TILL-WH-2026-000019, holding 6,500 RWF</span>
+                        <span class="hint" th:if="${askOnly}" th:text="#{creditNote.request.tillHint}">Cash comes out of the till of whoever issues it once approved</span>
+                        <span class="hint" th:if="${myTill != null and !askOnly}" th:text="#{creditNote.tillHint(${myTill.session.number}, ${@num.money(myTill.expectedCash)})}">Cash comes out of TILL-WH-2026-000019, holding 6,500 RWF</span>
                     </div>
                     <div class="form-group">
                         <label for="refundReference" th:text="#{pos.pay.reference}">Reference</label>
@@ -125,7 +127,7 @@
         </div>
 
         <div class="form-actions sticky-actions">
-            <button type="submit" class="btn btn-primary" th:text="#{creditNote.issue}">Issue the credit note</button>
+            <button type="submit" class="btn btn-primary" th:text="${askOnly} ? #{creditNote.request.ask} : #{creditNote.issue}">Issue the credit note</button>
             <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
         </div>
     </form>

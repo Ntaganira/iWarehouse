@@ -6,9 +6,12 @@ import com.ntaganira.heritier.iWarehouse.entity.Product;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrder;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrderLine;
 import com.ntaganira.heritier.iWarehouse.entity.Supplier;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.GoodsReceiptStatus;
+import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.enums.PurchaseOrderStatus;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.CurrencyRepository;
@@ -28,6 +31,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -64,11 +69,20 @@ public class PurchaseOrderService {
     private final CurrencyRepository currencyRepo;
     private final DocumentNumberService numbers;
     private final Clock clock;
+    private final ExchangeRateService rates;
+    private final DelegationOfAuthority authority;
+    private final SettingService settingService;
+    private final Notifier notifier;
 
     public PurchaseOrderService(PurchaseOrderRepository repo, PurchaseOrderLineRepository lineRepo,
                                 GoodsReceiptRepository receiptRepo, SupplierRepository supplierRepo,
                                 ProductRepository productRepo, CurrencyRepository currencyRepo,
-                                DocumentNumberService numbers, Clock clock) {
+                                DocumentNumberService numbers, Clock clock, ExchangeRateService rates, DelegationOfAuthority authority,
+                                SettingService settingService, Notifier notifier) {
+        this.rates = rates;
+        this.authority = authority;
+        this.settingService = settingService;
+        this.notifier = notifier;
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.receiptRepo = receiptRepo;
@@ -207,9 +221,83 @@ public class PurchaseOrderService {
                 throw BusinessException.of("po.line.product.inactive", line.getLineNo(), line.getProduct().getCode());
             }
         }
+        // Above the Settings limit (RWF at today's rate) another person approves it first (CMP 06, Annex E)
+        BigDecimal rwf = inRwf(order);
+        if (rwf.compareTo(settingService.getDecimal(SettingKey.APPROVAL_PURCHASE_ORDER_LIMIT)) > 0) {
+            Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+            order.setApprovalAmount(rwf);
+            order.setAuthorityLevel(authority.required(AuthorityDecision.PURCHASE_ORDER, rwf));
+            order.setSubmittedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            order.setSubmittedById(user.map(AppUserPrincipal::getId).orElse(null));
+            order.setSubmittedAt(LocalDateTime.now(clock));
+            order.setApprovalNote(null);
+            order.setStatus(PurchaseOrderStatus.PENDING_APPROVAL);
+            notifier.holders("APPROVE_PURCHASE_ORDER", order.getSubmittedById(), NotificationKind.APPROVAL, "notify.purchaseOrder.waiting",
+                    "notify.purchaseOrder.waitingText", "/purchase-orders/" + order.getId(), order.getNumber(), order.getSupplier().getName(),
+                    rwf.setScale(0, RoundingMode.HALF_UP).toPlainString());
+            return order;
+        }
         order.setStatus(PurchaseOrderStatus.ORDERED);
         order.setOrderedAt(LocalDateTime.now(clock));
         order.setOrderedBy(AppUserPrincipal.currentUsername());
+        return order;
+    }
+
+    /** The order's total in RWF at today's rate (its own currency's rate; RWF as it is). */
+    BigDecimal inRwf(PurchaseOrder order) {
+        BigDecimal total = order.getLines().stream().map(PurchaseOrderLine::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        String base = currencyRepo.findByBaseCurrencyTrue().map(Currency::getCode).orElse("RWF");
+        BigDecimal rwf = order.getCurrencyCode().equals(base) ? total : rates.rateFor(order.getCurrencyCode(), LocalDate.now(clock)).toBase(total);
+        return rwf.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** What an order waiting needs from the Delegation of Authority and whether the signed-in user may approve it. */
+    public DelegationOfAuthority.Check authorityOf(PurchaseOrder order) {
+        return authority.check(AuthorityDecision.PURCHASE_ORDER, order.getApprovalAmount());
+    }
+
+    public static boolean isSubmitter(PurchaseOrder order) {
+        return order.getSubmittedById() != null && AppUserPrincipal.current().map(u -> u.getId().equals(order.getSubmittedById())).orElse(false);
+    }
+
+    /** Another person approves an order waiting, within the Delegation of Authority: it is placed. */
+    @Transactional
+    public PurchaseOrder approve(UUID id, String note) {
+        PurchaseOrder order = findDetailed(id);
+        if (order.getStatus() != PurchaseOrderStatus.PENDING_APPROVAL) {
+            throw BusinessException.of("po.approve.notPending", order.getNumber());
+        }
+        if (isSubmitter(order)) {
+            throw BusinessException.of("po.approve.own", order.getNumber());
+        }
+        String clean = PartyRules.clean(note);
+        authority.require(AuthorityDecision.PURCHASE_ORDER, order.getApprovalAmount(), clean);
+        LocalDateTime now = LocalDateTime.now(clock);
+        order.setApprovedBy(AppUserPrincipal.currentUsername());
+        order.setApprovedAt(now);
+        order.setApprovalNote(clean);
+        order.setOrderedAt(now);
+        order.setOrderedBy(order.getSubmittedBy());
+        order.setStatus(PurchaseOrderStatus.ORDERED);
+        notifier.user(order.getSubmittedById(), NotificationKind.DECISION, "notify.purchaseOrder.approved", "notify.decidedBy",
+                "/purchase-orders/" + order.getId(), order.getNumber(), order.getApprovedBy());
+        return order;
+    }
+
+    /** Another person sends an order waiting back to draft, with the reason. */
+    @Transactional
+    public PurchaseOrder sendBack(UUID id, String reason) {
+        PurchaseOrder order = findDetailed(id);
+        if (order.getStatus() != PurchaseOrderStatus.PENDING_APPROVAL) {
+            throw BusinessException.of("po.approve.notPending", order.getNumber());
+        }
+        if (isSubmitter(order)) {
+            throw BusinessException.of("po.approve.ownReject", order.getNumber());
+        }
+        order.setApprovalNote(reason.trim());
+        order.setStatus(PurchaseOrderStatus.DRAFT);
+        notifier.user(order.getSubmittedById(), NotificationKind.DECISION, "notify.purchaseOrder.sentBack", "notify.decidedBy",
+                "/purchase-orders/" + order.getId(), order.getNumber(), AppUserPrincipal.currentUsername());
         return order;
     }
 
@@ -217,7 +305,8 @@ public class PurchaseOrderService {
     @Transactional
     public PurchaseOrder cancel(UUID id, String reason) {
         PurchaseOrder order = findDetailed(id);
-        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.ORDERED) {
+        if (order.getStatus() != PurchaseOrderStatus.DRAFT && order.getStatus() != PurchaseOrderStatus.PENDING_APPROVAL
+                && order.getStatus() != PurchaseOrderStatus.ORDERED) {
             throw BusinessException.of("po.cancel.notAllowed", order.getNumber());
         }
         requireNoDraftReceipts(order);

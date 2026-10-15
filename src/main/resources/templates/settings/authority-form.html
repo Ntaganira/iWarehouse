@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/sidebar :: html(#{authority.formTitle}, ~{::content})}">
+<head><title>Delegation of authority - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{authority.formTitle}">Delegation of authority</h1>
+            <div class="subtitle" th:text="#{authority.formSubtitle}">Which office may approve what, and up to what amount</div>
+        </div>
+        <div class="btn-group">
+            <a href="/settings?tab=authority" class="btn btn-outline" th:text="#{common.back}">Back</a>
+        </div>
+    </div>
+
+    <form th:action="@{/settings/authority}" th:object="${authorityDto}" method="post" novalidate>
+        <div th:replace="~{layout/errors :: error-summary}"></div>
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{authority.limits}">Limits</h2></div>
+            <div class="section-body">
+                <p class="form-note" th:text="#{authority.formHelp}">Tick an office to let it approve, then give its limit: an amount in RWF (a percentage for discounts), or nothing for no limit. A higher office may always decide what a lower one may; the Board decides above them all.</p>
+                <div class="table-container line-form" data-cards="off">
+                    <table class="authority-form">
+                        <thead>
+                            <tr>
+                                <th th:text="#{authority.decision}">Decision</th>
+                                <th th:each="lv : ${editableLevels}" th:text="#{${'authority.level.' + lv}}">Director</th>
+                                <th th:text="#{authority.level.BOARD}">Board</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row, r : *{rows}">
+                                <td>
+                                    <input type="hidden" th:field="*{rows[__${r.index}__].decision}">
+                                    <span class="strong" th:text="#{${'authority.decision.' + row.decision}}">Credit note</span>
+                                    <div class="cell-sub" th:text="${row.decision.percent} ? #{authority.inPercent} : #{authority.inRwf}">RWF</div>
+                                </td>
+                                <td th:each="cell, c : ${row.cells}">
+                                    <input type="hidden" th:field="*{rows[__${r.index}__].cells[__${c.index}__].level}">
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" class="checkbox" th:field="*{rows[__${r.index}__].cells[__${c.index}__].allowed}">
+                                        <span th:text="#{authority.allowed}">Allowed</span>
+                                    </label>
+                                    <div class="input-unit">
+                                        <input type="number" th:field="*{rows[__${r.index}__].cells[__${c.index}__].max}" min="0.01" step="0.01"
+                                               inputmode="decimal" th:placeholder="#{authority.noLimit}"
+                                               th:classappend="${#fields.hasErrors('rows[__${r.index}__].cells[__${c.index}__].max')} ? 'is-invalid'">
+                                        <span th:text="${row.decision.percent} ? '%' : 'RWF'">RWF</span>
+                                    </div>
+                                    <span class="field-error" th:if="${#fields.hasErrors('rows[__${r.index}__].cells[__${c.index}__].max')}"
+                                          th:errors="*{rows[__${r.index}__].cells[__${c.index}__].max}"></span>
+                                </td>
+                                <td class="text-muted" th:text="#{authority.noLimit}">No limit</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions sticky-actions">
+            <a href="/settings?tab=authority" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            <button type="submit" class="btn btn-primary" th:text="#{authority.save}">Save the limits</button>
+        </div>
+    </form>
+</div>
+</body>
+</html>

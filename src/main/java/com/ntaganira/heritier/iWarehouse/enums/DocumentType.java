@@ -50,6 +50,12 @@ public enum DocumentType {
     PAY_RUN("PAY"),
     /** A vehicle's running cost: VC-WH-2026-000001. */
     VEHICLE_COST("VC"),
+    /** A credit note asked for, before it is approved and issued (F-14): CNR-WH-2026-000001. */
+    CREDIT_NOTE_REQUEST("CNR"),
+    /** A customer's debt written off on approval (F-14): RWO-WH-2026-000001. */
+    RECEIVABLE_WRITE_OFF("RWO"),
+    /** A supplier payment prepared, before it is authorised and paid (CMP 07): PRQ-WH-2026-000001. */
+    SUPPLIER_PAYMENT_REQUEST("PRQ"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

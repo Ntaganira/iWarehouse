@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${writeOff.number}, ~{::content})}">
+<head><title>Write-off - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${writeOff.status.name()},
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_CREDIT_CONTROL'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_WRITE_OFF'')')},
+        canPrepare=${#authorization.expression('hasAuthority(''PERM_PREPARE_WRITE_OFF'')')},
+        waiting=${s == 'PENDING_REVIEW' or s == 'PENDING_APPROVAL'}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${writeOff.number}">RWO-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{creditNote.request.askedBy(${writeOff.requestedBy}, ${#temporals.format(writeOff.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by credit1 on 15/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{write-offs/list :: writeOffStatus(${writeOff.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/accounting/write-offs" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline" data-modal-open="withdraw-modal" th:if="${waiting and canPrepare and mine}" th:text="#{writeOff.withdraw}">Withdraw</button>
+            <th:block th:if="${s == 'PENDING_REVIEW' and canReview and !mine}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{writeOff.reject}">Reject</button>
+                <form th:action="@{/accounting/write-offs/{id}/review(id=${writeOff.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{writeOff.reviewConfirm(${writeOff.number})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{creditNote.request.review}">Reviewed, send for approval</button>
+                </form>
+            </th:block>
+            <th:block th:if="${s == 'PENDING_APPROVAL' and canApprove and !mine and !reviewer}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{writeOff.reject}">Reject</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/accounting/write-offs/{id}/approve(id=${writeOff.id})}, #{writeOff.approveConfirm(${writeOff.number}, ${@num.money(writeOff.amount)}, ${writeOff.customer.name})}, #{writeOff.approve}, ${authority})}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="#{writeOff.reason} + ':'">Why it cannot be recovered:</strong> <span th:text="${writeOff.reason}">Company closed</span></div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_REVIEW'}">
+        <span th:text="#{writeOff.waitingReview}">Finance reviews it first, then another person approves it. Nothing is posted until then.</span>
+        <span th:if="${mine}" th:text="#{writeOff.notYourOwn}">You cannot review or approve your own write-off.</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
+        <span th:text="#{writeOff.waitingApproval}">Waiting for approval. Approving posts it to bad debts against the customer's account.</span>
+        <span th:if="${mine}" th:text="#{writeOff.notYourOwn}">You cannot review or approve your own write-off.</span>
+        <span th:if="${reviewer}" th:text="#{creditNote.request.reviewerNote}">You reviewed it: another person approves it.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine or reviewer})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${writeOff.reviewedBy != null}">
+        <strong th:text="#{creditNote.request.reviewedBy(${writeOff.reviewedBy}, ${#temporals.format(writeOff.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by accountant1 on 15/10/2026 11:00</strong>
+        <span th:if="${writeOff.reviewNote != null}" th:text="${'· ' + writeOff.reviewNote}">· ok</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'POSTED'}">
+        <strong th:text="#{writeOff.postedBy(${writeOff.decidedBy}, ${#temporals.format(writeOff.postedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner and posted on 15/10/2026 11:30</strong>
+        <span th:if="${writeOff.decisionNote != null}" th:text="${'· ' + writeOff.decisionNote}">· Board resolution 12/2026</span>
+        <th:block sec:authorize="hasAuthority('PAGE_ACCOUNTING') and hasAuthority('PERM_VIEW_ACCOUNTING')" th:if="${!#lists.isEmpty(journals)}">
+            · <span th:text="#{journal.postedIn}">Journal</span>
+            <th:block th:replace="~{journals/list :: journalLinks(${journals})}"></th:block>
+        </th:block>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'WITHDRAWN'}">
+        <strong th:text="${s == 'REJECTED'} ? #{creditNote.request.rejectedBy(${writeOff.decidedBy})} : #{creditNote.request.withdrawnBy(${writeOff.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${writeOff.decisionNote}">Keep chasing</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${writeOff.customer.id}, tab='account')}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${writeOff.customer.name}">Umucyo Construction</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${writeOff.customer.name}">Umucyo Construction</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(writeOff.amount)}">250,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.owedWhenAsked}">Owed when asked (RWF)</label>
+                    <div class="value" th:text="${@num.money(writeOff.owedWhenAsked)}">392,038</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.owedNowLabel}">Owed now (RWF)</label>
+                    <div class="value" th:text="${@num.money(owedNow)}">392,038</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.oldestDays}">Oldest overdue</label>
+                    <div class="value" th:text="${writeOff.oldestDays != null} ? #{writeOff.days(${writeOff.oldestDays})} : '—'">120 days</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{writeOff.invoice}">Invoice</label>
+                    <div class="value">
+                        <a class="mono" th:if="${writeOff.invoice != null}" th:href="@{/invoices/{id}(id=${writeOff.invoice.id})}" th:text="${writeOff.invoice.number}">INV-WH-2026-000027</a>
+                        <span th:if="${writeOff.invoice == null}" th:text="#{writeOff.noInvoice}">The whole account</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.request.office}">Office</label>
+                    <div class="value" th:text="#{${'authority.level.' + writeOff.authorityLevel}}">Chief Operating Officer</div>
+                </div>
+                <div class="item item-full" th:if="${writeOff.recoveryAction != null}">
+                    <label th:text="#{writeOff.recovery}">Recovery tried</label>
+                    <div class="value" th:text="${writeOff.recoveryAction}">Three reminders and a lawyer's letter</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('RECEIVABLE_WRITE_OFF', ${writeOff.id}, ${documents}, '/accounting/write-offs/' + ${writeOff.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/accounting/write-offs/' + ${writeOff.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${((s == 'PENDING_REVIEW' and canReview) or (s == 'PENDING_APPROVAL' and canApprove)) and !mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{writeOff.rejectTitle(${writeOff.number})},
+                @{/accounting/write-offs/{id}/reject(id=${writeOff.id})}, #{writeOff.rejectText}, #{writeOff.reject})}"></div>
+    </th:block>
+    <th:block th:if="${waiting and canPrepare and mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('withdraw-modal', #{writeOff.withdrawTitle(${writeOff.number})},
+                @{/accounting/write-offs/{id}/withdraw(id=${writeOff.id})}, #{writeOff.withdrawText}, #{writeOff.withdraw})}"></div>
+    </th:block>
+    <div th:replace="~{fragments/authority :: boardModal(@{/accounting/write-offs/{id}/approve(id=${writeOff.id})}, #{writeOff.approve}, ${authority})}"></div>
+</div>
+</body>
+</html>

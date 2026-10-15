@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
+import java.time.LocalDateTime;
 import com.ntaganira.heritier.iWarehouse.entity.SaleApproval;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import jakarta.persistence.LockModeType;
@@ -42,6 +43,8 @@ public interface SaleApprovalRepository extends JpaRepository<SaleApproval, UUID
 
     long countByStatus(SaleApprovalStatus status);
 
+    long countByStatusIn(List<SaleApprovalStatus> statuses);
+
     /** The till of a request's sale, read without loading the request (approving locks the till first). */
     @Query("select a.invoice.tillSession.id from SaleApproval a where a.id = :id")
     Optional<UUID> tillOf(@Param("id") UUID id);
@@ -50,4 +53,8 @@ public interface SaleApprovalRepository extends JpaRepository<SaleApproval, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from SaleApproval a where a.id = :id")
     Optional<SaleApproval> lockById(@Param("id") UUID id);
+
+    /** Counter exceptions decided in a period (the exceptions report). */
+    @EntityGraph(attributePaths = {"customer"})
+    List<SaleApproval> findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(LocalDateTime from, LocalDateTime to, List<SaleApprovalStatus> statuses);
 }

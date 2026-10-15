@@ -9,10 +9,13 @@
             <h1 th:text="#{user.title}">Users</h1>
             <div class="subtitle" th:text="#{user.subtitle}">Manage who can sign in and what they can do</div>
         </div>
-        <a href="/users/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_USER')">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span th:text="#{user.add}">Add User</span>
-        </a>
+        <div class="btn-group">
+            <a href="/users/access-review" class="btn btn-outline" th:text="#{accessReview.title}">Access review</a>
+            <a href="/users/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_USER')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{user.add}">Add User</span>
+            </a>
+        </div>
     </div>
 
     <div class="section">

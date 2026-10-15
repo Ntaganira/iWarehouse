@@ -41,7 +41,10 @@ import java.util.stream.Collectors;
  *               (CreditNotes.share, counting every credit note before), VAT per tax letter. The credit first reduces the
  *               invoice's balance due; the rest is refunded in cash from the user's till (if it holds that much), by
  *               mobile money, card or transfer, or to the customer's account (not for walk-ins). Issuing locks the till
- *               (cash refunds), then the invoice, then the products, and posts the journal.
+ *               (cash refunds), then the invoice, then the products, and posts the journal. When Settings ask for it
+ *               (F-14), a credit note is first asked (CreditNoteRequest: what comes back or is given up, the refund, the
+ *               totals), reviewed by Finance, approved by another person within the Delegation of Authority, and only then
+ *               issued, never for more than was approved; nobody who asked or reviewed approves it.
  * </pre>
  */
 @Service
@@ -65,13 +68,22 @@ public class CreditNoteService {
     private final DocumentNumberService numbers;
     private final EbmService ebmService;
     private final Clock clock;
+    private final CreditNoteRequestRepository requestRepo;
+    private final DelegationOfAuthority authority;
+    private final SettingService settingService;
+    private final Notifier notifier;
 
     public CreditNoteService(CreditNoteRepository repo, CreditNoteLineRepository lineRepo, CreditNoteUnitRepository returnedRepo,
                              SalesInvoiceRepository invoiceRepo, SalesDeliveryRepository deliveryRepo, StockUnitRepository unitRepo,
                              ProductRepository productRepo, CuttingJobRepository jobRepo, CuttingJobLineRepository jobLineRepo,
                              SalesService salesService, CuttingJobService cuttingJobService, TillService tillService,
                              StockService stockService, PostingService postingService, DocumentNumberService numbers,
-                             EbmService ebmService, Clock clock) {
+                             EbmService ebmService, Clock clock, CreditNoteRequestRepository requestRepo, DelegationOfAuthority authority,
+                             SettingService settingService, Notifier notifier) {
+        this.requestRepo = requestRepo;
+        this.authority = authority;
+        this.settingService = settingService;
+        this.notifier = notifier;
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.returnedRepo = returnedRepo;
@@ -335,41 +347,16 @@ public class CreditNoteService {
      */
     @Transactional
     public CreditNote issue(CreditNoteDto form) {
+        requireRequest(form);
         TillSession till = tillFor(form);
         SalesInvoice invoice = lockedInvoice(form.getInvoiceId());
         String reason = reason(form);
         String refundReason = refundReason(form);
 
         // What comes back, and where it goes
-        Map<UUID, Returnable> returnable = returnables(invoice).stream()
-                .collect(Collectors.toMap(r -> r.unit().getId(), Function.identity()));
-        Map<Returnable, ReturnOutcome> chosen = new LinkedHashMap<>();
-        for (CreditNoteDto.Item item : form.getItems()) {
-            if (!item.isSelected()) {
-                continue;
-            }
-            Returnable r = returnable.get(item.getUnitId());
-            if (r == null) {
-                String code = item.getUnitId() == null ? "" : unitRepo.findById(item.getUnitId()).map(StockUnit::getCode).orElse("");
-                throw BusinessException.onField("items", "creditNote.unit.notReturnable", code, invoice.getNumber());
-            }
-            chosen.put(r, item.isCullet() ? ReturnOutcome.CULLET : ReturnOutcome.RESTOCK);
-        }
-        if (chosen.isEmpty()) {
-            throw BusinessException.onField("items", "creditNote.items.required");
-        }
-        Location location = null;
-        if (chosen.containsValue(ReturnOutcome.RESTOCK)) {
-            Map<UUID, Location> byId = stockService.locationsById();
-            location = form.getLocationId() == null ? null : stockService.storagePlaces(byId).stream()
-                    .filter(l -> l.getId().equals(form.getLocationId())).findFirst().orElse(null);
-            if (location == null) {
-                throw BusinessException.onField("locationId", form.getLocationId() == null ? "creditNote.location.required"
-                        : "creditNote.location.invalid");
-            }
-            checkRack(location, chosen.entrySet().stream().filter(e -> e.getValue() == ReturnOutcome.RESTOCK)
-                    .map(e -> e.getKey().unit()).toList(), byId);
-        }
+        ReturnPick pick = pickReturns(form, invoice);
+        Map<Returnable, ReturnOutcome> chosen = pick.chosen();
+        Location location = pick.location();
 
         Map<SalesInvoiceLine, Integer> pieces = new TreeMap<>(Comparator.comparingInt(SalesInvoiceLine::getLineNo));
         chosen.keySet().forEach(r -> pieces.merge(r.line(), 1, Integer::sum));
@@ -386,7 +373,7 @@ public class CreditNoteService {
         products.keySet().forEach(id -> heldBefore.put(id, stockService.heldArea(id)));
         PostingService.StockValues before = postingService.stockValues(products.values());
 
-        CreditNote note = save(CreditNoteKind.RETURN, invoice, reason, refundReason, totals, refund, till);
+        CreditNote note = save(CreditNoteKind.RETURN, invoice, reason, refundReason, totals, refund, till, form.getRequestId());
         BigDecimal restockedCost = BigDecimal.ZERO;
         BigDecimal culletCost = BigDecimal.ZERO;
         Map<UUID, BigDecimal> areaBack = new HashMap<>();
@@ -423,11 +410,87 @@ public class CreditNoteService {
      */
     @Transactional
     public CreditNote cancelPieces(CreditNoteDto form) {
+        requireRequest(form);
         TillSession till = tillFor(form);
         SalesInvoice invoice = lockedInvoice(form.getInvoiceId());
         String reason = reason(form);
         String refundReason = refundReason(form);
 
+        Map<Cancellable, Integer> chosen = pickSizes(form, invoice);
+
+        Map<SalesInvoiceLine, Integer> pieces = new TreeMap<>(Comparator.comparingInt(SalesInvoiceLine::getLineNo));
+        chosen.forEach((c, n) -> pieces.put(c.line(), n));
+        List<CreditNoteLine> lines = creditLines(invoice, pieces);
+        Vat.Totals totals = totals(lines);
+        Refund refund = refund(form, invoice, totals, till);
+
+        CreditNote note = save(CreditNoteKind.CANCEL, invoice, reason, refundReason, totals, refund, till, form.getRequestId());
+        String why = "Given up on " + note.getNumber() + ": " + reason;
+        for (Map.Entry<Cancellable, Integer> e : chosen.entrySet()) {
+            Cancellable c = e.getKey();
+            int left = e.getValue() - Math.min(e.getValue(), c.getUnplanned());
+            if (left > 0) {
+                left -= cuttingJobService.takeOffSale(invoice.getId(), c.line().getId(), left, why);
+            }
+            for (StockUnit piece : c.ready()) {
+                if (left == 0) {
+                    break;
+                }
+                Location place = piece.getLocation();
+                stockService.release(piece, why);
+                saveUnit(note, invoice, c.line(), piece, ReturnOutcome.RELEASE, place);
+                left--;
+            }
+            if (left > 0) {
+                throw new IllegalStateException("pieces left to give up on " + c.line().getId() + ": " + left);
+            }
+        }
+        finish(note, invoice, lines, refund);
+        postingService.creditNote(note, BigDecimal.ZERO, BigDecimal.ZERO, postingService.stockValues(List.of()));
+        return note;
+    }
+
+    // ---------------------------------------------------------------- what comes back or is given up
+
+    /** The units coming back and where they go, and the rack they go on (checked: limits, no sheet on an off-cut rack). */
+    private record ReturnPick(Map<Returnable, ReturnOutcome> chosen, Location location) {
+    }
+
+    private ReturnPick pickReturns(CreditNoteDto form, SalesInvoice invoice) {
+        Map<UUID, Returnable> returnable = returnables(invoice).stream()
+                .collect(Collectors.toMap(r -> r.unit().getId(), Function.identity()));
+        Map<Returnable, ReturnOutcome> chosen = new LinkedHashMap<>();
+        for (CreditNoteDto.Item item : form.getItems()) {
+            if (!item.isSelected()) {
+                continue;
+            }
+            Returnable r = returnable.get(item.getUnitId());
+            if (r == null) {
+                String code = item.getUnitId() == null ? "" : unitRepo.findById(item.getUnitId()).map(StockUnit::getCode).orElse("");
+                throw BusinessException.onField("items", "creditNote.unit.notReturnable", code, invoice.getNumber());
+            }
+            chosen.put(r, item.isCullet() ? ReturnOutcome.CULLET : ReturnOutcome.RESTOCK);
+        }
+        if (chosen.isEmpty()) {
+            throw BusinessException.onField("items", "creditNote.items.required");
+        }
+        Location location = null;
+        if (chosen.containsValue(ReturnOutcome.RESTOCK)) {
+            Map<UUID, Location> byId = stockService.locationsById();
+            location = form.getLocationId() == null ? null : stockService.storagePlaces(byId).stream()
+                    .filter(l -> l.getId().equals(form.getLocationId())).findFirst().orElse(null);
+            if (location == null) {
+                throw BusinessException.onField("locationId", form.getLocationId() == null ? "creditNote.location.required"
+                        : "creditNote.location.invalid");
+            }
+            checkRack(location, chosen.entrySet().stream().filter(e -> e.getValue() == ReturnOutcome.RESTOCK)
+                    .map(e -> e.getKey().unit()).toList(), byId);
+        }
+        return new ReturnPick(chosen, location);
+    }
+
+    /** The pieces given up per size, at most what can go now. */
+    private Map<Cancellable, Integer> pickSizes(CreditNoteDto form, SalesInvoice invoice) {
         Map<UUID, Cancellable> cancellable = cancellables(invoice).stream()
                 .collect(Collectors.toMap(c -> c.line().getId(), Function.identity()));
         Map<Cancellable, Integer> chosen = new LinkedHashMap<>();
@@ -455,37 +518,299 @@ public class CreditNoteService {
         if (chosen.isEmpty()) {
             throw BusinessException.onField("sizes", "creditNote.cancel.required");
         }
+        return chosen;
+    }
 
-        Map<SalesInvoiceLine, Integer> pieces = new TreeMap<>(Comparator.comparingInt(SalesInvoiceLine::getLineNo));
-        chosen.forEach((c, n) -> pieces.put(c.line(), n));
-        List<CreditNoteLine> lines = creditLines(invoice, pieces);
-        Vat.Totals totals = totals(lines);
-        Refund refund = refund(form, invoice, totals, till);
+    // ---------------------------------------------------------------- asked, reviewed, approved, issued (F-14)
 
-        CreditNote note = save(CreditNoteKind.CANCEL, invoice, reason, refundReason, totals, refund, till);
-        String why = "Given up on " + note.getNumber() + ": " + reason;
-        for (Map.Entry<Cancellable, Integer> e : chosen.entrySet()) {
-            Cancellable c = e.getKey();
-            int left = e.getValue() - Math.min(e.getValue(), c.getUnplanned());
-            if (left > 0) {
-                left -= cuttingJobService.takeOffSale(invoice.getId(), c.line().getId(), left, why);
-            }
-            for (StockUnit piece : c.ready()) {
-                if (left == 0) {
-                    break;
+    /** Whether credit notes are asked and approved before they are issued (Settings). */
+    public boolean approvalRequired() {
+        return settingService.getBoolean(SettingKey.APPROVAL_CREDIT_NOTE_REQUIRED);
+    }
+
+    public boolean reviewRequired() {
+        return settingService.getBoolean(SettingKey.APPROVAL_CREDIT_NOTE_REVIEW);
+    }
+
+    /** With approval required, a credit note is issued only from its approved request. */
+    private void requireRequest(CreditNoteDto form) {
+        if (form.getRequestId() == null && approvalRequired()) {
+            throw BusinessException.of("creditNote.request.required");
+        }
+    }
+
+    public CreditNoteRequest findRequest(UUID id) {
+        return requestRepo.findDetailedById(id).orElseThrow(() -> new NotFoundException("CreditNoteRequest", id));
+    }
+
+    public Page<CreditNoteRequest> findRequests(String status, String search, int page, int size) {
+        Specification<CreditNoteRequest> spec = (root, query, cb) -> {
+            List<Predicate> p = new ArrayList<>();
+            if (StringUtils.hasText(status)) {
+                try {
+                    p.add(cb.equal(root.get("status"), CreditNoteRequestStatus.valueOf(status)));
+                } catch (IllegalArgumentException ignored) {
+                    // an unknown status filters nothing
                 }
-                Location place = piece.getLocation();
-                stockService.release(piece, why);
-                saveUnit(note, invoice, c.line(), piece, ReturnOutcome.RELEASE, place);
-                left--;
             }
-            if (left > 0) {
-                throw new IllegalStateException("pieces left to give up on " + c.line().getId() + ": " + left);
+            if (StringUtils.hasText(search)) {
+                String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+                p.add(cb.or(cb.like(cb.lower(root.get("number")), term), cb.like(cb.lower(root.get("invoice").get("number")), term),
+                        cb.like(cb.lower(root.get("customer").get("name")), term), cb.like(cb.lower(root.get("reason")), term),
+                        cb.like(cb.lower(root.get("requestedBy")), term)));
+            }
+            return cb.and(p.toArray(Predicate[]::new));
+        };
+        return requestRepo.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Order.desc("requestedAt"), Sort.Order.desc("number"))));
+    }
+
+    public long waitingRequests() {
+        return requestRepo.countByStatusIn(List.of(CreditNoteRequestStatus.PENDING_REVIEW, CreditNoteRequestStatus.PENDING_APPROVAL,
+                CreditNoteRequestStatus.APPROVED));
+    }
+
+    public DelegationOfAuthority.Check authorityOf(CreditNoteRequest r) {
+        return authority.check(AuthorityDecision.CREDIT_NOTE, r.getTotalAmount());
+    }
+
+    /** The units of a return request, by label, with where each goes. */
+    public List<StockUnit> requestUnits(CreditNoteRequest r) {
+        List<UUID> ids = r.getItems().stream().map(CreditNoteRequest.Item::getUnitId).toList();
+        return ids.isEmpty() ? List.of() : unitRepo.findByIdIn(ids).stream().sorted(Comparator.comparing(StockUnit::getCode)).toList();
+    }
+
+    public static boolean isRequester(CreditNoteRequest r) {
+        return AppUserPrincipal.current().map(u -> u.getId().equals(r.getRequestedById())).orElse(false);
+    }
+
+    public static boolean isReviewer(CreditNoteRequest r) {
+        return r.getReviewedById() != null && AppUserPrincipal.current().map(u -> u.getId().equals(r.getReviewedById())).orElse(false);
+    }
+
+    /** What a credit note would credit, checked as issuing checks it, with nothing changed (the request's totals). */
+    Vat.Totals preview(CreditNoteDto form, CreditNoteKind kind) {
+        SalesInvoice invoice = invoiceRepo.findDetailedById(form.getInvoiceId()).filter(i -> i.getStatus() == SalesInvoiceStatus.POSTED)
+                .orElseThrow(() -> new NotFoundException("SalesInvoice", form.getInvoiceId()));
+        reason(form);
+        refundReason(form);
+        Map<SalesInvoiceLine, Integer> pieces = new TreeMap<>(Comparator.comparingInt(SalesInvoiceLine::getLineNo));
+        if (kind == CreditNoteKind.RETURN) {
+            pickReturns(form, invoice).chosen().keySet().forEach(r -> pieces.merge(r.line(), 1, Integer::sum));
+        } else {
+            pickSizes(form, invoice).forEach((c, n) -> pieces.put(c.line(), n));
+        }
+        Vat.Totals totals = totals(creditLines(invoice, pieces));
+        refund(form, invoice, totals, null);
+        return totals;
+    }
+
+    /**
+     * Asks for a credit note (F-14): checked as issuing would check it, its totals worked out, what it asks for kept; Finance
+     * reviews it first when Settings ask, then another person approves it. A unit already asked back on a request still
+     * open, or pieces of an invoice already being given up, cannot be asked twice.
+     */
+    @Transactional
+    public CreditNoteRequest request(CreditNoteDto form, CreditNoteKind kind) {
+        Vat.Totals totals = preview(form, kind);
+        SalesInvoice invoice = invoiceRepo.findDetailedById(form.getInvoiceId()).orElseThrow();
+        List<CreditNoteRequest> open = requestRepo.findByInvoice_IdAndStatusIn(invoice.getId(), List.of(CreditNoteRequestStatus.PENDING_REVIEW,
+                CreditNoteRequestStatus.PENDING_APPROVAL, CreditNoteRequestStatus.APPROVED));
+        CreditNoteRequest r = new CreditNoteRequest();
+        if (kind == CreditNoteKind.RETURN) {
+            for (CreditNoteDto.Item item : form.getItems()) {
+                if (!item.isSelected()) {
+                    continue;
+                }
+                for (CreditNoteRequest o : open) {
+                    if (o.getItems().stream().anyMatch(i -> i.getUnitId().equals(item.getUnitId()))) {
+                        String code = unitRepo.findById(item.getUnitId()).map(StockUnit::getCode).orElse("");
+                        throw BusinessException.onField("items", "creditNote.request.unitAsked", code, o.getNumber());
+                    }
+                }
+                r.getItems().add(new CreditNoteRequest.Item(item.getUnitId(), item.isCullet()));
+            }
+            r.setLocationId(form.getLocationId());
+        } else {
+            open.stream().filter(o -> o.getKind() == CreditNoteKind.CANCEL).findFirst().ifPresent(o -> {
+                throw BusinessException.onField("sizes", "creditNote.request.cancelAsked", o.getNumber());
+            });
+            for (CreditNoteDto.Size size : form.getSizes()) {
+                if (size.getQuantity() != null && size.getQuantity() > 0) {
+                    r.getSizes().add(new CreditNoteRequest.Size(size.getLineId(), size.getQuantity()));
+                }
             }
         }
-        finish(note, invoice, lines, refund);
-        postingService.creditNote(note, BigDecimal.ZERO, BigDecimal.ZERO, postingService.stockValues(List.of()));
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        r.setNumber(numbers.next(DocumentType.CREDIT_NOTE_REQUEST));
+        r.setKind(kind);
+        r.setInvoice(invoice);
+        r.setCustomer(invoice.getCustomer());
+        r.setReason(reason(form));
+        r.setRefundReason(refundReason(form));
+        boolean refunded = CreditNotes.refund(totals.gross(), invoice.getBalanceDue()).refunded().signum() > 0;
+        r.setRefundMethod(refunded ? form.getRefundMethod() : null);
+        r.setRefundReference(refunded && form.getRefundMethod() != null && form.getRefundMethod().needsReference()
+                ? PartyRules.clean(form.getRefundReference()) : null);
+        r.setNetAmount(totals.net());
+        r.setVatAmount(totals.vat());
+        r.setTotalAmount(totals.gross());
+        r.setAuthorityLevel(authority.required(AuthorityDecision.CREDIT_NOTE, totals.gross()));
+        r.setStatus(reviewRequired() ? CreditNoteRequestStatus.PENDING_REVIEW : CreditNoteRequestStatus.PENDING_APPROVAL);
+        r.setRequestedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        r.setRequestedById(user.map(AppUserPrincipal::getId).orElse(null));
+        r.setRequestedAt(LocalDateTime.now(clock));
+        requestRepo.save(r);
+        tell(r);
+        return r;
+    }
+
+    /** Finance reviews it (not who asked); then it waits for the approver. */
+    @Transactional
+    public CreditNoteRequest review(UUID id, String note) {
+        CreditNoteRequest r = lockRequest(id);
+        if (r.getStatus() != CreditNoteRequestStatus.PENDING_REVIEW) {
+            throw BusinessException.of("creditNote.request.notForReview", r.getNumber());
+        }
+        if (isRequester(r)) {
+            throw BusinessException.of("creditNote.request.ownReview", r.getNumber());
+        }
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        r.setReviewedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        r.setReviewedById(user.map(AppUserPrincipal::getId).orElse(null));
+        r.setReviewedAt(LocalDateTime.now(clock));
+        r.setReviewNote(PartyRules.clean(note));
+        r.setStatus(CreditNoteRequestStatus.PENDING_APPROVAL);
+        tell(r);
+        return r;
+    }
+
+    /** Another person approves it within the Delegation of Authority (not who asked or reviewed it); then it can be issued. */
+    @Transactional
+    public CreditNoteRequest approve(UUID id, String note) {
+        CreditNoteRequest r = lockRequest(id);
+        if (r.getStatus() != CreditNoteRequestStatus.PENDING_APPROVAL) {
+            throw BusinessException.of(r.getStatus() == CreditNoteRequestStatus.PENDING_REVIEW ? "creditNote.request.reviewFirst"
+                    : "creditNote.request.notPending", r.getNumber());
+        }
+        if (isRequester(r)) {
+            throw BusinessException.of("creditNote.request.ownApproval", r.getNumber());
+        }
+        if (isReviewer(r)) {
+            throw BusinessException.of("creditNote.request.reviewerApproval", r.getNumber());
+        }
+        String clean = PartyRules.clean(note);
+        authority.require(AuthorityDecision.CREDIT_NOTE, r.getTotalAmount(), clean);
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        r.setDecidedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        r.setDecidedById(user.map(AppUserPrincipal::getId).orElse(null));
+        r.setDecidedAt(LocalDateTime.now(clock));
+        r.setDecisionNote(clean);
+        r.setStatus(CreditNoteRequestStatus.APPROVED);
+        notifier.user(r.getRequestedById(), NotificationKind.DECISION, "notify.creditNoteRequest.approved", "notify.decidedBy",
+                "/credit-notes/requests/" + r.getId(), r.getNumber(), r.getDecidedBy());
+        notifier.holders("ISSUE_CREDIT_NOTE", r.getDecidedById(), NotificationKind.APPROVAL, "notify.creditNoteRequest.toIssue",
+                "notify.creditNoteRequest.toIssueText", "/credit-notes/requests/" + r.getId(), r.getNumber(), r.getCustomer().getName(),
+                r.getTotalAmount().setScale(0, RoundingMode.HALF_UP).toPlainString());
+        return r;
+    }
+
+    /** A reviewer or an approver rejects it (not who asked), with a reason. */
+    @Transactional
+    public CreditNoteRequest reject(UUID id, String reason) {
+        CreditNoteRequest r = lockRequest(id);
+        if (!r.isWaiting()) {
+            throw BusinessException.of("creditNote.request.notPending", r.getNumber());
+        }
+        if (isRequester(r)) {
+            throw BusinessException.of("creditNote.request.ownReject", r.getNumber());
+        }
+        closeRequest(r, CreditNoteRequestStatus.REJECTED, reason);
+        notifier.user(r.getRequestedById(), NotificationKind.DECISION, "notify.creditNoteRequest.rejected", "notify.decidedBy",
+                "/credit-notes/requests/" + r.getId(), r.getNumber(), r.getDecidedBy());
+        return r;
+    }
+
+    /** Whoever asked takes it back (waiting, or approved and not issued yet), with a reason. */
+    @Transactional
+    public CreditNoteRequest withdraw(UUID id, String reason) {
+        CreditNoteRequest r = lockRequest(id);
+        if (!r.isWaiting() && r.getStatus() != CreditNoteRequestStatus.APPROVED) {
+            throw BusinessException.of("creditNote.request.notPending", r.getNumber());
+        }
+        if (!isRequester(r)) {
+            throw BusinessException.of("creditNote.request.notYours", r.getNumber());
+        }
+        closeRequest(r, CreditNoteRequestStatus.WITHDRAWN, reason);
+        return r;
+    }
+
+    /**
+     * Issues an approved request: the usual credit note (the glass comes back, the refund is paid from the issuer's till if in
+     * cash), never for more than was approved. The request first, then the till and the invoice, as issuing takes them.
+     */
+    @Transactional
+    public CreditNote issueApproved(UUID id) {
+        CreditNoteRequest r = lockRequest(id);
+        if (r.getStatus() != CreditNoteRequestStatus.APPROVED) {
+            throw BusinessException.of("creditNote.request.notApproved", r.getNumber());
+        }
+        CreditNoteDto form = new CreditNoteDto();
+        form.setRequestId(r.getId());
+        form.setInvoiceId(r.getInvoice().getId());
+        form.setReason(r.getReason());
+        form.setRefundReason(r.getRefundReason());
+        form.setRefundMethod(r.getRefundMethod());
+        form.setRefundReference(r.getRefundReference());
+        form.setLocationId(r.getLocationId());
+        r.getItems().forEach(i -> {
+            CreditNoteDto.Item item = new CreditNoteDto.Item();
+            item.setUnitId(i.getUnitId());
+            item.setSelected(true);
+            item.setCullet(i.isCullet());
+            form.getItems().add(item);
+        });
+        r.getSizes().forEach(sz -> {
+            CreditNoteDto.Size size = new CreditNoteDto.Size();
+            size.setLineId(sz.getLineId());
+            size.setQuantity(sz.getQuantity());
+            form.getSizes().add(size);
+        });
+        CreditNote note = r.getKind() == CreditNoteKind.RETURN ? issue(form) : cancelPieces(form);
+        if (note.getTotalAmount().compareTo(r.getTotalAmount()) > 0) {
+            throw BusinessException.of("creditNote.request.moreThanApproved", r.getNumber(), r.getTotalAmount(), note.getTotalAmount());
+        }
+        r.setCreditNoteId(note.getId());
+        r.setIssuedBy(AppUserPrincipal.currentUsername());
+        r.setIssuedAt(LocalDateTime.now(clock));
+        r.setStatus(CreditNoteRequestStatus.ISSUED);
         return note;
+    }
+
+    private void closeRequest(CreditNoteRequest r, CreditNoteRequestStatus status, String reason) {
+        String why = PartyRules.clean(reason);
+        if (why == null || why.length() > 255) {
+            throw BusinessException.of("po.reason.required");
+        }
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        r.setDecidedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        r.setDecidedById(user.map(AppUserPrincipal::getId).orElse(null));
+        r.setDecidedAt(LocalDateTime.now(clock));
+        r.setDecisionNote(why);
+        r.setStatus(status);
+    }
+
+    /** The reviewers, or the approvers, are told it waits for them. */
+    private void tell(CreditNoteRequest r) {
+        boolean review = r.getStatus() == CreditNoteRequestStatus.PENDING_REVIEW;
+        notifier.holders(review ? "REVIEW_CREDIT_CONTROL" : "APPROVE_CREDIT_NOTE", r.getRequestedById(), NotificationKind.APPROVAL,
+                review ? "notify.creditNoteRequest.review" : "notify.creditNoteRequest.waiting", "notify.creditNoteRequest.waitingText",
+                "/credit-notes/requests/" + r.getId(), r.getNumber(), r.getCustomer().getName(),
+                r.getTotalAmount().setScale(0, RoundingMode.HALF_UP).toPlainString());
+    }
+
+    private CreditNoteRequest lockRequest(UUID id) {
+        requestRepo.lockById(id).orElseThrow(() -> new NotFoundException("CreditNoteRequest", id));
+        return findRequest(id);
     }
 
     // ---------------------------------------------------------------- the steps both take
@@ -567,7 +892,7 @@ public class CreditNoteService {
         if (method == PaymentMethod.CREDIT && !invoice.getCustomer().getType().isCreditAllowed()) {
             throw BusinessException.onField("refundMethod", "creditNote.refund.walkIn", invoice.getCustomer().getName());
         }
-        if (method == PaymentMethod.CASH) {
+        if (method == PaymentMethod.CASH && till != null) {
             BigDecimal inTill = tillService.summary(till).getExpectedCash();
             if (inTill.compareTo(split.refunded()) < 0) {
                 throw BusinessException.onField("refundMethod", "creditNote.refund.tillShort", till.getNumber(), inTill, split.refunded());
@@ -578,7 +903,7 @@ public class CreditNoteService {
 
     /** Saves the issued credit note and queues its EBM refund receipt (TAX-02), in the same transaction. */
     private CreditNote save(CreditNoteKind kind, SalesInvoice invoice, String reason, String refundReason, Vat.Totals totals,
-                            Refund refund, TillSession till) {
+                            Refund refund, TillSession till, UUID requestId) {
         LocalDateTime now = LocalDateTime.now(clock);
         CreditNote note = new CreditNote();
         note.setNumber(numbers.next(DocumentType.CREDIT_NOTE));
@@ -598,6 +923,7 @@ public class CreditNoteService {
         note.setTillSessionId(refund.method() == PaymentMethod.CASH ? till.getId() : null);
         note.setPostedAt(now);
         note.setPostedBy(AppUserPrincipal.currentUsername());
+        note.setRequestId(requestId);
         CreditNote saved = repo.save(note);
         ebmService.queueRefund(saved);
         return saved;

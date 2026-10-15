@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${cnr.number}, ~{::content})}">
+<head><title>Credit note request - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${cnr.status.name()},
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_CREDIT_CONTROL'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_CREDIT_NOTE'')')},
+        canIssue=${#authorization.expression('hasAuthority(''PERM_ISSUE_CREDIT_NOTE'')')},
+        canAsk=${#authorization.expression('hasAuthority(''PERM_RETURN_SALE'')')},
+        isReturn=${cnr.kind.name() == 'RETURN'}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${cnr.number}">CNR-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{creditNote.request.askedBy(${cnr.requestedBy}, ${#temporals.format(cnr.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by cashier1 on 15/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{credit-notes/requests :: requestStatus(${cnr.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/credit-notes/requests" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline" data-modal-open="withdraw-modal"
+                    th:if="${canAsk and mine and (s == 'PENDING_REVIEW' or s == 'PENDING_APPROVAL' or s == 'APPROVED')}" th:text="#{creditNote.request.withdraw}">Withdraw</button>
+            <th:block th:if="${s == 'PENDING_REVIEW' and canReview and !mine}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{creditNote.request.reject}">Reject</button>
+                <form th:action="@{/credit-notes/requests/{id}/review(id=${cnr.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{creditNote.request.reviewConfirm(${cnr.number})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{creditNote.request.review}">Reviewed, send for approval</button>
+                </form>
+            </th:block>
+            <th:block th:if="${s == 'PENDING_APPROVAL' and canApprove and !mine and !reviewer}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{creditNote.request.reject}">Reject</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/credit-notes/requests/{id}/approve(id=${cnr.id})}, #{creditNote.request.approveConfirm(${cnr.number}, ${@num.money(cnr.totalAmount)})}, #{creditNote.request.approve}, ${authority})}"></th:block>
+            </th:block>
+            <form th:if="${s == 'APPROVED' and canIssue}" th:action="@{/credit-notes/requests/{id}/issue(id=${cnr.id})}" method="post"
+                  class="row-action-form confirm-submit" th:attr="data-confirm=#{creditNote.request.issueConfirm(${cnr.number}, ${@num.money(cnr.totalAmount)})}">
+                <button type="submit" class="btn btn-primary" th:text="#{creditNote.issue}">Issue the credit note</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note"><strong th:text="(${isReturn} ? #{creditNote.reason} : #{creditNote.cancelReason}) + ':'">Why it comes back:</strong> <span th:text="${cnr.reason}">Wrong size</span></div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_REVIEW'}">
+        <span th:text="#{creditNote.request.waitingReview}">Finance reviews it first (credit control), then another person approves it.</span>
+        <span th:if="${mine}" th:text="#{creditNote.request.notYourOwn}">You cannot review or approve your own request.</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
+        <span th:text="#{creditNote.request.waitingApproval}">Waiting for approval. Nothing comes back and nothing is refunded until it is issued.</span>
+        <span th:if="${mine}" th:text="#{creditNote.request.notYourOwn}">You cannot review or approve your own request.</span>
+        <span th:if="${reviewer}" th:text="#{creditNote.request.reviewerNote}">You reviewed it: another person approves it.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine or reviewer})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${cnr.reviewedBy != null}">
+        <strong th:text="#{creditNote.request.reviewedBy(${cnr.reviewedBy}, ${#temporals.format(cnr.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by accountant1 on 15/10/2026 11:00</strong>
+        <span th:if="${cnr.reviewNote != null}" th:text="${'· ' + cnr.reviewNote}">· ok</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED' or s == 'ISSUED'}">
+        <strong th:text="#{creditNote.request.approvedBy(${cnr.decidedBy}, ${#temporals.format(cnr.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner on 15/10/2026 11:30</strong>
+        <span th:if="${cnr.decisionNote != null}" th:text="${'· ' + cnr.decisionNote}">· ok</span>
+        <span th:if="${s == 'APPROVED'}" th:text="#{creditNote.request.toIssue}">Issue it: the glass comes back and the refund is paid.</span>
+        <span th:if="${s == 'APPROVED' and cnr.refundMethod != null and cnr.refundMethod.name() == 'CASH' and canIssue}"
+              th:text="${myTill != null} ? #{creditNote.tillHint(${myTill.session.number}, ${@num.money(myTill.expectedCash)})} : #{creditNote.noTillHint}">Cash needs your open till</span>
+    </div>
+    <div class="doc-note" th:if="${creditNote != null}">
+        <strong th:text="#{creditNote.request.issuedAs(${cnr.issuedBy}, ${#temporals.format(cnr.issuedAt, 'dd/MM/yyyy HH:mm')})}">Issued by cashier1 on 15/10/2026 12:00:</strong>
+        <a class="mono" th:href="@{/credit-notes/{id}(id=${creditNote.id})}" th:text="${creditNote.number}">CN-WH-2026-000003</a>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'WITHDRAWN'}">
+        <strong th:text="${s == 'REJECTED'} ? #{creditNote.request.rejectedBy(${cnr.decidedBy})} : #{creditNote.request.withdrawnBy(${cnr.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${cnr.decisionNote}">Not ours</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{creditNote.invoice}">Invoice</label>
+                    <div class="value">
+                        <a class="mono" th:href="@{/invoices/{id}(id=${invoice.id})}" sec:authorize="hasAuthority('PAGE_INVOICES')" th:text="${invoice.number}">INV-WH-2026-000001</a>
+                        <span class="mono" sec:authorize="!hasAuthority('PAGE_INVOICES')" th:text="${invoice.number}">INV-WH-2026-000001</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${cnr.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${invoice.billTo}">Walk-in customer</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${invoice.billTo}">Walk-in customer</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.request.kind}">Asked for</label>
+                    <div class="value" th:text="#{${'creditNote.kindShort.' + cnr.kind}}">Return</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.total}">Total (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(cnr.totalAmount)}">27,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.request.vat}">Of which VAT (RWF)</label>
+                    <div class="value" th:text="${@num.money(cnr.vatAmount)}">4,119</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.refund}">Refund</label>
+                    <div class="value">
+                        <span th:text="${cnr.refundMethod != null} ? #{${'creditNote.refund.' + cnr.refundMethod}} : #{creditNote.refund.none}">Cash from the till</span>
+                        <span class="mono" th:if="${cnr.refundReference != null}" th:text="${' · ' + cnr.refundReference}">· MP-55</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.refundReason}">Refund reason (EBM)</label>
+                    <div class="value" th:text="#{${'ebm.refundReason.' + cnr.refundReason}}">Refund</div>
+                </div>
+                <div class="item" th:if="${place != null}">
+                    <label th:text="#{creditNote.location}">Rack or slot for glass back in stock</label>
+                    <div class="value mono" th:text="${place.code}">WH-A-R01</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{creditNote.request.office}">Office</label>
+                    <div class="value" th:text="#{${'authority.level.' + cnr.authorityLevel}}">Chief Operating Officer</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-items" th:classappend="${tab == 'items'} ? 'active'">
+                <span th:text="${isReturn} ? #{creditNote.whatComesBack} : #{creditNote.piecesGivenUp}">What comes back</span>
+                <span class="section-count" th:text="${isReturn} ? ${units.size()} : ${sizes.size()}">1</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-items" th:classappend="${tab == 'items'} ? 'active'">
+                <div class="table-container" th:if="${isReturn}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{invoice.item}">Item</th>
+                                <th th:text="#{creditNote.goesTo}">Condition</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${units}">
+                                <td><a class="mono strong" th:href="@{/stock/{id}(id=${u.id})}" th:text="${u.code}">U-WH-000012</a></td>
+                                <td class="mono nowrap" th:text="${u.product.code + ' · ' + u.widthMm + ' × ' + u.heightMm}">CLR-6 · 600 × 400</td>
+                                <td th:text="${cullet.contains(u.id)} ? #{creditNote.outcome.CULLET} : #{creditNote.outcome.RESTOCK}">Back to stock</td>
+                                <td><th:block th:replace="~{stock/list :: stockStatus(${u.status})}"></th:block></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-container" th:unless="${isReturn}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{invoice.item}">Item</th>
+                                <th class="num" th:text="#{creditNote.giveUp}">Pieces to give up</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="sz : ${sizes}" th:with="l=${invoiceLines.get(sz.lineId)}">
+                                <td class="num text-muted" th:text="${l != null} ? ${l.lineNo} : ''">1</td>
+                                <td th:text="${l != null} ? ${l.label} : ''">CLR-6 · 600 × 400</td>
+                                <td class="num" th:text="${sz.quantity}">2</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('CREDIT_NOTE_REQUEST', ${cnr.id}, ${documents}, '/credit-notes/requests/' + ${cnr.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/credit-notes/requests/' + ${cnr.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${((s == 'PENDING_REVIEW' and canReview) or (s == 'PENDING_APPROVAL' and canApprove)) and !mine}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{creditNote.request.rejectTitle(${cnr.number})},
+                @{/credit-notes/requests/{id}/reject(id=${cnr.id})}, #{creditNote.request.rejectText}, #{creditNote.request.reject})}"></div>
+    </th:block>
+    <th:block th:if="${canAsk and mine and (s == 'PENDING_REVIEW' or s == 'PENDING_APPROVAL' or s == 'APPROVED')}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('withdraw-modal', #{creditNote.request.withdrawTitle(${cnr.number})},
+                @{/credit-notes/requests/{id}/withdraw(id=${cnr.id})}, #{creditNote.request.withdrawText}, #{creditNote.request.withdraw})}"></div>
+    </th:block>
+    <div th:replace="~{fragments/authority :: boardModal(@{/credit-notes/requests/{id}/approve(id=${cnr.id})}, #{creditNote.request.approve}, ${authority})}"></div>
+</div>
+</body>
+</html>

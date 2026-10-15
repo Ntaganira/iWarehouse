@@ -2,9 +2,12 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
+import com.ntaganira.heritier.iWarehouse.dto.AuthorityDto;
 import com.ntaganira.heritier.iWarehouse.dto.SettingsDto;
 import com.ntaganira.heritier.iWarehouse.entity.NumberSequence;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.EbmMode;
 import com.ntaganira.heritier.iWarehouse.enums.RateSource;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
@@ -43,9 +46,9 @@ import java.util.*;
 public class SettingsController {
 
     static final String MODULE = "Settings";
-    private static final Set<String> TABS = Set.of("general", "tax", "numbering", "history");
+    private static final Set<String> TABS = Set.of("general", "authority", "tax", "numbering", "history");
     /** Entity types whose changes the History tab lists. */
-    private static final List<String> AUDITED_TYPES = List.of("Setting", "TaxCategory", "NumberSequence");
+    private static final List<String> AUDITED_TYPES = List.of("Setting", "TaxCategory", "NumberSequence", "AuthorityLimit");
 
     private final SettingService settingService;
     private final TaxCategoryService taxCategoryService;
@@ -54,11 +57,13 @@ public class SettingsController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final CompanyLogoService companyLogoService;
+    private final DelegationOfAuthority authority;
 
     public SettingsController(SettingService settingService, TaxCategoryService taxCategoryService,
                               DocumentNumberService documentNumberService, DataChangeService dataChangeService,
                               ActivityLogService activityLogService, Messages messages,
-                              CompanyLogoService companyLogoService) {
+                              CompanyLogoService companyLogoService, DelegationOfAuthority authority) {
+        this.authority = authority;
         this.settingService = settingService;
         this.taxCategoryService = taxCategoryService;
         this.documentNumberService = documentNumberService;
@@ -82,6 +87,9 @@ public class SettingsController {
         }
         model.addAttribute("settings", settingService.load());
         model.addAttribute("companyLogoUrl", companyLogoService.url());
+        model.addAttribute("authorityTable", authority.table());
+        model.addAttribute("authorityDecisions", AuthorityDecision.values());
+        model.addAttribute("authorityLevels", AuthorityLevel.values());
         // The open tab shows the page asked for; the others start at their first page.
         model.addAttribute("taxCategories", Paging.of(taxCategoryService.findAll(), Paging.pageOf("tax", open, page)));
         model.addAttribute("sequences", Paging.of(sequences, Paging.pageOf("numbering", open, page)));
@@ -136,6 +144,44 @@ public class SettingsController {
                         .contentType(MediaType.IMAGE_PNG)
                         .body(png))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // ---------------------------------------------------------------- the Delegation of Authority (Annex E)
+
+    @GetMapping("/authority")
+    @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_MANAGE_AUTHORITY')")
+    public String authorityForm(Model model) {
+        model.addAttribute("authorityDto", authority.form());
+        model.addAttribute("editableLevels", DelegationOfAuthority.EDITABLE);
+        return "settings/authority-form";
+    }
+
+    @PostMapping("/authority")
+    @PreAuthorize("hasAuthority('PAGE_SETTINGS') and hasAuthority('PERM_MANAGE_AUTHORITY')")
+    public String updateAuthority(@ModelAttribute("authorityDto") AuthorityDto dto, BindingResult result, Model model,
+                                  RedirectAttributes redirect) {
+        try {
+            List<String> changes = authority.update(dto);
+            if (changes.isEmpty()) {
+                redirect.addFlashAttribute("flashWarning", messages.get("settings.noChanges"));
+            } else {
+                activityLogService.record(MODULE, "UPDATE_AUTHORITY", "Changed the Delegation of Authority: " + String.join("; ", changes),
+                        ActivityStatus.SUCCESS);
+                redirect.addFlashAttribute("flashSuccess", messages.get("authority.updated", changes.size()));
+            }
+            return "redirect:/settings?tab=authority";
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "UPDATE_AUTHORITY", "Failed to change the Delegation of Authority: " + error, ActivityStatus.FAILED);
+            if (e.getField() != null) {
+                result.rejectValue(e.getField(), e.getMessageKey(), e.getArgs(), error);
+                model.addAttribute("formErrors", result.getFieldErrors());
+            } else {
+                model.addAttribute("flashError", error);
+            }
+            model.addAttribute("editableLevels", DelegationOfAuthority.EDITABLE);
+            return "settings/authority-form";
+        }
     }
 
     @GetMapping("/edit")

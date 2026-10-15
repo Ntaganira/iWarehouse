@@ -364,12 +364,14 @@ class CounterSalesTest {
         LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
                 jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, creditLineRepo, tills, cuttingJobs, stockService, pricing,
-                postings, journals, numbers, settings, mock(Notifier.class), ebm, CLOCK);
-        approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK);
+                postings, journals, numbers, settings, mock(Notifier.class), ebm, CLOCK, mock(CustomerAgeing.class), mock(DelegationOfAuthority.class));
+        approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK, mock(DelegationOfAuthority.class), settings,
+                mock(Notifier.class));
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
                 numbers, settings, CLOCK);
         creditNoteService = new CreditNoteService(creditNoteRepo, creditLineRepo, unitsBackRepo, invoiceRepo, deliveryRepo, unitRepo,
-                productRepo, jobRepo, jobLineRepo, sales, cuttingJobs, tills, stockService, postings, numbers, ebm, CLOCK);
+                productRepo, jobRepo, jobLineRepo, sales, cuttingJobs, tills, stockService, postings, numbers, ebm, CLOCK,
+                mock(CreditNoteRequestRepository.class), mock(DelegationOfAuthority.class), settings, mock(Notifier.class));
     }
 
     @AfterEach

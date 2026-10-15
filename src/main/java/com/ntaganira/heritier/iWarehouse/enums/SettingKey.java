@@ -50,6 +50,28 @@ public enum SettingKey {
     VEHICLE_COST_APPROVAL_LIMIT("approval.vehicle-cost-limit", "vehicleCostApprovalLimit", "100000"),
     /** Discounts and price overrides above this percentage need manager approval (POS-06). */
     DISCOUNT_APPROVAL_PERCENT("approval.discount-limit-percent", "discountApprovalPercent", "0"),
+    /** A discount that takes a line below what its glass cost needs approval (SDP 8). */
+    APPROVAL_BELOW_COST("approval.below-cost", "approvalBelowCost", "true"),
+    /** Counter exceptions are recommended (Director of Commercial) before they are decided (F-03). */
+    APPROVAL_SALE_RECOMMEND("approval.sale-recommend", "approvalSaleRecommend", "false"),
+    /** Customers with invoices overdue get no credit until a manager approves it (SDP 11). */
+    CREDIT_BLOCK_OVERDUE("credit.block-overdue", "creditBlockOverdue", "true"),
+    /** Days past due before an invoice blocks credit. */
+    CREDIT_OVERDUE_GRACE_DAYS("credit.overdue-grace-days", "creditOverdueGraceDays", "0"),
+    /** A credit note is asked, approved by another person, then issued (F-14); off: issued at once, as before. */
+    APPROVAL_CREDIT_NOTE_REQUIRED("approval.credit-note-required", "approvalCreditNoteRequired", "true"),
+    /** A credit note asked is reviewed (Finance) before it is approved. */
+    APPROVAL_CREDIT_NOTE_REVIEW("approval.credit-note-review", "approvalCreditNoteReview", "true"),
+    /** A receivable write-off asked is reviewed before it is approved. */
+    APPROVAL_WRITE_OFF_REVIEW("approval.write-off-review", "approvalWriteOffReview", "true"),
+    /** RWF above which a purchase order waits for another person's approval (CMP 06); 0: every order. */
+    APPROVAL_PURCHASE_ORDER_LIMIT("approval.purchase-order-limit", "approvalPurchaseOrderLimit", "0"),
+    /** A supplier payment is prepared, then authorised by another person (CMP 07); off: paid at once, as before. */
+    APPROVAL_SUPPLIER_PAYMENT_AUTHORISE("approval.supplier-payment-authorise", "approvalSupplierPaymentAuthorise", "true"),
+    /** RWF above which a supplier payment needs two authorisations (CMP 07: two signatories above 500,000). */
+    APPROVAL_SUPPLIER_PAYMENT_DUAL_LIMIT("approval.supplier-payment-dual-limit", "approvalSupplierPaymentDualLimit", "500000"),
+    /** A goods receipt is posted by someone other than who drafted it (F-06). */
+    APPROVAL_RECEIPT_SECOND_PERSON("approval.receipt-second-person", "approvalReceiptSecondPerson", "true"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

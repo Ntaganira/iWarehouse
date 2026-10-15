@@ -34,5 +34,7 @@ public enum SyncConflictReason {
     /** The payments do not add up to the total, or a mobile-money payment has no reference. */
     PAYMENT_MISMATCH,
     /** The sale cannot be read: no unit, a unit twice, a field missing. */
-    INVALID
+    INVALID,
+    /** A price that takes the glass below what it cost (SDP 8): the counter needs the Managing Director for that. */
+    BELOW_COST
 }

@@ -21,10 +21,7 @@
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canAdjust and mine}" th:text="#{adjustment.cancel}">Withdraw</button>
                 <th:block th:if="${canApprove and !mine}">
                     <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{adjustment.reject}">Reject</button>
-                    <form th:action="@{/stock-adjustments/{id}/approve(id=${adjustment.id})}" method="post" class="row-action-form confirm-submit"
-                          th:attr="data-confirm=#{adjustment.approveConfirm(${adjustment.number}, ${@num.money(adjustment.valueMoved)})}">
-                        <button type="submit" class="btn btn-primary" th:text="#{adjustment.approve}">Approve and post</button>
-                    </form>
+                    <th:block th:replace="~{fragments/authority :: approve(@{/stock-adjustments/{id}/approve(id=${adjustment.id})}, #{adjustment.approveConfirm(${adjustment.number}, ${@num.money(adjustment.valueMoved)})}, #{adjustment.approve}, ${authority})}"></th:block>
                 </th:block>
             </th:block>
         </div>
@@ -34,6 +31,7 @@
     <div class="doc-note is-warning" th:if="${s == 'PENDING_APPROVAL'}">
         <span th:text="#{adjustment.waitingNote(${@num.money(adjustment.valueMoved)}, ${@num.money(limit)})}">Moves 252,629 RWF, above the 0 RWF limit: another person with approval rights must approve it. Its units are held meanwhile.</span>
         <span th:if="${mine}" th:text="#{adjustment.notYourOwn}">You cannot approve your own adjustment.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${mine})}"></th:block>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
         <strong th:text="${s == 'REJECTED'} ? #{adjustment.rejectedBy(${adjustment.decidedBy})} : #{adjustment.cancelledBy(${adjustment.decidedBy})}">Rejected by owner:</strong>
@@ -133,6 +131,7 @@
         <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{adjustment.cancelTitle(${adjustment.number})},
                 @{/stock-adjustments/{id}/cancel(id=${adjustment.id})}, #{adjustment.cancelText}, #{adjustment.cancel})}"></div>
     </th:block>
+    <div th:replace="~{fragments/authority :: boardModal(@{/stock-adjustments/{id}/approve(id=${adjustment.id})}, #{adjustment.approve}, ${authority})}"></div>
 </div>
 </body>
 </html>

@@ -122,6 +122,10 @@ public class SalesInvoice extends BaseEntity {
     @Column(name = "quotation_id")
     private UUID quotationId;
 
+    /** Days added to the customer's payment terms for this invoice, as approved (F-03 extended terms). */
+    @Column(name = "extra_terms_days")
+    private Integer extraTermsDays;
+
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo")
     private List<SalesInvoiceLine> lines = new ArrayList<>();

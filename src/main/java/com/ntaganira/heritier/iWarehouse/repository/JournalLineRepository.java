@@ -78,8 +78,11 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " order by l.entry.entryDate, l.entry.postedAt, l.entry.number, l.lineNo")
     List<JournalLine> findCustomerLines(@Param("accountId") UUID accountId, @Param("customerId") UUID customerId);
 
-    /** Rows of (customer id, date, debit, credit) of an account's lines that name a customer: the receivables ageing. */
-    @Query("select l.customer.id, l.entry.entryDate, l.debit, l.credit from JournalLine l"
+    /**
+     * Rows of (customer id, date, debit, credit, source document id) of an account's lines that name a customer: the
+     * receivables ageing (an invoice with extended terms is found by its id).
+     */
+    @Query("select l.customer.id, l.entry.entryDate, l.debit, l.credit, l.entry.sourceId from JournalLine l"
             + " where l.account.id = :accountId and l.customer is not null")
     List<Object[]> customerEntries(@Param("accountId") UUID accountId);
 

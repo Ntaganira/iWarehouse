@@ -56,11 +56,13 @@ public class StockAdjustmentService {
     private final SettingService settingService;
     private final Notifier notifier;
     private final Clock clock;
+    private final DelegationOfAuthority authority;
 
     public StockAdjustmentService(StockAdjustmentRepository repo, StockUnitRepository unitRepo, ProductRepository productRepo,
                                   StockService stockService, PostingService postingService, DocumentNumberService numbers,
-                                  SettingService settingService, Notifier notifier, Clock clock) {
+                                  SettingService settingService, Notifier notifier, Clock clock, DelegationOfAuthority authority) {
         this.notifier = notifier;
+        this.authority = authority;
         this.repo = repo;
         this.unitRepo = unitRepo;
         this.productRepo = productRepo;
@@ -130,6 +132,11 @@ public class StockAdjustmentService {
 
     public long pendingCount() {
         return repo.countByStatus(AdjustmentStatus.PENDING_APPROVAL);
+    }
+
+    /** What the adjustment needs from the Delegation of Authority and whether the signed-in user may approve it. */
+    public DelegationOfAuthority.Check authorityOf(StockAdjustment adjustment) {
+        return authority.check(AuthorityDecision.STOCK_ADJUSTMENT, adjustment.getValueMoved());
     }
 
     /** RWF value an adjustment may move without approval. */
@@ -345,6 +352,8 @@ public class StockAdjustmentService {
         if (isRequester(adjustment)) {
             throw BusinessException.of("adjustment.ownApproval", adjustment.getNumber());
         }
+        // The office its value needs (Board Paper Annex E: stock write-offs and adjustments)
+        authority.require(AuthorityDecision.STOCK_ADJUSTMENT, adjustment.getValueMoved(), PartyRules.clean(note));
         decide(adjustment, AdjustmentStatus.PENDING_APPROVAL, PartyRules.clean(note));
         post(adjustment);
         notifier.user(adjustment.getRequestedById(), NotificationKind.DECISION, "notify.adjustment.approved", "notify.decidedBy",

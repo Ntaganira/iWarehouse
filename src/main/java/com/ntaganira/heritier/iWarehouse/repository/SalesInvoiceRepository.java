@@ -84,6 +84,13 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
 
     /** A mobile sale with its lines, trip, vehicle and driver, for the phone's receipt. */
     @EntityGraph(attributePaths = {"customer", "lines", "lines.product", "trip", "trip.vehicle", "trip.driver", "trip.driver.user", "device"})
+    /** A customer's invoices in a status, newest first (a write-off may name one). */
+    List<SalesInvoice> findByCustomer_IdAndStatusOrderByInvoiceDateDesc(UUID customerId, SalesInvoiceStatus status);
+
+    /** Rows of (invoice id, extra days) of the invoices approved with extended terms (F-03): the ageing gives them longer. */
+    @Query("select i.id, i.extraTermsDays from SalesInvoice i where i.extraTermsDays is not null")
+    List<Object[]> extendedTerms();
+
     @Query("select i from SalesInvoice i where i.clientId = :clientId")
     Optional<SalesInvoice> findMobileByClientId(@Param("clientId") UUID clientId);
 }

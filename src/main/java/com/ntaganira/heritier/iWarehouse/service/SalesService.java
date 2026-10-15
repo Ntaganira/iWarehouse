@@ -82,6 +82,8 @@ public class SalesService {
     private final Notifier notifier;
     private final EbmService ebmService;
     private final Clock clock;
+    private final CustomerAgeing ageing;
+    private final DelegationOfAuthority authority;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
                         ProductRepository productRepo, CustomerRepository customerRepo, ProcessingServiceRepository serviceRepo,
@@ -91,7 +93,9 @@ public class SalesService {
                         CuttingJobService cuttingJobService,
                         StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
                         DocumentNumberService numbers, SettingService settingService, Notifier notifier, EbmService ebmService,
-                        Clock clock) {
+                        Clock clock, CustomerAgeing ageing, DelegationOfAuthority authority) {
+        this.ageing = ageing;
+        this.authority = authority;
         this.notifier = notifier;
         this.ebmService = ebmService;
         this.repo = repo;
@@ -432,7 +436,7 @@ public class SalesService {
         }
 
         List<SaleApproval> approvals = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
-                List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED));
+                SaleApprovalStatus.OPEN);
         String pending = approvals.stream().filter(SaleApproval::isPending).map(SaleApproval::getNumber).sorted()
                 .collect(Collectors.joining(", "));
         if (!pending.isEmpty()) {
@@ -459,6 +463,11 @@ public class SalesService {
             }
             // Above what the customer has left only as far as a manager approved (POS-05)
             BigDecimal approved = approvedCredit(approvals);
+            // Invoices overdue stop credit until a manager approves it anyway (SDP 11)
+            CustomerAgeing.Overdue overdue = overdue(sale.getCustomer());
+            if (overdue.any() && credit.compareTo(approved) > 0) {
+                throw BusinessException.onField("credit", "sale.pay.credit.overdue", overdue.amount(), overdue.oldestDays());
+            }
             if (credit.compareTo(c.getAvailable()) > 0 && credit.compareTo(approved) > 0) {
                 throw approved.signum() > 0
                         ? BusinessException.onField("credit", "sale.pay.credit.overApproved", approved, c.getAvailable())
@@ -489,6 +498,8 @@ public class SalesService {
             payment.setUsername(username);
             payments.add(paymentRepo.save(payment));
         }
+        // Longer terms approved for this invoice (F-03): its balance is due that much later
+        approvals.stream().filter(a -> a.isTerms() && a.isApproved()).findFirst().ifPresent(a -> sale.setExtraTermsDays(a.getExtraDays()));
         // Status and the fields its check needs, together, after the queries
         sale.setNumber(number);
         sale.setBalanceDue(split.balance());
@@ -605,7 +616,7 @@ public class SalesService {
         SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
         SalesInvoiceLine line = lineOf(sale, lineId);
         List<SaleApproval> requests = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
-                List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED));
+                SaleApprovalStatus.OPEN);
         if (requests.stream().anyMatch(a -> a.isPending() && lineId.equals(a.getLineId()))) {
             throw BusinessException.of("sale.price.pending", line.getLabel());
         }
@@ -629,7 +640,11 @@ public class SalesService {
         }
         BigDecimal discount = Discounts.percent(list, newPrice);
         BigDecimal limit = discountLimit();
-        if (!Discounts.needsApproval(discount, limit)) {
+        BigDecimal after = amountAt(line, newPrice);
+        // A discount that takes the line below what its glass cost needs the office set for that (SDP 8)
+        BigDecimal cost = discount.signum() > 0 && settingService.getBoolean(SettingKey.APPROVAL_BELOW_COST) ? costOf(line) : null;
+        boolean belowCost = cost != null && Discounts.netOf(after, line.getVatRate()).compareTo(cost) < 0;
+        if (!belowCost && !Discounts.needsApproval(discount, limit)) {
             applied.ifPresent(a -> withdraw(a, "Replaced by a new price"));
             setPrice(line, newPrice, list, why);
             return new PriceChange(line, list, newPrice, discount, null);
@@ -641,7 +656,9 @@ public class SalesService {
         request.setDiscountPercent(discount);
         request.setLimitPercent(limit);
         request.setAmountBefore(line.getAmount());
-        request.setAmountAfter(amountAt(line, newPrice));
+        request.setAmountAfter(after);
+        request.setBelowCost(belowCost);
+        request.setCostAmount(belowCost ? cost : null);
         return new PriceChange(line, list, newPrice, discount, waiting(approvalRepo.save(request)));
     }
 
@@ -667,7 +684,8 @@ public class SalesService {
         if (amount.compareTo(total) > 0) {
             throw BusinessException.onField("credit", "sale.credit.overTotal", total);
         }
-        if (amount.compareTo(c.getAvailable()) <= 0) {
+        CustomerAgeing.Overdue overdue = overdue(sale.getCustomer());
+        if (amount.compareTo(c.getAvailable()) <= 0 && !overdue.any()) {
             throw BusinessException.onField("credit", "sale.credit.withinLimit", c.getAvailable());
         }
         String why = PartyRules.clean(reason);
@@ -678,7 +696,7 @@ public class SalesService {
             throw BusinessException.onField("creditReason", "sale.price.reasonSize");
         }
         List<SaleApproval> requests = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
-                List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED));
+                SaleApprovalStatus.OPEN);
         Optional<SaleApproval> waiting = requests.stream().filter(a -> a.isCredit() && a.isPending()).findFirst();
         if (waiting.isPresent()) {
             throw BusinessException.onField("credit", "sale.credit.pending", waiting.get().getNumber());
@@ -689,7 +707,74 @@ public class SalesService {
         request.setCreditLimit(c.limit());
         request.setOwed(c.owed());
         request.setCreditAmount(amount.setScale(2, RoundingMode.HALF_UP));
+        setOverdue(request, overdue);
         return waiting(approvalRepo.save(request));
+    }
+
+    /**
+     * Asks a manager for longer payment terms on this sale (F-03 "extended terms"): days added to the customer's terms for
+     * this invoice's balance. Only for customers buying on account.
+     */
+    @Transactional
+    public SaleApproval requestTerms(Integer extraDays, String reason) {
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        if (sale.getLines().isEmpty()) {
+            throw BusinessException.of("sale.empty");
+        }
+        if (!credit(sale.getCustomer()).allowed()) {
+            throw BusinessException.onField("extraDays", "sale.pay.credit.notAllowed", sale.getCustomer().getName());
+        }
+        if (extraDays == null || extraDays < 1 || extraDays > 365) {
+            throw BusinessException.onField("extraDays", "sale.terms.days");
+        }
+        String why = PartyRules.clean(reason);
+        if (why == null) {
+            throw BusinessException.onField("termsReason", "sale.terms.reason");
+        }
+        if (why.length() > 200) {
+            throw BusinessException.onField("termsReason", "sale.price.reasonSize");
+        }
+        List<SaleApproval> requests = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(), SaleApprovalStatus.OPEN);
+        Optional<SaleApproval> waiting = requests.stream().filter(a -> a.isTerms() && a.isPending()).findFirst();
+        if (waiting.isPresent()) {
+            throw BusinessException.onField("extraDays", "sale.terms.pending", waiting.get().getNumber());
+        }
+        SaleApproval request = newRequest(sale, SaleApprovalKind.TERMS,
+                sale.getCustomer().getName() + " · " + sale.getCustomer().getCode(), why);
+        requests.stream().filter(a -> a.isTerms() && a.isApproved()).forEach(a -> withdraw(a, "Replaced by a new request"));
+        request.setExtraDays(extraDays);
+        request.setAmountAfter(totals(sale).gross());
+        setOverdue(request, overdue(sale.getCustomer()));
+        return waiting(approvalRepo.save(request));
+    }
+
+    /** What the customer owes past due beyond the Settings' grace days, when Settings block credit for it (SDP 11). */
+    public CustomerAgeing.Overdue overdue(Customer customer) {
+        if (!settingService.getBoolean(SettingKey.CREDIT_BLOCK_OVERDUE) || !customer.getType().isCreditAllowed()) {
+            return CustomerAgeing.Overdue.NONE;
+        }
+        return ageing.overdue(customer, settingService.getInt(SettingKey.CREDIT_OVERDUE_GRACE_DAYS));
+    }
+
+    private static void setOverdue(SaleApproval request, CustomerAgeing.Overdue overdue) {
+        request.setOverdueAmount(overdue.any() ? overdue.amount() : null);
+        request.setOldestOverdueDays(overdue.any() ? (int) Math.min(overdue.oldestDays(), Integer.MAX_VALUE) : null);
+    }
+
+    /**
+     * What a glass line cost, net of VAT: the unit's own cost for a sheet from stock, its glass's moving-average cost over
+     * the pieces' area for a size to cut; none for processing (SDP 8).
+     */
+    private BigDecimal costOf(SalesInvoiceLine line) {
+        if (line.isStockUnit()) {
+            return line.getStockUnitId() == null ? null : unitRepo.findById(line.getStockUnitId()).map(StockUnit::getUnitCost).orElse(null);
+        }
+        if (line.isCustomPiece() && line.getProduct() != null && line.getProduct().getMacPerM2() != null) {
+            BigDecimal area = Pricing.areaM2(line.getWidthMm(), line.getHeightMm()).multiply(BigDecimal.valueOf(line.getQuantity()));
+            return line.getProduct().getMacPerM2().multiply(area).setScale(2, RoundingMode.HALF_UP);
+        }
+        return null;
     }
 
     /** The cashier takes back a request of the till's sale that is still pending, with a reason. */
@@ -734,12 +819,12 @@ public class SalesService {
 
     /** The credit a manager approved on a sale, 0 when none. */
     static BigDecimal approvedCredit(Collection<SaleApproval> approvals) {
-        return approvals.stream().filter(a -> a.isCredit() && a.isApproved()).map(SaleApproval::getCreditAmount)
+        return approvals.stream().filter(a -> a.isCredit() && a.isApproved()).map(SaleApproval::getEffectiveCredit)
                 .max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
     }
 
     /** What a line would come to at another price. */
-    private BigDecimal amountAt(SalesInvoiceLine line, BigDecimal price) {
+    BigDecimal amountAt(SalesInvoiceLine line, BigDecimal price) {
         return line.isServiceLine()
                 ? pricing.amount(price, line.getServiceQuantity(), 1, line.isPricesIncludeVat(), line.getVatRate())
                 : pricing.amount(price, line.getChargeableAreaM2(), line.getQuantity(), line.isPricesIncludeVat(), line.getVatRate());
@@ -747,6 +832,7 @@ public class SalesService {
 
     /** Tells the approvers a counter request waits (RPT-06): the POS asks every 8 s, the approver is told once. */
     private SaleApproval waiting(SaleApproval request) {
+        request.setAuthorityLevel(authority.required(request.getAuthorityDecision(), request.getAuthorityAmount()));
         notifier.holders("APPROVE_SALE", request.getRequestedById(), NotificationKind.APPROVAL, "notify.saleApproval.waiting",
                 "notify.saleApproval.waitingText", "/sale-approvals/" + request.getId(), request.getNumber(), request.getRequestedBy(),
                 request.getSubject());
@@ -779,7 +865,7 @@ public class SalesService {
         if (sale.getId() == null) {
             return;
         }
-        approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(), List.of(SaleApprovalStatus.PENDING, SaleApprovalStatus.APPROVED))
+        approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(), SaleApprovalStatus.OPEN)
                 .forEach(a -> withdraw(a, note));
     }
 

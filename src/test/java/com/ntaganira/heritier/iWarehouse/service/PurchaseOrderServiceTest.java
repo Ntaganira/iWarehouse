@@ -8,8 +8,12 @@ import com.ntaganira.heritier.iWarehouse.entity.Supplier;
 import com.ntaganira.heritier.iWarehouse.enums.*;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.*;
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -23,6 +27,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** Purchase orders (PRC-01): drafts in the supplier's currency, placing, cancelling and closing short. */
@@ -35,6 +40,8 @@ class PurchaseOrderServiceTest {
     private SupplierRepository supplierRepo;
     private ProductRepository productRepo;
     private DocumentNumberService numbers;
+    private SettingService settings;
+    private DelegationOfAuthority authority;
     private PurchaseOrderService service;
 
     private final Supplier shandong = supplier("Shandong Glass", "USD", Incoterm.FOB);
@@ -54,8 +61,18 @@ class PurchaseOrderServiceTest {
         when(productRepo.findById(clear8.getId())).thenReturn(Optional.of(clear8));
         when(repo.save(any())).thenAnswer(a -> a.getArgument(0));
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
+        ExchangeRateService rates = mock(ExchangeRateService.class);
+        when(rates.rateFor("USD", TODAY)).thenReturn(new ExchangeRateService.AppliedRate("USD", new BigDecimal("1350"), TODAY, RateSource.BNR));
+        settings = mock(SettingService.class);
+        when(settings.getDecimal(SettingKey.APPROVAL_PURCHASE_ORDER_LIMIT)).thenReturn(new BigDecimal("1000000000"));   // placed at once
+        authority = mock(DelegationOfAuthority.class);
         service = new PurchaseOrderService(repo, mock(PurchaseOrderLineRepository.class), receiptRepo, supplierRepo,
-                productRepo, mock(CurrencyRepository.class), numbers, clock);
+                productRepo, mock(CurrencyRepository.class), numbers, clock, rates, authority, settings, mock(Notifier.class));
+    }
+
+    @AfterEach
+    void signOut() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -136,6 +153,53 @@ class PurchaseOrderServiceTest {
     }
 
     @Test
+    void anOrderAboveTheLimitWaitsForAnotherPersonToApproveItWithinTheirOffice() {
+        when(settings.getDecimal(SettingKey.APPROVAL_PURCHASE_ORDER_LIMIT)).thenReturn(new BigDecimal("500000"));
+        when(authority.required(eq(AuthorityDecision.PURCHASE_ORDER), any())).thenReturn(AuthorityLevel.DIRECTOR);
+        PurchaseOrder order = draftWith(existing(1, clear6, 20));          // 577.80 USD at 1,350 = 780,030 RWF
+        signIn(5L, "buyer");
+        service.place(order.getId());
+        assertThat(order.getStatus()).isEqualTo(PurchaseOrderStatus.PENDING_APPROVAL);
+        assertThat(order.getApprovalAmount()).isEqualByComparingTo("780030");
+        assertThat(order.getAuthorityLevel()).isEqualTo(AuthorityLevel.DIRECTOR);
+        assertThat(order.getSubmittedBy()).isEqualTo("buyer");
+        assertThat(order.getOrderedAt()).isNull();
+        assertThat(order.getStatus().isReceivable()).isFalse();
+
+        assertThatThrownBy(() -> service.approve(order.getId(), null))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("po.approve.own"));
+        signIn(9L, "owner");
+        service.approve(order.getId(), " ok ");
+        verify(authority).require(AuthorityDecision.PURCHASE_ORDER, order.getApprovalAmount(), "ok");
+        assertThat(order.getStatus()).isEqualTo(PurchaseOrderStatus.ORDERED);
+        assertThat(order.getApprovedBy()).isEqualTo("owner");
+        assertThat(order.getOrderedBy()).isEqualTo("buyer");
+        assertThat(order.getOrderedAt()).isNotNull();
+        assertThatThrownBy(() -> service.approve(order.getId(), null))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("po.approve.notPending"));
+    }
+
+    @Test
+    void anOrderSentBackIsADraftAgainWithTheReasonAndWaitsAgainWhenPlaced() {
+        when(settings.getDecimal(SettingKey.APPROVAL_PURCHASE_ORDER_LIMIT)).thenReturn(BigDecimal.ZERO);
+        PurchaseOrder order = draftWith(existing(1, clear6, 20));
+        signIn(5L, "buyer");
+        service.place(order.getId());
+        assertThatThrownBy(() -> service.sendBack(order.getId(), "too dear"))
+                .satisfies(e -> assertThat(((BusinessException) e).getMessageKey()).isEqualTo("po.approve.ownReject"));
+        signIn(9L, "owner");
+        service.sendBack(order.getId(), " ask for a better price ");
+        assertThat(order.getStatus()).isEqualTo(PurchaseOrderStatus.DRAFT);
+        assertThat(order.getApprovalNote()).isEqualTo("ask for a better price");
+        signIn(5L, "buyer");
+        service.place(order.getId());
+        assertThat(order.getStatus()).isEqualTo(PurchaseOrderStatus.PENDING_APPROVAL);
+        assertThat(order.getApprovalNote()).isNull();
+        service.cancel(order.getId(), "not needed any more");
+        assertThat(order.getStatus()).isEqualTo(PurchaseOrderStatus.CANCELLED);
+    }
+
+    @Test
     void onlyAnOrderWithNothingReceivedCanBeCancelled() {
         PurchaseOrder order = draftWith(existing(1, clear6, 20));
         order.setStatus(PurchaseOrderStatus.PARTIALLY_RECEIVED);
@@ -163,6 +227,11 @@ class PurchaseOrderServiceTest {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    private static void signIn(long id, String username) {
+        AppUserPrincipal principal = new AppUserPrincipal(id, username, username, "x", true, true, List.of());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    }
 
     private PurchaseOrderDto dto(PurchaseOrderDto.Line... lines) {
         PurchaseOrderDto dto = new PurchaseOrderDto();

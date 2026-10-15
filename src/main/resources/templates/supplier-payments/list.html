@@ -9,7 +9,13 @@
             <h1 th:text="#{supplierPayment.title}">Supplier payments</h1>
             <div class="subtitle" th:text="#{supplierPayment.subtitle}">What was paid to suppliers, with the FX gain or loss on each</div>
         </div>
-        <a href="/accounting/payables" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PAYABLES')" th:text="#{nav.payables}">Payables</a>
+        <div class="btn-group">
+            <a href="/accounting/payables" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_PAYABLES')" th:text="#{nav.payables}">Payables</a>
+            <a href="/supplier-payments/requests" class="btn btn-primary">
+                <span th:text="#{supplierPayment.request.title}">Payment requests</span>
+                <span class="section-count" th:if="${waitingRequests > 0}" th:text="${waitingRequests}">2</span>
+            </a>
+        </div>
     </div>
 
     <div class="section">

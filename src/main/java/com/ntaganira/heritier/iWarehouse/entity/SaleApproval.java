@@ -1,6 +1,8 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalKind;
 import com.ntaganira.heritier.iWarehouse.enums.SaleApprovalStatus;
 import jakarta.persistence.*;
@@ -108,8 +110,71 @@ public class SaleApproval extends BaseEntity {
     @Column(name = "decision_note", length = 200)
     private String decisionNote;
 
+    /** Approved in part (F-03): a price between the one asked and the list price. */
+    @Column(name = "approved_price", precision = 18, scale = 2)
+    private BigDecimal approvedPrice;
+
+    /** Approved in part: less credit than asked. */
+    @Column(name = "approved_credit", precision = 18, scale = 2)
+    private BigDecimal approvedCredit;
+
+    /** A price below what the glass cost (SDP 8): it needs the office set for that. */
+    @Column(name = "below_cost", nullable = false, updatable = false)
+    private boolean belowCost;
+
+    /** What the glass of the line cost, net of VAT, when the price is below it. */
+    @Column(name = "cost_amount", precision = 18, scale = 2, updatable = false)
+    private BigDecimal costAmount;
+
+    /** CREDIT, TERMS: owed past due when asked, and how late the oldest of it was. */
+    @Column(name = "overdue_amount", precision = 18, scale = 2, updatable = false)
+    private BigDecimal overdueAmount;
+
+    @Column(name = "oldest_overdue_days", updatable = false)
+    private Integer oldestOverdueDays;
+
+    /** TERMS: days added to the customer's terms for this invoice. */
+    @Column(name = "extra_days", updatable = false)
+    private Integer extraDays;
+
+    /** The lowest office that may decide it, when it was asked (Delegation of Authority). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "authority_level", length = 10)
+    private AuthorityLevel authorityLevel;
+
+    @Column(name = "recommended_by", length = 50)
+    private String recommendedBy;
+
+    @Column(name = "recommended_by_id")
+    private Long recommendedById;
+
+    @Column(name = "recommended_at")
+    private LocalDateTime recommendedAt;
+
+    @Column(name = "recommendation_note", length = 200)
+    private String recommendationNote;
+
+    /** Waiting for a decision (recommended or not). */
     public boolean isPending() {
-        return status == SaleApprovalStatus.PENDING;
+        return SaleApprovalStatus.WAITING.contains(status);
+    }
+
+    public boolean isRecommended() {
+        return status == SaleApprovalStatus.RECOMMENDED;
+    }
+
+    public boolean isTerms() {
+        return kind == SaleApprovalKind.TERMS;
+    }
+
+    /** The price that applies once approved: the one approved in part, or the one asked. */
+    public BigDecimal getEffectivePrice() {
+        return approvedPrice != null ? approvedPrice : requestedPrice;
+    }
+
+    /** The credit allowed once approved: what was approved in part, or what was asked. */
+    public BigDecimal getEffectiveCredit() {
+        return approvedCredit != null ? approvedCredit : creditAmount;
     }
 
     public boolean isApproved() {
@@ -127,5 +192,21 @@ public class SaleApproval extends BaseEntity {
     /** Credit: how far past the limit the customer goes with it. */
     public BigDecimal getOverLimit() {
         return isCredit() ? owed.add(creditAmount).subtract(creditLimit).max(BigDecimal.ZERO) : null;
+    }
+
+    /** The decision of the Delegation of Authority it is: a discount, a price below cost, or credit. */
+    public AuthorityDecision getAuthorityDecision() {
+        return isPrice() ? (belowCost ? AuthorityDecision.BELOW_COST : AuthorityDecision.DISCOUNT) : AuthorityDecision.CREDIT_EXCEPTION;
+    }
+
+    /** What the Delegation of Authority weighs: the discount %, the sale at stake below cost, or the credit at stake. */
+    public BigDecimal getAuthorityAmount() {
+        if (isPrice()) {
+            return belowCost ? amountAfter : discountPercent;
+        }
+        if (isCredit()) {
+            return overdueAmount != null && overdueAmount.signum() > 0 ? creditAmount : getOverLimit();
+        }
+        return amountAfter;
     }
 }

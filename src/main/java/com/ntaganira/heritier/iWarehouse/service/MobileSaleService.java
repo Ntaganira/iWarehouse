@@ -67,6 +67,7 @@ public class MobileSaleService {
     private final TripBreakageRepository breakageRepo;
     private final AuditCaseService auditCaseService;
     private final Clock clock;
+    private final SettingService settingService;
 
     public MobileSaleService(SalesInvoiceRepository invoiceRepo, SalesPaymentRepository paymentRepo, SyncConflictRepository conflictRepo,
                              TripInvoiceNumberRepository numberRepo, TripRepository tripRepo, DriverRepository driverRepo,
@@ -74,7 +75,8 @@ public class MobileSaleService {
                              CustomerRepository customerRepo, PriceListRepository priceListRepo, MobileTripService tripService,
                              StockService stockService, PostingService postingService, EbmService ebmService, LinePricing pricing,
                              Notifier notifier, ObjectMapper mapper, TripBreakageRepository breakageRepo, AuditCaseService auditCaseService,
-                             Clock clock) {
+                             Clock clock, SettingService settingService) {
+        this.settingService = settingService;
         this.invoiceRepo = invoiceRepo;
         this.paymentRepo = paymentRepo;
         this.conflictRepo = conflictRepo;
@@ -238,6 +240,13 @@ public class MobileSaleService {
                     : StringUtils.hasText(l.priceReason()) ? l.priceReason().trim() : "Price changed on the road";
             BigDecimal amount = MobileSales.lineAmount(price, unit.getWidthMm(), unit.getHeightMm(), resolved.list(),
                     product.getTaxCategory().getRate(), decimals);
+            // A discount that takes the glass below what it cost is refused in the field as at the counter (SDP 8)
+            if (price.compareTo(resolved.pricePerM2()) < 0 && settingService.getBoolean(SettingKey.APPROVAL_BELOW_COST)
+                    && Discounts.netOf(amount, product.getTaxCategory().getRate()).compareTo(unit.getUnitCost()) < 0) {
+                throw new Refused(SyncConflictReason.BELOW_COST, unit.getCode() + " at " + price.toPlainString() + " per m2 comes to "
+                        + Discounts.netOf(amount, product.getTaxCategory().getRate()).toPlainString() + " net, below its cost of "
+                        + unit.getUnitCost().toPlainString());
+            }
             priced.add(new Priced(unit, resolved, price, reason, amount));
         }
         int differs = MobileSales.firstDifference(lines.stream().map(LineRequest::amount).toList(), priced.stream().map(Priced::amount).toList());

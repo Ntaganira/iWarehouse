@@ -97,6 +97,7 @@ public class GlobalSearchService {
     private final PayRunService payRunService;
     private final VehicleCostService vehicleCostService;
     private final Messages messages;
+    private final ReceivableWriteOffService writeOffService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -109,7 +110,8 @@ public class GlobalSearchService {
                                StockCountService stockCountService, TripService tripService, VehicleService vehicleService,
                                DriverService driverService, AuditCaseService auditCaseService, UserService userService,
                                EmployeeService employeeService, PayRunService payRunService, VehicleCostService vehicleCostService,
-                               Messages messages, NumberFormats num) {
+                               Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService) {
+        this.writeOffService = writeOffService;
         this.stockService = stockService;
         this.locationService = locationService;
         this.locationRepo = locationRepo;
@@ -229,10 +231,20 @@ public class GlobalSearchService {
                 q -> creditNoteService.findPage(q, 0, PER_GROUP),
                 n -> new Hit(n.getNumber(), n.getCustomer() == null ? null : n.getCustomer().getName(),
                         join(date(n.getPostedAt()), rwf(n.getTotalAmount())), "/credit-notes/" + n.getId())),
+            new Source<>("creditNote.request.title", "/credit-notes/requests", null, List.of("PAGE_CREDIT_NOTES", "PERM_VIEW_CREDIT_NOTE"),
+                q -> creditNoteService.findRequests(null, q, 0, PER_GROUP),
+                r -> new Hit(r.getNumber(), r.getCustomer() == null ? null : r.getCustomer().getName(),
+                        join(date(r.getRequestedAt()), rwf(r.getTotalAmount()), messages.get("creditNote.request.status." + r.getStatus())),
+                        "/credit-notes/requests/" + r.getId())),
             new Source<>("nav.customerPayments", "/customer-payments", null, List.of("PAGE_CUSTOMER_PAYMENTS", "PERM_VIEW_CUSTOMER_ACCOUNT"),
                 q -> customerAccountService.findPage(q, 0, PER_GROUP),
                 p -> new Hit(p.getNumber(), p.getCustomer() == null ? null : p.getCustomer().getName(),
                         join(date(p.getPostedAt()), rwf(p.getAmount())), "/customer-payments/" + p.getId())),
+            new Source<>("nav.writeOffs", "/accounting/write-offs", null, List.of("PAGE_RECEIVABLE_WRITE_OFFS", "PERM_VIEW_WRITE_OFF"),
+                q -> writeOffService.findPage(null, q, 0, PER_GROUP),
+                w -> new Hit(w.getNumber(), w.getCustomer() == null ? null : w.getCustomer().getName(),
+                        join(date(w.getRequestedAt()), rwf(w.getAmount()), messages.get("writeOff.status." + w.getStatus())),
+                        "/accounting/write-offs/" + w.getId())),
             new Source<>("nav.procurement", "/purchase-orders", null, List.of("PAGE_PROCUREMENT", "PERM_VIEW_PURCHASE_ORDER"),
                 q -> purchaseOrderService.findPage(q, null, null, 0, PER_GROUP),
                 o -> new Hit(o.getNumber(), o.getSupplier() == null ? null : o.getSupplier().getName(),
@@ -253,6 +265,11 @@ public class GlobalSearchService {
                 q -> supplierAccountService.findPayments(q, 0, PER_GROUP),
                 p -> new Hit(p.getNumber(), p.getSupplier() == null ? null : p.getSupplier().getName(),
                         join(date(p.getPostedAt()), money(p.getAmount(), p.getCurrencyCode())), "/supplier-payments/" + p.getId())),
+            new Source<>("supplierPayment.request.title", "/supplier-payments/requests", null, List.of("PAGE_SUPPLIER_PAYMENTS", "PERM_VIEW_SUPPLIER_ACCOUNT"),
+                q -> supplierAccountService.findRequests(null, q, 0, PER_GROUP),
+                r -> new Hit(r.getNumber(), r.getSupplier() == null ? null : r.getSupplier().getName(),
+                        join(date(r.getPreparedAt()), money(r.getAmount(), r.getCurrencyCode()), messages.get("supplierPayment.request.status." + r.getStatus())),
+                        "/supplier-payments/requests/" + r.getId())),
             new Source<>("nav.production", "/cutting-jobs", null, List.of("PAGE_PRODUCTION", "PERM_VIEW_CUTTING_JOB"),
                 q -> cuttingJobService.findPage(q, null, null, 0, PER_GROUP),
                 j -> new Hit(j.getNumber(), j.getProduct() == null ? null : productName(j.getProduct()),

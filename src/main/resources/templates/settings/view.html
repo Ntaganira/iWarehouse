@@ -14,6 +14,7 @@
     <div class="section">
         <div class="tabs">
             <button type="button" class="tab" data-tab="tab-general" th:classappend="${tab == 'general'} ? 'active'" th:text="#{settings.tab.general}">General</button>
+            <button type="button" class="tab" data-tab="tab-authority" th:classappend="${tab == 'authority'} ? 'active'" th:text="#{settings.tab.authority}">Delegation of authority</button>
             <button type="button" class="tab" data-tab="tab-tax" th:classappend="${tab == 'tax'} ? 'active'">
                 <span th:text="#{settings.tab.tax}">Tax categories</span>
                 <span class="section-count" th:text="${taxCategories.totalElements}">3</span>
@@ -200,6 +201,83 @@
                                 </dt>
                                 <dd><span th:text="*{discountApprovalPercent}">0</span> <span class="unit">%</span></dd>
                             </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalBelowCost}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalBelowCostHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalBelowCost} ? #{settings.onApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalSaleRecommend}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalSaleRecommendHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalSaleRecommend} ? #{settings.onRecommend} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.creditBlockOverdue}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.creditBlockOverdueHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.creditBlockOverdue} ? #{settings.onBlock} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.creditOverdueGraceDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.creditOverdueGraceDaysHint}">hint</span>
+                                </dt>
+                                <dd th:text="#{settings.daysCount(${settings.creditOverdueGraceDays})}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalCreditNoteRequired}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalCreditNoteRequiredHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalCreditNoteRequired} ? #{settings.onApproval} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalCreditNoteReview}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalCreditNoteReviewHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalCreditNoteReview} ? #{settings.onReview} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalWriteOffReview}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalWriteOffReviewHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalWriteOffReview} ? #{settings.onReview} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalPurchaseOrderLimit}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalPurchaseOrderLimitHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.approvalPurchaseOrderLimit)}">0</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalSupplierPaymentAuthorise}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalSupplierPaymentAuthoriseHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalSupplierPaymentAuthorise} ? #{settings.onAuthorise} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalSupplierPaymentDualLimit}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalSupplierPaymentDualLimitHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.approvalSupplierPaymentDualLimit)}">0</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.approvalReceiptSecondPerson}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.approvalReceiptSecondPersonHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.approvalReceiptSecondPerson} ? #{settings.onSecondPerson} : #{settings.off}">value</dd>
+                            </div>
                         </dl>
                         <p class="form-note setting-note" th:text="#{settings.zeroMeansAll}">0 means every adjustment or discount needs approval.</p>
                     </div>
@@ -342,6 +420,42 @@
                         </dl>
                     </div>
                 </div>
+            </div>
+
+            <!-- The Delegation of Authority (Board Paper Annex E): which office approves what, up to what -->
+            <div class="tab-content" id="tab-authority" th:classappend="${tab == 'authority'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{authority.intro}">Each approval needs the lowest office allowed whose limit covers it; a higher office may always decide, and the Board decides what no office below it may.</p>
+                    <a href="/settings/authority" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_AUTHORITY')">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        <span th:text="#{authority.edit}">Change the limits</span>
+                    </a>
+                </div>
+                <div class="table-container">
+                    <table class="authority-table">
+                        <thead>
+                            <tr>
+                                <th th:text="#{authority.decision}">Decision</th>
+                                <th class="num" th:each="lv : ${authorityLevels}" th:text="#{${'authority.level.' + lv}}">Director</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${authorityDecisions}" th:with="cells=${authorityTable.get(d)}">
+                                <td>
+                                    <span class="strong" th:text="#{${'authority.decision.' + d}}">Credit note</span>
+                                    <div class="cell-sub" th:text="${d.percent} ? #{authority.inPercent} : #{authority.inRwf}">RWF</div>
+                                </td>
+                                <td class="num" th:each="lv : ${authorityLevels}" th:with="c=${cells == null ? null : cells.get(lv)}">
+                                    <span th:if="${c == null or !c.allowed}" class="text-muted" th:text="#{authority.notAllowed}">Not allowed</span>
+                                    <span th:if="${c != null and c.allowed and c.maxAmount == null}" th:text="#{authority.noLimit}">No limit</span>
+                                    <span th:if="${c != null and c.allowed and c.maxAmount != null}"
+                                          th:text="${d.percent} ? ${@num.m2(c.maxAmount) + ' %'} : ${@num.money(c.maxAmount)}">500,000</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:text="#{authority.seededNote}">The amounts first set stand in for the Board's own: replace them with the Delegation of Authority it approves.</p>
             </div>
 
             <!-- Tax categories (TAX-01) -->

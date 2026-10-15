@@ -98,6 +98,18 @@ public enum SettingKey {
     TRANSFER_DIFFERENCE_HOURS("transfer.difference-hours", "transferDifferenceHours", "24"),
     /** Stock lost or found above this % of the stock value is flagged on the monthly reconciliation (BP 7.4). */
     RECONCILIATION_TOLERANCE_PERCENT("reconciliation.tolerance-percent", "reconciliationTolerancePercent", "0.5"),
+    /** The till takes payment only for orders the Order Desk raised (F-01, decision D4). */
+    SALES_ORDER_DESK("sales.order-desk", "salesOrderDesk", "true"),
+    /** An order not paid within this many days lapses. */
+    SALES_ORDER_VALID_DAYS("sales.order-valid-days", "salesOrderValidDays", "3"),
+    /** Goods leave only on a delivery note released by the warehouse (F-04). */
+    SALES_RELEASE_BY_NOTE("sales.release-by-note", "releaseByNote", "true"),
+    /** No goods before the EBM receipt is signed, unless overridden with a reason (decision D3). */
+    EBM_BEFORE_RELEASE("ebm.before-release", "ebmBeforeRelease", "true"),
+    /** Working days for the signed delivery note to come back (IMP 9.3). */
+    DELIVERY_SIGNED_COPY_DAYS("delivery.signed-copy-days", "signedCopyDays", "3"),
+    /** Cut pieces are verified by another person before release (IMP 10 step 3). */
+    CUTTING_VERIFY("cutting.verify", "cuttingVerify", "true"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

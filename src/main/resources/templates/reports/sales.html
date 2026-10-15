@@ -131,6 +131,8 @@
                                 <a th:case="'CUSTOMER'" th:href="@{/reports/sales(from=${from}, to=${to}, group='INVOICE', customer=${r.key}, item=${item}, salesperson=${salesperson})}" th:text="${r.label}">Umucyo Builders</a>
                                 <a th:case="'PRODUCT'" th:classappend="${#strings.startsWith(r.key, 'P:')} ? 'mono'" th:href="@{/reports/sales(from=${from}, to=${to}, group='INVOICE', customer=${customer}, item=${r.key}, salesperson=${salesperson})}" th:text="${r.label}">CLR-6</a>
                                 <a th:case="'SALESPERSON'" th:href="@{/reports/sales(from=${from}, to=${to}, group='INVOICE', customer=${customer}, item=${item}, salesperson=${r.key})}" th:text="${r.label}">QA Admin</a>
+                                <span th:case="'CHANNEL'" th:text="#{${'order.channel.' + r.label}}">Counter</span>
+                                <span th:case="'TERRITORY'" th:text="${r.label ?: #messages.msg('order.noTerritory')}">KGL · Kigali</span>
                                 <a th:case="'DAY'" th:href="@{/reports/sales(from=${r.date}, to=${r.date}, group='INVOICE', customer=${customer}, item=${item}, salesperson=${salesperson})}" th:text="${#temporals.format(r.date, 'dd/MM/yyyy')}">09/10/2026</a>
                                 <a th:case="'MONTH'" th:href="@{/reports/sales(from=${r.date}, to=${r.date.plusMonths(1).minusDays(1).isAfter(today) ? today : r.date.plusMonths(1).minusDays(1)}, group='DAY', customer=${customer}, item=${item}, salesperson=${salesperson})}" th:text="${#temporals.format(r.date, 'MMMM yyyy')}">October 2026</a>
                             </td>

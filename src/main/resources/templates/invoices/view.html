@@ -109,6 +109,43 @@
     <!-- The EBM signature and the receipt's QR code (TAX-02) -->
     <div th:replace="~{fragments/ebm :: signature(${ebm}, ${ebmQr})}"></div>
 
+    <!-- The release of the goods on delivery notes (F-04, DN-005): prepared by Dispatch, released by the warehouse -->
+    <div class="section" th:if="${releaseByNote}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{invoice.release}">Release of the goods</span>
+                <span class="section-count" th:text="${deliveryNotes.size()}">0</span>
+            </h2>
+            <a th:if="${toRelease > 0 and !invoice.hasBalanceDue()}" sec:authorize="hasAuthority('PAGE_DELIVERY_NOTES') and hasAuthority('PERM_PREPARE_DELIVERY')"
+               th:href="@{/delivery-notes/new(invoice=${invoice.id})}" class="btn btn-primary btn-sm" th:text="#{delivery.prepareFor(${toRelease})}">Prepare a delivery note (3 to release)</a>
+        </div>
+        <p class="form-note" th:if="${invoice.hasBalanceDue() and toRelease > 0}" th:text="#{invoice.balanceFirst}">Take the balance first: the pieces are handed over once the order is paid.</p>
+        <p class="form-note" th:if="${toRelease == 0 and #lists.isEmpty(deliveryNotes)}" th:text="#{invoice.nothingToRelease}">Nothing is ready to release yet: sizes to cut are released once cut and verified.</p>
+        <div class="table-container" th:unless="${#lists.isEmpty(deliveryNotes)}">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{delivery.number}">Delivery note</th>
+                        <th th:text="#{delivery.transport}">Transport</th>
+                        <th th:text="#{delivery.releasedCol}">Released</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="n : ${deliveryNotes}">
+                        <td>
+                            <a class="mono" th:href="@{/delivery-notes/{id}(id=${n.id})}" sec:authorize="hasAuthority('PAGE_DELIVERY_NOTES')" th:text="${n.number}">DN-WH-2026-000001</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_DELIVERY_NOTES')" th:text="${n.number}">DN-WH-2026-000001</span>
+                        </td>
+                        <td th:text="${n.collected} ? #{delivery.collected} : ${n.vehiclePlate + ' · ' + n.driverName}">RAD 123 A · Jean Bosco</td>
+                        <td class="nowrap" th:text="${n.releasedAt != null} ? ${#temporals.format(n.releasedAt, 'dd/MM/yyyy HH:mm') + ' · ' + n.releasedBy} : '—'">15/10/2026 11:00 · manager1</td>
+                        <td><th:block th:replace="~{delivery-notes/list :: noteStatus(${n})}"></th:block></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Sizes to cut (POS-02): their cutting jobs and the pieces to hand over (SRS 5.3) -->
     <div class="section" th:if="${custom}">
         <div class="section-header">
@@ -131,7 +168,7 @@
 
             <p class="form-note" th:if="${invoice.hasBalanceDue() and toHandOver > 0}" th:text="#{invoice.balanceFirst}">Take the balance first: the pieces are handed over once the order is paid.</p>
             <form th:action="@{/invoices/{id}/deliver(id=${invoice.id})}" method="post" class="pos-handover" novalidate
-                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${!#lists.isEmpty(ready) and !invoice.hasBalanceDue()}">
+                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${!releaseByNote and !#lists.isEmpty(ready) and !invoice.hasBalanceDue()}">
                 <div class="table-container">
                     <table>
                         <thead>
@@ -157,7 +194,7 @@
                 </div>
             </form>
             <form th:action="@{/invoices/{id}/deliver(id=${invoice.id})}" method="post" class="pos-handover-scan" novalidate
-                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${toHandOver > 0 and !invoice.hasBalanceDue()}">
+                  sec:authorize="hasAuthority('PERM_DELIVER_SALE')" th:if="${!releaseByNote and toHandOver > 0 and !invoice.hasBalanceDue()}">
                 <div class="form-group">
                     <label for="handover-codes" th:text="#{invoice.handOverScan}">Or scan the pieces handed over</label>
                     <div class="scan-row">
@@ -167,6 +204,7 @@
                     </div>
                 </div>
             </form>
+            <p class="form-note" th:if="${releaseByNote and !#lists.isEmpty(ready)}" th:text="#{invoice.readyByNote(${ready.size()})}">2 pieces are ready: they leave on a delivery note.</p>
             <p class="form-note" th:if="${toHandOver > 0 and #lists.isEmpty(ready) and !invoice.hasBalanceDue()}" th:text="#{invoice.nothingReady}">No piece is ready yet: the cutting jobs reserve them for the customer as they are cut.</p>
             <p class="form-note" th:if="${toHandOver == 0}" th:text="#{invoice.allHandedOver}">Every piece of this invoice has been handed over.</p>
 

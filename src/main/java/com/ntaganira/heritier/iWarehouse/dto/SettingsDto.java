@@ -223,6 +223,36 @@ public class SettingsDto {
     @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
     private BigDecimal reconciliationTolerancePercent;
 
+    // --- The Order Desk and the release of goods (M13)
+
+    /** The till takes payment only for orders the Order Desk raised (decision D4). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean salesOrderDesk;
+
+    /** An order not paid within this many days lapses. */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.salesOrderValidDays.range}")
+    @Max(value = 90, message = "{settings.salesOrderValidDays.range}")
+    private Integer salesOrderValidDays;
+
+    /** Goods leave only on a delivery note released by the warehouse (F-04). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean releaseByNote;
+
+    /** No goods before the EBM receipt is signed, unless overridden with a reason (decision D3). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean ebmBeforeRelease;
+
+    /** Working days for the signed delivery note to come back (IMP 9.3). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.signedCopyDays.range}")
+    @Max(value = 30, message = "{settings.signedCopyDays.range}")
+    private Integer signedCopyDays;
+
+    /** Cut pieces are verified by another person before release (IMP 10 step 3). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean cuttingVerify;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

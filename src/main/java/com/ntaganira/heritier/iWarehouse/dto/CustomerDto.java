@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
+import com.ntaganira.heritier.iWarehouse.enums.Market;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
 import com.ntaganira.heritier.iWarehouse.service.PartyRules;
 import jakarta.validation.constraints.*;
@@ -100,6 +101,14 @@ public class CustomerDto {
 
     /** Save although another customer has the same phone (BP 11: duplicates are looked at, not always wrong). */
     private boolean confirmDuplicate;
+
+    // --- Where it buys (F-01 A, BP 6)
+
+    private UUID territoryId;
+
+    private Market market = Market.DOMESTIC;
+
+    private boolean agent;
 
     public void setTin(String tin) {
         String normalized = PartyRules.normalizeTin(tin);

@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
+import com.ntaganira.heritier.iWarehouse.enums.Market;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -122,6 +124,20 @@ public class Customer extends BaseEntity {
     /** When its credit limit is next reviewed; null with credit = never reviewed. */
     @Column(name = "credit_review_due")
     private LocalDate creditReviewDue;
+
+    // --- Where it buys (F-01 A, BP 6)
+
+    /** Its territory, by id (the regional sales manager's). */
+    @Column(name = "territory_id")
+    private UUID territoryId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Market market = Market.DOMESTIC;
+
+    /** An established agent selling on to others (BP 6): orders can name it as the agent. */
+    @Column(nullable = false)
+    private boolean agent;
 
     public boolean hasCredit() {
         return creditLimit.signum() > 0 || paymentTermsDays > 0;

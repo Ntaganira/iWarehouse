@@ -283,6 +283,7 @@ public class SalesService {
     /** Adds a unit from stock to the till's sale, by its label code or id (POS-01). */
     @Transactional
     public SalesInvoice addUnit(String code, UUID unitId) {
+        requireNoOrderDesk("code");
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cartOrNew(session);
         StockUnit unit = unitId != null ? unitRepo.findById(unitId).orElse(null) : stockService.findByCode(code).orElse(null);
@@ -313,6 +314,9 @@ public class SalesService {
     public SalesInvoiceLine removeLine(UUID lineId) {
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        if (orderDesk() && sale.getQuotationId() != null) {
+            throw BusinessException.of("sale.orderDesk.lines");
+        }
         SalesInvoiceLine line = lineOf(sale, lineId);
         Set<UUID> leaving = new HashSet<>();
         leaving.add(line.getId());
@@ -361,6 +365,9 @@ public class SalesService {
             throw BusinessException.onField("purchaseCode", "sale.purchaseCode.invalid");
         }
         if (!customer.getId().equals(sale.getCustomer().getId())) {
+            if (orderDesk() && sale.getQuotationId() != null) {
+                throw BusinessException.onField("customerId", "sale.orderDesk.customer");
+            }
             Map<UUID, StockUnit> units = unitsOf(sale);
             for (SalesInvoiceLine line : sale.getLines()) {
                 StockUnit unit = units.get(line.getStockUnitId());
@@ -371,6 +378,7 @@ public class SalesService {
             }
             sale.setCustomer(customer);
             sale.setQuotationId(null);                                   // priced again: no longer at the quotation's prices
+            clearOrder(sale);
             withdrawAll(sale, "The customer changed: the sale was priced again");
             sale.getLines().forEach(l -> {
                 if (l.isServiceLine()) {
@@ -509,6 +517,12 @@ public class SalesService {
         sale.setTotalAmount(totals.gross());
         sale.setCashTendered(split.cashTendered());
         sale.setChangeGiven(split.cashTendered() == null ? null : split.change());
+        if (sale.getOrderChannel() == null) {
+            sale.setOrderChannel(OrderChannel.COUNTER);
+            sale.setMarket(sale.getCustomer().getMarket());
+            sale.setTerritoryId(sale.getCustomer().getTerritoryId());
+            sale.setSalesperson(username);
+        }
         sale.setPostedAt(now);
         sale.setPostedBy(username);
         sale.setStatus(SalesInvoiceStatus.POSTED);
@@ -517,6 +531,13 @@ public class SalesService {
                 q.setInvoiceId(sale.getId());
                 q.setConvertedAt(now);
                 q.setStatus(QuotationStatus.CONVERTED);
+                if (q.getSourceId() != null) {
+                    quotationRepo.findById(q.getSourceId()).filter(Quotation::isSent).ifPresent(source -> {
+                        source.setInvoiceId(sale.getId());
+                        source.setConvertedAt(now);
+                        source.setStatus(QuotationStatus.CONVERTED);
+                    });
+                }
             });
         }
         JournalEntry journal = postingService.sale(sale, payments, before);
@@ -614,6 +635,9 @@ public class SalesService {
     public PriceChange changePrice(UUID lineId, BigDecimal price, String reason) {
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cart(session).orElseThrow(() -> BusinessException.of("sale.none"));
+        if (orderDesk() && sale.getQuotationId() != null) {
+            throw BusinessException.of("sale.orderDesk.price");
+        }
         SalesInvoiceLine line = lineOf(sale, lineId);
         List<SaleApproval> requests = approvalRepo.findByInvoice_IdAndStatusIn(sale.getId(),
                 SaleApprovalStatus.OPEN);
@@ -895,6 +919,9 @@ public class SalesService {
         if (!q.isSent()) {
             throw BusinessException.of("sale.quote.notSent", q.getNumber());
         }
+        if (orderDesk() && !q.isOrder()) {
+            throw BusinessException.of("sale.orderDesk.quotation", q.getNumber());
+        }
         if (q.isExpiredOn(today())) {
             throw BusinessException.of("sale.quote.expired", q.getNumber(), q.getValidUntil().format(QuotationService.DAY));
         }
@@ -907,14 +934,17 @@ public class SalesService {
         if (!customer.isEnabled()) {
             throw BusinessException.of("sale.customer.invalid");
         }
-        // The units of its whole sheets first, so a shortage changes nothing
+        // The units of its whole sheets first, so a shortage changes nothing; an order released from a site takes that site's
         Map<QuotationLine, List<StockUnit>> sheets = new HashMap<>();
         Set<UUID> taken = new HashSet<>();
+        Map<UUID, Location> places = q.getSiteId() == null ? Map.of() : stockService.locationsById();
         for (QuotationLine ql : q.getLines()) {
             if (!ql.isSheet()) {
                 continue;
             }
-            List<StockUnit> found = unitRepo.findOfSize(ql.getProduct().getId(), ql.getWidthMm(), ql.getHeightMm(), StockStatus.AVAILABLE);
+            List<StockUnit> found = unitRepo.findOfSize(ql.getProduct().getId(), ql.getWidthMm(), ql.getHeightMm(), StockStatus.AVAILABLE)
+                    .stream().filter(u -> q.getSiteId() == null || (u.getLocation() != null
+                            && q.getSiteId().equals(SiteTransferService.siteOf(u.getLocation(), places)))).toList();
             Map<UUID, String> held = found.isEmpty() ? Map.of() : stockService.holds(found.stream().map(StockUnit::getId).toList());
             List<StockUnit> free = found.stream().filter(u -> !taken.contains(u.getId()) && !held.containsKey(u.getId()))
                     .limit(ql.getQuantity()).toList();
@@ -929,7 +959,16 @@ public class SalesService {
         sale.setBuyerName(q.getBuyerName());
         sale.setBuyerTin(q.getBuyerTin());
         sale.setQuotationId(q.getId());
-        String reason = "Quotation " + q.getNumber();
+        if (q.isOrder()) {
+            sale.setOrderChannel(q.getChannel());
+            sale.setMarket(q.getMarket());
+            sale.setTerritoryId(q.getTerritoryId());
+            sale.setSalesperson(q.getSalesperson());
+            sale.setAgentId(q.getAgentId());
+        } else {
+            clearOrder(sale);
+        }
+        String reason = (q.isOrder() ? "Order " : "Quotation ") + q.getNumber();
         for (QuotationLine ql : q.getLines()) {
             if (ql.isSheet()) {
                 for (StockUnit unit : sheets.get(ql)) {
@@ -996,6 +1035,7 @@ public class SalesService {
     /** Adds a size to cut to the till's sale, priced by chargeable area, with its processing as service lines. */
     @Transactional
     public SalesInvoice addCustom(CustomSize c) {
+        requireNoOrderDesk("productId");
         TillSession session = tillService.lockCurrent();
         SalesInvoice sale = cartOrNew(session);
         Product product = c.productId() == null ? null : productRepo.findById(c.productId()).filter(Product::isEnabled).orElse(null);
@@ -1092,8 +1132,9 @@ public class SalesService {
         if (pieces.isEmpty()) {
             return List.of();
         }
+        Set<UUID> blocked = cuttingJobService.notReleasable(pieces.keySet());
         return unitRepo.findByIdIn(pieces.keySet()).stream()
-                .filter(u -> u.getStatus() == StockStatus.RESERVED)
+                .filter(u -> u.getStatus() == StockStatus.RESERVED && !blocked.contains(u.getId()))
                 .filter(u -> progress.containsKey(pieces.get(u.getId())) && progress.get(pieces.get(u.getId())).getRemaining() > 0)
                 .sorted(Comparator.comparing(StockUnit::getCode))
                 .toList();
@@ -1213,6 +1254,36 @@ public class SalesService {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    /** The number of the order or quotation a sale was rung up from. */
+    public String orderNumber(UUID quotationId) {
+        return quotationRepo.findById(quotationId).map(Quotation::getNumber).orElse(null);
+    }
+
+    /** Orders sent to the cashier, still to pay (the POS lists them). */
+    public List<Quotation> ordersToPay() {
+        return quotationRepo.findByKindAndStatusAndValidUntilGreaterThanEqualOrderByQuoteDateAscNumberAsc(QuotationKind.SALES_ORDER,
+                QuotationStatus.SENT, today());
+    }
+
+    /** With the Order Desk (Settings, decision D4) the till takes payment for orders; it does not take them. */
+    public boolean orderDesk() {
+        return settingService.getBoolean(SettingKey.SALES_ORDER_DESK);
+    }
+
+    private void requireNoOrderDesk(String field) {
+        if (orderDesk()) {
+            throw BusinessException.onField(field, "sale.orderDesk.only");
+        }
+    }
+
+    private static void clearOrder(SalesInvoice sale) {
+        sale.setOrderChannel(null);
+        sale.setMarket(null);
+        sale.setTerritoryId(null);
+        sale.setSalesperson(null);
+        sale.setAgentId(null);
+    }
 
     private SalesInvoice cartOrNew(TillSession session) {
         return cart(session).orElseGet(() -> {

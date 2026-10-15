@@ -130,6 +130,21 @@ class SalesAnalysisTest {
         assertThat(SalesAnalysis.total(List.of()).getMarginPercent()).isNull();
     }
 
+    @Test
+    void salesGroupByChannelAndByTerritory() {
+        SalesAnalysis.Invoice counter = new SalesAnalysis.Invoice(UUID.randomUUID(), "INV-1", LocalDate.of(2026, 10, 3), customerA, "Umucyo",
+                null, "cashier1", "Cashier", new BigDecimal("100.00"), false, "COUNTER", "KGL · Kigali");
+        SalesAnalysis.Invoice whatsapp = new SalesAnalysis.Invoice(UUID.randomUUID(), "INV-2", LocalDate.of(2026, 10, 3), customerA, "Umucyo",
+                null, "cashier1", "Cashier", new BigDecimal("300.00"), false, "WHATSAPP", null);
+        List<SalesAnalysis.Line> lines = List.of(glassLine(counter.id(), UUID.randomUUID(), glass1, "1", "1"),
+                glassLine(whatsapp.id(), UUID.randomUUID(), glass1, "1", "1"));
+        List<SalesAnalysis.Fact> facts = SalesAnalysis.facts(List.of(counter, whatsapp), lines, List.of(), List.of(), List.of(), codes);
+        assertThat(SalesAnalysis.group(facts, SalesAnalysis.GroupBy.CHANNEL)).extracting(SalesAnalysis.Row::label)
+                .containsExactly("WHATSAPP", "COUNTER");                    // the bigger net first
+        assertThat(SalesAnalysis.group(facts, SalesAnalysis.GroupBy.TERRITORY)).extracting(SalesAnalysis.Row::label)
+                .containsExactly(null, "KGL · Kigali");
+    }
+
     private SalesAnalysis.Invoice invoice(String number, LocalDate date, UUID customer, String name, String cashier, String net, boolean pending) {
         return new SalesAnalysis.Invoice(UUID.randomUUID(), number, date, customer, name, null, cashier, "Cashier " + cashier, new BigDecimal(net), pending);
     }

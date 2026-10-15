@@ -8,6 +8,7 @@ import com.ntaganira.heritier.iWarehouse.enums.CreditNoteRequestStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ManualJournalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentRequestStatus;
 import com.ntaganira.heritier.iWarehouse.enums.PriceChangeStatus;
+import com.ntaganira.heritier.iWarehouse.enums.DeliveryNoteStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SiteTransferStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.TicketStatus;
@@ -80,6 +81,7 @@ public class BusinessDashboardService {
     private final SupplierRepository supplierRepo;
     private final TransactionTicketRepository ticketRepo;
     private final SiteTransferRepository siteTransferRepo;
+    private final DeliveryNoteRepository deliveryNoteRepo;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
                                     JournalService journalService, CustomerAccountService customerAccounts,
@@ -92,7 +94,8 @@ public class BusinessDashboardService {
                                     PurchaseOrderRepository purchaseOrderRepo, SupplierPaymentRequestRepository paymentRequestRepo,
                                     CreditApplicationRepository creditApplicationRepo, PriceChangeRepository priceChangeRepo,
                                     SupplierRepository supplierRepo, TransactionTicketRepository ticketRepo,
-                                    SiteTransferRepository siteTransferRepo) {
+                                    SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo) {
+        this.deliveryNoteRepo = deliveryNoteRepo;
         this.ticketRepo = ticketRepo;
         this.siteTransferRepo = siteTransferRepo;
         this.creditApplicationRepo = creditApplicationRepo;
@@ -137,7 +140,7 @@ public class BusinessDashboardService {
                        EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, long auditCases, long floatsToClear,
                        BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet,
                        long creditNotes, long writeOffs, long purchaseOrders, long supplierPayments, long creditApplications,
-                       long priceChanges, long suppliers, long tickets, long siteTransfers) {
+                       long priceChanges, long suppliers, long tickets, long siteTransfers, long deliveryNotes) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
@@ -145,7 +148,7 @@ public class BusinessDashboardService {
 
         public long getWaiting() {
             return saleApprovals + adjustments + manualJournals + vehicleCosts + creditNotes + writeOffs + purchaseOrders + supplierPayments
-                    + creditApplications + priceChanges + suppliers + tickets + siteTransfers;
+                    + creditApplications + priceChanges + suppliers + tickets + siteTransfers + deliveryNotes;
         }
     }
 
@@ -203,7 +206,8 @@ public class BusinessDashboardService {
                 priceChangeRepo.countByStatus(PriceChangeStatus.PENDING),
                 supplierRepo.countByApprovalStatus(SupplierApprovalStatus.PENDING),
                 ticketRepo.countByStatusIn(List.of(TicketStatus.RAISED, TicketStatus.VERIFIED, TicketStatus.COUNTERSIGNED)),
-                siteTransferRepo.countByStatusIn(List.of(SiteTransferStatus.REQUESTED)));
+                siteTransferRepo.countByStatusIn(List.of(SiteTransferStatus.REQUESTED)),
+                deliveryNoteRepo.countByStatus(DeliveryNoteStatus.DRAFT));
     }
 
     private static long whole(BigDecimal amount) {

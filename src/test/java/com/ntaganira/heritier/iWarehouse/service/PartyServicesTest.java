@@ -27,6 +27,7 @@ import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PriceListRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PurchaseOrderRepository;
 import com.ntaganira.heritier.iWarehouse.repository.SupplierRepository;
+import com.ntaganira.heritier.iWarehouse.repository.TerritoryRepository;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,7 +85,7 @@ class PartyServicesTest {
         attachmentRepo = mock(AttachmentRepository.class);
         suppliers = new SupplierService(supplierRepo, currencyRepo, numbers, new Countries(), orderRepo, settings, attachmentRepo,
                 mock(Notifier.class), Clock.fixed(Instant.parse("2026-10-15T08:00:00Z"), ZoneId.of("Africa/Kigali")));
-        customers = new CustomerService(customerRepo, priceListRepo, numbers, settings);
+        customers = new CustomerService(customerRepo, priceListRepo, numbers, settings, mock(TerritoryRepository.class));
     }
 
     @AfterEach
@@ -160,7 +161,18 @@ class PartyServicesTest {
                     assertThat(e.getField()).isEqualTo("phone");
                 });
         dto.setConfirmDuplicate(true);
-        assertThat(customers.create(dto, false).getPhone()).isEqualTo("+250 788 123 456");
+        Customer saved = customers.create(dto, false);
+        assertThat(saved.getPhone()).isEqualTo("+250 788 123 456");
+
+        // Saved again with the same phone, it is not asked again
+        saved.setId(UUID.randomUUID());
+        saved.setType(CustomerType.ACCOUNT);
+        when(customerRepo.findWithPriceListById(saved.getId())).thenReturn(Optional.of(saved));
+        CustomerDto again = new CustomerDto();
+        again.setType(CustomerType.ACCOUNT);
+        again.setName("Umucyo Construction Ltd");
+        again.setPhone("+250 788 123 456");
+        assertThat(customers.update(saved.getId(), again, false).getName()).isEqualTo("Umucyo Construction Ltd");
     }
 
     @Test

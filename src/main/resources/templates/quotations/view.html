@@ -25,7 +25,12 @@
                   class="row-action-form confirm-submit" th:attr="data-confirm=#{quote.sendConfirm(${quotation.number})}">
                 <button type="submit" class="btn btn-primary" th:text="#{quote.send}">Send</button>
             </form>
-            <form th:if="${canSell and s == 'SENT' and !expired and onTill == null}" th:action="@{/quotations/{id}/ring-up(id=${quotation.id})}" method="post"
+            <form sec:authorize="hasAuthority('PERM_CREATE_SALES_ORDER')" th:if="${s == 'SENT' and !expired}"
+                  th:action="@{/sales-orders/from/{id}(id=${quotation.id})}" method="post" class="row-action-form confirm-submit"
+                  th:attr="data-confirm=#{order.fromConfirm(${quotation.number})}">
+                <button type="submit" class="btn btn-primary" th:text="#{order.make}">Make an order</button>
+            </form>
+            <form th:if="${canSell and !orderDesk and s == 'SENT' and !expired and onTill == null}" th:action="@{/quotations/{id}/ring-up(id=${quotation.id})}" method="post"
                   class="row-action-form">
                 <button type="submit" class="btn btn-primary" th:text="#{quote.ringUp}">Ring up at the till</button>
             </form>

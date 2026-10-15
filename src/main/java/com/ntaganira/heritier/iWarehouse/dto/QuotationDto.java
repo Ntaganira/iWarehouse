@@ -1,5 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
+import com.ntaganira.heritier.iWarehouse.enums.Market;
+import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
 import com.ntaganira.heritier.iWarehouse.enums.QuoteLineKind;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -47,6 +49,18 @@ public class QuotationDto {
 
     @Size(max = 500, message = "{po.notes.size}")
     private String notes;
+
+    // --- A sales order's own fields (F-01 A); ignored on a quotation
+
+    private OrderChannel channel;
+
+    private Market market;
+
+    private UUID territoryId;
+
+    private UUID agentId;
+
+    private UUID siteId;
 
     @Valid
     private List<Line> lines = new ArrayList<>();

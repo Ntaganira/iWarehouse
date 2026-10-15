@@ -134,6 +134,26 @@
                            th:classappend="${#fields.hasErrors('securityOffered')} ? 'is-invalid'">
                     <span class="field-error" th:if="${#fields.hasErrors('securityOffered')}" th:errors="*{securityOffered}"></span>
                 </div>
+                <div class="form-group">
+                    <label for="territoryId" th:text="#{order.territory}">Territory</label>
+                    <select id="territoryId" th:field="*{territoryId}" th:classappend="${#fields.hasErrors('territoryId')} ? 'is-invalid'">
+                        <option value="" th:text="#{order.noTerritory}">None</option>
+                        <option th:each="t : ${territories}" th:value="${t.id}" th:text="${t.code + ' · ' + t.name}">KGL · Kigali</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('territoryId')}" th:errors="*{territoryId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="market" th:text="#{order.market}">Market</label>
+                    <select id="market" th:field="*{market}">
+                        <option th:each="m : ${markets}" th:value="${m}" th:text="#{${'order.market.' + m}}">Domestic</option>
+                    </select>
+                </div>
+                <div class="form-group full-width" th:unless="${customerDto.type != null and customerDto.type.name() == 'WALK_IN'}">
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="checkbox" th:field="*{agent}">
+                        <span th:text="#{customer.agent}">An established agent: orders can come through it</span>
+                    </label>
+                </div>
                 <div class="form-group full-width">
                     <label for="tradeReferences" th:text="#{party.references}">References</label>
                     <textarea id="tradeReferences" th:field="*{tradeReferences}" rows="3" maxlength="500" th:placeholder="#{party.referencesPh}"

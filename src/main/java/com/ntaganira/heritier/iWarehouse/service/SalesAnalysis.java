@@ -34,11 +34,17 @@ public final class SalesAnalysis {
     private SalesAnalysis() {
     }
 
-    public enum GroupBy { CUSTOMER, PRODUCT, SALESPERSON, DAY, MONTH, INVOICE }
+    public enum GroupBy { CUSTOMER, PRODUCT, SALESPERSON, CHANNEL, TERRITORY, DAY, MONTH, INVOICE }
 
     /** An issued invoice: who bought, who sold, its net amount, and whether pieces are still to hand over. */
     public record Invoice(UUID id, String number, LocalDate date, UUID customerId, String customer, String buyer, String salesperson,
-                          String salespersonName, BigDecimal net, boolean pending) {
+                          String salespersonName, BigDecimal net, boolean pending, String channel, String territory) {
+
+        /** As before the channels: a counter sale, no territory. */
+        public Invoice(UUID id, String number, LocalDate date, UUID customerId, String customer, String buyer, String salesperson,
+                       String salespersonName, BigDecimal net, boolean pending) {
+            this(id, number, date, customerId, customer, buyer, salesperson, salespersonName, net, pending, "COUNTER", null);
+        }
     }
 
     /** An invoice line: what it sells (a glass by product id, or a processing service), its m² and amount (VAT included). */
@@ -174,6 +180,8 @@ public final class SalesAnalysis {
             case CUSTOMER -> f -> String.valueOf(f.invoice().customerId());
             case PRODUCT -> Fact::itemKey;
             case SALESPERSON -> f -> String.valueOf(f.invoice().salesperson());
+            case CHANNEL -> f -> String.valueOf(f.invoice().channel());
+            case TERRITORY -> f -> f.invoice().territory() == null ? "" : f.invoice().territory();
             case DAY -> f -> f.invoice().date().toString();
             case MONTH -> f -> f.invoice().date().withDayOfMonth(1).toString();
             case INVOICE -> f -> f.invoice().id().toString();
@@ -187,6 +195,8 @@ public final class SalesAnalysis {
                 case CUSTOMER -> first.invoice().customer();
                 case PRODUCT -> first.itemLabel();
                 case SALESPERSON -> first.invoice().salespersonName();
+                case CHANNEL -> first.invoice().channel();
+                case TERRITORY -> first.invoice().territory();
                 case DAY, MONTH, INVOICE -> first.invoice().number();
             };
             LocalDate date = switch (by) {

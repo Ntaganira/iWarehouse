@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{delivery.printTitle(${note.number})} + ' - ' + #{app.name}">Delivery note - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page">
+    <!-- Toolbar: screen only -->
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{delivery.printTitle(${note.number})}">Delivery note DN-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{delivery.printHint}">A4, three copies: the warehouse, Finance and the customer. The customer signs the copy that comes back.</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/delivery-notes/{id}(id=${note.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!-- The delivery note and goods release authority (F-04, DN-005), one per copy -->
+    <div class="print-doc print-doc-copy" th:each="copy : ${copies}">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+                <div th:if="${companyAddress != null}" th:text="${companyAddress}">KN 5 Rd, Kigali</div>
+                <div th:if="${companyPhone != null}" th:text="${companyPhone}">+250 788 000 000</div>
+                <div th:if="${companyTin != null}" th:text="#{posReceipt.tin(${companyTin})}">TIN 100000000</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{delivery.printKind}">DELIVERY NOTE</div>
+                <div class="mono" th:text="${note.number}">DN-WH-2026-000001</div>
+                <div class="print-doc-label" th:text="#{${'delivery.copy.' + copy}}">Warehouse copy</div>
+            </div>
+        </div>
+
+        <div class="print-doc-parties">
+            <div>
+                <div class="print-doc-label" th:text="#{invoice.customer}">Customer</div>
+                <div class="strong" th:text="${invoice.billTo}">Umucyo Builders Ltd</div>
+                <div th:if="${invoice.buyerTin != null}" th:text="${#messages.msg('posReceipt.buyerTin') + ' ' + invoice.buyerTin}">Buyer's TIN 100123456</div>
+                <div th:if="${note.destination != null}"><span class="print-doc-label" th:text="#{delivery.destination}">Destination</span> <span th:text="${note.destination}">Kicukiro site</span></div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{delivery.invoice}">Invoice</span> <span class="mono" th:text="${invoice.number}">INV-WH-2026-000031</span></div>
+                <div th:if="${orderNumber != null}"><span class="print-doc-label" th:text="#{order.number}">Order</span> <span class="mono" th:text="${orderNumber}">SO-WH-2026-000003</span></div>
+                <div><span class="print-doc-label" th:text="#{delivery.ebm}">EBM receipt</span>
+                    <span th:text="${note.ebmReceipt != null} ? ${note.ebmReceipt} : (${receipt == null} ? '—' : #{delivery.ebmPending})">1042</span></div>
+                <div><span class="print-doc-label" th:text="#{delivery.store}">Store</span> <span th:text="${site != null} ? ${site.name} : '—'">Main warehouse</span></div>
+                <div><span class="print-doc-label" th:text="#{delivery.releasedCol}">Released</span>
+                    <strong th:text="${note.releasedAt != null} ? ${#temporals.format(note.releasedAt, 'dd/MM/yyyy HH:mm')} : #{delivery.notReleased.print}">15/10/2026 11:00</strong></div>
+                <div><span class="print-doc-label" th:text="#{delivery.transport}">Transport</span>
+                    <span th:text="${note.collected} ? #{delivery.collected} : ${note.vehiclePlate + ' · ' + note.driverName}">RAD 123 A · Jean Bosco</span></div>
+            </div>
+        </div>
+
+        <div class="print-doc-scroll">
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th th:text="#{invoice.item}">Item</th>
+                    <th class="num" th:text="#{delivery.ordered}">Ordered</th>
+                    <th class="num" th:text="#{delivery.releasedQty}">Released</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r : ${summary}">
+                    <td>
+                        <span th:text="${r.line.product.code + ' ' + r.line.widthMm + ' × ' + r.line.heightMm + ' mm'}">CLR-6 3210 × 2250 mm</span>
+                        <div class="print-doc-sub" th:text="${r.line.stockUnit} ? #{delivery.kind.SHEET} : #{delivery.kind.PIECE}">Whole sheet</div>
+                    </td>
+                    <td class="num" th:text="${r.line.quantity}">1</td>
+                    <td class="num" th:text="${r.released}">1</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="print-doc-note">
+            <span th:text="#{delivery.printLabels}">Labels:</span>
+            <span class="mono" th:each="l, st : ${lines}" th:text="${l.unitCode + (st.last ? '' : ', ')}">U-WH-000038, </span>
+        </p>
+        <p class="print-doc-note" th:if="${note.shortReason != null}" th:text="#{delivery.printShort(${note.shortReason})}">Short delivery: the rest is collected tomorrow</p>
+        <p class="print-doc-note" th:if="${note.ebmOverrideReason != null}" th:text="#{delivery.printOverride(${note.ebmOverrideReason})}">Released before the EBM signature: VSDC down</p>
+        <div class="print-doc-signs">
+            <div><span th:text="#{delivery.signReleased}">Released by (Warehouse)</span><span class="print-doc-signline" th:text="${note.releasedBy}">manager1</span></div>
+            <div><span th:text="#{delivery.signChecked}">Checked by (Dispatch)</span><span class="print-doc-signline" th:text="${note.preparedBy}">dispatch1</span></div>
+            <div><span th:text="#{delivery.signReceived}">Received in good order by</span><span class="print-doc-signline" th:text="${note.receivedByName}"></span></div>
+        </div>
+    </div>
+</body>
+</html>

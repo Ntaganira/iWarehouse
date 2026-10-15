@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.QuotationKind;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
 import com.ntaganira.heritier.iWarehouse.entity.Customer;
@@ -78,6 +79,7 @@ public class GlobalSearchService {
     private final SupplierService supplierService;
     private final SalesService salesService;
     private final QuotationService quotationService;
+    private final DeliveryNoteService deliveryNoteService;
     private final CreditNoteService creditNoteService;
     private final CustomerAccountService customerAccountService;
     private final PurchaseOrderService purchaseOrderService;
@@ -116,7 +118,9 @@ public class GlobalSearchService {
                                EmployeeService employeeService, PayRunService payRunService, VehicleCostService vehicleCostService,
                                Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService,
                                CreditApplicationService creditApplicationService, PriceChangeService priceChangeService,
-                               SiteTransferService siteTransferService, TicketService ticketService) {
+                               SiteTransferService siteTransferService, TicketService ticketService,
+                               DeliveryNoteService deliveryNoteService) {
+        this.deliveryNoteService = deliveryNoteService;
         this.siteTransferService = siteTransferService;
         this.ticketService = ticketService;
         this.writeOffService = writeOffService;
@@ -246,6 +250,13 @@ public class GlobalSearchService {
             new Source<>("nav.quotations", "/quotations", null, List.of("PAGE_QUOTATIONS", "PERM_VIEW_QUOTATION"),
                 q -> quotationService.findPage(null, q, 0, PER_GROUP),
                 x -> new Hit(x.getNumber(), buyer(x.getBuyerName(), x.getCustomer()), rwf(x.getTotalAmount()), "/quotations/" + x.getId())),
+            new Source<>("nav.salesOrders", "/sales-orders", null, List.of("PAGE_SALES_ORDERS", "PERM_VIEW_SALES_ORDER"),
+                q -> quotationService.findPage(QuotationKind.SALES_ORDER, null, q, 0, PER_GROUP),
+                x -> new Hit(x.getNumber(), buyer(x.getBuyerName(), x.getCustomer()), rwf(x.getTotalAmount()), "/sales-orders/" + x.getId())),
+            new Source<>("nav.deliveryNotes", "/delivery-notes", null, List.of("PAGE_DELIVERY_NOTES", "PERM_VIEW_DELIVERY_NOTE"),
+                q -> deliveryNoteService.findPage(null, q, 0, PER_GROUP),
+                n -> new Hit(n.getNumber(), n.getInvoice().getNumber() + " · " + n.getInvoice().getBillTo(),
+                        join(date(n.getPreparedAt()), messages.get("delivery.status." + n.getStatus())), "/delivery-notes/" + n.getId())),
             new Source<>("nav.creditNotes", "/credit-notes", null, List.of("PAGE_CREDIT_NOTES", "PERM_VIEW_CREDIT_NOTE"),
                 q -> creditNoteService.findPage(q, 0, PER_GROUP),
                 n -> new Hit(n.getNumber(), n.getCustomer() == null ? null : n.getCustomer().getName(),

@@ -29,5 +29,9 @@ public enum NotificationKind {
     /** A customer's credit limit due for its review: yearly, or an invoice long overdue (F-02 C). */
     CREDIT,
     /** A transfer between sites waiting, or glass that did not arrive (IMP 11.2). */
-    TRANSFER
+    TRANSFER,
+    /** An order sent to the cashier, or released short (F-01, F-04). */
+    ORDER,
+    /** Goods waiting for release, or a signed delivery note not back (F-04, IMP 9.3). */
+    DELIVERY
 }

@@ -94,6 +94,11 @@ public class PosController {
         }
         model.addAttribute("till", session);
         model.addAttribute("summary", tillService.summary(session));
+        // With the Order Desk (decision D4) the till takes payment for orders sent to it; it takes no order itself
+        boolean orderDesk = salesService.orderDesk();
+        model.addAttribute("orderDesk", orderDesk);
+        model.addAttribute("ordersToPay", orderDesk ? salesService.ordersToPay() : List.of());
+        model.addAttribute("saleOrderNumber", sale != null && sale.getQuotationId() != null ? salesService.orderNumber(sale.getQuotationId()) : null);
         model.addAttribute("sale", sale);
         model.addAttribute("customer", customer);
         model.addAttribute("totals", sale == null ? Vat.Totals.NONE : salesService.totals(sale));

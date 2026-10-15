@@ -101,6 +101,7 @@ public class CustomerController {
         String open = List.of("details", "documents", "applications", "history").contains(tab) || (seesAccount && "account".equals(tab)) ? tab : "details";
         Customer customer = customerService.findById(id);
         model.addAttribute("customer", customer);
+        model.addAttribute("territory", customer.getTerritoryId() == null ? null : customerService.territoryName(customer.getTerritoryId()));
         model.addAttribute("defaultList", priceListService.defaultList());
         // The account (ACC-09): its statement, balance and ageing, and taking a payment on it
         if (seesAccount) {
@@ -173,6 +174,9 @@ public class CustomerController {
         dto.setMomoNumber(c.getMomoNumber());
         dto.setTradeReferences(c.getTradeReferences());
         dto.setSecurityOffered(c.getSecurityOffered());
+        dto.setTerritoryId(c.getTerritoryId());
+        dto.setMarket(c.getMarket());
+        dto.setAgent(c.isAgent());
         dto.setExpectedMonthly(c.getExpectedMonthly() == null ? null : c.getExpectedMonthly().stripTrailingZeros());
         return form(model, dto);
     }
@@ -255,6 +259,8 @@ public class CustomerController {
         model.addAttribute("customerEntity", current);
         model.addAttribute("types", CustomerType.values());
         model.addAttribute("priceLists", customerService.priceListsFor(current));
+        model.addAttribute("territories", customerService.territories());
+        model.addAttribute("markets", com.ntaganira.heritier.iWarehouse.enums.Market.values());
         model.addAttribute("defaultList", priceListService.defaultList());
         model.addAttribute("canSetTerms", AppUserPrincipal.currentHas(TERMS) && !customerService.termsByApplication());
         model.addAttribute("termsByApplication", customerService.termsByApplication());

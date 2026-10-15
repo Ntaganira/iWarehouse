@@ -90,7 +90,11 @@ public class QuotationController {
                        @RequestParam(defaultValue = "0") int page, Model model) {
         String open = "history".equals(tab) ? tab : "lines";
         Quotation q = quotationService.findDetailed(id);
+        if (q.isOrder()) {
+            return "redirect:/sales-orders/" + id;                       // an order has its own page
+        }
         model.addAttribute("quotation", q);
+        model.addAttribute("orderDesk", salesService.orderDesk());
         model.addAttribute("totals", quotationService.totals(q));
         model.addAttribute("today", quotationService.today());
         model.addAttribute("onTill", quotationService.onTill(q).orElse(null));
@@ -150,6 +154,9 @@ public class QuotationController {
     @PreAuthorize("hasAuthority('PAGE_QUOTATIONS') and hasAuthority('PERM_MANAGE_QUOTATION')")
     public String editForm(@PathVariable UUID id, Model model, RedirectAttributes redirect) {
         Quotation q = quotationService.findDetailed(id);
+        if (q.isOrder()) {
+            return "redirect:/sales-orders/" + id + "/edit";
+        }
         if (!q.isDraft()) {
             redirect.addFlashAttribute("flashError", messages.get("quote.notDraft", q.getNumber()));
             return "redirect:/quotations/" + id;

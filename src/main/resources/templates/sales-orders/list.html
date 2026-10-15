@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{order.title}, ~{::content})}">
+<head><title>Sales orders - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{order.title}">Sales Orders</h1>
+            <div class="subtitle" th:text="#{order.subtitle}">Orders raised by the Order Desk: checked against stock, prices and credit, paid at the cashier, released by the warehouse</div>
+        </div>
+        <div class="btn-group">
+            <a href="/sales-orders/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_SALES_ORDER')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{order.new}">New order</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${orderDesk}" th:text="#{order.deskOn}">The Order Desk takes every order: the cashier takes payment against an order and adds nothing to it.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{order.sectionTitle}">Orders</span>
+                <span class="section-count" th:text="${orders.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/sales-orders}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{order.searchPh}" th:aria-label="#{order.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st == status}" th:text="#{${'order.status.' + st}}">To pay</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{order.number}">Order</th>
+                        <th th:text="#{quote.date}">Date</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th th:text="#{order.channel}">Came in through</th>
+                        <th th:text="#{order.validUntil}">To pay by</th>
+                        <th class="num" th:text="#{invoice.total}">Total (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="q : ${orders.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/sales-orders/{id}(id=${q.id})}" th:text="${q.number}">SO-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${q.salesperson}">orderdesk1</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(q.quoteDate, 'dd/MM/yyyy')}">15/10/2026</td>
+                        <td>
+                            <span th:text="${q.billTo}">Umucyo Builders Ltd</span>
+                            <div class="cell-sub mono" th:if="${q.buyerTin != null}" th:text="${q.buyerTin}">100123456</div>
+                        </td>
+                        <td>
+                            <span th:text="#{${'order.channel.' + q.channel}}">Counter</span>
+                            <div class="cell-sub" th:text="#{${'order.market.' + q.market}}">Domestic</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(q.validUntil, 'dd/MM/yyyy')}">18/10/2026</td>
+                        <td class="num strong" th:text="${@num.money(q.totalAmount)}">412,500</td>
+                        <td><th:block th:replace="~{sales-orders/list :: orderStatus(${q}, ${today})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(orders.content)}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{order.empty}">No orders found</h3>
+                                <p th:text="#{order.emptyHint}">The Order Desk takes the customer's order; the cashier takes the payment</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${orders}, '/sales-orders', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of an order: one sent and not paid by its day has lapsed. */-->
+<th:block th:fragment="orderStatus(q, day)" th:switch="${q.isExpiredOn(day) ? 'EXPIRED' : q.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{order.status.DRAFT}">Draft</span>
+    <span th:case="'SENT'" class="badge badge-warning" th:text="#{order.status.SENT}">To pay</span>
+    <span th:case="'EXPIRED'" class="badge badge-danger" th:text="#{order.status.EXPIRED}">Lapsed</span>
+    <span th:case="'CONVERTED'" class="badge badge-success" th:text="#{order.status.CONVERTED}">Paid</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{order.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

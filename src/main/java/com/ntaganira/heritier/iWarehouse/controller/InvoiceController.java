@@ -60,13 +60,15 @@ public class InvoiceController {
     private final ReportFiles reportFiles;
     private final PdfService pdfService;
     private final EbmService ebmService;
+    private final DeliveryNoteService noteService;
 
     public InvoiceController(SalesService salesService, CreditNoteService creditNoteService, JournalService journalService,
                              DataChangeService dataChangeService,
                              SettingService settingService, ActivityLogService activityLogService,
                              Messages messages, NumberFormats num,
                              ReportFiles reportFiles, PdfService pdfService, EbmService ebmService,
-            CompanyLogoService companyLogoService) {
+            CompanyLogoService companyLogoService, DeliveryNoteService noteService) {
+        this.noteService = noteService;
         this.ebmService = ebmService;
         this.reportFiles = reportFiles;
         this.pdfService = pdfService;
@@ -121,6 +123,11 @@ public class InvoiceController {
         model.addAttribute("jobs", custom ? salesService.jobsOf(invoice) : List.of());
         model.addAttribute("ready", custom ? salesService.readyPieces(invoice) : List.of());
         model.addAttribute("deliveries", custom ? salesService.deliveries(id) : List.of());
+        // The release of its goods on delivery notes (F-04): the notes, and what is still to release
+        boolean byNote = noteService.releaseByNote();
+        model.addAttribute("releaseByNote", byNote);
+        model.addAttribute("deliveryNotes", noteService.ofInvoice(id));
+        model.addAttribute("toRelease", byNote ? noteService.releasable(invoice).size() : 0);
         // Lines whose price a manager approved (POS-06): the approval, by line
         Map<UUID, SaleApproval> priceApprovals = new HashMap<>();
         salesService.approvals(invoice).stream().filter(a -> a.isPrice() && a.isApproved() && a.getLineId() != null)
@@ -243,6 +250,13 @@ public class InvoiceController {
     @PreAuthorize("hasAuthority('PAGE_INVOICES') and hasAuthority('PERM_DELIVER_SALE')")
     public String deliver(@PathVariable UUID id, @RequestParam(required = false) List<UUID> unitIds,
                           @RequestParam(required = false) String codes, RedirectAttributes redirect) {
+        if (noteService.releaseByNote()) {
+            String error = messages.get("delivery.byNote");
+            activityLogService.record(PosController.MODULE, "DELIVER_SALE", "Failed to hand over pieces of invoice " + id + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+            return "redirect:/invoices/" + id;
+        }
         try {
             SalesService.Delivered d = salesService.deliver(id, unitIds, codes);
             String units = d.units().stream().map(StockUnit::getCode).collect(Collectors.joining(", "));

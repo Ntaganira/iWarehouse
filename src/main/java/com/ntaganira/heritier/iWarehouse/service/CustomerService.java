@@ -2,13 +2,16 @@ package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.dto.CustomerDto;
 import com.ntaganira.heritier.iWarehouse.entity.Customer;
+import com.ntaganira.heritier.iWarehouse.entity.Territory;
 import com.ntaganira.heritier.iWarehouse.entity.PriceList;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
+import com.ntaganira.heritier.iWarehouse.enums.Market;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.CustomerRepository;
+import com.ntaganira.heritier.iWarehouse.repository.TerritoryRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PriceListRepository;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
@@ -47,13 +50,25 @@ public class CustomerService {
     private final PriceListRepository priceListRepo;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
+    private final TerritoryRepository territoryRepo;
 
     public CustomerService(CustomerRepository repo, PriceListRepository priceListRepo, DocumentNumberService numbers,
-                           SettingService settingService) {
+                           SettingService settingService, TerritoryRepository territoryRepo) {
+        this.territoryRepo = territoryRepo;
         this.settingService = settingService;
         this.repo = repo;
         this.priceListRepo = priceListRepo;
         this.numbers = numbers;
+    }
+
+    /** Active territories, for the form. */
+    public List<Territory> territories() {
+        return territoryRepo.findByEnabledTrueOrderByCodeAsc();
+    }
+
+    /** A territory's code and name, for the customer's page. */
+    public String territoryName(UUID id) {
+        return territoryRepo.findById(id).map(t -> t.getCode() + " · " + t.getName()).orElse(null);
     }
 
     public Page<Customer> findPage(String search, CustomerType type, String status, int page, int size) {
@@ -163,10 +178,13 @@ public class CustomerService {
         return settingService.getBoolean(SettingKey.APPROVAL_CREDIT_APPLICATION);
     }
 
-    /** A phone already on another customer is saved only once confirmed: it may be the same buyer under two names (BP 11). */
+    /**
+     * A phone already on another customer is saved only once confirmed: it may be the same buyer under two names (BP 11).
+     * A phone kept as it was was confirmed when it was saved.
+     */
     private void checkPhone(CustomerDto dto, Customer current) {
         String phone = PartyRules.clean(dto.getPhone());
-        if (phone == null || dto.isConfirmDuplicate()) {
+        if (phone == null || dto.isConfirmDuplicate() || (current != null && phone.equals(current.getPhone()))) {
             return;
         }
         repo.findByPhone(phone).stream()
@@ -177,7 +195,14 @@ public class CustomerService {
                 });
     }
 
-    private static void apply(Customer customer, CustomerDto dto, String tin) {
+    private void apply(Customer customer, CustomerDto dto, String tin) {
+        if (dto.getTerritoryId() != null && territoryRepo.findById(dto.getTerritoryId()).filter(Territory::isEnabled).isEmpty()
+                && !dto.getTerritoryId().equals(customer.getTerritoryId())) {
+            throw BusinessException.onField("territoryId", "order.territory.invalid");
+        }
+        customer.setTerritoryId(dto.getTerritoryId());
+        customer.setMarket(dto.getMarket() == null ? Market.DOMESTIC : dto.getMarket());
+        customer.setAgent(dto.isAgent() && customer.getType().isCreditAllowed());
         customer.setName(dto.getName().trim());
         customer.setTin(tin);
         customer.setPhone(PartyRules.clean(dto.getPhone()));

@@ -1,6 +1,8 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.Market;
+import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SaleChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus;
 import jakarta.persistence.*;
@@ -121,6 +123,26 @@ public class SalesInvoice extends BaseEntity {
     /** The quotation it was rung up from (POS-03), converted when this sale is paid. */
     @Column(name = "quotation_id")
     private UUID quotationId;
+
+    // --- What the sale came through (F-01 A, G.19, G.20): copied from its order, else the counter's own
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "order_channel", length = 12)
+    private OrderChannel orderChannel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Market market;
+
+    @Column(name = "territory_id")
+    private UUID territoryId;
+
+    @Column(length = 50)
+    private String salesperson;
+
+    /** The agent the order came through, if any. */
+    @Column(name = "agent_id")
+    private UUID agentId;
 
     /** Days added to the customer's payment terms for this invoice, as approved (F-03 extended terms). */
     @Column(name = "extra_terms_days")

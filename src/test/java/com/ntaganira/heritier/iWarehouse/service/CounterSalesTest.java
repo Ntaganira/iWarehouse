@@ -54,6 +54,7 @@ class CounterSalesTest {
     private TillService tills;
     private SalesService sales;
     private DocumentNumberService numbers;
+    private SettingService settings;
     private CuttingJobService cuttingJobs;
     private CuttingJobRepository jobRepo;
     private CuttingJobOutputRepository outputRepo;
@@ -329,7 +330,7 @@ class CounterSalesTest {
         rolesOf.put(5L, List.of(role("CASHIER", null)));
         rolesOf.put(6L, List.of(role("CASHIER", null)));
         rolesOf.put(9L, List.of(role("OWNER", "100")));
-        SettingService settings = mock(SettingService.class);
+        settings = mock(SettingService.class);
         when(settings.getDecimal(SettingKey.DISCOUNT_APPROVAL_PERCENT)).thenReturn(new BigDecimal("5"));
         when(settings.getDecimal(SettingKey.DEPOSIT_MIN_PERCENT)).thenReturn(new BigDecimal("50"));
 
@@ -368,7 +369,7 @@ class CounterSalesTest {
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK, mock(DelegationOfAuthority.class), settings,
                 mock(Notifier.class));
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
-                numbers, settings, CLOCK);
+                numbers, settings, mock(TerritoryRepository.class), unitRepo, stockService, mock(Notifier.class), CLOCK);
         creditNoteService = new CreditNoteService(creditNoteRepo, creditLineRepo, unitsBackRepo, invoiceRepo, deliveryRepo, unitRepo,
                 productRepo, jobRepo, jobLineRepo, sales, cuttingJobs, tills, stockService, postings, numbers, ebm, CLOCK,
                 mock(CreditNoteRequestRepository.class), mock(DelegationOfAuthority.class), settings, mock(Notifier.class));
@@ -700,6 +701,73 @@ class CounterSalesTest {
         quotationService.cancel(q.getId(), "Bought elsewhere");
         assertThat(q.getStatus()).isEqualTo(QuotationStatus.CANCELLED);
         assertThat(q.getCancelReason()).isEqualTo("Bought elsewhere");
+    }
+
+    // ---------------------------------------------------------------- the Order Desk (F-01, Annex G, decision D4)
+
+    @Test
+    void withTheOrderDeskTheTillTakesPaymentForAnOrderAndTheSaleKeepsWhereItCameFrom() {
+        when(settings.getBoolean(SettingKey.SALES_ORDER_DESK)).thenReturn(true);
+        when(settings.getInt(SettingKey.SALES_ORDER_VALID_DAYS)).thenReturn(3);
+        when(numbers.next(DocumentType.SALES_ORDER)).thenReturn("SO-WH-2026-000001");
+        tills.open(BigDecimal.ZERO);
+        unit("U-WH-000041", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        // Nothing is taken at the till itself, and a quotation becomes an order first
+        assertThatThrownBy(() -> sales.addUnit("U-WH-000041", null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.orderDesk.only"));
+        Quotation quote = quotationService.create(quote(walkIn, size(clear6, 600, 400, 1, null, null)));
+        quotationService.send(quote.getId());
+        assertThatThrownBy(() -> sales.ringUp(quote.getId()))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.orderDesk.quotation"));
+
+        signIn(11L, "orderdesk1");
+        QuotationDto dto = quotationService.newForm(QuotationKind.SALES_ORDER);
+        dto.setCustomerId(builders.getId());
+        dto.getLines().clear();
+        dto.getLines().add(sheets(clear6, 3210, 2250, 1));
+        dto.setChannel(null);
+        assertThatThrownBy(() -> quotationService.create(QuotationKind.SALES_ORDER, dto, null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("order.channel.required"));
+        dto.setChannel(OrderChannel.WHATSAPP);
+        Quotation order = quotationService.create(QuotationKind.SALES_ORDER, dto, null);
+        assertThat(order.getNumber()).isEqualTo("SO-WH-2026-000001");
+        assertThat(order.isOrder()).isTrue();
+        assertThat(order.getSalesperson()).isEqualTo("orderdesk1");
+        assertThat(order.getValidUntil()).isEqualTo(LocalDate.of(2026, 10, 12));
+        quotationService.send(order.getId());
+        QuotationService.DeskCheck check = quotationService.deskCheck(order);
+        assertThat(check.lines()).singleElement().satisfies(l -> {
+            assertThat(l.sheetsFree()).isEqualTo(1);
+            assertThat(l.enough()).isTrue();
+        });
+
+        signIn(5L, "cashier1");
+        order.setSiteId(UUID.randomUUID());                                              // released from another site: none there
+        assertThatThrownBy(() -> sales.ringUp(order.getId()))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.quote.noSheets"));
+        order.setSiteId(null);
+        SalesInvoice sale = sales.ringUp(order.getId());
+        assertThat(sale.getOrderChannel()).isEqualTo(OrderChannel.WHATSAPP);
+        assertThat(sale.getSalesperson()).isEqualTo("orderdesk1");
+        UUID lineId = assignIds(sale);
+        assertThatThrownBy(() -> sales.removeLine(lineId))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.orderDesk.lines"));
+        assertThatThrownBy(() -> sales.setCustomer(walkIn.getId(), null, null))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getMessageKey()).isEqualTo("sale.orderDesk.customer"));
+        sales.pay(new SalePayments.Entered(sales.totals(sale).gross(), null, null, null, null, null, null, null));
+        assertThat(order.getStatus()).isEqualTo(QuotationStatus.CONVERTED);
+        assertThat(sale.getOrderChannel()).isEqualTo(OrderChannel.WHATSAPP);
+    }
+
+    @Test
+    void aCounterSaleWithoutAnOrderIsTheCountersOwn() {
+        tills.open(BigDecimal.ZERO);
+        unit("U-WH-000041", clear6, 3210, 2250, StockStatus.AVAILABLE, null);
+        SalesInvoice sale = sales.addUnit("U-WH-000041", null);
+        sales.pay(new SalePayments.Entered(sales.totals(sale).gross(), null, null, null, null, null, null, null));
+        assertThat(sale.getOrderChannel()).isEqualTo(OrderChannel.COUNTER);
+        assertThat(sale.getSalesperson()).isEqualTo("cashier1");
+        assertThat(sale.getMarket()).isEqualTo(Market.DOMESTIC);
     }
 
     // ---------------------------------------------------------------- price changes and credit (POS-05, POS-06)

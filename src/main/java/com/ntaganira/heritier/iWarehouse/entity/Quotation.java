@@ -1,6 +1,9 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.Market;
+import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
+import com.ntaganira.heritier.iWarehouse.enums.QuotationKind;
 import com.ntaganira.heritier.iWarehouse.enums.QuotationStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -37,6 +40,11 @@ public class Quotation extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 30, updatable = false)
     private String number;
+
+    /** A quotation, or a sales order raised by the Order Desk (F-01). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "doc_kind", nullable = false, length = 12, updatable = false)
+    private QuotationKind kind = QuotationKind.QUOTATION;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 12)
@@ -92,12 +100,48 @@ public class Quotation extends BaseEntity {
     @Column(name = "cancelled_by", length = 50)
     private String cancelledBy;
 
+    // --- A sales order's own fields (F-01 A, BP 6)
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 12)
+    private OrderChannel channel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Market market;
+
+    @Column(name = "territory_id")
+    private UUID territoryId;
+
+    /** The agent it came through. */
+    @Column(name = "agent_id")
+    private UUID agentId;
+
+    /** The site the goods leave from. */
+    @Column(name = "site_id")
+    private UUID siteId;
+
+    /** Who took the order (the Order Desk officer) or the salesperson named. */
+    @Column(length = 50)
+    private String salesperson;
+
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
+
+    /** The quotation an order was made from: converted with it. */
+    @Column(name = "source_id", updatable = false)
+    private UUID sourceId;
+
     @OneToMany(mappedBy = "quotation", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo")
     private List<QuotationLine> lines = new ArrayList<>();
 
     public boolean isDraft() {
         return status == QuotationStatus.DRAFT;
+    }
+
+    public boolean isOrder() {
+        return kind == QuotationKind.SALES_ORDER;
     }
 
     public boolean isSent() {

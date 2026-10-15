@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${quoteDto.id == null} ? #{order.addTitle} : #{order.editTitle(${quotation.number})}, ~{::content})}">
+<head><title>Sales order - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${quoteDto.id == null} ? #{order.addTitle} : #{order.editTitle(${quotation.number})}">New Sales Order</h1>
+            <div class="subtitle" th:text="#{order.formSubtitle(${@num.m2(discountLimit)})}">Saved as a draft and priced from the customer's list; you give up to 5% off. Send it to the cashier, who takes the payment.</div>
+        </div>
+        <a th:href="${quoteDto.id == null} ? @{/sales-orders} : @{/sales-orders/{id}(id=${quoteDto.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${quoteDto.id == null} ? @{/sales-orders/new} : @{/sales-orders/{id}/edit(id=${quoteDto.id})}"
+          th:object="${quoteDto}" method="post" class="quote-form" novalidate>
+        <div class="section">
+            <div class="form-container">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="customerId" th:text="#{pos.customer}">Customer</label>
+                        <select id="customerId" th:field="*{customerId}" data-searchable th:classappend="${#fields.hasErrors('customerId')} ? 'is-invalid'">
+                            <option th:each="c : ${customers}" th:value="${c.id}" th:text="${c.name + ' · ' + c.code}">Walk-in customer · WALK-IN</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('customerId')}" th:errors="*{customerId}"></span>
+                        <span class="hint" th:text="#{order.customerHint}">Their price list prices the order; the order page shows their credit</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerName" th:text="#{pos.buyerName}">Name on the invoice</label>
+                        <input type="text" id="buyerName" th:field="*{buyerName}" maxlength="100" th:placeholder="#{pos.buyerNamePh}"
+                               th:classappend="${#fields.hasErrors('buyerName')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('buyerName')}" th:errors="*{buyerName}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="buyerTin" th:text="#{pos.buyerTin}">Buyer's TIN</label>
+                        <input type="text" id="buyerTin" th:field="*{buyerTin}" maxlength="9" inputmode="numeric" class="input-code" th:placeholder="#{pos.buyerTinPh}"
+                               th:classappend="${#fields.hasErrors('buyerTin')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('buyerTin')}" th:errors="*{buyerTin}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="channel" th:text="#{order.channel}">Came in through</label>
+                        <select id="channel" th:field="*{channel}" required th:classappend="${#fields.hasErrors('channel')} ? 'is-invalid'">
+                            <option th:each="c : ${channels}" th:value="${c}" th:text="#{${'order.channel.' + c}}">Counter</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('channel')}" th:errors="*{channel}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="market" th:text="#{order.market}">Market</label>
+                        <select id="market" th:field="*{market}" required th:classappend="${#fields.hasErrors('market')} ? 'is-invalid'">
+                            <option th:each="m : ${markets}" th:value="${m}" th:text="#{${'order.market.' + m}}">Domestic</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('market')}" th:errors="*{market}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="territoryId" th:text="#{order.territory}">Territory</label>
+                        <select id="territoryId" th:field="*{territoryId}" th:classappend="${#fields.hasErrors('territoryId')} ? 'is-invalid'">
+                            <option value="" th:text="#{order.noTerritory}">None</option>
+                            <option th:each="t : ${territories}" th:value="${t.id}" th:text="${t.code + ' · ' + t.name}">KGL · Kigali</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('territoryId')}" th:errors="*{territoryId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="agentId" th:text="#{order.agent}">Agent</label>
+                        <select id="agentId" th:field="*{agentId}" th:classappend="${#fields.hasErrors('agentId')} ? 'is-invalid'">
+                            <option value="" th:text="#{order.noAgent}">No agent</option>
+                            <option th:each="a : ${agents}" th:value="${a.id}" th:text="${a.name}">Musanze Glass Agents</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('agentId')}" th:errors="*{agentId}"></span>
+                        <span class="hint" th:text="#{order.agentHint}">Required when it came through an agent</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="siteId" th:text="#{order.site}">Released from</label>
+                        <select id="siteId" th:field="*{siteId}" th:classappend="${#fields.hasErrors('siteId')} ? 'is-invalid'">
+                            <option value="" th:text="#{order.anySite}">Any site</option>
+                            <option th:each="s : ${sites}" th:value="${s.id}" th:text="${s.code + ' · ' + s.name}">WH · Main warehouse</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('siteId')}" th:errors="*{siteId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="validUntil" th:text="#{order.validUntil}">To pay by</label>
+                        <input type="date" id="validUntil" th:field="*{validUntil}" required th:classappend="${#fields.hasErrors('validUntil')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('validUntil')}" th:errors="*{validUntil}"></span>
+                        <span class="hint" th:text="#{order.validUntilHint}">An order not paid by this day lapses</span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="notes" th:text="#{product.notes}">Notes</label>
+                        <input type="text" id="notes" th:field="*{notes}" maxlength="500" th:placeholder="#{order.notesPh}"
+                               th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <th:block th:replace="~{quotations/form :: lineSection(#{order.linesTitle}, #{order.linesNote})}"></th:block>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{po.saveDraft}">Save draft</button>
+            <a th:href="${quoteDto.id == null} ? @{/sales-orders} : @{/sales-orders/{id}(id=${quoteDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+</body>
+</html>

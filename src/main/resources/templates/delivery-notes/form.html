@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{delivery.newTitle}, ~{::content})}">
+<head><title>Prepare a delivery note - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{delivery.newTitle}">Prepare a Delivery Note</h1>
+            <div class="subtitle" th:text="#{delivery.formSubtitle(${invoice.number}, ${invoice.billTo})}">For invoice INV-WH-2026-000031 · Umucyo Builders Ltd. Another person releases it.</div>
+        </div>
+        <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="@{/delivery-notes/new(invoice=${invoice.id})}" method="post" novalidate>
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{delivery.leaving}">What leaves</span>
+                    <span class="section-count" th:text="${ready.size()}">0</span>
+                </h2>
+            </div>
+            <span class="field-error" th:if="${errorField == 'unitIds'}" th:text="${flashError}"></span>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><span class="sr-only" th:text="#{delivery.release}">Release</span></th>
+                            <th th:text="#{stock.code}">Label</th>
+                            <th th:text="#{delivery.kind}">What</th>
+                            <th th:text="#{summary.group.PRODUCT}">Glass</th>
+                            <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                            <th th:text="#{stock.location}">Place</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="u : ${ready.sheets}">
+                            <td><input type="checkbox" class="checkbox" name="unitIds" th:value="${u.id}" th:checked="${chosen.contains(u.id)}"
+                                       th:aria-label="${u.code}"></td>
+                            <td class="mono" th:text="${u.code}">U-WH-000038</td>
+                            <td th:text="#{delivery.kind.SHEET}">Whole sheet</td>
+                            <td class="mono" th:text="${u.product.code}">CLR-6</td>
+                            <td class="num nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">3210 × 2250</td>
+                            <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R01</td>
+                        </tr>
+                        <tr th:each="u : ${ready.pieces}">
+                            <td><input type="checkbox" class="checkbox" name="unitIds" th:value="${u.id}" th:checked="${chosen.contains(u.id)}"
+                                       th:aria-label="${u.code}"></td>
+                            <td class="mono" th:text="${u.code}">U-WH-000090</td>
+                            <td th:text="#{delivery.kind.PIECE}">Cut piece</td>
+                            <td class="mono" th:text="${u.product.code}">CLR-6</td>
+                            <td class="num nowrap" th:text="${u.widthMm + ' × ' + u.heightMm}">600 × 400</td>
+                            <td class="mono" th:text="${u.location != null} ? ${u.location.code} : '—'">WH-A-R02</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{delivery.leavingNote}">Whole sheets were sold at payment and are still in the warehouse; cut pieces are handed over when the note is released. Untick what does not leave now and say why.</p>
+        </div>
+
+        <div class="section">
+            <div class="form-container">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="checkbox-item">
+                            <input type="checkbox" class="checkbox" name="collected" value="true" th:checked="${collected}">
+                            <span th:text="#{delivery.collectedLabel}">The customer collects at the counter (no vehicle)</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehiclePlate" th:text="#{siteTransfer.vehiclePlate}">Vehicle plate</label>
+                        <input type="text" id="vehiclePlate" name="vehiclePlate" maxlength="20" class="input-code" autocomplete="off" th:value="${vehiclePlate}"
+                               th:classappend="${errorField == 'vehiclePlate'} ? 'is-invalid'">
+                        <span class="field-error" th:if="${errorField == 'vehiclePlate'}" th:text="${flashError}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="driverName" th:text="#{siteTransfer.driver}">Driver</label>
+                        <input type="text" id="driverName" name="driverName" maxlength="100" autocomplete="off" th:value="${driverName}"
+                               th:classappend="${errorField == 'driverName'} ? 'is-invalid'">
+                        <span class="field-error" th:if="${errorField == 'driverName'}" th:text="${flashError}"></span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="destination" th:text="#{delivery.destination}">Destination</label>
+                        <input type="text" id="destination" name="destination" maxlength="150" th:value="${destination}" th:placeholder="#{delivery.destinationPh}">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="shortReason" th:text="#{delivery.shortReason}">Why not everything leaves</label>
+                        <input type="text" id="shortReason" name="shortReason" maxlength="255" th:value="${shortReason}"
+                               th:placeholder="#{delivery.shortReasonPh}" th:classappend="${errorField == 'shortReason'} ? 'is-invalid'">
+                        <span class="field-error" th:if="${errorField == 'shortReason'}" th:text="${flashError}"></span>
+                        <span class="hint" th:text="#{delivery.shortHint}">Only when something ready stays behind: the Order Desk is told</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:text="#{delivery.prepare}">Prepare the note</button>
+                    <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>

@@ -21,6 +21,7 @@ import com.ntaganira.heritier.iWarehouse.service.CuttingYield;
 import com.ntaganira.heritier.iWarehouse.service.Excel;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.StockService;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import jakarta.validation.Validator;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -74,10 +75,13 @@ public class CuttingJobController {
     private final Messages messages;
     private final NumberFormats num;
     private final ReportFiles reportFiles;
+    private final AttachmentService attachmentService;
 
     public CuttingJobController(CuttingJobService jobService, StockService stockService, DataChangeService dataChangeService,
                                 JournalService journalService, SalesService salesService, ActivityLogService activityLogService,
-                                Validator validator, Messages messages, NumberFormats num, ReportFiles reportFiles) {
+                                Validator validator, Messages messages, NumberFormats num, ReportFiles reportFiles,
+                                AttachmentService attachmentService) {
+        this.attachmentService = attachmentService;
         this.reportFiles = reportFiles;
         this.jobService = jobService;
         this.stockService = stockService;
@@ -124,11 +128,40 @@ public class CuttingJobController {
         model.addAttribute("parent", job.getParentJobId() == null ? null : jobService.findById(job.getParentJobId()));
         model.addAttribute("restJobs", jobService.restJobs(id));
         model.addAttribute("locations", stockService.locationsById());
-        model.addAttribute("history", dataChangeService.historyWithChildren("CuttingJob", id.toString(),
-                List.of("CuttingJobLine"), "job", Paging.page(page), Paging.SIZE));
         boolean cut = job.getStatus() == CuttingJobStatus.IN_PROGRESS || job.getStatus() == CuttingJobStatus.COMPLETED;
-        model.addAttribute("tab", "history".equals(tab) || ("cut".equals(tab) && cut) ? tab : "pieces");
+        String open = List.of("history", "documents", "checks").contains(tab) || ("cut".equals(tab) && cut) ? tab : "pieces";
+        model.addAttribute("history", dataChangeService.historyWithChildren("CuttingJob", id.toString(),
+                List.of("CuttingJobLine"), "job", Paging.pageOf("history", open, page), Paging.SIZE));
+        // The pieces measured by another person (IMP 10 step 3); the drawing and other documents (IMP 10 step 1)
+        model.addAttribute("checks", jobService.checks(id));
+        model.addAttribute("verifyRequired", jobService.verifyRequired());
+        model.addAttribute("cutPieces", job.getStatus() == CuttingJobStatus.COMPLETED && job.getVerifiedAt() == null
+                ? jobService.piecesOf(job) : List.of());
+        model.addAttribute("cutByMe", job.getCompletedBy() != null && job.getCompletedBy().equals(AppUserPrincipal.currentUsername()));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.CUTTING_JOB, id, Paging.pageOf("documents", open, page), Paging.SIZE));
+        model.addAttribute("tab", open);
         return "cutting-jobs/view";
+    }
+
+    /** Another person measures the pieces of a cut (IMP 10 step 3): all accepted but those named out of specification. */
+    @PostMapping("/{id}/verify")
+    @PreAuthorize("hasAuthority('PAGE_PRODUCTION') and hasAuthority('PERM_VERIFY_CUT')")
+    public String verify(@PathVariable UUID id, @RequestParam(required = false) List<UUID> rejectedIds,
+                         @RequestParam(required = false) String reason, @RequestParam(required = false) String note,
+                         RedirectAttributes redirect) {
+        try {
+            CuttingJobService.Verified v = jobService.verify(id, rejectedIds, reason, note);
+            activityLogService.record(MODULE, "VERIFY_CUT", "Verified the pieces of " + v.job().getNumber() + ": " + v.passed()
+                    + " accepted, " + v.rejected() + " out of specification" + (v.rework() == null ? ""
+                    : " (" + reason + "), cut again on " + v.rework().getNumber()), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", v.rework() == null ? messages.get("cutting.verified", v.job().getNumber(), v.passed())
+                    : messages.get("cutting.verifiedRework", v.job().getNumber(), v.passed(), v.rejected(), v.rework().getNumber()));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "VERIFY_CUT", "Failed to verify the pieces of job " + id + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/cutting-jobs/" + id + "?tab=checks";
     }
 
     // ---------------------------------------------------------------- drafts (PRD-01)

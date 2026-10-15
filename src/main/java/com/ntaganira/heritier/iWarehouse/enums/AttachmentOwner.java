@@ -38,7 +38,11 @@ public enum AttachmentOwner {
     /** The papers behind a credit application: financial statements, references, the guarantee (F-02). */
     CREDIT_APPLICATION("PAGE_CREDIT_APPLICATIONS", "/credit-applications/"),
     /** A transfer's delivery note, signed when it left and when it arrived (TCN-008). */
-    SITE_TRANSFER("PAGE_SITE_TRANSFERS", "/site-transfers/");
+    SITE_TRANSFER("PAGE_SITE_TRANSFERS", "/site-transfers/"),
+    /** The approved cutting drawing (IMP 10 step 1, CUT-006). */
+    CUTTING_JOB("PAGE_PRODUCTION", "/cutting-jobs/"),
+    /** The delivery note signed by the customer and brought back (IMP 9.3, DN-005). */
+    DELIVERY_NOTE("PAGE_DELIVERY_NOTES", "/delivery-notes/");
 
     private final String page;
     private final String path;

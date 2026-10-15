@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${quotation.number}, ~{::content})}">
+<head><title>Sales order - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${quotation.status.name()}, expired=${quotation.isExpiredOn(today)},
+        canManage=${#authorization.expression('hasAuthority(''PERM_CREATE_SALES_ORDER'')')},
+        canSell=${#authorization.expression('hasAuthority(''PAGE_POS'') and hasAuthority(''PERM_SELL'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${quotation.number}">SO-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{quote.subtitleOne(${quotation.billTo}, ${#temporals.format(quotation.quoteDate, 'dd/MM/yyyy')}, ${quotation.salesperson})}">Umucyo Builders Ltd · 15/10/2026 · orderdesk1</span>
+                &middot; <th:block th:replace="~{sales-orders/list :: orderStatus(${quotation}, ${today})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/sales-orders" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
+                    th:if="${canManage and (s == 'DRAFT' or s == 'SENT') and onTill == null}" th:text="#{order.cancel}">Cancel order</button>
+            <a th:href="@{/sales-orders/{id}/edit(id=${quotation.id})}" class="btn btn-outline" th:if="${canManage and s == 'DRAFT'}" th:text="#{common.edit}">Edit</a>
+            <form th:if="${canManage and s == 'DRAFT'}" th:action="@{/sales-orders/{id}/send(id=${quotation.id})}" method="post"
+                  class="row-action-form confirm-submit" th:attr="data-confirm=#{order.sendConfirm(${quotation.number})}">
+                <button type="submit" class="btn btn-primary" th:text="#{order.send}">Send to the cashier</button>
+            </form>
+            <form th:if="${canSell and s == 'SENT' and !expired and onTill == null}" th:action="@{/sales-orders/{id}/ring-up(id=${quotation.id})}" method="post"
+                  class="row-action-form">
+                <button type="submit" class="btn btn-primary" th:text="#{order.ringUp}">Take the payment</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${s == 'DRAFT'}" th:text="#{order.draftNote}">A draft: check stock, prices and credit below, then send it to the cashier.</div>
+    <div class="doc-note" th:if="${s == 'SENT' and !expired}">
+        <strong th:text="#{order.sentOn(${quotation.sentBy}, ${#temporals.format(quotation.sentAt, 'dd/MM/yyyy HH:mm')})}">Sent to the cashier by orderdesk1 on 15/10/2026 10:30</strong>
+        <span th:text="#{order.payBy(${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')})}">· to pay by 18/10/2026</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${expired}" th:text="#{order.expiredNote(${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')})}">Not paid by 18/10/2026: it has lapsed. Raise a new order to price it again.</div>
+    <div class="doc-note is-warning" th:if="${onTill != null}" th:text="#{quote.onTillNote(${onTill})}">Being rung up at till TILL-WH-2026-000016: it becomes the invoice when paid.</div>
+    <div class="doc-note" th:if="${s == 'CONVERTED'}">
+        <strong th:text="#{order.paidOn(${#temporals.format(quotation.convertedAt, 'dd/MM/yyyy HH:mm')})}">Paid on 15/10/2026 11:00</strong>
+        <a class="mono" th:if="${invoiceNumber != null}" sec:authorize="hasAuthority('PAGE_INVOICES')" th:href="@{/invoices/{id}(id=${quotation.invoiceId})}" th:text="${invoiceNumber}">INV-WH-2026-000031</a>
+        <span class="mono" th:if="${invoiceNumber != null}" sec:authorize="!hasAuthority('PAGE_INVOICES')" th:text="${invoiceNumber}">INV-WH-2026-000031</span>
+        <span th:text="#{order.releaseNote}">The warehouse releases the goods on a delivery note.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{quote.cancelledBy(${quotation.cancelledBy})}">Cancelled by orderdesk1:</strong>
+        <span th:text="${quotation.cancelReason}">The customer bought elsewhere</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value">
+                        <a th:href="@{/customers/{id}(id=${quotation.customer.id})}" sec:authorize="hasAuthority('PAGE_CUSTOMERS')" th:text="${quotation.customer.name}">Umucyo Builders Ltd</a>
+                        <span sec:authorize="!hasAuthority('PAGE_CUSTOMERS')" th:text="${quotation.customer.name}">Umucyo Builders Ltd</span>
+                        <div class="cell-sub" th:if="${quotation.buyerTin != null}" th:text="#{order.tin(${quotation.buyerTin})}">TIN 100123456</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.channel}">Came in through</label>
+                    <div class="value" th:text="#{${'order.channel.' + quotation.channel}}">Counter</div>
+                    <div class="cell-sub" th:text="#{${'order.market.' + quotation.market}}">Domestic</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.territory}">Territory</label>
+                    <div class="value" th:text="${territory != null} ? ${territory.code + ' · ' + territory.name} : '—'">KGL · Kigali</div>
+                    <div class="cell-sub" th:if="${territory != null and territory.managerName != null}" th:text="${territory.managerName}">Regional manager</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.agent}">Agent</label>
+                    <div class="value" th:text="${agentName ?: '—'}">—</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.site}">Released from</label>
+                    <div class="value" th:text="${siteName ?: #messages.msg('order.anySite')}">Main warehouse</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.validUntil}">To pay by</label>
+                    <div class="value" th:text="${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')}">18/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.total}">Total (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(quotation.totalAmount)}">412,500</div>
+                </div>
+                <div class="item" th:if="${sourceNumber != null}">
+                    <label th:text="#{order.fromQuotationLabel}">From quotation</label>
+                    <div class="value"><a class="mono" th:href="@{/quotations/{id}(id=${quotation.sourceId})}" th:text="${sourceNumber}">QUO-WH-2026-000004</a></div>
+                </div>
+                <div class="item item-full" th:if="${quotation.notes != null}">
+                    <label th:text="#{product.notes}">Notes</label>
+                    <div class="value" th:text="${quotation.notes}">Deliver to the site in Kicukiro</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- The Order Desk's check (F-01 C, Annex G step 2): stock, the price list and the customer's credit -->
+    <div class="section" th:if="${check != null}">
+        <div class="section-header">
+            <h2 th:text="#{order.check}">Order check</h2>
+        </div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{order.checkStock}">Stock</label>
+                    <div class="value">
+                        <span class="badge" th:classappend="${check.stockShort} ? 'badge-warning' : 'badge-success'"
+                              th:text="${check.stockShort} ? #{order.stockShort} : #{order.stockOk}">In stock</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.checkPrices}">Prices</label>
+                    <div class="value" th:text="${check.priceList != null} ? ${check.priceList.name} : '—'">Retail</div>
+                    <div class="cell-sub" th:if="${check.pricesOf != null}" th:text="#{order.pricesOf(${#temporals.format(check.pricesOf, 'dd/MM/yyyy HH:mm')})}">prices of 15/10/2026 09:00</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{order.checkCredit}">Credit</label>
+                    <th:block th:if="${check.credit.allowed}">
+                        <div class="value" th:text="#{order.creditRoom(${@num.money(check.credit.available)})}">1,200,000 RWF left</div>
+                        <div class="cell-sub" th:text="#{order.creditOf(${@num.money(check.credit.limit)}, ${@num.money(check.credit.owed)})}">limit 5,000,000 · owed 3,800,000</div>
+                        <span class="badge badge-warning" th:if="${check.overCredit}" th:text="#{order.overCredit}">More than the credit left: cash, or a credit approval at payment</span>
+                    </th:block>
+                    <div class="value" th:unless="${check.credit.allowed}" th:text="#{order.cashOnly}">Pays at the cashier (no credit)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{order.linesTitle}">Glass ordered</span>
+                <span class="section-count" th:text="${quotation.lines.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{invoice.item}">Item</th>
+                                <th class="num" th:text="#{pos.charged}">Charged</th>
+                                <th th:text="#{order.inStock}">In stock</th>
+                                <th class="num" th:text="#{pos.amount}">Amount (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${quotation.lines}" th:with="st=${stockOf.get(l.id)}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td><th:block th:replace="~{quotations/view :: quoteLineWhat(${l})}"></th:block></td>
+                                <td class="num nowrap"><th:block th:replace="~{quotations/view :: quoteLineCharge(${l})}"></th:block></td>
+                                <td>
+                                    <th:block th:if="${st != null}">
+                                        <span class="badge" th:classappend="${st.enough} ? 'badge-success' : 'badge-warning'"
+                                              th:text="${l.sheet} ? #{order.sheetsFree(${st.sheetsFree})} : #{order.areaFree(${@num.m2(st.areaAvailable)})}">4 free</span>
+                                        <div class="cell-sub" th:if="${l.customPiece}" th:text="#{order.areaNeeded(${@num.m2(st.areaNeeded)})}">needs 0.72 m²</div>
+                                    </th:block>
+                                </td>
+                                <td class="num strong" th:text="${@num.money(l.amount)}">195,008</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(quotation.lines)}">
+                                <td colspan="5"><div class="empty-state"><h3 th:text="#{quote.noLines}">No lines yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                        <tfoot th:unless="${#lists.isEmpty(quotation.lines)}">
+                            <tr th:each="g : ${totals.groups}">
+                                <th colspan="4" th:text="#{invoice.vatLine(${g.taxCode}, ${@num.m2(g.rate)}, ${@num.money(g.getNet())})}">B 18%: net 165,261.02, VAT</th>
+                                <th class="num" th:text="${@num.money(g.vat)}">29,746.98</th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" th:text="#{pos.total}">Total (RWF)</th>
+                                <th class="num" th:text="${@num.money(quotation.totalAmount)}">412,500</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/sales-orders/' + quotation.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+    <th:block th:if="${canManage and (s == 'DRAFT' or s == 'SENT') and onTill == null}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{order.cancelTitle(${quotation.number})},
+                @{/sales-orders/{id}/cancel(id=${quotation.id})}, #{order.cancelText}, #{order.cancel})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

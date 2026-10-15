@@ -8,6 +8,11 @@ import com.ntaganira.heritier.iWarehouse.enums.PriceChangeStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SupplierApprovalStatus;
 import com.ntaganira.heritier.iWarehouse.enums.NotificationKind;
 import com.ntaganira.heritier.iWarehouse.enums.SiteTransferStatus;
+import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
+import com.ntaganira.heritier.iWarehouse.enums.Market;
+import com.ntaganira.heritier.iWarehouse.enums.DeliveryNoteStatus;
+import com.ntaganira.heritier.iWarehouse.enums.DeliveryLineKind;
+import com.ntaganira.heritier.iWarehouse.enums.PieceCheckOutcome;
 import com.ntaganira.heritier.iWarehouse.enums.TicketKind;
 import com.ntaganira.heritier.iWarehouse.enums.TicketStatus;
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
@@ -75,7 +80,13 @@ class MessageCoverageTest {
             Map.entry("notification.kind.", NotificationKind.class),
             Map.entry("ticket.status.", TicketStatus.class),
             Map.entry("ticket.kind.", TicketKind.class),
-            Map.entry("siteTransfer.status.", SiteTransferStatus.class));
+            Map.entry("siteTransfer.status.", SiteTransferStatus.class),
+            Map.entry("order.channel.", OrderChannel.class),
+            Map.entry("order.market.", Market.class),
+            Map.entry("delivery.status.", DeliveryNoteStatus.class),
+            Map.entry("delivery.kind.", DeliveryLineKind.class),
+            Map.entry("cutting.check.", PieceCheckOutcome.class),
+            Map.entry("salesReport.by.", com.ntaganira.heritier.iWarehouse.service.SalesAnalysis.GroupBy.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

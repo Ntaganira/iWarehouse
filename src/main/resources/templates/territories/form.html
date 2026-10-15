@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${territory == null} ? #{territory.newTitle} : #{territory.editTitle(${territory.code})}, ~{::content})}">
+<head><title>Territory - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${territory == null} ? #{territory.newTitle} : #{territory.editTitle(${territory.code})}">New Territory</h1>
+        </div>
+        <a href="/territories" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${territory == null} ? @{/territories/new} : @{/territories/{id}/edit(id=${territory.id})}" method="post"
+              class="form-container" novalidate>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{territory.code}">Code</label>
+                    <input type="text" id="code" name="code" maxlength="20" required class="input-code" th:value="${form.code}"
+                           th:placeholder="#{territory.codePh}" th:classappend="${errorField == 'code'} ? 'is-invalid'">
+                    <span class="field-error" th:if="${errorField == 'code'}" th:text="${flashError}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{territory.name}">Name</label>
+                    <input type="text" id="name" name="name" maxlength="100" required th:value="${form.name}"
+                           th:placeholder="#{territory.namePh}" th:classappend="${errorField == 'name'} ? 'is-invalid'">
+                    <span class="field-error" th:if="${errorField == 'name'}" th:text="${flashError}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="managerUserId" th:text="#{territory.manager}">Regional sales manager</label>
+                    <select id="managerUserId" name="managerUserId" data-searchable th:classappend="${errorField == 'managerUserId'} ? 'is-invalid'">
+                        <option value="" th:text="#{territory.noManager}">Not named yet</option>
+                        <option th:each="u : ${managers}" th:value="${u.id}" th:selected="${form.managerUserId != null and form.managerUserId == u.id}"
+                                th:text="${u.fullName + ' · ' + u.username}">Jean Bosco · jbosco</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'managerUserId'}" th:text="${flashError}"></span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+                <a href="/territories" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

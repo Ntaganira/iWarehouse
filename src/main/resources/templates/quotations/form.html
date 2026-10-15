@@ -54,9 +54,21 @@
             </div>
         </div>
 
+        <th:block th:replace="~{quotations/form :: lineSection(#{quote.linesTitle}, #{quote.linesNote})}"></th:block>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{po.saveDraft}">Save draft</button>
+            <a th:href="${quoteDto.id == null} ? @{/quotations} : @{/quotations/{id}(id=${quoteDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/line-form.js"></script>
+</div>
+
+<!--/* The rows of a quotation or an order (lines with their processing, the empty row template), inside its th:object form */-->
+<th:block th:fragment="lineSection(title, note)">
         <div class="section">
             <div class="section-header">
-                <h2 th:text="#{quote.linesTitle}">Glass quoted</h2>
+                <h2 th:text="${title}">Glass quoted</h2>
                 <button type="button" class="btn btn-outline btn-sm line-add">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span th:text="#{po.addLine}">Add line</span>
@@ -154,7 +166,7 @@
                     </tfoot>
                 </table>
             </div>
-            <p class="form-note" th:text="#{quote.linesNote}">A size to cut is cut from a sheet once paid; whole sheets come from stock as they are. Prices come from the customer's list when you save. Empty lines are ignored.</p>
+            <p class="form-note" th:text="${note}">A size to cut is cut from a sheet once paid; whole sheets come from stock as they are. Prices come from the customer's list when you save. Empty lines are ignored.</p>
         </div>
 
         <!-- A new line ({i} becomes the row number) -->
@@ -196,12 +208,6 @@
             </tr>
         </template>
 
-        <div class="form-actions sticky-actions">
-            <button type="submit" class="btn btn-primary" th:text="#{po.saveDraft}">Save draft</button>
-            <a th:href="${quoteDto.id == null} ? @{/quotations} : @{/quotations/{id}(id=${quoteDto.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
-        </div>
-    </form>
-    <script defer src="/js/line-form.js"></script>
-</div>
+</th:block>
 </body>
 </html>

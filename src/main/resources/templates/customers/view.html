@@ -147,6 +147,17 @@
                         <div class="value" th:text="${customer.expectedMonthly != null} ? ${@num.money(customer.expectedMonthly) + ' RWF'} : '—'">—</div>
                     </div>
                     <div class="item">
+                        <label th:text="#{order.territory}">Territory</label>
+                        <div class="value" th:text="${territory ?: '—'}">—</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{order.market}">Market</label>
+                        <div class="value">
+                            <span th:text="#{${'order.market.' + customer.market}}">Domestic</span>
+                            <span class="badge badge-info" th:if="${customer.agent}" th:text="#{customer.agentBadge}">Agent</span>
+                        </div>
+                    </div>
+                    <div class="item">
                         <label th:text="#{customer.security}">Security offered</label>
                         <div class="value" th:text="${customer.securityOffered ?: '—'}">—</div>
                     </div>

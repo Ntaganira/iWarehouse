@@ -139,6 +139,20 @@ public class CuttingJob extends BaseEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    // --- The pieces measured and accepted by another person (IMP 10 step 3, PF-03)
+
+    @Column(name = "verified_by", length = 50)
+    private String verifiedBy;
+
+    @Column(name = "verified_by_id")
+    private Long verifiedById;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "verify_note", length = 500)
+    private String verifyNote;
+
     /** The sale whose custom sizes it cuts (POS-02), if any. */
     @Column(name = "sales_invoice_id")
     private UUID salesInvoiceId;

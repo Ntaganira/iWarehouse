@@ -63,13 +63,15 @@ public class CuttingJobService {
     private final PostingService postingService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
+    private final CuttingPieceCheckRepository checkRepo;
     private final Clock clock;
 
     public CuttingJobService(CuttingJobRepository repo, CuttingJobLineRepository lineRepo, CuttingJobOutputRepository outputRepo,
                              ProductRepository productRepo, CustomerRepository customerRepo,
                              ProcessingServiceRepository serviceRepo, StockUnitRepository unitRepo, StockService stockService,
                              PostingService postingService, DocumentNumberService numbers, SettingService settingService,
-                             Clock clock) {
+                             CuttingPieceCheckRepository checkRepo, Clock clock) {
+        this.checkRepo = checkRepo;
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.outputRepo = outputRepo;
@@ -955,6 +957,144 @@ public class CuttingJobService {
             rest.getLines().add(copy);
         }
         return repo.save(rest);
+    }
+
+    // ---------------------------------------------------------------- verification (IMP 10 step 3, PF-03)
+
+    /** The verification: the job, and the job its rejected sizes are cut again on (or null). */
+    public record Verified(CuttingJob job, int passed, int rejected, CuttingJob rework) {
+    }
+
+    /** Whether cut pieces wait for another person's verification before they are handed over (Settings). */
+    public boolean verifyRequired() {
+        return settingService.getBoolean(SettingKey.CUTTING_VERIFY);
+    }
+
+    public List<CuttingPieceCheck> checks(UUID jobId) {
+        return checkRepo.findByCuttingJobIdOrderByUnitCode(jobId);
+    }
+
+    /** The pieces of a completed job (its PIECE outputs with their units), by label. */
+    public List<StockUnit> piecesOf(CuttingJob job) {
+        List<UUID> ids = outputRepo.findByCuttingJobIdIn(List.of(job.getId())).stream()
+                .filter(o -> o.getKind() == CuttingOutputKind.PIECE && o.getStockUnitId() != null).map(CuttingJobOutput::getStockUnitId).toList();
+        return ids.isEmpty() ? List.of() : unitRepo.findByIdIn(ids).stream().sorted(Comparator.comparing(StockUnit::getCode)).toList();
+    }
+
+    /**
+     * Of these cut pieces, those that may not be handed over: rejected at verification, or, when Settings ask for the
+     * verification, not accepted yet.
+     */
+    public Set<UUID> notReleasable(Collection<UUID> pieceIds) {
+        if (pieceIds.isEmpty()) {
+            return Set.of();
+        }
+        Map<UUID, CuttingPieceCheck> checked = new HashMap<>();
+        checkRepo.findByStockUnitIdIn(pieceIds).forEach(c -> checked.put(c.getStockUnitId(), c));
+        boolean required = verifyRequired();
+        Set<UUID> blocked = new HashSet<>();
+        for (UUID id : pieceIds) {
+            CuttingPieceCheck c = checked.get(id);
+            if (c != null ? !c.isPassed() : required) {
+                blocked.add(id);
+            }
+        }
+        return blocked;
+    }
+
+    /**
+     * Another person than who recorded the cut measures its pieces (IMP 10 step 3): every piece is accepted but those
+     * named out of specification, which need a reason; their sizes go on a new draft job linked to this one (cut again,
+     * for the same sale lines). The rejected pieces stay reserved until written off or released to stock.
+     */
+    @Transactional
+    public Verified verify(UUID id, Collection<UUID> rejectedIds, String reason, String note) {
+        repo.lockById(id).orElseThrow(() -> new NotFoundException("CuttingJob", id));
+        CuttingJob job = findDetailed(id);
+        requireStatus(job, CuttingJobStatus.COMPLETED, "cutting.verify.notCompleted");
+        if (job.getVerifiedAt() != null) {
+            throw BusinessException.of("cutting.verify.done", job.getNumber());
+        }
+        String me = AppUserPrincipal.currentUsername();
+        if (me != null && me.equals(job.getCompletedBy())) {
+            throw BusinessException.of("cutting.verify.ownCut", job.getNumber());
+        }
+        List<StockUnit> pieces = piecesOf(job);
+        if (pieces.isEmpty()) {
+            throw BusinessException.of("cutting.verify.noPieces", job.getNumber());
+        }
+        Set<UUID> rejected = rejectedIds == null ? Set.of() : new HashSet<>(rejectedIds);
+        Set<UUID> ids = pieces.stream().map(StockUnit::getId).collect(Collectors.toSet());
+        if (!ids.containsAll(rejected)) {
+            throw BusinessException.of("cutting.verify.notAPiece", job.getNumber());
+        }
+        String why = PartyRules.clean(reason);
+        if (!rejected.isEmpty() && (why == null || why.length() > 255)) {
+            throw BusinessException.onField("reason", "cutting.verify.reason");
+        }
+        String clean = PartyRules.clean(note);
+        if (clean != null && clean.length() > 500) {
+            throw BusinessException.onField("note", "cutting.verify.noteSize");
+        }
+        // The rejected sizes cut again: one line per size of the job, for the same sale line
+        CuttingJob rework = null;
+        if (!rejected.isEmpty()) {
+            Map<UUID, UUID> lineOf = new HashMap<>();
+            outputRepo.findByCuttingJobIdIn(List.of(job.getId())).stream()
+                    .filter(o -> o.getKind() == CuttingOutputKind.PIECE && o.getStockUnitId() != null)
+                    .forEach(o -> lineOf.put(o.getStockUnitId(), o.getJobLineId()));
+            Map<UUID, Integer> again = new LinkedHashMap<>();
+            pieces.stream().filter(p -> rejected.contains(p.getId())).forEach(p -> again.merge(lineOf.get(p.getId()), 1, Integer::sum));
+            rework = new CuttingJob();
+            rework.setNumber(numbers.next(DocumentType.CUTTING_JOB));
+            rework.setPurpose(job.getPurpose());
+            rework.setCustomer(job.getCustomer());
+            rework.setCustomerRef(job.getCustomerRef());
+            rework.setProduct(job.getProduct());
+            rework.setDueDate(job.getDueDate());
+            rework.setNotes("Cut again: out of specification on " + job.getNumber() + " (" + why + ")");
+            rework.setParentJobId(job.getId());
+            rework.setSalesInvoiceId(job.getSalesInvoiceId());
+            int no = 0;
+            for (CuttingJobLine line : job.getLines()) {
+                Integer qty = again.get(line.getId());
+                if (qty == null) {
+                    continue;
+                }
+                CuttingJobLine copy = new CuttingJobLine();
+                copy.setJob(rework);
+                copy.setLineNo(++no);
+                copy.setWidthMm(line.getWidthMm());
+                copy.setHeightMm(line.getHeightMm());
+                copy.setQuantity(qty);
+                copy.setProcessing(line.getProcessing());
+                copy.setMark(line.getMark());
+                copy.setSalesLineId(line.getSalesLineId());
+                rework.getLines().add(copy);
+            }
+            rework = repo.save(rework);
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        for (StockUnit piece : pieces) {
+            CuttingPieceCheck check = new CuttingPieceCheck();
+            check.setCuttingJobId(job.getId());
+            check.setStockUnitId(piece.getId());
+            check.setUnitCode(piece.getCode());
+            boolean out = rejected.contains(piece.getId());
+            check.setOutcome(out ? PieceCheckOutcome.REJECTED : PieceCheckOutcome.PASSED);
+            check.setReason(out ? why : null);
+            check.setReworkJobId(out ? rework.getId() : null);
+            check.setCreatedAt(now);
+            check.setUserId(user.map(AppUserPrincipal::getId).orElse(null));
+            check.setUsername(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            checkRepo.save(check);
+        }
+        job.setVerifiedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
+        job.setVerifiedById(user.map(AppUserPrincipal::getId).orElse(null));
+        job.setVerifyNote(clean);
+        job.setVerifiedAt(now);
+        return new Verified(job, pieces.size() - rejected.size(), rejected.size(), rework);
     }
 
     // ---------------------------------------------------------------- yield (PRD-09)

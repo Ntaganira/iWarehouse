@@ -33,7 +33,10 @@ import java.util.stream.Collectors;
  * - File      : QuotationService.java
  * - Date      : 2026. 10. 09.
  * - User      : Hntaganira
- * - Desc      : Quotations (POS-03). A draft is priced each time it is saved, like a sale (LinePricing): whole
+ * - Desc      : Quotations (POS-03) and sales orders (F-01, Annex G, decision D4: a quotation of kind SALES_ORDER
+ *               raised by the Order Desk with its channel, market, territory, agent and site, checked against stock,
+ *               the price list and the customer's credit, sent to the cashier, who takes payment against it; it lapses
+ *               after the Settings' days). A draft is priced each time it is saved, like a sale (LinePricing): whole
  *               sheets and sizes to cut from the customer's list over their chargeable area, the processing of a
  *               size under it, a discount per row within the author's limit (Discounts), VAT per tax letter on the
  *               totals. Sending fixes it (QUO number from the start); a sent quotation is rung up at a till
@@ -57,11 +60,21 @@ public class QuotationService {
     private final SalesService salesService;
     private final DocumentNumberService numbers;
     private final SettingService settingService;
+    private final TerritoryRepository territoryRepo;
+    private final StockUnitRepository unitRepo;
+    private final StockService stockService;
+    private final Notifier notifier;
     private final Clock clock;
 
     public QuotationService(QuotationRepository repo, CustomerRepository customerRepo, ProductRepository productRepo,
                             ProcessingServiceRepository serviceRepo, SalesInvoiceRepository invoiceRepo, LinePricing pricing,
-                            SalesService salesService, DocumentNumberService numbers, SettingService settingService, Clock clock) {
+                            SalesService salesService, DocumentNumberService numbers, SettingService settingService,
+                            TerritoryRepository territoryRepo, StockUnitRepository unitRepo, StockService stockService,
+                            Notifier notifier, Clock clock) {
+        this.territoryRepo = territoryRepo;
+        this.unitRepo = unitRepo;
+        this.stockService = stockService;
+        this.notifier = notifier;
         this.repo = repo;
         this.customerRepo = customerRepo;
         this.productRepo = productRepo;
@@ -81,9 +94,15 @@ public class QuotationService {
      * number, customer or name printed.
      */
     public Page<Quotation> findPage(String status, String search, int page, int size) {
+        return findPage(QuotationKind.QUOTATION, status, search, page, size);
+    }
+
+    /** Quotations or sales orders, as above. */
+    public Page<Quotation> findPage(QuotationKind kind, String status, String search, int page, int size) {
         LocalDate today = today();
         Specification<Quotation> spec = (root, query, cb) -> {
             List<Predicate> p = new ArrayList<>();
+            p.add(cb.equal(root.get("kind"), kind));
             if ("EXPIRED".equals(status)) {
                 p.add(cb.equal(root.get("status"), QuotationStatus.SENT));
                 p.add(cb.lessThan(root.get("validUntil"), today));
@@ -147,9 +166,22 @@ public class QuotationService {
 
     /** A new quotation: the walk-in customer, valid for the Settings number of days, one empty row. */
     public QuotationDto newForm() {
+        return newForm(QuotationKind.QUOTATION);
+    }
+
+    /** A new quotation, or a new order (at the counter, domestic, payable for the Settings' days). */
+    public QuotationDto newForm(QuotationKind kind) {
         QuotationDto dto = new QuotationDto();
         customerRepo.findByDefaultCustomerTrue().ifPresent(c -> dto.setCustomerId(c.getId()));
-        dto.setValidUntil(defaultValidUntil());
+        dto.setValidUntil(defaultValidUntil(kind));
+        if (kind == QuotationKind.SALES_ORDER) {
+            dto.setChannel(OrderChannel.COUNTER);
+            dto.setMarket(Market.DOMESTIC);
+            List<Location> sites = sites();
+            if (sites.size() == 1) {
+                dto.setSiteId(sites.get(0).getId());
+            }
+        }
         dto.getLines().add(new QuotationDto.Line());
         return dto;
     }
@@ -161,8 +193,13 @@ public class QuotationService {
         dto.setCustomerId(q.getCustomer().getId());
         dto.setBuyerName(q.getBuyerName());
         dto.setBuyerTin(q.getBuyerTin());
-        dto.setValidUntil(copy ? defaultValidUntil() : q.getValidUntil());
+        dto.setValidUntil(copy ? defaultValidUntil(q.getKind()) : q.getValidUntil());
         dto.setNotes(q.getNotes());
+        dto.setChannel(q.getChannel());
+        dto.setMarket(q.getMarket());
+        dto.setTerritoryId(q.getTerritoryId());
+        dto.setAgentId(q.getAgentId());
+        dto.setSiteId(q.getSiteId());
         for (QuotationLine line : q.getLines()) {
             if (line.isServiceLine()) {
                 continue;
@@ -187,7 +224,33 @@ public class QuotationService {
     }
 
     public LocalDate defaultValidUntil() {
-        return today().plusDays(settingService.getInt(SettingKey.QUOTATION_VALIDITY_DAYS));
+        return defaultValidUntil(QuotationKind.QUOTATION);
+    }
+
+    public LocalDate defaultValidUntil(QuotationKind kind) {
+        return today().plusDays(settingService.getInt(kind == QuotationKind.SALES_ORDER
+                ? SettingKey.SALES_ORDER_VALID_DAYS : SettingKey.QUOTATION_VALIDITY_DAYS));
+    }
+
+    /** Active territories (an order's and a customer's). */
+    public List<Territory> territories() {
+        return territoryRepo.findByEnabledTrueOrderByCodeAsc();
+    }
+
+    /** Every territory by id, for names on pages. */
+    public Map<UUID, Territory> territoriesById() {
+        return territoryRepo.findAll().stream().collect(Collectors.toMap(Territory::getId, Function.identity()));
+    }
+
+    /** Customers who are established agents (BP 6). */
+    public List<Customer> agents() {
+        return customerRepo.findByEnabledTrueOrderByNameAsc().stream().filter(Customer::isAgent).toList();
+    }
+
+    /** Active sites the goods of an order can leave from. */
+    public List<Location> sites() {
+        return stockService.locationsById().values().stream().filter(l -> l.getType() == LocationType.SITE && l.isEnabled())
+                .sorted(Comparator.comparing(Location::getCode)).toList();
     }
 
     // ---------------------------------------------------------------- writing
@@ -195,11 +258,97 @@ public class QuotationService {
     /** A new draft, numbered and priced. */
     @Transactional
     public Quotation create(QuotationDto dto) {
+        return create(QuotationKind.QUOTATION, dto, null);
+    }
+
+    /** A new quotation or order (taken by the signed-in user), numbered and priced; an order may name its quotation. */
+    @Transactional
+    public Quotation create(QuotationKind kind, QuotationDto dto, UUID sourceId) {
         Quotation q = new Quotation();
+        q.setKind(kind);
         q.setQuoteDate(today());
+        q.setSourceId(sourceId);
+        if (kind == QuotationKind.SALES_ORDER) {
+            Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+            q.setSalesperson(user.map(AppUserPrincipal::getUsername).orElse("system"));
+            q.setSalespersonId(user.map(AppUserPrincipal::getId).orElse(null));
+        }
         apply(q, dto);
-        q.setNumber(numbers.next(DocumentType.QUOTATION));
+        q.setNumber(numbers.next(kind == QuotationKind.SALES_ORDER ? DocumentType.SALES_ORDER : DocumentType.QUOTATION));
         return repo.save(q);
+    }
+
+    /**
+     * The Order Desk turns a sent, valid quotation into an order (F-01): a draft order with its customer, rows and
+     * processing, at the counter; the quotation converts when the order is paid.
+     */
+    @Transactional
+    public Quotation orderFrom(UUID quotationId) {
+        Quotation source = findDetailed(quotationId);
+        if (source.isOrder() || !source.isSent()) {
+            throw BusinessException.of("order.from.notSent", source.getNumber());
+        }
+        if (source.isExpiredOn(today())) {
+            throw BusinessException.of("sale.quote.expired", source.getNumber(), source.getValidUntil().format(DAY));
+        }
+        if (repo.existsBySourceIdAndStatusIn(source.getId(), List.of(QuotationStatus.DRAFT, QuotationStatus.SENT))) {
+            throw BusinessException.of("order.from.exists", source.getNumber());
+        }
+        QuotationDto dto = formOf(source, true);
+        QuotationDto defaults = newForm(QuotationKind.SALES_ORDER);
+        dto.setValidUntil(defaults.getValidUntil());
+        dto.setChannel(defaults.getChannel());
+        dto.setMarket(source.getCustomer().getMarket());
+        dto.setTerritoryId(source.getCustomer().getTerritoryId());
+        dto.setSiteId(defaults.getSiteId());
+        return create(QuotationKind.SALES_ORDER, dto, source.getId());
+    }
+
+    // ---------------------------------------------------------------- the Order Desk's check (F-01 C, Annex G step 2)
+
+    /** One row against stock: free whole sheets of its size, or m² of its glass available to cut. */
+    public record LineStock(QuotationLine line, long sheetsFree, BigDecimal areaAvailable, BigDecimal areaNeeded, boolean enough) {
+    }
+
+    /** Stock for each row, the price list and its date, and the customer's credit: limit, owed and room left. */
+    public record DeskCheck(List<LineStock> lines, PriceList priceList, LocalDateTime pricesOf, SalesService.Credit credit,
+                            boolean overCredit) {
+
+        public boolean isStockShort() {
+            return lines.stream().anyMatch(l -> !l.enough());
+        }
+    }
+
+    public DeskCheck deskCheck(Quotation q) {
+        List<LineStock> rows = new ArrayList<>();
+        Map<String, Long> sheetsTaken = new HashMap<>();
+        Map<UUID, BigDecimal> areaFree = new HashMap<>();
+        Map<UUID, Location> places = q.getSiteId() == null ? Map.of() : stockService.locationsById();
+        for (QuotationLine line : q.getLines()) {
+            if (line.isSheet()) {
+                // The sheets of the site the order leaves from, when it names one
+                List<StockUnit> found = unitRepo.findOfSize(line.getProduct().getId(), line.getWidthMm(), line.getHeightMm(), StockStatus.AVAILABLE)
+                        .stream().filter(u -> q.getSiteId() == null || (u.getLocation() != null
+                                && q.getSiteId().equals(SiteTransferService.siteOf(u.getLocation(), places)))).toList();
+                Map<UUID, String> held = found.isEmpty() ? Map.of() : stockService.holds(found.stream().map(StockUnit::getId).toList());
+                String key = line.getProduct().getId() + ":" + Math.min(line.getWidthMm(), line.getHeightMm()) + "x"
+                        + Math.max(line.getWidthMm(), line.getHeightMm());
+                long free = found.stream().filter(u -> !held.containsKey(u.getId())).count() - sheetsTaken.getOrDefault(key, 0L);
+                sheetsTaken.merge(key, (long) line.getQuantity(), Long::sum);
+                rows.add(new LineStock(line, Math.max(free, 0), null, null, free >= line.getQuantity()));
+            } else if (line.isCustomPiece()) {
+                BigDecimal available = areaFree.computeIfAbsent(line.getProduct().getId(),
+                        id -> unitRepo.sumArea(id, List.of(StockStatus.AVAILABLE)));
+                BigDecimal needed = Pricing.areaM2(line.getWidthMm(), line.getHeightMm()).multiply(BigDecimal.valueOf(line.getQuantity()));
+                rows.add(new LineStock(line, 0, available, needed, available.compareTo(needed) >= 0));
+                areaFree.put(line.getProduct().getId(), available.subtract(needed));
+            }
+        }
+        PriceList list = q.getLines().stream().map(QuotationLine::getPriceList).filter(Objects::nonNull).findFirst().orElse(null);
+        LocalDateTime pricesOf = list == null ? null : list.getUpdatedAt() != null ? list.getUpdatedAt() : list.getCreatedAt();
+        SalesService.Credit credit = salesService.credit(q.getCustomer());
+        boolean over = credit.allowed() && q.getTotalAmount().compareTo(credit.getAvailable()) > 0;
+        return new DeskCheck(rows, list, pricesOf, credit, over);
     }
 
     /** A draft changed and priced again. */
@@ -231,6 +380,11 @@ public class QuotationService {
         q.setSentAt(LocalDateTime.now(clock));
         q.setSentBy(AppUserPrincipal.currentUsername());
         q.setStatus(QuotationStatus.SENT);
+        if (q.isOrder()) {
+            // The cashier takes payment against it (Annex G step 3)
+            notifier.holders("SELL", AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null), NotificationKind.ORDER,
+                    "notify.order.toPay", "notify.order.toPayText", "/sales-orders/" + q.getId(), q.getNumber(), q.getBillTo());
+        }
         return q;
     }
 
@@ -272,6 +426,9 @@ public class QuotationService {
         }
         if (dto.getLines().isEmpty()) {
             throw BusinessException.of("quote.lines.required");
+        }
+        if (q.isOrder()) {
+            applyOrder(q, dto);
         }
         q.setCustomer(customer);
         q.setBuyerName(PartyRules.clean(dto.getBuyerName()));
@@ -388,6 +545,33 @@ public class QuotationService {
         q.setNetAmount(totals.net());
         q.setVatAmount(totals.vat());
         q.setTotalAmount(totals.gross());
+    }
+
+    /** An order's channel, market, territory, agent and site: each required or checked. */
+    private void applyOrder(Quotation q, QuotationDto dto) {
+        if (dto.getChannel() == null) {
+            throw BusinessException.onField("channel", "order.channel.required");
+        }
+        if (dto.getMarket() == null) {
+            throw BusinessException.onField("market", "order.market.required");
+        }
+        if (dto.getTerritoryId() != null && territoryRepo.findById(dto.getTerritoryId()).filter(Territory::isEnabled).isEmpty()) {
+            throw BusinessException.onField("territoryId", "order.territory.invalid");
+        }
+        if (dto.getAgentId() != null && customerRepo.findById(dto.getAgentId()).filter(c -> c.isEnabled() && c.isAgent()).isEmpty()) {
+            throw BusinessException.onField("agentId", "order.agent.invalid");
+        }
+        if (dto.getChannel() == OrderChannel.AGENT && dto.getAgentId() == null) {
+            throw BusinessException.onField("agentId", "order.agent.required");
+        }
+        if (dto.getSiteId() != null && sites().stream().noneMatch(s -> s.getId().equals(dto.getSiteId()))) {
+            throw BusinessException.onField("siteId", "order.site.invalid");
+        }
+        q.setChannel(dto.getChannel());
+        q.setMarket(dto.getMarket());
+        q.setTerritoryId(dto.getTerritoryId());
+        q.setAgentId(dto.getAgentId());
+        q.setSiteId(dto.getSiteId());
     }
 
     private static void price(QuotationLine line, PriceList list, boolean includeVat, String taxCode, BigDecimal vatRate,

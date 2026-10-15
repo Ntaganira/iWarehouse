@@ -16,8 +16,52 @@
     </div>
 
     <div class="pos-layout">
+        <!-- Orders to pay (Annex G steps 3-4): with the Order Desk, the till takes payment against an order -->
+        <div class="section pos-find" th:if="${orderDesk}">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{pos.ordersToPay}">Orders to pay</span>
+                    <span class="section-count" th:text="${ordersToPay.size()}">0</span>
+                </h2>
+            </div>
+            <div class="section-body">
+                <p class="form-note" th:text="#{pos.orderDeskNote}">The Order Desk takes the orders: take the payment for one sent to the cashier. Nothing is added at the till.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{order.number}">Order</th>
+                                <th th:text="#{invoice.customer}">Customer</th>
+                                <th class="num" th:text="#{invoice.total}">Total (RWF)</th>
+                                <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="o : ${ordersToPay}">
+                                <td>
+                                    <a class="row-link strong mono" th:href="@{/sales-orders/{id}(id=${o.id})}" sec:authorize="hasAuthority('PAGE_SALES_ORDERS')" th:text="${o.number}">SO-WH-2026-000001</a>
+                                    <span class="mono strong" sec:authorize="!hasAuthority('PAGE_SALES_ORDERS')" th:text="${o.number}">SO-WH-2026-000001</span>
+                                    <div class="cell-sub" th:text="#{order.payBy(${#temporals.format(o.validUntil, 'dd/MM/yyyy')})}">to pay by 18/10/2026</div>
+                                </td>
+                                <td th:text="${o.billTo}">Umucyo Builders Ltd</td>
+                                <td class="num strong" th:text="${@num.money(o.totalAmount)}">412,500</td>
+                                <td>
+                                    <form th:action="@{/sales-orders/{id}/ring-up(id=${o.id})}" method="post" class="row-action-form" th:if="${empty}">
+                                        <button type="submit" class="btn btn-primary btn-sm" th:text="#{order.ringUp}">Take the payment</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(ordersToPay)}">
+                                <td colspan="4"><div class="empty-state"><h3 th:text="#{pos.noOrders}">No order waits for payment</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Find glass: scan a label, or search the smallest piece that fits (POS-01, INV-06) -->
-        <div class="section pos-find">
+        <div class="section pos-find" th:unless="${orderDesk}">
             <div class="section-header">
                 <h2 th:text="#{pos.find}">Find glass</h2>
             </div>
@@ -164,7 +208,8 @@
                 </h2>
             </div>
             <div class="section-body">
-                <form th:action="@{/pos/customer}" method="post" class="pos-customer" novalidate>
+                <p class="doc-note" th:if="${orderDesk and saleOrderNumber != null}" th:text="#{pos.saleOfOrder(${saleOrderNumber}, ${sale.billTo})}">Order SO-WH-2026-000001 for Umucyo Builders Ltd</p>
+                <form th:action="@{/pos/customer}" method="post" class="pos-customer" novalidate th:unless="${orderDesk}">
                     <input type="hidden" name="back" th:value="${searchQuery}">
                     <div class="form-grid">
                         <div class="form-group full-width">
@@ -227,7 +272,7 @@
                                     <div class="cell-sub" th:text="#{pos.vatShort(${l.taxCode}, ${@num.m2(l.vatRate)})}">VAT B 18%</div>
                                 </td>
                                 <td>
-                                    <div class="btn-group">
+                                    <div class="btn-group" th:unless="${orderDesk and sale.quotationId != null}">
                                         <button type="button" class="action-icon edit" th:attr="data-modal-open=${'price-modal-' + l.lineNo}"
                                                 th:title="#{pos.changePrice}" th:aria-label="#{pos.changePrice}">
                                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
@@ -245,7 +290,7 @@
                                 <td colspan="4">
                                     <div class="empty-state">
                                         <h3 th:text="#{pos.emptySale}">Nothing in the sale yet</h3>
-                                        <p th:text="#{pos.emptySaleHint}">Scan a label or add a piece from the search</p>
+                                        <p th:text="${orderDesk} ? #{pos.emptySaleOrder} : #{pos.emptySaleHint}">Scan a label or add a piece from the search</p>
                                     </div>
                                 </td>
                             </tr>

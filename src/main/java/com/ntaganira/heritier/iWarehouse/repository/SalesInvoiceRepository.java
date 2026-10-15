@@ -61,8 +61,12 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
     @Query("select i from SalesInvoice i where i.id = :id")
     Optional<SalesInvoice> lockById(@Param("id") UUID id);
 
-    /** Invoices issued in a period as (id, number, date, customer id, customer name, buyer name, posted by, net), for the sales reports (RPT-05). */
-    @Query("select i.id, i.number, i.invoiceDate, c.id, c.name, i.buyerName, i.postedBy, i.netAmount from SalesInvoice i join i.customer c"
+    /**
+     * Invoices issued in a period as (id, number, date, customer id, customer name, buyer name, posted by, net, order channel,
+     * channel, territory code, territory name), for the sales reports (RPT-05, G.19, G.20).
+     */
+    @Query("select i.id, i.number, i.invoiceDate, c.id, c.name, i.buyerName, i.postedBy, i.netAmount, i.orderChannel, i.channel, t.code, t.name"
+            + " from SalesInvoice i join i.customer c left join Territory t on t.id = i.territoryId"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 

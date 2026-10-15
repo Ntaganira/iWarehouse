@@ -33,7 +33,7 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -64,6 +64,7 @@ public class ExceptionsReportService {
     private final PriceChangeRepository priceChangeRepo;
     private final SupplierRepository supplierRepo;
     private final SiteTransferRepository siteTransferRepo;
+    private final DeliveryNoteRepository deliveryNoteRepo;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
                                    ManualJournalRepository manualJournalRepo, VehicleCostRepository vehicleCostRepo,
@@ -71,7 +72,8 @@ public class ExceptionsReportService {
                                    ReceivableWriteOffRepository writeOffRepo, PurchaseOrderRepository purchaseOrderRepo,
                                    SupplierPaymentRequestRepository paymentRequestRepo, CreditApplicationRepository creditApplicationRepo,
                                    PriceChangeRepository priceChangeRepo, SupplierRepository supplierRepo,
-                                   SiteTransferRepository siteTransferRepo) {
+                                   SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo) {
+        this.deliveryNoteRepo = deliveryNoteRepo;
         this.siteTransferRepo = siteTransferRepo;
         this.creditApplicationRepo = creditApplicationRepo;
         this.priceChangeRepo = priceChangeRepo;
@@ -196,6 +198,11 @@ public class ExceptionsReportService {
             rows.add(new Row(Kind.SITE_TRANSFER, t.getNumber(), "/site-transfers/" + t.getId(), t.getDecidedAt(),
                     t.getFromSite().getName() + " → " + t.getToSite().getName() + " · " + t.getReason(), null, false, null,
                     t.getRequestedBy(), t.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED, t.getDecisionNote()));
+        }
+        for (DeliveryNote d : deliveryNoteRepo.findByEbmOverrideReasonIsNotNullAndReleasedAtBetweenOrderByReleasedAtAsc(from, to)) {
+            rows.add(new Row(Kind.EBM_OVERRIDE, d.getNumber(), "/delivery-notes/" + d.getId(), d.getReleasedAt(),
+                    d.getInvoice().getNumber() + " · " + d.getInvoice().getBillTo(), d.getInvoice().getTotalAmount(), false, null,
+                    d.getPreparedBy(), d.getEbmOverrideBy(), Outcome.ISSUED, d.getEbmOverrideReason()));
         }
         for (CreditNote n : creditNoteRepo.findByPostedAtBetweenOrderByPostedAtAsc(from, to)) {
             if (n.getRequestId() != null) {

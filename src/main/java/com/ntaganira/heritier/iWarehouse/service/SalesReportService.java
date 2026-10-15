@@ -4,6 +4,8 @@ import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
 import com.ntaganira.heritier.iWarehouse.enums.CreditNoteKind;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
+import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
+import com.ntaganira.heritier.iWarehouse.enums.SaleChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SaleLineKind;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import org.springframework.stereotype.Service;
@@ -160,8 +162,12 @@ public class SalesReportService {
             UUID id = (UUID) r[0];
             long toHandOver = customPieces.getOrDefault(id, 0L) - handedOver.getOrDefault(id, 0L) - cancelledPieces.getOrDefault(id, 0L);
             String postedBy = (String) r[6];
+            // Its channel: as the order said, else the counter's own or the field's (before orders, G.19)
+            String channel = r[8] != null ? ((OrderChannel) r[8]).name() : r[9] == SaleChannel.MOBILE ? OrderChannel.FIELD.name()
+                    : OrderChannel.COUNTER.name();
+            String territory = r[10] == null ? null : r[10] + " · " + r[11];
             invoices.add(new SalesAnalysis.Invoice(id, (String) r[1], (LocalDate) r[2], (UUID) r[3], (String) r[4], (String) r[5], postedBy,
-                    postedBy == null ? "" : names.getOrDefault(postedBy, postedBy), (BigDecimal) r[7], toHandOver > 0));
+                    postedBy == null ? "" : names.getOrDefault(postedBy, postedBy), (BigDecimal) r[7], toHandOver > 0, channel, territory));
         }
 
         // Cost of Goods Sold of each journal of an invoice (sale, hand-over, credit note), with its inventory lines per glass

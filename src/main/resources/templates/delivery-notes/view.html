@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${note.number}, ~{::content})}">
+<head><title>Delivery note - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${note.status.name()},
+        canPrepare=${#authorization.expression('hasAuthority(''PERM_PREPARE_DELIVERY'')')},
+        canRelease=${#authorization.expression('hasAuthority(''PERM_RELEASE_GOODS'')')},
+        canOverride=${#authorization.expression('hasAuthority(''PERM_OVERRIDE_EBM_RELEASE'')')},
+        waitingEbm=${ebmBeforeRelease and receipt != null and !receipt.signed},
+        mayRelease=${s == 'DRAFT' and canRelease and !preparer}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${note.number}">DN-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{delivery.preparedBy(${note.preparedBy}, ${#temporals.format(note.preparedAt, 'dd/MM/yyyy HH:mm')})}">prepared by dispatch1 on 15/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{delivery-notes/list :: noteStatus(${note})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/delivery-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/delivery-notes/{id}/print(id=${note.id})}" class="btn btn-outline" target="_blank" rel="noopener" th:text="#{delivery.print}">Print</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
+                    th:if="${s == 'DRAFT' and (canPrepare or canRelease)}" th:text="#{delivery.cancel}">Cancel</button>
+            <button type="button" class="btn btn-primary" data-modal-open="copy-modal" th:if="${s == 'RELEASED' and !note.copyBack and canPrepare}"
+                    th:text="#{delivery.recordCopy}">Record the signed copy</button>
+            <form th:if="${mayRelease and !waitingEbm}" th:action="@{/delivery-notes/{id}/release(id=${note.id})}" method="post"
+                  class="row-action-form confirm-submit" th:attr="data-confirm=#{delivery.releaseConfirm(${note.number}, ${lines.size()})}">
+                <button type="submit" class="btn btn-primary" th:text="#{delivery.release}">Release the goods</button>
+            </form>
+            <button type="button" class="btn btn-primary" data-modal-open="override-modal" th:if="${mayRelease and waitingEbm and canOverride}"
+                    th:text="#{delivery.releaseOverride}">Release before the signature</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'DRAFT'}">
+        <span th:text="#{delivery.draftNote}">Prepared: another person checks the goods and releases them.</span>
+        <span th:if="${preparer}" th:text="#{delivery.yourOwn}">You prepared it: someone else releases it.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'DRAFT' and waitingEbm}">
+        <strong th:text="#{delivery.ebmWaiting(${receipt.status.name()})}">The EBM receipt is not signed yet (QUEUED):</strong>
+        <span th:text="#{delivery.ebmWaitingText}">no goods leave before it. When the RRA connection is down, a person allowed to may release them with the reason, which is kept.</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'RELEASED'}">
+        <strong th:text="#{delivery.releasedBy(${note.releasedBy}, ${#temporals.format(note.releasedAt, 'dd/MM/yyyy HH:mm')})}">Released by manager1 on 15/10/2026 11:00</strong>
+        <span th:if="${note.ebmReceipt != null}" th:text="#{delivery.ebmReceipt(${note.ebmReceipt})}">· EBM receipt 1042</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${note.ebmOverrideReason != null}">
+        <strong th:text="#{delivery.overrideBy(${note.ebmOverrideBy})}">Released before the EBM signature by coo1:</strong>
+        <span th:text="${note.ebmOverrideReason}">VSDC unreachable since 10:00</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${note.shortReason != null}">
+        <strong th:text="#{delivery.shortLabel}">Short delivery:</strong> <span th:text="${note.shortReason}">The rest is collected tomorrow</span>
+    </div>
+    <div class="doc-note" th:classappend="${note.issue} ? 'is-danger'" th:if="${note.copyBack}">
+        <strong th:text="#{delivery.copyBy(${note.receivedByName}, ${#temporals.format(note.receivedOn, 'dd/MM/yyyy')})}">Signed for the customer by Eric Mugisha on 15/10/2026.</strong>
+        <span th:if="${note.remarks != null}" th:text="${note.remarks}">One sheet chipped at the corner</span>
+        <span th:text="#{delivery.copyRecordedBy(${note.copyRecordedBy})}">Recorded by dispatch1.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{siteTransfer.cancelledBy(${note.cancelledBy})}">Cancelled by dispatch1:</strong>
+        <span th:text="${note.cancelReason}">Prepared twice</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{delivery.invoice}">Invoice</label>
+                    <div class="value">
+                        <a class="mono" th:href="@{/invoices/{id}(id=${invoice.id})}" sec:authorize="hasAuthority('PAGE_INVOICES')" th:text="${invoice.number}">INV-WH-2026-000031</a>
+                        <span class="mono" sec:authorize="!hasAuthority('PAGE_INVOICES')" th:text="${invoice.number}">INV-WH-2026-000031</span>
+                    </div>
+                    <div class="cell-sub" th:if="${orderNumber != null}" th:text="#{delivery.order(${orderNumber})}">Order SO-WH-2026-000003</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{invoice.customer}">Customer</label>
+                    <div class="value" th:text="${invoice.billTo}">Umucyo Builders Ltd</div>
+                    <div class="cell-sub" th:if="${invoice.buyerTin != null}" th:text="#{order.tin(${invoice.buyerTin})}">TIN 100123456</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{delivery.transport}">Transport</label>
+                    <div class="value" th:if="${note.collected}" th:text="#{delivery.collected}">Collected by the customer</div>
+                    <th:block th:unless="${note.collected}">
+                        <div class="value mono" th:text="${note.vehiclePlate}">RAD 123 A</div>
+                        <div class="cell-sub" th:text="${note.driverName}">Jean Bosco</div>
+                    </th:block>
+                </div>
+                <div class="item">
+                    <label th:text="#{delivery.destination}">Destination</label>
+                    <div class="value" th:text="${note.destination ?: '—'}">Kicukiro site</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{delivery.store}">Store</label>
+                    <div class="value" th:text="${site != null} ? ${site.name} : '—'">Main warehouse</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{delivery.ebm}">EBM receipt</label>
+                    <div class="value" th:if="${receipt == null}" th:text="#{delivery.ebmNone}">None (before the EBM connection)</div>
+                    <th:block th:if="${receipt != null}">
+                        <div class="value" th:text="${receipt.signed} ? #{delivery.ebmSigned(${receipt.rcptNo ?: receipt.invcNo})} : #{${'ebm.status.' + receipt.status}}">Signed (1042)</div>
+                    </th:block>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{delivery.leaving}">What leaves</span>
+                <span class="section-count" th:text="${lines.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="num">#</th>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{delivery.kind}">What</th>
+                                <th th:text="#{summary.group.PRODUCT}">Glass</th>
+                                <th class="num" th:text="#{cutting.size}">Size (mm)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines}" th:with="il=${invoiceLines.get(l.invoiceLineId)}">
+                                <td class="num text-muted" th:text="${l.lineNo}">1</td>
+                                <td class="mono" th:text="${l.unitCode}">U-WH-000038</td>
+                                <td th:text="#{${'delivery.kind.' + l.kind}}">Whole sheet</td>
+                                <td class="mono" th:text="${il != null} ? ${il.product.code} : '—'">CLR-6</td>
+                                <td class="num nowrap" th:text="${l.widthMm + ' × ' + l.heightMm}">3210 × 2250</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <p class="tab-intro" th:text="#{delivery.documentsIntro}">Keep a photo or scan of the copy signed by the customer.</p>
+                <th:block th:replace="~{fragments/attachments :: documents('DELIVERY_NOTE', ${note.id}, ${documents}, '/delivery-notes/' + ${note.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, '/delivery-notes/' + ${note.id}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'DRAFT' and (canPrepare or canRelease)}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{delivery.cancelTitle(${note.number})},
+                @{/delivery-notes/{id}/cancel(id=${note.id})}, #{delivery.cancelText}, #{delivery.cancel})}"></div>
+    </th:block>
+
+    <!-- Release before the EBM signature (decision D3): the reason is kept on the note -->
+    <div class="modal-overlay" id="override-modal" th:if="${mayRelease and waitingEbm and canOverride}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="override-title">
+            <div class="modal-header">
+                <h3 id="override-title" th:text="#{delivery.overrideTitle(${note.number})}">Release DN-WH-2026-000001 before the signature</h3>
+                <button type="button" class="modal-close" data-modal-close="override-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/delivery-notes/{id}/release(id=${note.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{delivery.overrideText}">The EBM receipt waits for its signature. Say why the goods leave anyway (the RRA connection down); the reason is kept on the note and in the log.</p>
+                    <div class="form-group">
+                        <label for="override-reason" th:text="#{reason.label}">Reason</label>
+                        <input type="text" id="override-reason" name="overrideReason" maxlength="255" required autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="override-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{delivery.release}">Release the goods</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- The signed copy (IMP 9.2, 9.3) -->
+    <div class="modal-overlay" id="copy-modal" th:if="${s == 'RELEASED' and !note.copyBack and canPrepare}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="copy-title">
+            <div class="modal-header">
+                <h3 id="copy-title" th:text="#{delivery.copyTitle(${note.number})}">Signed copy of DN-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="copy-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/delivery-notes/{id}/copy(id=${note.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="copy-name" th:text="#{delivery.receivedBy}">Signed for the customer by</label>
+                        <input type="text" id="copy-name" name="receivedByName" maxlength="100" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="copy-date" th:text="#{delivery.receivedOn}">On</label>
+                        <input type="date" id="copy-date" name="receivedOn" required th:value="${today}" th:attr="max=${today}">
+                    </div>
+                    <div class="form-group">
+                        <label for="copy-remarks" th:text="#{delivery.remarks}">The customer's remarks</label>
+                        <textarea id="copy-remarks" name="remarks" rows="2" maxlength="500"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" class="checkbox" name="issue" value="true">
+                            <span th:text="#{delivery.issueLabel}">The customer noted a shortage or damage</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="copy-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{delivery.recordCopy}">Record the signed copy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

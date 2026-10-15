@@ -4625,3 +4625,12 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 @media (max-width: 640px) {
   .print-doc-signs { grid-template-columns: 1fr; gap: 4mm; }
 }
+
+/* Delivery notes (M13): one copy per printed page */
+@media print {
+  .print-doc-copy { page-break-after: always; break-after: page; }
+  .print-doc-copy:last-child { page-break-after: auto; break-after: auto; }
+}
+@media screen {
+  .print-doc-copy + .print-doc-copy { margin-top: 24px; }
+}

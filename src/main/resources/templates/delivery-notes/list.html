@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{delivery.title}, ~{::content})}">
+<head><title>Delivery notes - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{delivery.title}">Delivery Notes</h1>
+            <div class="subtitle" th:text="#{delivery.subtitle}">Goods released from paid invoices: prepared by Dispatch, released by the warehouse after the EBM receipt, signed by the customer</div>
+        </div>
+        <div class="btn-group">
+            <a href="/invoices" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_INVOICES')" th:text="#{nav.invoices}">Invoices</a>
+        </div>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{delivery.kpi.waiting}">Waiting for release</div>
+                <div class="kpi-value" th:text="${waiting}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{delivery.kpi.waitingHint}">prepared, not released</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{delivery.kpi.released}">Released this month</div>
+                <div class="kpi-value" th:text="${accuracy.released}">24</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{delivery.kpi.copies(${accuracy.copiesBack})}">20 signed copies back</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{delivery.kpi.overdue}">Signed copies overdue</div>
+                <div class="kpi-value" th:text="${accuracy.overdue}">1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{delivery.kpi.overdueHint(${copyDays})}">not back after 3 working days</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{delivery.kpi.accuracy}">Delivery accuracy</div>
+                <div class="kpi-value" th:text="${accuracy.percent != null} ? ${accuracy.percent + ' %'} : '—'">98.5 %</div>
+                <div class="kpi-trend" th:classappend="${accuracy.percent == null} ? 'flat' : (${accuracy.percent.doubleValue() >= 98} ? 'good' : 'bad')">
+                    <span class="vs" th:text="#{delivery.kpi.accuracyHint(${accuracy.withIssue})}">1 with a shortage or damage · target 98 %</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{delivery.sectionTitle}">Delivery notes</span>
+                <span class="section-count" th:text="${notes.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/delivery-notes}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{delivery.searchPh}" th:aria-label="#{delivery.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st == status}" th:text="#{${'delivery.filter.' + st}}">Released</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{delivery.number}">Delivery note</th>
+                        <th th:text="#{delivery.invoice}">Invoice</th>
+                        <th th:text="#{delivery.transport}">Transport</th>
+                        <th th:text="#{delivery.prepared}">Prepared</th>
+                        <th th:text="#{delivery.releasedCol}">Released</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="n : ${notes.content}">
+                        <td><a class="row-link strong mono" th:href="@{/delivery-notes/{id}(id=${n.id})}" th:text="${n.number}">DN-WH-2026-000001</a></td>
+                        <td>
+                            <span class="mono" th:text="${n.invoice.number}">INV-WH-2026-000031</span>
+                            <div class="cell-sub" th:text="${n.invoice.billTo}">Umucyo Builders Ltd</div>
+                        </td>
+                        <td>
+                            <span th:if="${n.collected}" th:text="#{delivery.collected}">Collected by the customer</span>
+                            <th:block th:unless="${n.collected}">
+                                <span class="mono" th:text="${n.vehiclePlate}">RAD 123 A</span>
+                                <div class="cell-sub" th:text="${n.driverName}">Jean Bosco</div>
+                            </th:block>
+                        </td>
+                        <td>
+                            <span class="nowrap" th:text="${#temporals.format(n.preparedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 10:30</span>
+                            <div class="cell-sub" th:text="${n.preparedBy}">dispatch1</div>
+                        </td>
+                        <td>
+                            <th:block th:if="${n.releasedAt != null}">
+                                <span class="nowrap" th:text="${#temporals.format(n.releasedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 11:00</span>
+                                <div class="cell-sub" th:text="${n.releasedBy}">manager1</div>
+                            </th:block>
+                            <span th:if="${n.releasedAt == null}">—</span>
+                        </td>
+                        <td><th:block th:replace="~{delivery-notes/list :: noteStatus(${n})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${notes.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{delivery.empty}">No delivery notes</h3>
+                                <p th:text="#{delivery.emptyHint}">A paid invoice's goods leave on a delivery note prepared from the invoice</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${notes}, '/delivery-notes', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status of a delivery note; a released one shows whether its signed copy is back */-->
+<th:block th:fragment="noteStatus(n)">
+    <span th:if="${n.status.name() == 'DRAFT'}" class="badge badge-warning" th:text="#{delivery.status.DRAFT}">To release</span>
+    <span th:if="${n.status.name() == 'CANCELLED'}" class="badge badge-secondary" th:text="#{delivery.status.CANCELLED}">Cancelled</span>
+    <th:block th:if="${n.status.name() == 'RELEASED'}">
+        <span class="badge" th:classappend="${n.copyBack} ? (${n.issue} ? 'badge-danger' : 'badge-success') : 'badge-info'"
+              th:text="${n.copyBack} ? (${n.issue} ? #{delivery.status.ISSUE} : #{delivery.status.SIGNED}) : #{delivery.status.RELEASED}">Released</span>
+    </th:block>
+</th:block>
+</body>
+</html>

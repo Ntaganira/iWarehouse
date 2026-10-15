@@ -39,6 +39,9 @@ class CuttingJobServiceTest {
     private StockCostEntryRepository costEntryRepo;
     private StockAdjustmentLineRepository adjustmentLineRepo;
     private CuttingJobService service;
+    private CuttingPieceCheckRepository checkRepo;
+    private SettingService settings;
+    private final List<CuttingPieceCheck> checks = new ArrayList<>();
 
     private final Location zone = location("WH-A", LocationType.ZONE, null, false, null, null);
     private final Location rack = location("WH-A-R04", LocationType.RACK, zone.getId(), false, 30, 3000);
@@ -83,7 +86,13 @@ class CuttingJobServiceTest {
             j.setId(UUID.randomUUID());
             return j;
         });
-        SettingService settings = mock(SettingService.class);
+        settings = mock(SettingService.class);
+        when(settings.getBoolean(SettingKey.CUTTING_VERIFY)).thenReturn(true);
+        checkRepo = mock(CuttingPieceCheckRepository.class);
+        when(checkRepo.save(any())).thenAnswer(a -> {
+            checks.add(a.getArgument(0));
+            return a.getArgument(0);
+        });
         when(settings.getDecimal(SettingKey.OFFCUT_MIN_AREA)).thenReturn(new BigDecimal("0.25"));
         when(settings.getInt(SettingKey.OFFCUT_MIN_SIDE)).thenReturn(300);
         when(settings.getDecimal(SettingKey.GLASS_DENSITY)).thenReturn(new BigDecimal("2.5"));
@@ -99,7 +108,7 @@ class CuttingJobServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2026-10-08T08:00:00Z"), ZoneId.of("Africa/Kigali"));
         StockService stockService = new StockService(unitRepo, movementRepo, costEntryRepo, adjustmentLineRepo, mock(StockCountRepository.class), mock(SalesInvoiceLineRepository.class), mock(TripRepository.class), locationRepo, numbers, clock);
         service = new CuttingJobService(repo, mock(CuttingJobLineRepository.class), outputRepo, productRepo, customerRepo,
-                serviceRepo, unitRepo, stockService, mock(PostingService.class), numbers, settings, clock);
+                serviceRepo, unitRepo, stockService, mock(PostingService.class), numbers, settings, checkRepo, clock);
     }
 
     // ---------------------------------------------------------------- drafts (PRD-01)
@@ -521,6 +530,115 @@ class CuttingJobServiceTest {
         assertThatThrownBy(() -> service.cutRest(job.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("messageKey", "cutting.rest.exists");
+    }
+
+    // ---------------------------------------------------------------- verification (IMP 10 step 3, PF-03)
+
+    @Test
+    void anotherPersonAcceptsThePiecesOfACut() {
+        CuttingJob job = cutForSale();
+        signIn(7L, "manager1");
+        CuttingJobService.Verified v = service.verify(job.getId(), List.of(), null, "All within 1 mm");
+        assertThat(v.passed()).isEqualTo(3);
+        assertThat(v.rework()).isNull();
+        assertThat(checks).hasSize(3).allSatisfy(c -> {
+            assertThat(c.isPassed()).isTrue();
+            assertThat(c.getUsername()).isEqualTo("manager1");
+        });
+        assertThat(job.getVerifiedBy()).isEqualTo("manager1");
+        assertThat(job.getVerifyNote()).isEqualTo("All within 1 mm");
+        assertThatThrownBy(() -> service.verify(job.getId(), List.of(), null, null))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "cutting.verify.done");
+    }
+
+    @Test
+    void whoRecordedTheCutDoesNotVerifyIt() {
+        CuttingJob job = cutForSale();
+        signIn(5L, "operator1");
+        assertThatThrownBy(() -> service.verify(job.getId(), List.of(), null, null))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "cutting.verify.ownCut");
+    }
+
+    @Test
+    void aPieceOutOfSpecificationIsCutAgainForTheSameSaleLine() {
+        CuttingJob job = cutForSale();
+        signIn(7L, "manager1");
+        StockUnit wrong = pieces.get(1);                                   // a 1500 x 1000 piece
+        assertThatThrownBy(() -> service.verify(job.getId(), List.of(wrong.getId()), " ", null))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "cutting.verify.reason");
+
+        CuttingJobService.Verified v = service.verify(job.getId(), List.of(wrong.getId()), "4 mm short on the width", null);
+        assertThat(v.passed()).isEqualTo(2);
+        assertThat(v.rejected()).isEqualTo(1);
+        assertThat(v.rework().getParentJobId()).isEqualTo(job.getId());
+        assertThat(v.rework().getSalesInvoiceId()).isEqualTo(job.getSalesInvoiceId());
+        assertThat(v.rework().getLines()).singleElement().satisfies(l -> {
+            assertThat(l.getWidthMm()).isEqualTo(1500);
+            assertThat(l.getQuantity()).isEqualTo(1);
+            assertThat(l.getSalesLineId()).isEqualTo(job.getLines().get(1).getSalesLineId());
+        });
+        assertThat(checks).filteredOn(c -> !c.isPassed()).singleElement().satisfies(c -> {
+            assertThat(c.getStockUnitId()).isEqualTo(wrong.getId());
+            assertThat(c.getReason()).isEqualTo("4 mm short on the width");
+            assertThat(c.getReworkJobId()).isEqualTo(v.rework().getId());
+        });
+    }
+
+    @Test
+    void onlyAcceptedPiecesAreReleasedWhenSettingsAskForTheVerification() {
+        UUID accepted = UUID.randomUUID();
+        UUID rejected = UUID.randomUUID();
+        UUID unchecked = UUID.randomUUID();
+        CuttingPieceCheck ok = new CuttingPieceCheck();
+        ok.setStockUnitId(accepted);
+        ok.setOutcome(PieceCheckOutcome.PASSED);
+        CuttingPieceCheck no = new CuttingPieceCheck();
+        no.setStockUnitId(rejected);
+        no.setOutcome(PieceCheckOutcome.REJECTED);
+        when(checkRepo.findByStockUnitIdIn(any())).thenReturn(List.of(ok, no));
+        assertThat(service.notReleasable(List.of(accepted, rejected, unchecked))).containsExactlyInAnyOrder(rejected, unchecked);
+        when(settings.getBoolean(SettingKey.CUTTING_VERIFY)).thenReturn(false);
+        assertThat(service.notReleasable(List.of(accepted, rejected, unchecked))).containsExactly(rejected);
+    }
+
+    private final List<StockUnit> pieces = new ArrayList<>();
+
+    /** The AT-02 job cut for a sale by operator1: three pieces (2000 x 1000, 1500 x 1000 twice), each a PIECE output. */
+    private CuttingJob cutForSale() {
+        CuttingJob job = draftAt02();
+        job.setPurpose(CuttingPurpose.CUSTOMER);
+        job.setCustomer(customer);
+        job.setSalesInvoiceId(UUID.randomUUID());
+        job.getLines().forEach(l -> l.setSalesLineId(UUID.randomUUID()));
+        job.setStatus(CuttingJobStatus.COMPLETED);
+        job.setCompletedBy("operator1");
+        List<CuttingJobOutput> outputs = new ArrayList<>();
+        int[][] sizes = {{2000, 1000, 0}, {1500, 1000, 1}, {1500, 1000, 1}};
+        for (int[] s : sizes) {
+            StockUnit piece = unit("U-WH-0001" + (40 + pieces.size()), s[0], s[1], "12.5", "60000", StockStatus.RESERVED, rack);
+            pieces.add(piece);
+            CuttingJobOutput o = new CuttingJobOutput();
+            o.setCuttingJobId(job.getId());
+            o.setKind(CuttingOutputKind.PIECE);
+            o.setJobLineId(job.getLines().get(s[2]).getId());
+            o.setStockUnitId(piece.getId());
+            outputs.add(o);
+        }
+        when(outputRepo.findByCuttingJobIdIn(List.of(job.getId()))).thenReturn(outputs);
+        when(unitRepo.findByIdIn(any())).thenReturn(pieces);
+        return job;
+    }
+
+    private static void signIn(long id, String username) {
+        com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal principal =
+                new com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal(id, username, username, "x", true, true, List.of());
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void signOut() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
     }
 
     // ---------------------------------------------------------------- helpers

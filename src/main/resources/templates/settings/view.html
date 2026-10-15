@@ -380,6 +380,59 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.release}">Orders and release</div>
+                                <div class="role-card-desc" th:text="#{settings.group.releaseHint}">The Order Desk, the delivery note, the EBM receipt before goods and the verification of cut pieces</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.salesOrderDesk}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.salesOrderDeskHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.salesOrderDesk} ? #{settings.onOrderDesk} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.salesOrderValidDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.salesOrderValidDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.salesOrderValidDays}">3</span> <span class="unit" th:text="#{settings.days}">days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.releaseByNote}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.releaseByNoteHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.releaseByNote} ? #{settings.onReleaseByNote} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.ebmBeforeRelease}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.ebmBeforeReleaseHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.ebmBeforeRelease} ? #{settings.onEbmBeforeRelease} : #{settings.off}">value</dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.signedCopyDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.signedCopyDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.signedCopyDays}">3</span> <span class="unit" th:text="#{settings.workingDays}">working days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.cuttingVerify}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.cuttingVerifyHint}">hint</span>
+                                </dt>
+                                <dd th:text="${settings.cuttingVerify} ? #{settings.onCuttingVerify} : #{settings.off}">value</dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

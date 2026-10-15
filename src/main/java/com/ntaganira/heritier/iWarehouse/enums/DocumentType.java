@@ -64,6 +64,8 @@ public enum DocumentType {
     SITE_TRANSFER("STR"),
     /** The ticket of a stock movement, verified, countersigned and posted (F-05, Annex I): TT-WH-2026-000001. */
     TRANSACTION_TICKET("TT"),
+    /** The delivery note and goods release authority (F-04, DN-005): DN-WH-2026-000001. */
+    DELIVERY_NOTE("DN"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

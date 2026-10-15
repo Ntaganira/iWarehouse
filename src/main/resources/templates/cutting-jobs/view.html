@@ -9,7 +9,9 @@
         canLabel=${#authorization.expression('hasAuthority(''PAGE_STOCK'') and hasAuthority(''PERM_PRINT_LABEL'')')},
         seeStock=${#authorization.expression('hasAuthority(''PAGE_STOCK'') and hasAuthority(''PERM_VIEW_STOCK'')')},
         seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
-        taken=${s == 'IN_PROGRESS' or s == 'COMPLETED'}">
+        taken=${s == 'IN_PROGRESS' or s == 'COMPLETED'},
+        canVerify=${#authorization.expression('hasAuthority(''PERM_VERIFY_CUT'')')},
+        mayVerify=${s == 'COMPLETED' and job.verifiedAt == null and canVerify and !cutByMe and !#lists.isEmpty(cutPieces)}">
     <div class="page-header">
         <div>
             <h1 class="mono" th:text="${job.number}">CUT-WH-2026-000001</h1>
@@ -31,6 +33,7 @@
             <a th:if="${canCut and s == 'DRAFT'}" th:href="@{/cutting-jobs/{id}/start(id=${job.id})}" class="btn btn-primary" th:text="#{cutting.start}">Take a sheet</a>
             <a th:if="${canCut and s == 'IN_PROGRESS'}" th:href="@{/cutting-jobs/{id}/complete(id=${job.id})}" class="btn btn-primary" th:text="#{cutting.complete}">Record the cut</a>
             <a th:if="${canLabel and s == 'COMPLETED' and !outcome.units.isEmpty()}" th:href="@{/stock/labels(job=${job.id})}" class="btn btn-outline" th:text="#{cutting.printLabels}">Print labels</a>
+            <button type="button" class="btn btn-primary" data-modal-open="verify-modal" th:if="${mayVerify}" th:text="#{cutting.verify}">Verify the pieces</button>
             <form th:if="${canManage and job.short and #lists.isEmpty(restJobs)}" th:action="@{/cutting-jobs/{id}/rest(id=${job.id})}" method="post"
                   class="row-action-form confirm-submit" th:attr="data-confirm=#{cutting.restConfirm(${job.pieces - job.piecesCut})}">
                 <button type="submit" class="btn btn-primary" th:text="#{cutting.rest}">Cut the rest</button>
@@ -54,6 +57,15 @@
             <span th:text="#{cutting.restIn}">They are on</span>
             <a class="mono" th:href="@{/cutting-jobs/{id}(id=${r.id})}" th:text="${r.number}">CUT-WH-2026-000002</a>
         </th:block>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'COMPLETED' and job.verifiedAt == null and verifyRequired and !#lists.isEmpty(cutPieces)}">
+        <span th:text="#{cutting.verifyWaiting}">The pieces wait for another person to measure them: they are handed over once accepted.</span>
+        <span th:if="${cutByMe}" th:text="#{cutting.verifyNotYou}">You recorded the cut: someone else verifies it.</span>
+    </div>
+    <div class="doc-note" th:if="${job.verifiedAt != null}">
+        <strong th:text="#{cutting.verifiedBy(${job.verifiedBy}, ${#temporals.format(job.verifiedAt, 'dd/MM/yyyy HH:mm')})}">Pieces verified by manager1 on 15/10/2026 12:00.</strong>
+        <span th:if="${job.verifyNote != null}" th:text="${job.verifyNote}">All within 1 mm</span>
     </div>
 
     <div class="kpi-grid doc-kpis">
@@ -108,6 +120,14 @@
                 <span class="section-count" th:text="${job.lines.size()}">2</span>
             </button>
             <button type="button" class="tab" data-tab="tab-cut" th:classappend="${tab == 'cut'} ? 'active'" th:if="${taken}" th:text="#{cutting.cutTab}">The cut</button>
+            <button type="button" class="tab" data-tab="tab-checks" th:classappend="${tab == 'checks'} ? 'active'" th:if="${s == 'COMPLETED'}">
+                <span th:text="#{cutting.checksTab}">Verification</span>
+                <span class="section-count" th:text="${checks.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -314,6 +334,44 @@
                 </th:block>
             </div>
 
+            <div class="tab-content" id="tab-checks" th:classappend="${tab == 'checks'} ? 'active'" th:if="${s == 'COMPLETED'}">
+                <p class="tab-intro" th:text="#{cutting.checksIntro}">Each piece measured by another person than who recorded the cut: accepted, or out of specification and cut again.</p>
+                <div class="table-container" th:unless="${#lists.isEmpty(checks)}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{stock.code}">Label</th>
+                                <th th:text="#{cutting.checkOutcome}">Outcome</th>
+                                <th th:text="#{reason.label}">Reason</th>
+                                <th th:text="#{cutting.checkedBy}">Checked by</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${checks}">
+                                <td class="mono" th:text="${c.unitCode}">U-WH-000090</td>
+                                <td>
+                                    <span class="badge" th:classappend="${c.passed} ? 'badge-success' : 'badge-danger'"
+                                          th:text="#{${'cutting.check.' + c.outcome}}">Accepted</span>
+                                    <div class="cell-sub" th:if="${c.reworkJobId != null}">
+                                        <a class="mono" th:href="@{/cutting-jobs/{id}(id=${c.reworkJobId})}" th:text="#{cutting.reworkLink}">cut again</a>
+                                    </div>
+                                </td>
+                                <td th:text="${c.reason ?: '—'}">—</td>
+                                <td>
+                                    <span th:text="${c.username}">manager1</span>
+                                    <div class="cell-sub" th:text="${#temporals.format(c.createdAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 12:00</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="form-note" th:if="${#lists.isEmpty(checks)}" th:text="#{cutting.checksNone}">Not verified yet.</p>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <p class="tab-intro" th:text="#{cutting.documentsIntro}">Keep the approved drawing of the sizes and any written confirmation from the customer.</p>
+                <th:block th:replace="~{fragments/attachments :: documents('CUTTING_JOB', ${job.id}, ${documents}, '/cutting-jobs/' + ${job.id})}"></th:block>
+            </div>
+
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <p class="tab-intro" th:text="#{cutting.historyIntro}">Changes to the job and its pieces, newest first.</p>
                 <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
@@ -326,6 +384,39 @@
         <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{cutting.cancelTitle(${job.number})},
                 @{/cutting-jobs/{id}/cancel(id=${job.id})}, ${s == 'IN_PROGRESS'} ? #{cutting.cancelTextTaken(${job.sourceCode})} : #{cutting.cancelText}, #{cutting.cancel})}"></div>
     </th:block>
+    <!-- Verify the pieces (IMP 10 step 3): tick those out of specification -->
+    <div class="modal-overlay" id="verify-modal" th:if="${mayVerify}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="verify-title">
+            <div class="modal-header">
+                <h3 id="verify-title" th:text="#{cutting.verifyTitle(${job.number})}">Verify the pieces of CUT-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="verify-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/cutting-jobs/{id}/verify(id=${job.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{cutting.verifyText}">Measure each piece against the sizes ordered. Tick only those out of specification: their sizes go on a new job, cut again.</p>
+                    <div class="form-group">
+                        <span class="label" th:text="#{cutting.outOfSpec}">Out of specification</span>
+                        <label class="checkbox-item" th:each="p : ${cutPieces}">
+                            <input type="checkbox" class="checkbox" name="rejectedIds" th:value="${p.id}">
+                            <span class="mono" th:text="${p.code + ' · ' + p.widthMm + ' × ' + p.heightMm}">U-WH-000090 · 600 × 400</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="verify-reason" th:text="#{cutting.rejectReason}">Why they are out of specification</label>
+                        <input type="text" id="verify-reason" name="reason" maxlength="255" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="verify-note" th:text="#{ticket.note}">Note (optional)</label>
+                        <input type="text" id="verify-note" name="note" maxlength="500" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="verify-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{cutting.verifySubmit}">Record the verification</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <th:block th:if="${canCut and s == 'IN_PROGRESS'}">
         <div th:replace="~{fragments/reason-modal :: reasonModal('release-modal', #{cutting.releaseTitle(${job.sourceCode})},
                 @{/cutting-jobs/{id}/release(id=${job.id})}, #{cutting.releaseText}, #{cutting.release})}"></div>

@@ -443,10 +443,23 @@ public class FixedAssetService {
         return runRepo.findFirstByStatusOrderByPeriodAsc(DepreciationRunStatus.POSTED).map(r -> YearMonth.from(r.getPeriod()));
     }
 
-    /** What a month's run would post, and why it cannot run if it cannot. */
+    /** The posted run of a month, if it has one. */
+    public Optional<DepreciationRun> postedRun(YearMonth month) {
+        return runRepo.findByPeriodAndStatus(month.atDay(1), DepreciationRunStatus.POSTED);
+    }
+
+    /** Whether a month is the latest posted run's or before it: nothing is left to preview there. */
+    public boolean isRunAlready(YearMonth month) {
+        return latestPosted().map(r -> !month.isAfter(YearMonth.from(r.getPeriod()))).orElse(false);
+    }
+
+    /**
+     * What a month's run would post, and why it cannot run if it cannot. A month already run, or before the latest run, has no
+     * lines: its depreciation to date would count runs made after it.
+     */
     public Preview preview(YearMonth month) {
         List<FixedAsset> active = repo.findByStatusOrderByNumberAsc(FixedAssetStatus.ACTIVE);
-        List<PreviewLine> lines = linesFor(active, month);
+        List<PreviewLine> lines = isRunAlready(month) ? List.of() : linesFor(active, month);
         String[] blocked = blocked(month);
         return new Preview(month, lines, blocked == null ? null : blocked[0], blocked == null ? new Object[0] : Arrays.copyOfRange(blocked, 1, blocked.length));
     }

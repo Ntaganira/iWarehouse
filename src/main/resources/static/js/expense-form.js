@@ -78,6 +78,9 @@
         set('.bill-net', net);
         set('.bill-vat', vat);
         set('.bill-total', net + vat);
+        // The withholding rate counts only when the bill withholds (U.14)
+        const withhold = form.querySelector('#withhold'), rate = form.querySelector('.wht-rate-group');
+        if (withhold && rate) rate.hidden = withhold.value !== 'true';
     }
 
     // ---------------------------------------------------------------- a requisition

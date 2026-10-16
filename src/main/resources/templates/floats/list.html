@@ -126,7 +126,7 @@
                                 <td class="num" th:text="${@num.money(f.expected)}">295,008</td>
                                 <td class="num" th:text="${@num.money(f.counted)}">294,008</td>
                                 <td class="num">
-                                    <span th:if="${f.shortage.signum() > 0}" class="text-danger" th:text="${'−' + @num.money(f.shortage)}">−1,000</span>
+                                    <span th:if="${f.shortage.signum() > 0}" class="text-danger" th:text="${'-' + @num.money(f.shortage)}">-1,000</span>
                                     <span th:if="${f.overage.signum() > 0}" th:text="${'+' + @num.money(f.overage)}">+500</span>
                                     <span th:if="${f.shortage.signum() == 0 and f.overage.signum() == 0}">0</span>
                                 </td>

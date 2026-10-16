@@ -45,7 +45,7 @@
                     <tr>
                         <td class="strong" th:text="#{taxReturn.vat}">VAT</td>
                         <td>RRA</td>
-                        <td class="num" th:text="${(r.vat.payable.signum() < 0 ? '−' : '') + @num.money(r.vat.payable.abs())}">54,000</td>
+                        <td class="num" th:text="${(r.vat.payable.signum() < 0 ? '-' : '') + @num.money(r.vat.payable.abs())}">54,000</td>
                         <td>
                             <a sec:authorize="hasAuthority('PAGE_VAT_REPORT')" th:href="@{/accounting/vat-report(month=${month})}" th:text="#{vatReport.title}">VAT report</a>
                             <div class="cell-sub" th:if="${r.vat.payable.signum() < 0}" th:text="#{taxReturn.vatCredit}">a credit carried forward</div>

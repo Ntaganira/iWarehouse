@@ -173,6 +173,8 @@ public class FixedAssetController {
         model.addAttribute("previewLines", Paging.of(preview.lines(), Paging.page(ppage)));
         model.addAttribute("blockedText", preview.blockedKey() == null ? null : messages.get(preview.blockedKey(), preview.blockedArgs()));
         model.addAttribute("month", chosen);
+        model.addAttribute("runAlready", assets.isRunAlready(chosen));
+        model.addAttribute("monthRun", assets.postedRun(chosen).orElse(null));
         model.addAttribute("nextRun", next);
         model.addAttribute("firstRun", assets.firstRun().orElse(null));
         model.addAttribute("latest", assets.latestPosted().orElse(null));

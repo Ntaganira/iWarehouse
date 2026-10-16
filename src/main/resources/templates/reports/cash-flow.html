@@ -83,16 +83,16 @@
                                     <div class="cell-sub" th:text="${#temporals.format(w.from, 'dd/MM') + ' – ' + #temporals.format(w.to, 'dd/MM/yyyy')}">16/10 – 22/10/2026</div>
                                 </td>
                                 <td class="num" th:text="${@num.money(w.opening)}">12,500,000</td>
-                                <td class="num" th:each="k : ${columns}" th:text="${w.get(k).signum() == 0} ? '—' : ${(k.in ? '' : '−') + @num.money(w.get(k))}">2,000,000</td>
-                                <td class="num" th:text="${w.planned.signum() == 0} ? '—' : ${(w.planned.signum() < 0 ? '−' : '') + @num.money(w.planned.abs())}">−1,500,000</td>
+                                <td class="num" th:each="k : ${columns}" th:text="${w.get(k).signum() == 0} ? '—' : ${(k.in ? '' : '-') + @num.money(w.get(k))}">2,000,000</td>
+                                <td class="num" th:text="${w.planned.signum() == 0} ? '—' : ${(w.planned.signum() < 0 ? '-' : '') + @num.money(w.planned.abs())}">-1,500,000</td>
                                 <td class="num strong" th:classappend="${w.short} ? 'text-danger'" th:text="${@num.money(w.closing)}">13,200,000</td>
                             </tr>
                         </tbody>
                         <tfoot>
                             <tr>
                                 <th colspan="2" th:text="#{fin.total}">Total</th>
-                                <th class="num" th:each="k : ${columns}" th:text="${(k.in ? '' : '−') + @num.money(f.getTotal(k))}">0</th>
-                                <th class="num" th:text="${(f.totalPlanned.signum() < 0 ? '−' : '') + @num.money(f.totalPlanned.abs())}">0</th>
+                                <th class="num" th:each="k : ${columns}" th:text="${(k.in ? '' : '-') + @num.money(f.getTotal(k))}">0</th>
+                                <th class="num" th:text="${(f.totalPlanned.signum() < 0 ? '-' : '') + @num.money(f.totalPlanned.abs())}">0</th>
                                 <th class="num" th:text="${@num.money(f.closing)}">0</th>
                             </tr>
                         </tfoot>
@@ -207,7 +207,7 @@
                                     <span th:text="#{${'cashflow.repeat.' + i.repeats}}">Every month</span>
                                     <div class="cell-sub" th:if="${i.until != null}" th:text="#{cashflow.item.untilSub(${#temporals.format(i.until, 'dd/MM/yyyy')})}">until 31/12/2027</div>
                                 </td>
-                                <td class="num" th:text="${(i.direction.name() == 'OUT' ? '−' : '') + @num.money(i.amount)}">−1,500,000</td>
+                                <td class="num" th:text="${(i.direction.name() == 'OUT' ? '-' : '') + @num.money(i.amount)}">-1,500,000</td>
                                 <td th:if="${canManage}" class="actions">
                                     <form th:action="@{/reports/cash-flow/items/{id}/cancel(id=${i.id})}" method="post" class="row-action-form confirm-submit danger"
                                           th:attr="data-confirm=#{cashflow.item.cancelConfirm(${i.description})}">

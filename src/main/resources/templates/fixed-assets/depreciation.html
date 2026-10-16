@@ -33,11 +33,15 @@
         </form>
     </div>
 
-    <div class="doc-note is-warning" th:if="${blockedText != null}" th:text="${blockedText}">The depreciation of 10/2026 can be posted once the month has ended.</div>
+    <div class="doc-note" th:if="${monthRun != null}">
+        <span th:text="#{depreciation.existsRun(${monthText})}">The depreciation of 09/2026 is posted already:</span>
+        <a class="mono" th:href="@{/fixed-assets/depreciation/{id}(id=${monthRun.id})}" th:text="${monthRun.number}">DEP-WH-2026-000002</a>
+    </div>
+    <div class="doc-note is-warning" th:if="${blockedText != null and monthRun == null}" th:text="${blockedText}">The depreciation of 10/2026 can be posted once the month has ended.</div>
     <div class="doc-note" th:if="${blockedText == null and !p.runnable}" th:text="#{depreciation.nothingNote(${monthText})}">No asset in use is due to be depreciated in 09/2026.</div>
     <div class="doc-note" th:if="${firstRun == null}" th:text="#{depreciation.firstNote}">No month has been run yet: choose the first month the register depreciates; the months after it then follow in order.</div>
 
-    <div class="section">
+    <div class="section" th:unless="${runAlready}">
         <div class="section-header">
             <h2>
                 <span th:text="#{depreciation.previewTitle(${monthText})}">09/2026 to post</span>

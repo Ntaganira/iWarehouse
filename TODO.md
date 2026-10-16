@@ -217,6 +217,7 @@ The web app (`/m/`) stays.
 - [x] The app (L) — 2026-10-13: `mobile/`, the same API and the same behaviour as the web app (sign in with the server's address, trip download, scan or tap to sell, prices within the limit, cash and mobile money, receipt shared as a picture or text, offline queue with backoff, EBM signature, breakage with photo and position, cash declaration, EN/FR, light and dark). Its sums are tested against the server's worked examples (`test/money_test.dart`), its rules and screens against a fake server
 - [ ] Tried on the owner's phone: a test APK (`ALLOW_HTTP`) against the dev server, then against the real one
   - 2026-10-14: the test APK is built (`mobile/build/app/outputs/flutter-apk/app-release.apk`, 49 MB, a copy on the Desktop as HighBytesPOS-test.apk): ARM phones, Android 7.0 and later, signed with the debug key, plain http allowed, starting at the dev server http://192.168.76.4:8080. To build it the Android NDK r28c was installed by hand, Kotlin's incremental compilation is off (sources on C:, project on H:) and path_provider_android stays below 2.3 (mobile/README.md)
+  - 2026-10-16: rebuilt as version 1.1.0 (build 2, 51.5 MB, `--target-platform android-arm,android-arm64`) with M15’s deposits, van counts and credit on the road, starting at the dev server’s new address http://10.235.217.4:8080 (the PC’s address changes with the network: the driver can type another on the sign-in screen); the Desktop copy HighBytesPOS-test.apk replaced
 - [ ] Release signing: an upload key for the Play Store, kept outside the repository; the Play Store listing
 - [ ] iOS: a build on a Mac with Xcode (`flutter build ipa`), then TestFlight or the App Store
 - [ ] The real server reachable from the road over HTTPS (a domain and a certificate): the app accepts no plain http in a release build
@@ -389,7 +390,9 @@ Answers change what gets built; record each answer next to the question.
 - For My day and the test APK on 2026-10-14 (manual-admin): trip TRP-WH-2026-000018 (RAC123A, driver-m7, Musanze, Rubavu, U-WH-000053..55 loaded, departed at 45,470 km, still on the road: return or cancel it before go-live); the web app signed in for driver-m7 as phone "Edge check (My day)" (an api_devices token; the trip's prices frozen and invoice numbers given to it)
 - Phone pictures of the main system for the user manual on 2026-10-13 (manual-admin): trip TRP-WH-2026-000017 (RAC123A, Jean Driver, Huye: U-WH-000053..55 on its manifest, two scanned, then cancelled "Made for the user manual (test)") and stock count CNT-WH-2026-000008 (WH-A-R04, U-WH-000053 and -000054 scanned, cancelled with the same reason). TRP-WH-2026-000013 (Nyamata, planned for 12/10/2026 with U-WH-000084) was already there and was left as it is
 - Responsive checks: orders PO-WH-2026-000010 and -000011 and cutting jobs CUT-WH-2026-000006 and -000007, all cancelled ("Responsive check"); U-WH-000055 taken and released twice
-- Disabled test users (cashier*, auditor*, super4032); test owner user owner38648 (password kept out of the repo) — disable before go-live
+- Disabled test users (cashier*, auditor*, super4032); test owner user owner38648 — disable before go-live
+- **Every dev user, admin included, has the password `password123`** (the user’s choice, 2026-10-16, set through User Management’s reset, 13 RESET_PASSWORD rows in the activity log). Give every real user their own password before go-live, and never copy the dev users to the real server
+- The phone API’s sign-in check of 2026-10-16: driver-m7 signed in from the device "Password check" (an api_devices row, signed out at once)
 - Test prices on the RETAIL and CONTRACTOR lists
 
 ---

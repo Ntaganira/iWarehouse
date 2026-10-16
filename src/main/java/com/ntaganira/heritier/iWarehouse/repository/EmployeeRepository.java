@@ -42,6 +42,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     @EntityGraph(attributePaths = {"user"})
     Optional<Employee> findByUser_Id(Long userId);
 
+    /** Employees still with the business (a staff advance is asked for one). */
+    List<Employee> findByLeftOnIsNullOrderByFullNameAsc();
+
     boolean existsByNationalId(String nationalId);
 
     boolean existsByNationalIdAndIdNot(String nationalId, UUID id);

@@ -30,4 +30,7 @@ public interface SupplierInvoiceRepository extends JpaRepository<SupplierInvoice
     Optional<SupplierInvoice> findDetailedById(UUID id);
 
     boolean existsBySupplier_IdAndSupplierRefIgnoreCase(UUID supplierId, String supplierRef);
+
+    /** Supplier invoices dated in a period (the expenditure report's three-way match). */
+    long countByInvoiceDateBetween(java.time.LocalDate from, java.time.LocalDate to);
 }

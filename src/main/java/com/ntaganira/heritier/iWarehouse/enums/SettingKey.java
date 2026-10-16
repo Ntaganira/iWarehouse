@@ -212,6 +212,24 @@ public enum SettingKey {
     EXPENSE_RATIFY_DAYS("expense.ratify-days", "expenseRatifyDays", "10"),
     /** The cost centre vehicle costs are posted to (F-15 A). */
     EXPENSE_FLEET_COST_CENTRE("expense.fleet-cost-centre", "expenseFleetCostCentre", "SC"),
+    /** The largest float a petty cash fund may hold (CMP 07: 200,000 per location). */
+    PETTY_CASH_MAX_FLOAT("pettycash.max-float", "pettyCashMaxFloat", "200000"),
+    /** The largest single petty cash payment (CMP 07: 50,000). */
+    PETTY_CASH_MAX_PAYMENT("pettycash.max-payment", "pettyCashMaxPayment", "50000"),
+    /** A fund below this share of its float is topped up (CMP 07: 25 %). */
+    PETTY_CASH_REPLENISH_PERCENT("pettycash.replenish-percent", "pettyCashReplenishPercent", "25"),
+    /** A voucher is submitted with its original receipt attached (CMP 07, F-13 D). */
+    PETTY_CASH_RECEIPT_REQUIRED("pettycash.receipt-required", "pettyCashReceiptRequired", "true"),
+    /** Finance counts each fund by surprise once a month: told when none by this day of the month (CMP 07). */
+    PETTY_CASH_AUDIT_DAY("pettycash.audit-day", "pettyCashAuditDay", "25"),
+    /** Working days after the advance is paid (or the trip ends) to retire it with receipts (CMP 08: 10). */
+    ADVANCE_RETIRE_DAYS("advance.retire-days", "advanceRetireDays", "10"),
+    /** No new advance for an employee while one is open (CMP 08). */
+    ADVANCE_BLOCK_OPEN("advance.block-open", "advanceBlockOpen", "true"),
+    /** An advance is retired with its receipts attached (CMP 08). */
+    ADVANCE_RECEIPTS_REQUIRED("advance.receipts-required", "advanceReceiptsRequired", "true"),
+    /** An advance not retired in time is taken from the next salary (CMP 08). */
+    ADVANCE_PAYROLL_RECOVERY("advance.payroll-recovery", "advancePayrollRecovery", "true"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

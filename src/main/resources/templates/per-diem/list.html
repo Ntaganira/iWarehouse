@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{perDiem.title}, ~{::content})}">
+<head><title>Per diem rates - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{perDiem.title}">Per diem rates</h1>
+            <div class="subtitle" th:text="#{perDiem.subtitle}">What a journey pays a day for meals and incidentals, and a night for accommodation, by where it goes</div>
+        </div>
+        <a href="/payroll/advances" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_STAFF_ADVANCES')" th:text="#{nav.staffAdvances}">Staff advances</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{perDiem.sectionTitle}">Rates</span>
+                <span class="section-count" th:text="${rates.totalElements}">4</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{perDiem.category}">Category</th>
+                        <th th:text="#{perDiem.currency}">Currency</th>
+                        <th class="num" th:text="#{perDiem.meal}">Meals a day</th>
+                        <th class="num" th:text="#{perDiem.incidentals}">Incidentals a day</th>
+                        <th class="num" th:text="#{perDiem.accommodation}">Accommodation a night</th>
+                        <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rates.content}">
+                        <td>
+                            <span class="strong" th:text="#{${'perDiem.category.' + r.category}}">Upcountry</span>
+                            <div class="cell-sub" th:text="#{${'perDiem.categoryHint.' + r.category}}">Outside Kigali, in Rwanda</div>
+                        </td>
+                        <td class="mono" th:text="${r.currencyCode}">RWF</td>
+                        <td class="num" th:text="${@num.money(r.meal)}">25,000</td>
+                        <td class="num" th:text="${@num.money(r.incidentals)}">10,000</td>
+                        <td class="num" th:text="${@num.money(r.accommodation)}">40,000</td>
+                        <td class="actions">
+                            <a sec:authorize="hasAuthority('PERM_MANAGE_PER_DIEM')" th:href="@{/payroll/per-diem/{id}/edit(id=${r.id})}" class="action-icon"
+                               th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rates}, '/payroll/per-diem', '')}"></th:block>
+        <p class="form-note" th:text="#{perDiem.note}">A travel advance pays days x (meals + incidentals) + nights x accommodation; a rate in another currency is converted at the exchange rate of the day the advance is asked, kept on it.</p>
+    </div>
+</div>
+</body>
+</html>

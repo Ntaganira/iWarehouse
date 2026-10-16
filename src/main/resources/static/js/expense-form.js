@@ -1,18 +1,20 @@
 /*
- * iWarehouse - expense bill and requisition forms (CMP 01, 05, 06).
+ * iWarehouse - expense bill, requisition and advance retirement forms (CMP 01, 05, 06, 08).
  * Rows in each table (tbody.line-body[data-prefix]) are added from template.line-template[data-for] and removed;
  * their numbers stay continuous (lines[0], quotes[0]...). The chosen quote is a radio whose value is its row.
  * Live figures: a bill line's amount with VAT and the bill's totals (VAT at most 18 % of a line); a requisition
- * line's amount, the estimated total, the sourcing its value calls for and the cheapest quote. The server checks
+ * line's amount, the estimated total, the sourcing its value calls for and the cheapest quote; an advance's receipts
+ * against what is still owed (the rest returned, or paid back to the employee). The server checks
  * everything again; these figures are only a preview.
  */
 (function () {
     'use strict';
 
-    const form = document.querySelector('form.expense-form, form.requisition-form');
+    const form = document.querySelector('form.expense-form, form.requisition-form, form.retire-form');
     if (!form) return;
 
     const isBill = form.classList.contains('expense-form');
+    const isRetire = form.classList.contains('retire-form');
     const fmt = (value) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
     const num = (el) => {
         const v = el ? parseFloat(el.value) : NaN;
@@ -112,8 +114,29 @@
         if (cheapest && quotes.length > 1) cheapest.row.classList.add('is-cheapest');
     }
 
+    // ---------------------------------------------------------------- an advance retired (CMP 08)
+
+    function recalcRetire() {
+        let spent = 0;
+        rowsOf(bodyOf('lines')).forEach(row => {
+            const a = num(field(row, 'amount'));
+            if (a) spent += a;
+        });
+        const owed = parseFloat(form.dataset.outstanding) || 0;
+        const rest = Math.round((owed - spent) * 100) / 100;
+        const set = (sel, text) => { const el = form.querySelector(sel); if (el) el.textContent = text; };
+        set('.retire-spent', fmt(spent));
+        const settle = form.querySelector('.retire-settle');
+        if (settle) {
+            settle.textContent = rest > 0 ? settle.dataset.returned.replace('{0}', fmt(rest))
+                : rest < 0 ? settle.dataset.paidBack.replace('{0}', fmt(-rest)) : settle.dataset.even;
+        }
+        const method = form.querySelector('.retire-method');
+        if (method) method.hidden = rest === 0;
+    }
+
     function recalc() {
-        if (isBill) recalcBill(); else recalcRequisition();
+        if (isRetire) recalcRetire(); else if (isBill) recalcBill(); else recalcRequisition();
     }
 
     form.addEventListener('click', (e) => {

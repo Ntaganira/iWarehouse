@@ -44,6 +44,14 @@ public class PayRunLine extends BaseEntity {
     @Column(name = "driver_id")
     private UUID driverId;
 
+    /** A staff advance not retired in time, recovered by the advance deduction (CMP 08). */
+    @Column(name = "advance_id")
+    private UUID advanceId;
+
+    /** The employee's cost centre, copied: the salary posts to it (F-15 A). */
+    @Column(name = "cost_centre_id")
+    private UUID costCentreId;
+
     @Column(name = "employee_code", nullable = false, length = 20, updatable = false)
     private String employeeCode;
 

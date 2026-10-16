@@ -122,6 +122,7 @@ public class RequisitionController {
         String open = "history".equals(tab) ? tab : "documents";
         model.addAttribute("req", r);
         model.addAttribute("mine", service.isRequester(r));
+        model.addAttribute("head", service.isHead(r));
         model.addAttribute("sourcing", service.sourcingOf(r));
         model.addAttribute("tiers", service.tiers());
         model.addAttribute("documentCount", attachmentService.count(AttachmentOwner.PURCHASE_REQUISITION, id));

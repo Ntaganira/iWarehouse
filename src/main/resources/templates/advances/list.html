@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{advance.title}, ~{::content})}">
+<head><title>Staff advances - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{advance.title}">Staff advances</h1>
+            <div class="subtitle" th:text="#{advance.subtitle}">Approved by the Managing Director, retired with receipts within ten working days, recovered from salary when late</div>
+        </div>
+        <a href="/payroll/advances/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_REQUEST_ADVANCE')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{advance.new}">Ask for an advance</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waiting > 0}">
+        <span th:text="#{advance.waitingNote(${waiting})}">2 advances wait for approval.</span>
+        <a th:href="@{/payroll/advances(status='waiting')}" th:text="#{expense.showWaiting}">Show them</a>
+    </div>
+    <div class="doc-note is-danger" th:if="${overdue > 0}">
+        <span th:text="#{advance.overdueNote(${overdue})}">1 advance is not retired by its day: the next pay run takes it from salary.</span>
+        <a th:href="@{/payroll/advances(status='overdue')}" th:text="#{expense.showWaiting}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{advance.sectionTitle}">Advances</span>
+                <span class="section-count" th:text="${advances.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/payroll/advances}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{advance.searchPh}" th:aria-label="#{advance.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="waiting" th:selected="${status == 'waiting'}" th:text="#{expense.filter.waiting}">Waiting</option>
+                    <option value="overdue" th:selected="${status == 'overdue'}" th:text="#{advance.filter.overdue}">Overdue</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'advance.status.' + st}}">Paid</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{advance.number}">Advance</th>
+                        <th th:text="#{advance.employee}">Employee</th>
+                        <th th:text="#{advance.purpose}">For</th>
+                        <th class="num" th:text="#{advance.amount}">Amount (RWF)</th>
+                        <th th:text="#{advance.dueOn}">Retire by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${advances.content}">
+                        <td><a class="row-link strong mono" th:href="@{/payroll/advances/{id}(id=${a.id})}" th:text="${a.number}">ADV-WH-2026-000001</a></td>
+                        <td>
+                            <span th:text="${a.employee.fullName}">Jean Habimana</span>
+                            <div class="cell-sub mono" th:text="${a.employee.code}">EMP-WH-0001</div>
+                        </td>
+                        <td>
+                            <span th:text="${a.purpose}">Customer visits in Musanze</span>
+                            <div class="cell-sub" th:text="#{${'advance.kind.' + a.kind}}">Travel</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(a.amount)}">110,000</td>
+                        <td class="nowrap" th:text="${a.dueOn != null} ? ${#temporals.format(a.dueOn, 'dd/MM/yyyy')} : '—'">30/10/2026</td>
+                        <td><th:block th:replace="~{advances/list :: advanceStatus(${a}, ${today})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${advances.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{advance.empty}">No staff advances yet</h3>
+                                <p th:text="#{advance.emptyHint}">Ask for an advance for an employee's journey (worked out from the per diem) or another need; the Managing Director approves it.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${advances}, '/payroll/advances', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* An advance's status as a badge; one paid and past its day says so */-->
+<th:block th:fragment="advanceStatus(a, today)" th:switch="${a.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{advance.status.DRAFT}">Draft</span>
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{advance.status.SUBMITTED}">Submitted</span>
+    <span th:case="'APPROVED'" class="badge badge-info" th:text="#{advance.status.APPROVED}">Approved</span>
+    <th:block th:case="'PAID'">
+        <span class="badge badge-success" th:text="#{advance.status.PAID}">Paid</span>
+        <span class="badge badge-danger" th:if="${a.isOverdue(today)}" th:text="#{advance.overdue}">Overdue</span>
+    </th:block>
+    <span th:case="'RETIRED'" class="badge badge-success" th:text="#{advance.status.RETIRED}">Retired</span>
+    <span th:case="'RECOVERED'" class="badge badge-info" th:text="#{advance.status.RECOVERED}">Recovered from salary</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{advance.status.REJECTED}">Rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{advance.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

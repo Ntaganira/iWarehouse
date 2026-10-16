@@ -57,7 +57,17 @@ public enum JournalSource {
     /** A damage loss charged to whoever pays it back (F-07 C). */
     DAMAGE_RECOVERY("/damage/"),
     /** An expense bill approved: Dr its categories' accounts and VAT Input / Cr Payable naming the supplier (CMP 01). */
-    EXPENSE_BILL("/expenses/");
+    EXPENSE_BILL("/expenses/"),
+    /** A petty cash fund topped up (Dr Petty Cash / Cr Vault or Bank) or its cash returned when it closes. */
+    PETTY_CASH_REPLENISHMENT("/petty-cash/funds/"),
+    /** A petty cash voucher approved: Dr its category's account / Cr Petty Cash naming the site (F-16). */
+    PETTY_CASH_VOUCHER("/petty-cash/vouchers/"),
+    /** A petty cash count's difference: to or from Cash Over and Short. */
+    PETTY_CASH_COUNT("/petty-cash/funds/"),
+    /** A staff advance paid: Dr Staff Advances / Cr what paid it (CMP 08). */
+    STAFF_ADVANCE("/payroll/advances/"),
+    /** A staff advance retired: Dr what it paid for and the cash returned / Cr Staff Advances (CMP 08). */
+    ADVANCE_RETIREMENT("/payroll/advances/");
 
     private final String path;
 

@@ -949,6 +949,25 @@ class PostingServiceTest {
     }
 
     /** A pay run line worked out at the rates V40 seeds. */
+    private static CostCentre centre(String code) {
+        CostCentre c = new CostCentre();
+        c.setId(UUID.randomUUID());
+        c.setCode(code);
+        return c;
+    }
+
+    private static StaffAdvanceLine advanceLine(StaffAdvance advance, int no, ExpenseCategory category, String description, CostCentre centre,
+                                                String amount) {
+        StaffAdvanceLine line = new StaffAdvanceLine();
+        line.setAdvance(advance);
+        line.setLineNo(no);
+        line.setCategory(category);
+        line.setDescription(description);
+        line.setCostCentre(centre);
+        line.setAmount(new BigDecimal(amount));
+        return line;
+    }
+
     private static PayRunLine payLine(String code, String base, String transport, String advance, String shortage, String other,
                                       SalaryPayMethod method, UUID driverId) {
         PayRunLine line = new PayRunLine();
@@ -1120,6 +1139,159 @@ class PostingServiceTest {
 
     private BigDecimal balance(AccountKey account) {
         return lines(account).stream().map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Test
+    void pettyCashMovesOnItsSitesLinesAndAnAdvanceIsPaidAndRetired() {   // CMP 07, 08, F-16, AT-10
+        Location wh = new Location();
+        wh.setId(UUID.randomUUID());
+        wh.setCode("WH");
+        PettyCashFund fund = new PettyCashFund();
+        fund.setId(UUID.randomUUID());
+        fund.setCode("PC-WH");
+        fund.setLocation(wh);
+        CostCentre fin = centre("FIN");
+        CostCentre com = centre("COM");
+
+        // Topped up from the vault
+        PettyCashReplenishment top = new PettyCashReplenishment();
+        top.setId(UUID.randomUUID());
+        top.setNumber("PCR-WH-2026-000001");
+        top.setFund(fund);
+        top.setKind(PettyCashReplenishmentKind.TOP_UP);
+        top.setSource(PettyCashSource.CASH_VAULT);
+        top.setAmount(new BigDecimal("200000"));
+        top.setTxnDate(LocalDate.of(2026, 10, 1));
+        postings.pettyCashReplenishment(top);
+        Journal topUp = last();
+        assertThat(topUp.source()).isEqualTo(JournalSource.PETTY_CASH_REPLENISHMENT);
+        assertThat(topUp.sourceId()).isEqualTo(fund.getId());                                  // the fund's page lists it
+        assertThat(line(topUp, AccountKey.PETTY_CASH).debit()).isEqualByComparingTo("200000");
+        assertThat(line(topUp, AccountKey.PETTY_CASH).locationId()).isEqualTo(wh.getId());
+        assertThat(line(topUp, AccountKey.CASH_VAULT).credit()).isEqualByComparingTo("200000");
+
+        // A voucher: the category for its cost centre and the site / Petty Cash
+        PettyCashVoucher v = new PettyCashVoucher();
+        v.setId(UUID.randomUUID());
+        v.setNumber("PCV-WH-2026-000001");
+        v.setFund(fund);
+        v.setVoucherDate(LocalDate.of(2026, 10, 2));
+        v.setPayee("Moto taxi");
+        v.setPurpose("Documents to RRA");
+        v.setCategory(ExpenseCategory.TRANSPORT);
+        v.setCostCentre(fin);
+        v.setAmount(new BigDecimal("3000"));
+        postings.pettyCashVoucher(v);
+        Journal paid = last();
+        assertThat(paid.source()).isEqualTo(JournalSource.PETTY_CASH_VOUCHER);
+        Journal.Line transport = line(paid, AccountKey.EXPENSE_TRANSPORT);
+        assertThat(transport.debit()).isEqualByComparingTo("3000");
+        assertThat(transport.costCentreId()).isEqualTo(fin.getId());
+        assertThat(transport.locationId()).isEqualTo(wh.getId());
+        assertThat(line(paid, AccountKey.PETTY_CASH).credit()).isEqualByComparingTo("3000");
+        assertThat(line(paid, AccountKey.PETTY_CASH).locationId()).isEqualTo(wh.getId());
+
+        // The custodian counts 500 short: to Cash Over and Short at once
+        PettyCashCount count = new PettyCashCount();
+        count.setFund(fund);
+        count.setKind(PettyCashCountKind.DAILY);
+        count.setCountedOn(LocalDate.of(2026, 10, 2));
+        count.setExpected(new BigDecimal("197000"));
+        count.setCounted(new BigDecimal("196500"));
+        count.setDifference(new BigDecimal("-500"));
+        count.setNote("Change given twice");
+        postings.pettyCashCount(count);
+        Journal short500 = last();
+        assertThat(short500.source()).isEqualTo(JournalSource.PETTY_CASH_COUNT);
+        assertThat(line(short500, AccountKey.PETTY_CASH).credit()).isEqualByComparingTo("500");
+        assertThat(line(short500, AccountKey.CASH_OVER_SHORT).debit()).isEqualByComparingTo("500");
+
+        // An advance paid from the fund, retired with 45,000 of receipts and 5,000 returned to the vault
+        Employee jean = new Employee();
+        jean.setCode("EMP-WH-0001");
+        jean.setFullName("Jean Habimana");
+        StaffAdvance a = new StaffAdvance();
+        a.setId(UUID.randomUUID());
+        a.setNumber("ADV-WH-2026-000001");
+        a.setEmployee(jean);
+        a.setPurpose("Customer visits in Musanze");
+        a.setCostCentre(com);
+        a.setAmount(new BigDecimal("50000"));
+        a.setPaidOn(LocalDate.of(2026, 10, 5));
+        a.setPayMethod(AdvancePayMethod.PETTY_CASH);
+        a.setPayFund(fund);
+        postings.staffAdvance(a);
+        Journal advance = last();
+        assertThat(advance.source()).isEqualTo(JournalSource.STAFF_ADVANCE);
+        assertThat(line(advance, AccountKey.STAFF_ADVANCES).debit()).isEqualByComparingTo("50000");
+        assertThat(line(advance, AccountKey.STAFF_ADVANCES).memo()).isEqualTo("EMP-WH-0001 · ADV-WH-2026-000001");
+        assertThat(line(advance, AccountKey.PETTY_CASH).credit()).isEqualByComparingTo("50000");
+        assertThat(line(advance, AccountKey.PETTY_CASH).locationId()).isEqualTo(wh.getId());
+
+        a.getLines().add(advanceLine(a, 1, ExpenseCategory.TRAVEL, "Hotel and meals", com, "30000"));
+        a.getLines().add(advanceLine(a, 2, ExpenseCategory.TRANSPORT, "Bus fares", com, "15000"));
+        a.setSpent(new BigDecimal("45000"));
+        a.setSettled(new BigDecimal("5000"));
+        a.setSettleMethod(AdvancePayMethod.CASH_VAULT);
+        a.setRetiredOn(LocalDate.of(2026, 10, 12));
+        postings.advanceRetirement(a);
+        Journal retired = last();
+        assertThat(retired.source()).isEqualTo(JournalSource.ADVANCE_RETIREMENT);
+        assertThat(line(retired, AccountKey.EXPENSE_TRAVEL).debit()).isEqualByComparingTo("30000");
+        assertThat(line(retired, AccountKey.EXPENSE_TRAVEL).costCentreId()).isEqualTo(com.getId());
+        assertThat(line(retired, AccountKey.EXPENSE_TRANSPORT).debit()).isEqualByComparingTo("15000");
+        assertThat(line(retired, AccountKey.CASH_VAULT).debit()).isEqualByComparingTo("5000");
+        assertThat(line(retired, AccountKey.STAFF_ADVANCES).credit()).isEqualByComparingTo("50000");
+
+        // Another advance: 20,000 of 60,000 recovered from salary, then retired with 45,000 of receipts: 5,000 paid back by bank
+        StaffAdvance b = new StaffAdvance();
+        b.setId(UUID.randomUUID());
+        b.setNumber("ADV-WH-2026-000002");
+        b.setEmployee(jean);
+        b.setPurpose("Training in Huye");
+        b.setCostCentre(fin);
+        b.setAmount(new BigDecimal("60000"));
+        b.setRecovered(new BigDecimal("20000"));
+        b.setRetiredOn(LocalDate.of(2026, 11, 3));
+        b.getLines().add(advanceLine(b, 1, ExpenseCategory.TRAINING, "Course fee", fin, "45000"));
+        b.setSpent(new BigDecimal("45000"));
+        b.setSettled(new BigDecimal("-5000"));
+        b.setSettleMethod(AdvancePayMethod.BANK);
+        b.setSettleReference("BK-3301");
+        postings.advanceRetirement(b);
+        Journal paidBack = last();
+        assertThat(line(paidBack, AccountKey.EXPENSE_TRAINING).debit()).isEqualByComparingTo("45000");
+        assertThat(line(paidBack, AccountKey.BANK).credit()).isEqualByComparingTo("5000");
+        assertThat(line(paidBack, AccountKey.BANK).memo()).isEqualTo("BK-3301");
+        assertThat(line(paidBack, AccountKey.STAFF_ADVANCES).credit()).isEqualByComparingTo("40000");    // what was still owed
+
+        // Every journal balances; the site's petty cash is the cash in its box: 200,000 - 3,000 - 500 - 50,000
+        posted.forEach(j -> assertThat(j.isBalanced()).isTrue());
+        BigDecimal box = posted.stream().flatMap(j -> j.lines().stream())
+                .filter(l -> l.account() == AccountKey.PETTY_CASH && wh.getId().equals(l.locationId()))
+                .map(Journal.Line::signed).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(box).isEqualByComparingTo("146500");
+    }
+
+    @Test
+    void aPayRunPostsSalariesToEachEmployeesCostCentre() {   // F-15 A
+        CostCentre com = centre("COM");
+        PayRun run = new PayRun();
+        run.setId(UUID.randomUUID());
+        run.setNumber("PAY-WH-2026-000002");
+        run.setPeriod(LocalDate.of(2026, 10, 1));
+        run.setPostingDate(LocalDate.of(2026, 10, 31));
+        PayRunLine office = payLine("EMP-WH-0001", "250000", "50000", "0", "0", "0", SalaryPayMethod.BANK, null);
+        office.setCostCentreId(com.getId());
+        PayRunLine other = payLine("EMP-WH-0002", "120000", "0", "0", "0", "0", SalaryPayMethod.BANK, null);
+        postings.payroll(run, List.of(office, other));
+        Journal j = last();
+        List<Journal.Line> salaries = j.lines().stream().filter(l -> l.account() == AccountKey.SALARIES).toList();
+        assertThat(salaries).hasSize(2);
+        assertThat(salaries.stream().filter(l -> com.getId().equals(l.costCentreId())).findFirst().orElseThrow().debit()).isEqualByComparingTo("300000");
+        assertThat(salaries.stream().filter(l -> l.costCentreId() == null).findFirst().orElseThrow().debit()).isEqualByComparingTo("120000");
+        assertThat(j.lines().stream().filter(l -> l.account() == AccountKey.EMPLOYER_CONTRIBUTIONS).count()).isEqualTo(2);
+        assertThat(j.isBalanced()).isTrue();
     }
 
     private Journal last() {

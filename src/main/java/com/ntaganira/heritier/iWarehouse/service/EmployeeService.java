@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.dto.EmployeeDto;
 import com.ntaganira.heritier.iWarehouse.dto.PayslipRow;
+import com.ntaganira.heritier.iWarehouse.entity.CostCentre;
 import com.ntaganira.heritier.iWarehouse.entity.Driver;
 import com.ntaganira.heritier.iWarehouse.entity.Employee;
 import com.ntaganira.heritier.iWarehouse.entity.User;
@@ -10,6 +11,7 @@ import com.ntaganira.heritier.iWarehouse.enums.PayRunStatus;
 import com.ntaganira.heritier.iWarehouse.enums.SalaryPayMethod;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.repository.CostCentreRepository;
 import com.ntaganira.heritier.iWarehouse.repository.DriverRepository;
 import com.ntaganira.heritier.iWarehouse.repository.EmployeeRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PayRunLineRepository;
@@ -49,15 +51,22 @@ public class EmployeeService {
     private final UserRepository userRepo;
     private final DriverRepository driverRepo;
     private final PayRunLineRepository lineRepo;
+    private final CostCentreRepository costCentreRepo;
     private final DocumentNumberService numbers;
 
     public EmployeeService(EmployeeRepository repo, UserRepository userRepo, DriverRepository driverRepo, PayRunLineRepository lineRepo,
-                           DocumentNumberService numbers) {
+                           CostCentreRepository costCentreRepo, DocumentNumberService numbers) {
         this.repo = repo;
         this.userRepo = userRepo;
         this.driverRepo = driverRepo;
         this.lineRepo = lineRepo;
+        this.costCentreRepo = costCentreRepo;
         this.numbers = numbers;
+    }
+
+    /** The cost centres an employee may belong to; the form and the page show them by code. */
+    public List<CostCentre> costCentres() {
+        return costCentreRepo.findAll(Sort.by("code"));
     }
 
     public Page<Employee> findPage(String search, String status, int page, int size) {
@@ -114,6 +123,7 @@ public class EmployeeService {
         dto.setNationalId(e.getNationalId());
         dto.setRssbNumber(e.getRssbNumber());
         dto.setJobTitle(e.getJobTitle());
+        dto.setCostCentreId(e.getCostCentreId());
         dto.setHiredOn(e.getHiredOn());
         dto.setLeftOn(e.getLeftOn());
         dto.setEmployment(e.getEmployment());
@@ -134,6 +144,7 @@ public class EmployeeService {
         }
         Employee employee = new Employee();
         employee.setUser(user(dto.getUserId(), null));
+        requireCostCentre(dto.getCostCentreId(), null);
         apply(employee, dto);
         employee.setCode(numbers.next(DocumentType.EMPLOYEE));
         return repo.save(employee);
@@ -146,8 +157,20 @@ public class EmployeeService {
             throw BusinessException.onField("nationalId", "employee.nationalId.taken");
         }
         employee.setUser(user(dto.getUserId(), id));
+        requireCostCentre(dto.getCostCentreId(), employee.getCostCentreId());
         apply(employee, dto);
         return employee;
+    }
+
+    /** A cost centre in use (or the one the employee already had). */
+    private void requireCostCentre(UUID id, UUID current) {
+        if (id == null || id.equals(current)) {
+            return;
+        }
+        CostCentre centre = costCentreRepo.findById(id).orElseThrow(() -> BusinessException.onField("costCentreId", "expense.line.costCentre.required"));
+        if (!centre.isEnabled()) {
+            throw BusinessException.onField("costCentreId", "expense.line.costCentre.disabled", centre.getCode());
+        }
     }
 
     /** The user to link: enabled and no other employee's; none when not given. */
@@ -177,6 +200,7 @@ public class EmployeeService {
         e.setNationalId(dto.getNationalId());
         e.setRssbNumber(StringUtils.hasText(dto.getRssbNumber()) ? dto.getRssbNumber() : null);
         e.setJobTitle(StringUtils.hasText(dto.getJobTitle()) ? dto.getJobTitle().trim() : null);
+        e.setCostCentreId(dto.getCostCentreId());
         e.setHiredOn(dto.getHiredOn());
         e.setLeftOn(dto.getLeftOn());
         e.setEmployment(dto.getEmployment());

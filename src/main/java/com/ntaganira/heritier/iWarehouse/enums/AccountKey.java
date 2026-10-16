@@ -74,5 +74,7 @@ public enum AccountKey {
     EXPENSE_TRAINING,
     EXPENSE_INSURANCE,
     EXPENSE_TAXES,
-    EXPENSE_OTHER
+    EXPENSE_OTHER,
+    /** The petty cash imprest of each site (CMP 07): its lines name the site. */
+    PETTY_CASH
 }

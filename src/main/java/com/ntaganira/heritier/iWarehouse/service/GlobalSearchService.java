@@ -108,6 +108,8 @@ public class GlobalSearchService {
     private final StockVarianceService varianceService;
     private final ExpenseBillService expenseBillService;
     private final RequisitionService requisitionService;
+    private final PettyCashVoucherService voucherService;
+    private final StaffAdvanceService advanceService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -124,9 +126,12 @@ public class GlobalSearchService {
                                CreditApplicationService creditApplicationService, PriceChangeService priceChangeService,
                                SiteTransferService siteTransferService, TicketService ticketService,
                                DeliveryNoteService deliveryNoteService, DamageService damageService, StockVarianceService varianceService,
-                               ExpenseBillService expenseBillService, RequisitionService requisitionService) {
+                               ExpenseBillService expenseBillService, RequisitionService requisitionService, PettyCashVoucherService voucherService,
+                               StaffAdvanceService advanceService) {
         this.expenseBillService = expenseBillService;
         this.requisitionService = requisitionService;
+        this.voucherService = voucherService;
+        this.advanceService = advanceService;
         this.damageService = damageService;
         this.varianceService = varianceService;
         this.deliveryNoteService = deliveryNoteService;
@@ -341,6 +346,12 @@ public class GlobalSearchService {
             new Source<>("nav.requisitions", "/requisitions", null, List.of("PAGE_REQUISITIONS", "PERM_VIEW_REQUISITION"),
                 q -> requisitionService.findPage(q, null, 0, PER_GROUP),
                 r -> new Hit(r.getNumber(), r.getTitle(), join(r.getCostCentre().getCode(), date(r.getRequestedAt())), "/requisitions/" + r.getId())),
+            new Source<>("nav.pettyCash", "/petty-cash", null, List.of("PAGE_PETTY_CASH", "PERM_VIEW_PETTY_CASH"),
+                q -> voucherService.findPage(q, null, 0, PER_GROUP),
+                v -> new Hit(v.getNumber(), v.getPurpose(), join(v.getPayee(), date(v.getVoucherDate())), "/petty-cash/vouchers/" + v.getId())),
+            new Source<>("nav.staffAdvances", "/payroll/advances", null, List.of("PAGE_STAFF_ADVANCES", "PERM_VIEW_ADVANCE"),
+                q -> advanceService.findPage(q, null, 0, PER_GROUP),
+                a -> new Hit(a.getNumber(), a.getPurpose(), join(a.getEmployee().getFullName(), date(a.getRequestedAt())), "/payroll/advances/" + a.getId())),
             new Source<>("nav.damage", "/damage", null, List.of("PAGE_DAMAGE", "PERM_VIEW_DAMAGE"),
                 q -> damageService.findPage(q, null, 0, PER_GROUP),
                 d -> new Hit(d.getNumber(), d.getDescription(), join(d.getLocation().getCode(), date(d.getReportedAt())), "/damage/" + d.getId())),

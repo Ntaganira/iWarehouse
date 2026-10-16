@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${fund == null} ? #{pettyCash.open} : #{pettyCash.editTitle(${fund.code})}, ~{::content})}">
+<head><title>Petty cash fund - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${fund == null} ? #{pettyCash.open} : #{pettyCash.editTitle(${fund.code})}">Open a fund</h1>
+            <div class="subtitle" th:text="#{pettyCash.formSubtitle}">One fund per site; it holds nothing until Treasury tops it up.</div>
+        </div>
+        <a th:href="${fund == null} ? @{/petty-cash} : @{/petty-cash/funds/{id}(id=${fund.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${fund == null} ? @{/petty-cash/funds/new} : @{/petty-cash/funds/{id}/edit(id=${fund.id})}" th:object="${fundDto}" method="post"
+              class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="locationId" th:text="#{pettyCash.site}">Site</label>
+                    <select id="locationId" th:field="*{locationId}" required th:if="${fund == null}" th:classappend="${#fields.hasErrors('locationId')} ? 'is-invalid'">
+                        <option value="" th:text="#{pettyCash.chooseSite}">Choose the site</option>
+                        <option th:each="l : ${sites}" th:value="${l.id}" th:text="${l.code + ' · ' + l.name}">WH · Main warehouse</option>
+                    </select>
+                    <th:block th:if="${fund != null}">
+                        <input type="hidden" th:field="*{locationId}">
+                        <input type="text" id="locationId-shown" th:value="${fund.location.code + ' · ' + fund.location.name}" disabled>
+                    </th:block>
+                    <span class="field-error" th:if="${#fields.hasErrors('locationId')}" th:errors="*{locationId}"></span>
+                    <span class="hint" th:text="#{pettyCash.siteHint}">Sites without a fund in use; fixed once opened</span>
+                </div>
+                <div class="form-group">
+                    <label for="custodianUserId" th:text="#{pettyCash.custodian}">Custodian</label>
+                    <select id="custodianUserId" th:field="*{custodianUserId}" data-searchable required th:classappend="${#fields.hasErrors('custodianUserId')} ? 'is-invalid'">
+                        <option value="" th:text="#{pettyCash.chooseCustodian}">Choose who keeps it</option>
+                        <option th:each="u : ${users}" th:value="${u.id}" th:text="${(u.fullName ?: u.username) + ' · ' + u.username}">Jean Bosco · jbosco</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('custodianUserId')}" th:errors="*{custodianUserId}"></span>
+                    <span class="hint" th:text="#{pettyCash.custodianHint}">Records the vouchers and counts the cash every day; never tops the fund up</span>
+                </div>
+                <div class="form-group">
+                    <label for="imprest" th:text="#{pettyCash.imprest}">Float (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="imprest" th:field="*{imprest}" min="1" step="1" th:attr="max=${maxFloat}" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('imprest')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('imprest')}" th:errors="*{imprest}"></span>
+                    <span class="hint" th:text="#{pettyCash.imprestHint(${@num.money(maxFloat)})}">At most 200,000 (Settings); topped up back to it</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+                <a th:href="${fund == null} ? @{/petty-cash} : @{/petty-cash/funds/{id}(id=${fund.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

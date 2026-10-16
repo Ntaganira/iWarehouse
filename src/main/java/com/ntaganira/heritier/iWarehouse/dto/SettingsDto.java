@@ -500,6 +500,46 @@ public class SettingsDto {
     @Pattern(regexp = "^$|^[A-Za-z0-9-]{2,10}$", message = "{costCentre.code.pattern}")
     private String expenseFleetCostCentre;
 
+    // --- Petty cash and staff advances (M17: Cost Management & Expenditure Control Policy 07, 08) ---
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal pettyCashMaxFloat;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal pettyCashMaxPayment;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal pettyCashReplenishPercent;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean pettyCashReceiptRequired;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.pettyCashAuditDay.range}")
+    @Max(value = 28, message = "{settings.pettyCashAuditDay.range}")
+    private Integer pettyCashAuditDay;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.advanceRetireDays.range}")
+    @Max(value = 60, message = "{settings.advanceRetireDays.range}")
+    private Integer advanceRetireDays;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean advanceBlockOpen;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean advanceReceiptsRequired;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean advancePayrollRecovery;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

@@ -47,6 +47,9 @@ public class EmployeeDto {
     @Size(max = 100, message = "{employee.jobTitle.size}")
     private String jobTitle;
 
+    /** The department their pay is posted to (F-15 A). */
+    private UUID costCentreId;
+
     @NotNull(message = "{employee.hiredOn.required}")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate hiredOn;

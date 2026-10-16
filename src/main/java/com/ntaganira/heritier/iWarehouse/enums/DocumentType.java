@@ -84,6 +84,12 @@ public enum DocumentType {
     EXPENSE_BILL("EXP"),
     /** A purchase requisition, approved before any commitment (CMP 06). */
     PURCHASE_REQUISITION("PRF"),
+    /** A payment from a petty cash fund (CMP 07, F-13 D). */
+    PETTY_CASH_VOUCHER("PCV"),
+    /** Money put into a petty cash fund, or returned from it when it closes (CMP 07). */
+    PETTY_CASH_REPLENISHMENT("PCR"),
+    /** A staff advance, retired with receipts (CMP 08). */
+    STAFF_ADVANCE("ADV"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

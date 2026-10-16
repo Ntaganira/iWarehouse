@@ -70,6 +70,33 @@
         </div>
     </div>
 
+    <div class="kpi-grid doc-kpis" th:with="adv=${r.advances}">
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.advanceRetirement}">Advances retired</div>
+                <div class="kpi-value" th:text="${adv.retirementPercent() != null} ? ${@num.percent(adv.retirementPercent()) + ' %'} : '—'">100 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.advanceRetirementSub(${adv.retired}, ${adv.due})}">3 of 3 advances due were retired</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.claimTimeliness}">Expense claims on time</div>
+                <div class="kpi-value" th:text="${adv.timelinessPercent() != null} ? ${@num.percent(adv.timelinessPercent()) + ' %'} : '—'">95 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.claimTimelinessSub(${adv.onTime}, ${adv.due})}">2 of 3 retired by their day</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.threeWay}">Three-way match</div>
+                <div class="kpi-value" th:text="${r.supplierInvoices > 0} ? '100 %' : '—'">100 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.threeWaySub(${r.supplierInvoices})}">5 supplier invoices, each billing posted receipts</span></div>
+            </div>
+        </div>
+    </div>
+
     <div class="section">
         <div class="section-header"><h2 th:text="#{expenditure.byCentre}">By cost centre</h2></div>
         <th:block th:replace="~{reports/expenditure :: amounts(${r.byCentre}, #{expense.line.costCentre})}"></th:block>
@@ -133,6 +160,54 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{expenditure.funds}">Petty cash funds</span>
+                <span class="section-count" th:text="${fundPage.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{pettyCash.fund}">Fund</th>
+                        <th th:text="#{pettyCash.custodian}">Custodian</th>
+                        <th class="num" th:text="#{pettyCash.imprest}">Float (RWF)</th>
+                        <th class="num" th:text="#{pettyCash.balance}">Holds (RWF)</th>
+                        <th th:text="#{expenditure.fund.lastCount}">Last daily count</th>
+                        <th th:text="#{expenditure.fund.audited}">Surprise count this month</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="f : ${fundPage.content}">
+                        <td>
+                            <a class="mono" sec:authorize="hasAuthority('PAGE_PETTY_CASH')" th:href="@{/petty-cash/funds/{id}(id=${f.fund.id})}" th:text="${f.fund.code}">PC-WH</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_PETTY_CASH')" th:text="${f.fund.code}">PC-WH</span>
+                            <div class="cell-sub" th:text="${f.fund.location.name}">Main warehouse</div>
+                        </td>
+                        <td th:text="${f.fund.custodianName}">cashier1</td>
+                        <td class="num" th:text="${@num.money(f.fund.imprest)}">200,000</td>
+                        <td class="num">
+                            <span th:text="${@num.money(f.balance)}">40,000</span>
+                            <div class="cell-sub" th:if="${f.low}"><span class="badge badge-warning" th:text="#{pettyCash.low}">To top up</span></div>
+                        </td>
+                        <td class="nowrap" th:text="${f.lastDaily != null} ? ${#temporals.format(f.lastDaily.countedOn, 'dd/MM/yyyy')} : '—'">15/10/2026</td>
+                        <td>
+                            <span th:if="${f.auditedThisMonth}" class="badge badge-success" th:text="#{common.yes}">Yes</span>
+                            <span th:if="${!f.auditedThisMonth and f.auditDue}" class="badge badge-warning" th:text="#{pettyCash.auditDue}">Due</span>
+                            <span th:if="${!f.auditedThisMonth and !f.auditDue}" class="badge badge-secondary" th:text="#{common.no}">No</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${fundPage.totalElements == 0}">
+                        <td colspan="6"><div class="empty-state"><p th:text="#{pettyCash.noFunds}">No petty cash fund yet</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${fundPage}, '/reports/expenditure', ${fundQuery}, 'fpage')}"></th:block>
     </div>
 
     <div class="section">

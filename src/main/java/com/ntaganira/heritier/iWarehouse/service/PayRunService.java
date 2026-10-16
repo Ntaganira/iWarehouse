@@ -62,6 +62,7 @@ public class PayRunService {
     private final JournalEntryRepository entryRepo;
     private final JournalService journalService;
     private final PostingService postings;
+    private final StaffAdvanceService advances;
     private final DocumentNumberService numbers;
     private final PeriodLock periods;
     private final Notifier notifier;
@@ -70,7 +71,8 @@ public class PayRunService {
 
     public PayRunService(PayRunRepository repo, PayRunLineRepository lineRepo, EmployeeRepository employeeRepo, PayrollRateService rates,
                          DriverRepository driverRepo, JournalEntryRepository entryRepo, JournalService journalService, PostingService postings,
-                         DocumentNumberService numbers, PeriodLock periods, Notifier notifier, NumberFormats num, Clock clock) {
+                         StaffAdvanceService advances, DocumentNumberService numbers, PeriodLock periods, Notifier notifier, NumberFormats num,
+                         Clock clock) {
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.employeeRepo = employeeRepo;
@@ -79,6 +81,7 @@ public class PayRunService {
         this.entryRepo = entryRepo;
         this.journalService = journalService;
         this.postings = postings;
+        this.advances = advances;
         this.numbers = numbers;
         this.periods = periods;
         this.notifier = notifier;
@@ -351,6 +354,7 @@ public class PayRunService {
         List<PayRunLine> lines = lines(id);
         run.setPostingDate(run.getPeriodEnd());
         JournalEntry entry = postings.payroll(run, lines);
+        advances.recoverFromPayroll(lines);                       // CMP 08: advances not retired in time, taken from salary
         run.setApprovedBy(AppUserPrincipal.currentUsername());
         run.setApprovedAt(LocalDateTime.now(clock));
         run.setJournalId(entry.getId());
@@ -435,10 +439,19 @@ public class PayRunService {
         line.setTransportAllowance(e.getTransportAllowance());
         line.setHousingAllowance(e.getHousingAllowance());
         line.setOtherAllowance(e.getOtherAllowance());
+        line.setCostCentreId(e.getCostCentreId());
         if (e.getUser() != null) {
             driverRepo.findByUser_Id(e.getUser().getId()).ifPresent(d -> line.setDriverId(d.getId()));
         }
         line.apply(Payroll.calculate(line.earnings(), line.deductions(), line.getEmployment(), run.getRateSet().rates()));
+        // An advance not retired by its day is taken from this salary, at most the net pay (CMP 08)
+        LocalDate day = today().isBefore(run.getPeriodEnd()) ? today() : run.getPeriodEnd();
+        advances.recoverable(e.getId(), day).ifPresent(a -> {
+            line.setAdvanceId(a.getId());
+            line.setAdvanceDeduction(Advances.deduction(a.getOutstanding(), line.getNetPay()));
+            line.setDeductionNote(a.getNumber());
+            line.apply(Payroll.calculate(line.earnings(), line.deductions(), line.getEmployment(), run.getRateSet().rates()));
+        });
         return lineRepo.save(line);
     }
 

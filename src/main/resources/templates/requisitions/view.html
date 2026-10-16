@@ -26,7 +26,7 @@
             </th:block>
             <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${(s == 'SUBMITTED' or s == 'APPROVED') and canCreate and mine}"
                     th:text="#{requisition.cancel}">Cancel</button>
-            <th:block th:if="${s == 'SUBMITTED' and canApprove and !mine}">
+            <th:block th:if="${s == 'SUBMITTED' and canApprove and !mine and head}">
                 <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{requisition.reject}">Reject</button>
                 <form th:action="@{/requisitions/{id}/approve(id=${req.id})}" method="post" class="row-action-form confirm-submit"
                       th:attr="data-confirm=#{requisition.approveConfirm(${req.number}, ${@num.money(chosen != null ? chosen.amount : req.estimatedTotal)})}">
@@ -42,6 +42,7 @@
     <div class="doc-note is-warning" th:if="${s == 'SUBMITTED'}">
         <span th:text="#{requisition.waitingApproval}">Waits for the head of department's approval.</span>
         <span th:if="${mine}" th:text="#{requisition.notYourOwn}">You cannot approve a requisition you raised.</span>
+        <span th:if="${!mine and !head}" th:text="#{requisition.headOnly(${req.costCentre.code}, ${req.costCentre.managerName})}">COM names its head: Jean Bosco, or the COO and above, decide it.</span>
     </div>
     <div class="doc-note" th:if="${s == 'APPROVED' or s == 'CLOSED'}">
         <strong th:text="#{requisition.approvedBy(${req.decidedBy}, ${#temporals.format(req.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by director1 on 16/10/2026 11:00</strong>

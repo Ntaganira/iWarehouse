@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${advance == null} ? #{advance.new} : #{advance.editTitle(${advance.number})}, ~{::content})}">
+<head><title>Staff advance - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${advance == null} ? #{advance.new} : #{advance.editTitle(${advance.number})}">Ask for an advance</h1>
+            <div class="subtitle" th:text="#{advance.formSubtitle}">A journey is worked out from the per diem of its category; the Managing Director approves the advance before it is paid.</div>
+        </div>
+        <a th:href="${advance == null} ? @{/payroll/advances} : @{/payroll/advances/{id}(id=${advance.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${advance == null} ? @{/payroll/advances/new} : @{/payroll/advances/{id}/edit(id=${advance.id})}" th:object="${advanceDto}"
+              method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="employeeId" th:text="#{advance.employee}">Employee</label>
+                    <select id="employeeId" th:field="*{employeeId}" data-searchable required th:classappend="${#fields.hasErrors('employeeId')} ? 'is-invalid'">
+                        <option value="" th:text="#{advance.chooseEmployee}">Choose the employee</option>
+                        <option th:each="e : ${employees}" th:value="${e.id}" th:text="${e.fullName + ' · ' + e.code}">Jean Habimana · EMP-WH-0001</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('employeeId')}" th:errors="*{employeeId}"></span>
+                    <span class="hint" th:text="#{advance.employeeHint}">No new advance while one of theirs is open</span>
+                </div>
+                <div class="form-group">
+                    <label for="costCentreId" th:text="#{advance.costCentre}">Cost centre</label>
+                    <select id="costCentreId" th:field="*{costCentreId}" required th:classappend="${#fields.hasErrors('costCentreId')} ? 'is-invalid'">
+                        <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                        <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">COM · Commercial</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('costCentreId')}" th:errors="*{costCentreId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="kind" th:text="#{advance.kind}">What for</label>
+                    <select id="kind" th:field="*{kind}" data-kind-select required>
+                        <option th:each="k : ${kinds}" th:value="${k}" th:text="#{${'advance.kind.' + k}}">Travel</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="purpose" th:text="#{advance.purpose}">For</label>
+                    <input type="text" id="purpose" th:field="*{purpose}" maxlength="255" required autocomplete="off" th:placeholder="#{advance.purposePh}"
+                           th:classappend="${#fields.hasErrors('purpose')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('purpose')}" th:errors="*{purpose}"></span>
+                </div>
+
+                <div class="form-group" data-kind="TRAVEL">
+                    <label for="perDiemCategory" th:text="#{advance.perDiemCategory}">Per diem</label>
+                    <select id="perDiemCategory" th:field="*{perDiemCategory}" th:classappend="${#fields.hasErrors('perDiemCategory')} ? 'is-invalid'">
+                        <option value="" th:text="#{advance.chooseCategory}">Choose where to</option>
+                        <option th:each="r : ${rates}" th:value="${r.category}"
+                                th:text="#{advance.categoryOption(${#messages.msg('perDiem.category.' + r.category)}, ${r.currencyCode}, ${@num.money(r.daily)}, ${@num.money(r.accommodation)})}">Upcountry · RWF 35,000 a day, 40,000 a night</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('perDiemCategory')}" th:errors="*{perDiemCategory}"></span>
+                </div>
+                <div class="form-group" data-kind="TRAVEL">
+                    <label for="destination" th:text="#{advance.destination}">Destination</label>
+                    <input type="text" id="destination" th:field="*{destination}" maxlength="100" autocomplete="off" th:placeholder="#{advance.destinationPh}"
+                           th:classappend="${#fields.hasErrors('destination')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('destination')}" th:errors="*{destination}"></span>
+                </div>
+                <div class="form-group" data-kind="TRAVEL">
+                    <label for="departOn" th:text="#{advance.departOn}">Leaves</label>
+                    <input type="date" id="departOn" th:field="*{departOn}" th:classappend="${#fields.hasErrors('departOn')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('departOn')}" th:errors="*{departOn}"></span>
+                </div>
+                <div class="form-group" data-kind="TRAVEL">
+                    <label for="returnOn" th:text="#{advance.returnOn}">Back</label>
+                    <input type="date" id="returnOn" th:field="*{returnOn}" th:classappend="${#fields.hasErrors('returnOn')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('returnOn')}" th:errors="*{returnOn}"></span>
+                    <span class="hint" th:text="#{advance.daysHint}">Days of meals and incidentals, one night fewer of accommodation</span>
+                </div>
+                <div class="form-group" data-kind="TRAVEL">
+                    <label for="extraAmount" th:text="#{advance.extraAmount}">Fares and fees</label>
+                    <div class="input-unit">
+                        <input type="number" id="extraAmount" th:field="*{extraAmount}" min="0" step="1" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('extraAmount')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('extraAmount')}" th:errors="*{extraAmount}"></span>
+                    <span class="hint" th:text="#{advance.extraHint}">Bus or air fares, registration fees: on top of the per diem</span>
+                </div>
+                <div class="form-group" data-kind="OTHER">
+                    <label for="amount" th:text="#{advance.amount}">Amount (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="amount" th:field="*{amount}" min="1" step="1" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{advance.formNote}">A journey's per diem is worked out when you save: days x (meals + incidentals) + nights x accommodation, a foreign rate at today's exchange rate (kept on the advance).</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{expense.saveDraft}">Save the draft</button>
+                <a th:href="${advance == null} ? @{/payroll/advances} : @{/payroll/advances/{id}(id=${advance.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/advance-form.js"></script>
+</div>
+</body>
+</html>

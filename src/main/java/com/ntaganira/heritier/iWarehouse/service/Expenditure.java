@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
+import com.ntaganira.heritier.iWarehouse.enums.AuthorityLevel;
 import com.ntaganira.heritier.iWarehouse.enums.ExpenseNature;
 import com.ntaganira.heritier.iWarehouse.enums.SourcingMethod;
 
@@ -79,6 +80,20 @@ public final class Expenditure {
     /** The lowest of some amounts (the cheapest quote), if any. */
     public static <T> Optional<T> cheapest(Collection<T> quotes, java.util.function.Function<T, BigDecimal> amount) {
         return quotes.stream().filter(Objects::nonNull).min(Comparator.comparing(amount));
+    }
+
+    /**
+     * Whether the signed-in user may sign as the head of department (CMP 05, 06): when the departments name no manager, any holder
+     * of the right; otherwise one of their managers, or an office from the COO up (who stand above the heads of department).
+     */
+    public static boolean mayActAsHead(Collection<Long> managers, Long me, AuthorityLevel office) {
+        if (managers.isEmpty()) {
+            return true;
+        }
+        if (me != null && managers.contains(me)) {
+            return true;
+        }
+        return office != null && office.compareTo(AuthorityLevel.COO) >= 0;
     }
 
     /** Whether a review by Finance is due for a bill of this amount (CMP 05: from the Settings' amount; 0 = never). */

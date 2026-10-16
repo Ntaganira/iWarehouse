@@ -4,8 +4,10 @@ import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
 import com.ntaganira.heritier.iWarehouse.enums.AdjustmentKind;
+import com.ntaganira.heritier.iWarehouse.enums.AdvancePayMethod;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
+import com.ntaganira.heritier.iWarehouse.enums.PettyCashReplenishmentKind;
 import com.ntaganira.heritier.iWarehouse.enums.WriteOffCause;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.CurrencyRepository;
@@ -358,24 +360,29 @@ public class PostingService {
 
     // ---------------------------------------------------------------- payroll
 
+    /** Lines of employees with no cost centre, gathered under one key. */
+    private static final UUID NO_CENTRE = new UUID(0L, 0L);
+
     /**
-     * A pay run approved, on its month's last day: Dr Salaries and Wages (gross) and Employer Social Contributions / Cr PAYE
+     * A pay run approved, on its month's last day: Dr Salaries and Wages (gross) and Employer Social Contributions, each by
+     * the employees' cost centre (F-15 A), / Cr PAYE
      * Payable, RSSB Contributions Payable (both shares of pension and maternity, occupational hazards, CBHI), Staff Advances
      * and a driver's shortage recovered (naming the driver, ACC-07), Other Payroll Deductions, and the net pay owed.
      */
     public JournalEntry payroll(PayRun run, List<PayRunLine> lines) {
         Journal journal = Journal.of(JournalSource.PAYROLL, run.getId(), run.getNumber(), run.getPostingDate(),
                 "Payroll of " + PAY_MONTH.format(run.getPeriod()));
-        BigDecimal gross = ZERO;
-        BigDecimal employer = ZERO;
+        Map<UUID, BigDecimal> grossByCentre = new LinkedHashMap<>();
+        Map<UUID, BigDecimal> employerByCentre = new LinkedHashMap<>();
         BigDecimal paye = ZERO;
         BigDecimal rssb = ZERO;
         BigDecimal advances = ZERO;
         BigDecimal other = ZERO;
         BigDecimal net = ZERO;
         for (PayRunLine l : lines) {
-            gross = gross.add(l.getGross());
-            employer = employer.add(l.getEmployerContributions());
+            UUID centre = l.getCostCentreId() == null ? NO_CENTRE : l.getCostCentreId();
+            grossByCentre.merge(centre, l.getGross(), BigDecimal::add);
+            employerByCentre.merge(centre, l.getEmployerContributions(), BigDecimal::add);
             paye = paye.add(l.getPaye());
             rssb = rssb.add(l.getRssbTotal());
             advances = advances.add(l.getAdvanceDeduction());
@@ -386,9 +393,10 @@ public class PostingService {
                         l.getEmployeeCode() + " " + run.getNumber());
             }
         }
-        journal.debit(AccountKey.SALARIES, gross)
-                .debit(AccountKey.EMPLOYER_CONTRIBUTIONS, employer)
-                .credit(AccountKey.PAYE_PAYABLE, paye)
+        grossByCentre.forEach((centre, amount) -> journal.addTagged(AccountKey.SALARIES, amount, null, null, centre == NO_CENTRE ? null : centre, null));
+        employerByCentre.forEach((centre, amount) -> journal.addTagged(AccountKey.EMPLOYER_CONTRIBUTIONS, amount, null, null,
+                centre == NO_CENTRE ? null : centre, null));
+        journal.credit(AccountKey.PAYE_PAYABLE, paye)
                 .credit(AccountKey.RSSB_PAYABLE, rssb)
                 .credit(AccountKey.STAFF_ADVANCES, advances)
                 .credit(AccountKey.PAYROLL_DEDUCTIONS, other)
@@ -614,6 +622,89 @@ public class PostingService {
         journal.add(AccountKey.PAYABLE, bill.getAmount().negate(), null, bill.getSupplier().getId(), bill.getSupplierRef() + " · " + bill.getNumber(),
                 null);
         return journalService.post(journal);
+    }
+
+    // ---------------------------------------------------------------- petty cash and staff advances
+
+    /**
+     * A petty cash fund topped up from the vault or the bank (CMP 07): Dr Petty Cash naming the fund's site / Cr where the cash
+     * came from; its cash returned when it closes, the other way. The journal names the fund (its page lists both).
+     */
+    public JournalEntry pettyCashReplenishment(PettyCashReplenishment r) {
+        PettyCashFund fund = r.getFund();
+        boolean topUp = r.getKind() == PettyCashReplenishmentKind.TOP_UP;
+        BigDecimal signed = topUp ? r.getAmount() : r.getAmount().negate();
+        Journal journal = Journal.of(JournalSource.PETTY_CASH_REPLENISHMENT, fund.getId(), r.getNumber(), r.getTxnDate(),
+                (topUp ? "Petty cash " + fund.getCode() + " topped up" : "Petty cash " + fund.getCode() + " returned") + " (" + r.getNumber() + ")");
+        journal.addTagged(AccountKey.PETTY_CASH, signed, null, r.getNumber(), null, fund.getLocation().getId())
+                .add(r.getSource().account(), signed.negate(), null, null, r.getReference() == null ? r.getNumber() : r.getReference(), null);
+        return journalService.post(journal);
+    }
+
+    /**
+     * A petty cash voucher approved (CMP 07, F-16): Dr its category's account naming its cost centre and the fund's site / Cr Petty
+     * Cash naming the site.
+     */
+    public JournalEntry pettyCashVoucher(PettyCashVoucher v) {
+        UUID site = v.getFund().getLocation().getId();
+        Journal journal = Journal.of(JournalSource.PETTY_CASH_VOUCHER, v.getId(), v.getNumber(), v.getVoucherDate(),
+                "Petty cash " + v.getNumber() + " to " + v.getPayee() + ": " + v.getPurpose());
+        journal.addTagged(v.getCategory().account(), v.getAmount(), null, v.getPurpose(), v.getCostCentre().getId(), site)
+                .addTagged(AccountKey.PETTY_CASH, v.getAmount().negate(), null, v.getNumber(), null, site);
+        return journalService.post(journal);
+    }
+
+    /**
+     * A petty cash count found more or less cash than the ledger holds (CMP 07): the difference to Cash Over and Short at once,
+     * both lines naming the site, so the fund's balance is the cash in its box again.
+     */
+    public JournalEntry pettyCashCount(PettyCashCount c) {
+        PettyCashFund fund = c.getFund();
+        UUID site = fund.getLocation().getId();
+        Journal journal = Journal.of(JournalSource.PETTY_CASH_COUNT, fund.getId(), fund.getCode(), c.getCountedOn(),
+                "Petty cash " + fund.getCode() + " counted " + (c.getDifference().signum() < 0 ? "short" : "over") + ": " + c.getNote());
+        journal.addTagged(AccountKey.PETTY_CASH, c.getDifference(), null, c.getKind().name(), null, site)
+                .addTagged(AccountKey.CASH_OVER_SHORT, c.getDifference().negate(), null, fund.getCode(), null, site);
+        return journalService.post(journal);
+    }
+
+    /**
+     * A staff advance paid (CMP 08): Dr Staff Advances (the employee's code and the advance) / Cr what paid it: the vault, the
+     * bank or mobile money (with the reference), or a petty cash fund naming its site.
+     */
+    public JournalEntry staffAdvance(StaffAdvance a) {
+        Journal journal = Journal.of(JournalSource.STAFF_ADVANCE, a.getId(), a.getNumber(), a.getPaidOn(),
+                "Advance " + a.getNumber() + " to " + a.getEmployee().getFullName() + ": " + a.getPurpose());
+        journal.add(AccountKey.STAFF_ADVANCES, a.getAmount(), null, null, a.getEmployee().getCode() + " · " + a.getNumber(), null);
+        advanceMoney(journal, a.getPayMethod(), a.getPayFund(), a.getAmount().negate(), a.getPayReference());
+        return journalService.post(journal);
+    }
+
+    /**
+     * A staff advance retired with its receipts (CMP 08): Dr what it paid for, each line's category naming its cost centre, and
+     * the cash the employee returned / Cr Staff Advances what was still owed, and what was paid back to the employee when the
+     * receipts came to more.
+     */
+    public JournalEntry advanceRetirement(StaffAdvance a) {
+        Journal journal = Journal.of(JournalSource.ADVANCE_RETIREMENT, a.getId(), a.getNumber(), a.getRetiredOn(),
+                "Advance " + a.getNumber() + " of " + a.getEmployee().getFullName() + " retired");
+        for (StaffAdvanceLine l : a.getLines()) {
+            journal.addTagged(l.getCategory().account(), l.getAmount(), null, l.getDescription(), l.getCostCentre().getId(), null);
+        }
+        if (a.getSettled().signum() != 0) {
+            advanceMoney(journal, a.getSettleMethod(), a.getSettleFund(), a.getSettled(), a.getSettleReference());
+        }
+        journal.add(AccountKey.STAFF_ADVANCES, a.getAmount().subtract(a.getRecovered()).negate(), null, null,
+                a.getEmployee().getCode() + " · " + a.getNumber(), null);
+        return journalService.post(journal);
+    }
+
+    private static void advanceMoney(Journal journal, AdvancePayMethod method, PettyCashFund fund, BigDecimal signed, String reference) {
+        if (method == AdvancePayMethod.PETTY_CASH) {
+            journal.addTagged(AccountKey.PETTY_CASH, signed, null, fund.getCode(), null, fund.getLocation().getId());
+        } else {
+            journal.add(method.account(), signed, null, null, reference, null);
+        }
     }
 
     private JournalEntry damageRecoveryJournal(DamageReport report) {

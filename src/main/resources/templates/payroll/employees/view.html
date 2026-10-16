@@ -55,6 +55,13 @@
                         <div class="value" th:text="${@num.money(employee.otherAllowance)}">0</div>
                     </div>
                     <div class="item">
+                        <label th:text="#{employee.costCentre}">Cost centre</label>
+                        <div class="value">
+                            <span class="mono" th:text="${costCentre != null} ? ${costCentre.code} : '—'">COM</span>
+                            <div class="cell-sub" th:if="${costCentre != null}" th:text="${costCentre.name}">Commercial</div>
+                        </div>
+                    </div>
+                    <div class="item">
                         <label th:text="#{employee.employment}">PAYE</label>
                         <div class="value" th:text="#{${'employee.employment.' + employee.employment}}">First employer (bands)</div>
                     </div>

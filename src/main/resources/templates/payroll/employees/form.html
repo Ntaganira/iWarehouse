@@ -35,6 +35,15 @@
                     <span class="field-error" th:if="${#fields.hasErrors('jobTitle')}" th:errors="*{jobTitle}"></span>
                 </div>
                 <div class="form-group">
+                    <label for="costCentreId" th:text="#{employee.costCentre}">Cost centre</label>
+                    <select id="costCentreId" th:field="*{costCentreId}" th:classappend="${#fields.hasErrors('costCentreId')} ? 'is-invalid'">
+                        <option value="" th:text="#{employee.noCostCentre}">Not named</option>
+                        <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">COM · Commercial</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('costCentreId')}" th:errors="*{costCentreId}"></span>
+                    <span class="hint" th:text="#{employee.costCentreHint}">Their pay is posted to this department</span>
+                </div>
+                <div class="form-group">
                     <label for="userId" th:text="#{employee.user}">Signs in as</label>
                     <select id="userId" th:field="*{userId}" data-searchable th:classappend="${#fields.hasErrors('userId')} ? 'is-invalid'">
                         <option value="" th:text="#{employee.noUser}">Nobody (no payslips on My profile)</option>

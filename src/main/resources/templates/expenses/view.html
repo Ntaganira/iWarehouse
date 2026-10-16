@@ -33,7 +33,7 @@
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canCreate and mine}" th:text="#{expense.cancel}">Cancel</button>
                 <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:if="${signer and !tookPart}"
                         th:text="#{expense.reject}">Reject</button>
-                <form th:if="${step == 'RECOMMEND' and canRecommend and !tookPart}" th:action="@{/expenses/{id}/recommend(id=${bill.id})}" method="post"
+                <form th:if="${step == 'RECOMMEND' and canRecommend and !tookPart and head}" th:action="@{/expenses/{id}/recommend(id=${bill.id})}" method="post"
                       class="row-action-form confirm-submit" th:attr="data-confirm=#{expense.recommendConfirm(${bill.number})}">
                     <button type="submit" class="btn btn-primary" th:text="#{expense.recommend}">Recommend</button>
                 </form>
@@ -59,6 +59,7 @@
     <div class="doc-note is-warning" th:if="${bill.waiting}">
         <span th:text="#{${'expense.step.' + step}}">Waits for the head of department's recommendation.</span>
         <span th:if="${tookPart}" th:text="#{expense.notYourStep}">You took part in this bill: another person signs the next step.</span>
+        <span th:if="${step == 'RECOMMEND' and !tookPart and !head}" th:text="#{expense.headOnly}">Its departments name their heads: one of them, or the COO and above, recommends it.</span>
         <th:block th:if="${step == 'APPROVE'}"><th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${tookPart})}"></th:block></th:block>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
@@ -94,10 +95,10 @@
                     </div>
                 </div>
                 <div class="item">
-                    <label th:text="#{expense.matrixRow}">Approved under</label>
+                    <label th:text="${s == 'APPROVED' or s == 'REVERSED'} ? #{expense.matrixRow} : #{expense.matrixRowNeeded}">Approved under</label>
                     <div class="value">
                         <span th:text="#{${'authority.decision.' + decision}}">Operating expenditure</span>
-                        <div class="cell-sub" th:if="${bill.authorityLevel != null}" th:text="#{expense.approvedAs(${#messages.msg('authority.level.' + bill.authorityLevel)})}">within the limit of the Managing Director</div>
+                        <div class="cell-sub" th:if="${bill.authorityLevel != null}" th:text="#{authority.lowestAllowed(${#messages.msg('authority.level.' + bill.authorityLevel)})}">lowest office allowed: Managing Director</div>
                     </div>
                 </div>
                 <div class="item">

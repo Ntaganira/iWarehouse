@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${advance.number}, ~{::content})}">
+<head><title>Staff advance - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${advance.status.name()}, base=${'/payroll/advances/' + advance.id},
+        canRequest=${#authorization.expression('hasAuthority(''PERM_REQUEST_ADVANCE'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_ADVANCE'')')},
+        canPay=${#authorization.expression('hasAuthority(''PERM_PAY_ADVANCE'')')},
+        canRetire=${#authorization.expression('hasAuthority(''PERM_RETIRE_ADVANCE'')')},
+        tookPart=${mine or ownAdvance}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${advance.number}">ADV-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{advance.requestedBy(${advance.requestedBy}, ${#temporals.format(advance.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by accountant on 16/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{advances/list :: advanceStatus(${advance}, ${today})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/payroll/advances" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'DRAFT' and canRequest and mine}">
+                <a th:href="@{/payroll/advances/{id}/edit(id=${advance.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{expense.cancel}">Cancel</button>
+                <form th:action="@{/payroll/advances/{id}/submit(id=${advance.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{advance.submitConfirm(${advance.number}, ${@num.money(advance.amount)})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{expense.submit}">Submit</button>
+                </form>
+            </th:block>
+            <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${(s == 'SUBMITTED' or s == 'APPROVED') and canRequest and mine}"
+                    th:text="#{expense.cancel}">Cancel</button>
+            <th:block th:if="${s == 'SUBMITTED' and canApprove and !tookPart}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{expense.reject}">Reject</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/payroll/advances/{id}/approve(id=${advance.id})}, #{advance.approveConfirm(${advance.number}, ${@num.money(advance.amount)}, ${advance.employee.fullName})}, #{expense.approve}, ${authority})}"></th:block>
+            </th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="pay-modal" th:if="${s == 'APPROVED' and canPay and !ownAdvance}" th:text="#{advance.pay}">Pay</button>
+            <a th:if="${s == 'PAID' and canRetire and !ownAdvance}" th:href="@{/payroll/advances/{id}/retire(id=${advance.id})}" class="btn btn-primary" th:text="#{advance.retire}">Retire</a>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'DRAFT'}" th:text="#{advance.draftNote}">A draft: submit it for the Managing Director's approval.</div>
+    <div class="doc-note is-warning" th:if="${s == 'SUBMITTED'}">
+        <span th:text="#{advance.waitingStep}">Waits for approval within the Delegation of Authority.</span>
+        <span th:if="${tookPart}" th:text="#{advance.notYourStep}">You asked for this advance or it is yours: another person approves it.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${tookPart})}"></th:block>
+    </div>
+    <div class="doc-note is-warning" th:if="${s == 'APPROVED'}" th:text="#{advance.approvedNote(${advance.decidedBy})}">Approved by owner: Treasury pays it.</div>
+    <div class="doc-note" th:classappend="${overdue} ? 'is-danger' : 'is-warning'" th:if="${s == 'PAID'}">
+        <span th:if="${!overdue}" th:text="#{advance.paidNote(${#temporals.format(advance.dueOn, 'dd/MM/yyyy')})}">Retire it with the receipts by 30/10/2026.</span>
+        <span th:if="${overdue}" th:text="#{advance.overdueOne(${#temporals.format(advance.dueOn, 'dd/MM/yyyy')}, ${@num.money(advance.outstanding)})}">Not retired by 30/10/2026: the next pay run takes 110,000 from salary.</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'RETIRED'}">
+        <strong th:text="#{advance.retiredBy(${advance.retiredBy}, ${#temporals.format(advance.retiredOn, 'dd/MM/yyyy')})}">Retired by accountant on 28/10/2026:</strong>
+        <span th:text="#{advance.retiredSummary(${@num.money(advance.spent)}, ${advance.settled.signum() >= 0 ? #messages.msg('advance.settledReturned', @num.money(advance.settled)) : #messages.msg('advance.settledPaidBack', @num.money(advance.settled.negate()))})}">spent 100,000; 10,000 returned</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'RECOVERED'}" th:text="#{advance.recoveredNote(${@num.money(advance.recovered)})}">Recovered from salary in full: 110,000.</div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{expense.rejectedBy(${advance.decidedBy})} : #{expense.cancelledBy(${advance.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${advance.decisionNote}">Not needed</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{advance.employee}">Employee</label>
+                    <div class="value">
+                        <a sec:authorize="hasAuthority('PAGE_EMPLOYEES')" th:href="@{/payroll/employees/{id}(id=${advance.employee.id})}" th:text="${advance.employee.fullName}">Jean Habimana</a>
+                        <span sec:authorize="!hasAuthority('PAGE_EMPLOYEES')" th:text="${advance.employee.fullName}">Jean Habimana</span>
+                        <div class="cell-sub mono" th:text="${advance.employee.code}">EMP-WH-0001</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{advance.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(advance.amount)}">110,000</div>
+                    <div class="cell-sub" th:if="${advance.recovered.signum() > 0}" th:text="#{advance.recoveredSub(${@num.money(advance.recovered)})}">60,000 recovered from salary</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{advance.costCentre}">Cost centre</label>
+                    <div class="value">
+                        <span class="mono" th:text="${advance.costCentre.code}">COM</span>
+                        <div class="cell-sub" th:text="${advance.costCentre.name}">Commercial</div>
+                    </div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{advance.purpose}">For</label>
+                    <div class="value">
+                        <span th:text="${advance.purpose}">Customer visits in Musanze</span>
+                        <div class="cell-sub" th:text="#{${'advance.kind.' + advance.kind}}">Travel</div>
+                    </div>
+                </div>
+                <th:block th:if="${advance.kind.name() == 'TRAVEL'}">
+                    <div class="item">
+                        <label th:text="#{advance.journey}">Journey</label>
+                        <div class="value">
+                            <span th:text="${advance.destination}">Musanze</span>
+                            <div class="cell-sub" th:text="#{advance.journeySub(${#temporals.format(advance.departOn, 'dd/MM/yyyy')}, ${#temporals.format(advance.returnOn, 'dd/MM/yyyy')}, ${advance.days}, ${advance.nights})}">20/10/2026 – 22/10/2026 · 3 days, 2 nights</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{advance.perDiemCategory}">Per diem</label>
+                        <div class="value">
+                            <span th:text="${#messages.msg('perDiem.category.' + advance.perDiemCategory) + ' · ' + advance.perDiemCurrency + ' ' + @num.money(advance.perDiemAmount)}">Upcountry · RWF 185,000</span>
+                            <div class="cell-sub" th:if="${advance.rate != null}" th:text="#{advance.rateSub(${@num.rate(advance.rate)}, ${#temporals.format(advance.rateDate, 'dd/MM/yyyy')}, ${advance.rateSource})}">at 1,310.50 of 15/10/2026 (BNR)</div>
+                        </div>
+                    </div>
+                </th:block>
+                <div class="item" th:if="${advance.paidOn != null}">
+                    <label th:text="#{advance.paid}">Paid</label>
+                    <div class="value">
+                        <span th:text="${#temporals.format(advance.paidOn, 'dd/MM/yyyy') + ' · ' + #messages.msg('advance.method.' + advance.payMethod)}">20/10/2026 · Main cash vault</span>
+                        <div class="cell-sub" th:text="${advance.payFund != null ? advance.payFund.code + ' · ' + advance.paidBy : (advance.payReference != null ? advance.payReference + ' · ' + advance.paidBy : advance.paidBy)}">treasury1</div>
+                    </div>
+                </div>
+                <div class="item" th:if="${advance.dueOn != null}">
+                    <label th:text="#{advance.dueOn}">Retire by</label>
+                    <div class="value" th:text="${#temporals.format(advance.dueOn, 'dd/MM/yyyy')}">05/11/2026</div>
+                </div>
+                <div class="item" th:if="${advance.decidedAt != null and (s == 'APPROVED' or s == 'PAID' or s == 'RETIRED' or s == 'RECOVERED')}">
+                    <label th:text="#{expense.trail}">Signed</label>
+                    <div class="value">
+                        <div th:text="#{expense.trail.approved(${advance.decidedBy}, ${#temporals.format(advance.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner, 16/10/2026 14:00</div>
+                        <div class="cell-sub" th:if="${advance.authorityLevel != null}" th:text="#{authority.lowestAllowed(${#messages.msg('authority.level.' + advance.authorityLevel)})}">lowest office allowed: Managing Director</div>
+                    </div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" th:if="${!advance.lines.isEmpty()}">
+        <div class="section-header"><h2 th:text="#{advance.spentOn}">What it paid for</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{expense.line.category}">Category</th>
+                        <th th:text="#{expense.line.description}">What</th>
+                        <th th:text="#{expense.line.costCentre}">Cost centre</th>
+                        <th th:text="#{pettyCash.voucher.receiptRef}">Receipt number</th>
+                        <th class="num" th:text="#{expense.line.amount}">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${advance.lines}">
+                        <td th:text="#{${'expense.category.' + l.category}}">Travel</td>
+                        <td th:text="${l.description}">Hotel, 2 nights</td>
+                        <td class="mono" th:text="${l.costCentre.code}">COM</td>
+                        <td class="mono" th:text="${l.receiptRef != null} ? ${l.receiptRef} : '—'">H-551</td>
+                        <td class="num" th:text="${@num.money(l.amount)}">80,000</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" th:text="#{advance.spentTotal}">Spent</th>
+                        <th class="num" th:text="${@num.money(advance.spent)}">100,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <div class="tab-toolbar" th:if="${s == 'PAID'}"><p class="tab-intro" th:text="#{advance.documentsIntro}">Attach the receipts before the advance is retired.</p></div>
+                <th:block th:replace="~{fragments/attachments :: documents('STAFF_ADVANCE', ${advance.id}, ${documents}, ${base})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{advance.rejectTitle(${advance.number})},
+            @{/payroll/advances/{id}/reject(id=${advance.id})}, #{advance.rejectText}, #{expense.reject})}"></div>
+    <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{advance.cancelTitle(${advance.number})},
+            @{/payroll/advances/{id}/cancel(id=${advance.id})}, #{advance.cancelText}, #{expense.cancel})}"></div>
+
+    <!--/* Paying: how, the fund or the reference, the day */-->
+    <div class="modal-overlay" id="pay-modal" th:if="${s == 'APPROVED' and canPay and !ownAdvance}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pay-title">
+            <div class="modal-header">
+                <h3 id="pay-title" th:text="#{advance.payTitle(${advance.number})}">Pay ADV-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="pay-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/payroll/advances/{id}/pay(id=${advance.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{advance.payText(${@num.money(advance.amount)}, ${advance.employee.fullName})}">Pays 110,000 to Jean Habimana: posted at once (Dr Staff Advances).</p>
+                    <div class="form-group">
+                        <label for="pay-method" th:text="#{advance.payMethod}">Paid from</label>
+                        <select id="pay-method" name="payMethod" data-method-select required>
+                            <option th:each="m : ${payMethods}" th:value="${m}" th:text="#{${'advance.method.' + m}}">Main cash vault</option>
+                        </select>
+                    </div>
+                    <div class="form-group" data-fund-for="payMethod" hidden>
+                        <label for="pay-fund" th:text="#{pettyCash.fund}">Fund</label>
+                        <select id="pay-fund" name="payFundId">
+                            <option th:each="f : ${funds}" th:value="${f.fund.id}" th:text="${f.fund.code + ' · ' + @num.money(f.balance)}">PC-WH · 150,000</option>
+                        </select>
+                    </div>
+                    <div class="form-group" data-reference-for="payMethod" hidden>
+                        <label for="pay-reference" th:text="#{pettyCash.reference}">Reference</label>
+                        <input type="text" id="pay-reference" name="payReference" maxlength="60" autocomplete="off" class="input-code">
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-date" th:text="#{advance.paidOn}">Paid on</label>
+                        <input type="date" id="pay-date" name="paidOn" th:value="${today}" th:max="${today}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="pay-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{advance.pay}">Pay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <th:block th:if="${s == 'SUBMITTED'}">
+        <div th:replace="~{fragments/authority :: boardModal(@{/payroll/advances/{id}/approve(id=${advance.id})}, #{expense.approve}, ${authority})}"></div>
+    </th:block>
+    <script defer src="/js/advance-form.js"></script>
+</div>
+</body>
+</html>

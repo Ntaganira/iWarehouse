@@ -54,10 +54,12 @@ public class RequisitionService {
     private final DocumentNumberService numbers;
     private final SettingService settings;
     private final Notifier notifier;
+    private final DelegationOfAuthority authority;
     private final Clock clock;
 
     public RequisitionService(PurchaseRequisitionRepository repo, CostCentreRepository costCentreRepo, SupplierRepository supplierRepo,
-                              AttachmentService attachments, DocumentNumberService numbers, SettingService settings, Notifier notifier, Clock clock) {
+                              AttachmentService attachments, DocumentNumberService numbers, SettingService settings, Notifier notifier,
+                              DelegationOfAuthority authority, Clock clock) {
         this.repo = repo;
         this.costCentreRepo = costCentreRepo;
         this.supplierRepo = supplierRepo;
@@ -65,7 +67,15 @@ public class RequisitionService {
         this.numbers = numbers;
         this.settings = settings;
         this.notifier = notifier;
+        this.authority = authority;
         this.clock = clock;
+    }
+
+    /** Whether the signed-in user may decide it as its department's head: its manager when one is named, or the COO and above. */
+    public boolean isHead(PurchaseRequisition r) {
+        List<Long> managers = r.getCostCentre().getManagerUserId() == null ? List.of() : List.of(r.getCostCentre().getManagerUserId());
+        return Expenditure.mayActAsHead(managers, AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null),
+                authority.currentLevel().orElse(null));
     }
 
     // ---------------------------------------------------------------- reading
@@ -313,8 +323,13 @@ public class RequisitionService {
         r.setSubmittedAt(LocalDateTime.now(clock));
         r.setStatus(RequisitionStatus.SUBMITTED);
         String link = "/requisitions/" + r.getId();
-        notifier.holders("APPROVE_REQUISITION", r.getRequestedById(), NotificationKind.APPROVAL, "notify.requisition.waiting",
-                "notify.requisition.waitingText", link, r.getNumber(), r.getRequestedBy(), r.getCostCentre().getCode(), r.getTitle());
+        if (r.getCostCentre().getManagerUserId() != null && !r.getCostCentre().getManagerUserId().equals(r.getRequestedById())) {
+            notifier.user(r.getCostCentre().getManagerUserId(), NotificationKind.APPROVAL, "notify.requisition.waiting",
+                    "notify.requisition.waitingText", link, r.getNumber(), r.getRequestedBy(), r.getCostCentre().getCode(), r.getTitle());
+        } else {
+            notifier.holders("APPROVE_REQUISITION", r.getRequestedById(), NotificationKind.APPROVAL, "notify.requisition.waiting",
+                    "notify.requisition.waitingText", link, r.getNumber(), r.getRequestedBy(), r.getCostCentre().getCode(), r.getTitle());
+        }
         return r;
     }
 
@@ -326,6 +341,7 @@ public class RequisitionService {
         if (isRequester(r)) {
             throw BusinessException.of("requisition.ownDecision", r.getNumber());
         }
+        requireHead(r);
         String clean = PartyRules.clean(note);
         if (clean != null && clean.length() > 500) {
             throw BusinessException.onField("note", "requisition.note.size");
@@ -343,6 +359,7 @@ public class RequisitionService {
         if (isRequester(r)) {
             throw BusinessException.of("requisition.ownDecision", r.getNumber());
         }
+        requireHead(r);
         decide(r, RequisitionStatus.REJECTED, reason(reason));
         notifier.user(r.getRequestedById(), NotificationKind.DECISION, "notify.requisition.rejected", "notify.rejectedBy",
                 "/requisitions/" + r.getId(), r.getNumber(), r.getDecidedBy(), r.getDecisionNote());
@@ -364,6 +381,12 @@ public class RequisitionService {
         r.setDecisionNote(reason(reason));
         r.setStatus(RequisitionStatus.CANCELLED);
         return r;
+    }
+
+    private void requireHead(PurchaseRequisition r) {
+        if (!isHead(r)) {
+            throw BusinessException.of("requisition.notHead", r.getNumber(), r.getCostCentre().getCode(), r.getCostCentre().getManagerName());
+        }
     }
 
     // ---------------------------------------------------------------- an order or a bill uses one

@@ -46,6 +46,19 @@ public final class WorkingDays {
         return d;
     }
 
+    /** The n-th working day after a day (CMP 08: an advance is retired within ten working days). */
+    public static LocalDate after(LocalDate day, int n) {
+        LocalDate d = day;
+        int count = 0;
+        while (count < n) {
+            d = d.plusDays(1);
+            if (isWorking(d)) {
+                count++;
+            }
+        }
+        return d;
+    }
+
     /** The working day before a day. */
     public static LocalDate previous(LocalDate day) {
         LocalDate d = day.minusDays(1);

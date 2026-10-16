@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${voucher == null} ? #{pettyCash.voucher.new} : #{pettyCash.voucher.editTitle(${voucher.number})}, ~{::content})}">
+<head><title>Petty cash voucher - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${voucher == null} ? #{pettyCash.voucher.new} : #{pettyCash.voucher.editTitle(${voucher.number})}">Record a voucher</h1>
+            <div class="subtitle" th:text="#{pettyCash.voucher.formSubtitle}">Saved as a draft; submitted with the original receipt attached, another person approves it before it is paid and posted.</div>
+        </div>
+        <a th:href="${voucher == null} ? @{/petty-cash} : @{/petty-cash/vouchers/{id}(id=${voucher.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${voucher == null} ? @{/petty-cash/vouchers/new} : @{/petty-cash/vouchers/{id}/edit(id=${voucher.id})}" th:object="${voucherDto}"
+              method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="doc-note is-warning" th:if="${voucher == null and funds.isEmpty()}" th:text="#{pettyCash.voucher.noFund}">You keep no petty cash fund: only a fund's custodian records its vouchers.</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="fundId" th:text="#{pettyCash.fund}">Fund</label>
+                    <select id="fundId" th:field="*{fundId}" required th:if="${voucher == null}" th:classappend="${#fields.hasErrors('fundId')} ? 'is-invalid'">
+                        <option value="" th:text="#{pettyCash.chooseFund}">Choose the fund</option>
+                        <option th:each="f : ${funds}" th:value="${f.fund.id}" th:text="${f.fund.code + ' · ' + f.fund.location.name + ' · ' + @num.money(f.balance)}">PC-WH · Main warehouse · 150,000</option>
+                    </select>
+                    <th:block th:if="${voucher != null}">
+                        <input type="hidden" th:field="*{fundId}">
+                        <input type="text" id="fund-shown" th:value="${voucher.fund.code + ' · ' + voucher.fund.location.name}" disabled>
+                    </th:block>
+                    <span class="field-error" th:if="${#fields.hasErrors('fundId')}" th:errors="*{fundId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="voucherDate" th:text="#{pettyCash.voucher.date}">Date</label>
+                    <input type="date" id="voucherDate" th:field="*{voucherDate}" required th:attr="max=${today}"
+                           th:classappend="${#fields.hasErrors('voucherDate')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('voucherDate')}" th:errors="*{voucherDate}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="payee" th:text="#{pettyCash.voucher.payee}">Paid to</label>
+                    <input type="text" id="payee" th:field="*{payee}" maxlength="100" required autocomplete="off" th:placeholder="#{pettyCash.voucher.payeePh}"
+                           th:classappend="${#fields.hasErrors('payee')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('payee')}" th:errors="*{payee}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="amount" th:text="#{pettyCash.voucher.amount}">Amount (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="amount" th:field="*{amount}" min="1" step="1" th:attr="max=${maxPayment}" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></span>
+                    <span class="hint" th:text="#{pettyCash.voucher.amountHint(${@num.money(maxPayment)})}">At most 50,000 a payment (Settings)</span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="purpose" th:text="#{pettyCash.voucher.purpose}">For</label>
+                    <input type="text" id="purpose" th:field="*{purpose}" maxlength="255" required autocomplete="off" th:placeholder="#{pettyCash.voucher.purposePh}"
+                           th:classappend="${#fields.hasErrors('purpose')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('purpose')}" th:errors="*{purpose}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="category" th:text="#{expense.line.category}">Category</label>
+                    <select id="category" th:field="*{category}" required th:classappend="${#fields.hasErrors('category')} ? 'is-invalid'">
+                        <option value="" th:text="#{expense.chooseCategory}">Choose</option>
+                        <option th:each="c : ${categories}" th:value="${c}" th:text="#{${'expense.category.' + c}}">Transport</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="costCentreId" th:text="#{pettyCash.voucher.costCentre}">Cost centre</label>
+                    <select id="costCentreId" th:field="*{costCentreId}" required th:classappend="${#fields.hasErrors('costCentreId')} ? 'is-invalid'">
+                        <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                        <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">FIN · Finance</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('costCentreId')}" th:errors="*{costCentreId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="receiptRef" th:text="#{pettyCash.voucher.receiptRef}">Receipt number</label>
+                    <input type="text" id="receiptRef" th:field="*{receiptRef}" maxlength="60" autocomplete="off" class="input-code"
+                           th:classappend="${#fields.hasErrors('receiptRef')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('receiptRef')}" th:errors="*{receiptRef}"></span>
+                    <span class="hint" th:text="#{pettyCash.voucher.receiptRefHint}">The number on the shop's receipt; attach the receipt itself on the voucher's page</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{expense.saveDraft}">Save the draft</button>
+                <a th:href="${voucher == null} ? @{/petty-cash} : @{/petty-cash/vouchers/{id}(id=${voucher.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

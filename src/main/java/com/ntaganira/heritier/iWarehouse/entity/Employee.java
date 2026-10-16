@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * <pre>
@@ -53,6 +54,10 @@ public class Employee extends BaseEntity {
 
     @Column(name = "job_title", length = 100)
     private String jobTitle;
+
+    /** The department their pay is posted to (F-15 A). */
+    @Column(name = "cost_centre_id")
+    private UUID costCentreId;
 
     @Column(name = "hired_on", nullable = false)
     private LocalDate hiredOn;

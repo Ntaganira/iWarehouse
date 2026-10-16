@@ -58,7 +58,11 @@ public enum AttachmentOwner {
     /** An expense bill: the supplier's original invoice (CMP 07). */
     EXPENSE_BILL("PAGE_EXPENSE_BILLS", "/expenses/"),
     /** A purchase requisition: the written quotes, the RFQ or tender papers (CMP 06). */
-    PURCHASE_REQUISITION("PAGE_REQUISITIONS", "/requisitions/");
+    PURCHASE_REQUISITION("PAGE_REQUISITIONS", "/requisitions/"),
+    /** A petty cash voucher: the original receipt (CMP 07, F-13 D). */
+    PETTY_CASH_VOUCHER("PAGE_PETTY_CASH", "/petty-cash/vouchers/"),
+    /** A staff advance: the receipts it is retired with (CMP 08). */
+    STAFF_ADVANCE("PAGE_STAFF_ADVANCES", "/payroll/advances/");
 
     private final String page;
     private final String path;

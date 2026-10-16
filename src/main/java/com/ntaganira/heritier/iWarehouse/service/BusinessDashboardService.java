@@ -91,6 +91,9 @@ public class BusinessDashboardService {
     private final com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.PettyCashVoucherRepository voucherRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo;
+    private final PettyCashService pettyCash;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
                                     JournalService journalService, CustomerAccountService customerAccounts,
@@ -107,9 +110,14 @@ public class BusinessDashboardService {
                                     com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo,
                                     com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo,
                                     com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo,
-                                    com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo) {
+                                    com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo,
+                                    com.ntaganira.heritier.iWarehouse.repository.PettyCashVoucherRepository voucherRepo,
+                                    com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo, PettyCashService pettyCash) {
         this.expenseBillRepo = expenseBillRepo;
         this.requisitionRepo = requisitionRepo;
+        this.voucherRepo = voucherRepo;
+        this.advanceRepo = advanceRepo;
+        this.pettyCash = pettyCash;
         this.damageRepo = damageRepo;
         this.varianceRepo = varianceRepo;
         this.deliveryNoteRepo = deliveryNoteRepo;
@@ -159,7 +167,8 @@ public class BusinessDashboardService {
                        BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet,
                        long creditNotes, long writeOffs, long purchaseOrders, long supplierPayments, long creditApplications,
                        long priceChanges, long suppliers, long tickets, long siteTransfers, long deliveryNotes, long loadRequests,
-                       long damageReports, long variances, long expenseBills, long requisitions, long toRatify) {
+                       long damageReports, long variances, long expenseBills, long requisitions, long toRatify, long pettyCashVouchers,
+                       long advances, long advancesOverdue, long pettyCashLow) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
@@ -168,7 +177,7 @@ public class BusinessDashboardService {
         public long getWaiting() {
             return saleApprovals + adjustments + manualJournals + vehicleCosts + creditNotes + writeOffs + purchaseOrders + supplierPayments
                     + creditApplications + priceChanges + suppliers + tickets + siteTransfers + deliveryNotes + loadRequests + damageReports + variances
-                    + expenseBills + requisitions + toRatify;
+                    + expenseBills + requisitions + toRatify + pettyCashVouchers + advances;
         }
     }
 
@@ -235,7 +244,11 @@ public class BusinessDashboardService {
                         com.ntaganira.heritier.iWarehouse.enums.VarianceStatus.ESCALATED)),
                 expenseBillRepo.countByStatusIn(List.of(ExpenseBillStatus.SUBMITTED, ExpenseBillStatus.RECOMMENDED, ExpenseBillStatus.REVIEWED)),
                 requisitionRepo.countByStatus(RequisitionStatus.SUBMITTED),
-                expenseBillRepo.findByEmergencyTrueAndStatusAndRatifiedAtIsNullOrderByDecidedAtAsc(ExpenseBillStatus.APPROVED).size());
+                expenseBillRepo.findByEmergencyTrueAndStatusAndRatifiedAtIsNullOrderByDecidedAtAsc(ExpenseBillStatus.APPROVED).size(),
+                voucherRepo.countByStatus(com.ntaganira.heritier.iWarehouse.enums.PettyCashVoucherStatus.SUBMITTED),
+                advanceRepo.countByStatus(com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.SUBMITTED),
+                advanceRepo.findByStatusAndDueOnBeforeOrderByDueOnAsc(com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.PAID, today).size(),
+                pettyCash.lowCount());
     }
 
     private static long whole(BigDecimal amount) {

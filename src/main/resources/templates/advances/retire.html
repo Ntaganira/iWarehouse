@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{advance.retireTitle(${advance.number})}, ~{::content})}">
+<head><title>Retire an advance - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{advance.retireTitle(${advance.number})}">Retire ADV-WH-2026-000001</h1>
+            <div class="subtitle" th:text="#{advance.retireSubtitle(${advance.employee.fullName}, ${@num.money(advance.outstanding)})}">Jean Habimana still owes 110,000: what the receipts show it paid for, and the rest returned or paid back.</div>
+        </div>
+        <a th:href="@{/payroll/advances/{id}(id=${advance.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${receipts == 0}">
+        <span th:text="#{advance.noReceipts}">No receipt is attached yet: attach them on the advance's page (Documents) first.</span>
+        <a th:href="@{/payroll/advances/{id}(id=${advance.id})}" th:text="#{advance.toDocuments}">Go to the advance</a>
+    </div>
+
+    <form th:action="@{/payroll/advances/{id}/retire(id=${advance.id})}" th:object="${retireDto}" method="post" class="retire-form" novalidate
+          th:attr="data-outstanding=${advance.outstanding}">
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{advance.spentOn}">What it paid for</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add" data-for="lines">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{expense.addLine}">Add a line</span>
+                </button>
+            </div>
+            <div class="section-body">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="retiredOn" th:text="#{advance.retiredOn}">Retired on</label>
+                        <input type="date" id="retiredOn" th:field="*{retiredOn}" required th:attr="max=${today},min=${advance.paidOn}"
+                               th:classappend="${#fields.hasErrors('retiredOn')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('retiredOn')}" th:errors="*{retiredOn}"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="line-table retire-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{expense.line.category}">Category</th>
+                            <th th:text="#{expense.line.description}">What</th>
+                            <th th:text="#{expense.line.costCentre}">Cost centre</th>
+                            <th th:text="#{pettyCash.voucher.receiptRef}">Receipt number</th>
+                            <th class="num" th:text="#{expense.line.amount}">Amount</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body" data-prefix="lines">
+                        <tr class="line-row" th:each="row, st : *{lines}">
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].category}" th:aria-label="#{expense.line.category}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].category')} ? 'is-invalid'">
+                                    <option value="" th:text="#{expense.chooseCategory}">Choose</option>
+                                    <option th:each="c : ${categories}" th:value="${c}" th:text="#{${'expense.category.' + c}}">Travel</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].category')}" th:errors="*{lines[__${st.index}__].category}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{lines[__${st.index}__].description}" maxlength="255" th:aria-label="#{expense.line.description}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].description')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].description')}" th:errors="*{lines[__${st.index}__].description}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].costCentreId}" th:aria-label="#{expense.line.costCentre}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].costCentreId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                                    <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">COM · Commercial</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].costCentreId')}" th:errors="*{lines[__${st.index}__].costCentreId}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{lines[__${st.index}__].receiptRef}" maxlength="60" class="input-code" th:aria-label="#{pettyCash.voucher.receiptRef}">
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].amount}" min="1" step="1" inputmode="numeric" th:aria-label="#{expense.line.amount}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].amount')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].amount')}" th:errors="*{lines[__${st.index}__].amount}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="4" th:text="#{advance.spentTotal}">Spent</th>
+                            <th class="num retire-spent">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <template class="line-template" data-for="lines">
+            <tr class="line-row">
+                <td>
+                    <select name="lines[{i}].category" th:aria-label="#{expense.line.category}">
+                        <option value="" th:text="#{expense.chooseCategory}">Choose</option>
+                        <option th:each="c : ${categories}" th:value="${c}" th:text="#{${'expense.category.' + c}}">Travel</option>
+                    </select>
+                </td>
+                <td><input type="text" name="lines[{i}].description" maxlength="255" th:aria-label="#{expense.line.description}"></td>
+                <td>
+                    <select name="lines[{i}].costCentreId" th:aria-label="#{expense.line.costCentre}">
+                        <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                        <option th:each="c : ${costCentres}" th:value="${c.id}" th:selected="${c.id == advance.costCentre.id}" th:text="${c.code + ' · ' + c.name}">COM · Commercial</option>
+                    </select>
+                </td>
+                <td><input type="text" name="lines[{i}].receiptRef" maxlength="60" class="input-code" th:aria-label="#{pettyCash.voucher.receiptRef}"></td>
+                <td class="num"><input type="number" name="lines[{i}].amount" min="1" step="1" inputmode="numeric" th:aria-label="#{expense.line.amount}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{advance.rest}">The rest</h2></div>
+            <div class="section-body">
+                <p class="retire-settle strong" th:attr="data-returned=#{advance.restReturned('{0}')},data-paid-back=#{advance.restPaidBack('{0}')},data-even=#{advance.restEven}"
+                   th:text="#{advance.restEven}">The receipts come to what is owed: nothing to settle.</p>
+                <div class="form-grid retire-method">
+                    <div class="form-group">
+                        <label for="settleMethod" th:text="#{advance.settleMethod}">Returned to / paid back from</label>
+                        <select id="settleMethod" th:field="*{settleMethod}" data-method-select th:classappend="${#fields.hasErrors('settleMethod')} ? 'is-invalid'">
+                            <option value="" th:text="#{advance.chooseMethod}">Choose</option>
+                            <option th:each="m : ${payMethods}" th:value="${m}" th:text="#{${'advance.method.' + m}}">Main cash vault</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('settleMethod')}" th:errors="*{settleMethod}"></span>
+                    </div>
+                    <div class="form-group" data-fund-for="settleMethod" hidden>
+                        <label for="settleFundId" th:text="#{pettyCash.fund}">Fund</label>
+                        <select id="settleFundId" th:field="*{settleFundId}">
+                            <option th:each="f : ${funds}" th:value="${f.fund.id}" th:text="${f.fund.code + ' · ' + @num.money(f.balance)}">PC-WH · 150,000</option>
+                        </select>
+                    </div>
+                    <div class="form-group" data-reference-for="settleMethod" hidden>
+                        <label for="settleReference" th:text="#{pettyCash.reference}">Reference</label>
+                        <input type="text" id="settleReference" th:field="*{settleReference}" maxlength="60" autocomplete="off" class="input-code"
+                               th:classappend="${#fields.hasErrors('settleReference')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('settleReference')}" th:errors="*{settleReference}"></span>
+                    </div>
+                </div>
+                <p class="form-note" th:text="#{advance.retireNote}">Posting: Dr each line's category for its cost centre and the cash returned / Cr Staff Advances what was owed (and the cash paid back when the receipts come to more).</p>
+            </div>
+        </div>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{advance.retire}">Retire</button>
+            <a th:href="@{/payroll/advances/{id}(id=${advance.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/expense-form.js"></script>
+    <script defer src="/js/advance-form.js"></script>
+</div>
+</body>
+</html>

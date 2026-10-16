@@ -810,6 +810,80 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.pettyCash}">Petty cash and staff advances</div>
+                                <div class="role-card-desc" th:text="#{settings.group.pettyCashHint}">hint</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.pettyCashMaxFloat}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.pettyCashMaxFloatHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.pettyCashMaxFloat)}">200,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.pettyCashMaxPayment}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.pettyCashMaxPaymentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.pettyCashMaxPayment)}">200,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.pettyCashReplenishPercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.pettyCashReplenishPercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.pettyCashReplenishPercent}">25</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.pettyCashReceiptRequired}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.pettyCashReceiptRequiredHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.pettyCashReceiptRequired} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.pettyCashAuditDay}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.pettyCashAuditDayHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.pettyCashAuditDay}">25</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.advanceRetireDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.advanceRetireDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.advanceRetireDays}">10</span> <span class="unit" th:text="#{settings.workingDaysUnit}">working days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.advanceBlockOpen}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.advanceBlockOpenHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.advanceBlockOpen} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.advanceReceiptsRequired}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.advanceReceiptsRequiredHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.advanceReceiptsRequired} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.advancePayrollRecovery}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.advancePayrollRecoveryHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.advancePayrollRecovery} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

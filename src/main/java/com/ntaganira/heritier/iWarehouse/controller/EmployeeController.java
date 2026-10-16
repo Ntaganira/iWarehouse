@@ -82,6 +82,8 @@ public class EmployeeController {
         model.addAttribute("nationalIdShown", personal ? employee.getNationalId() : Driver.masked(employee.getNationalId()));
         model.addAttribute("accountShown", personal ? employee.getAccountNumber() : Driver.masked(employee.getAccountNumber()));
         model.addAttribute("driver", employeeService.driverOf(employee).orElse(null));
+        model.addAttribute("costCentre", employee.getCostCentreId() == null ? null : employeeService.costCentres().stream()
+                .filter(c -> c.getId().equals(employee.getCostCentreId())).findFirst().orElse(null));
         model.addAttribute("payslips", employeeService.payslips(id, Paging.pageOf("payslips", open, page), Paging.SIZE));
         model.addAttribute("history", dataChangeService.history("Employee", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
@@ -147,6 +149,7 @@ public class EmployeeController {
         model.addAttribute("users", employeeService.linkableUsers(current));
         model.addAttribute("employments", EmploymentType.values());
         model.addAttribute("payMethods", SalaryPayMethod.values());
+        model.addAttribute("costCentres", employeeService.costCentres().stream().filter(c -> c.isEnabled() || c.getId().equals(dto.getCostCentreId())).toList());
         return "payroll/employees/form";
     }
 

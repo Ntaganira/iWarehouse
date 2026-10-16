@@ -50,12 +50,16 @@ public class ExpenditureReportService {
     private final StockService stockService;
     private final PurchaseOrderService orderService;
     private final RequisitionService requisitions;
+    private final StaffAdvanceService advances;
+    private final PettyCashService pettyCash;
+    private final SupplierInvoiceRepository supplierInvoiceRepo;
     private final SettingService settings;
     private final Clock clock;
 
     public ExpenditureReportService(JournalLineRepository lineRepo, ExpenseBillRepository billRepo, PurchaseOrderRepository orderRepo,
                                     CostCentreRepository costCentreRepo, StockService stockService, PurchaseOrderService orderService,
-                                    RequisitionService requisitions, SettingService settings, Clock clock) {
+                                    RequisitionService requisitions, StaffAdvanceService advances, PettyCashService pettyCash,
+                                    SupplierInvoiceRepository supplierInvoiceRepo, SettingService settings, Clock clock) {
         this.lineRepo = lineRepo;
         this.billRepo = billRepo;
         this.orderRepo = orderRepo;
@@ -63,6 +67,9 @@ public class ExpenditureReportService {
         this.stockService = stockService;
         this.orderService = orderService;
         this.requisitions = requisitions;
+        this.advances = advances;
+        this.pettyCash = pettyCash;
+        this.supplierInvoiceRepo = supplierInvoiceRepo;
         this.settings = settings;
         this.clock = clock;
     }
@@ -88,8 +95,14 @@ public class ExpenditureReportService {
         }
     }
 
+    /**
+     * The report: spending by cost centre, location and account, the bills of the period, the indicators, split purchases; staff
+     * advances due in the period retired and retired on time (CMP 10), the supplier invoices of the period (each bills posted goods
+     * receipts at their value: the three-way match), and the petty cash funds today.
+     */
     public record Report(LocalDate from, LocalDate to, List<Row> byCentre, List<Row> byLocation, List<Row> byAccount, BigDecimal operating,
-                         BigDecimal capital, Map<ExpenseBillStatus, Long> bills, long toRatify, Indicators indicators, List<SplitPurchases.Flag> splits) {
+                         BigDecimal capital, Map<ExpenseBillStatus, Long> bills, long toRatify, Indicators indicators, List<SplitPurchases.Flag> splits,
+                         Advances.Rates advances, long supplierInvoices, List<PettyCashService.FundRow> funds) {
     }
 
     public LocalDate today() {
@@ -197,8 +210,10 @@ public class ExpenditureReportService {
                 settings.getDecimal(SettingKey.EXPENSE_RFQ_FROM), settings.getDecimal(SettingKey.EXPENSE_TENDER_FROM))).stream()
                 .filter(f -> !f.getTo().isBefore(from)).toList();
         long toRatify = billRepo.findByEmergencyTrueAndStatusAndRatifiedAtIsNullOrderByDecidedAtAsc(ExpenseBillStatus.APPROVED).size();
+        long invoices = supplierInvoiceRepo.countByInvoiceDateBetween(from, to);
         return new Report(from, to, centreRows, locationRows, accountRows, operating, capital, byStatus, toRatify,
-                new Indicators(needing, cited, spend, onRegister, manual, untagged, operating), splits);
+                new Indicators(needing, cited, spend, onRegister, manual, untagged, operating), splits,
+                advances.retirementRates(from, to), invoices, pettyCash.funds());
     }
 
     /** Groups as rows, largest first; the key "" is the group no cost centre or location names. */

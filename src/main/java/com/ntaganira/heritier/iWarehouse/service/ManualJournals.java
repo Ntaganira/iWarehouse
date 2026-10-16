@@ -25,7 +25,8 @@ public final class ManualJournals {
 
     /** Accounts posted by their documents only. */
     public static final Set<AccountKey> CONTROLLED = Collections.unmodifiableSet(EnumSet.of(AccountKey.INVENTORY, AccountKey.RECEIVABLE,
-            AccountKey.PAYABLE, AccountKey.GRNI, AccountKey.CASH, AccountKey.DRIVER_FLOAT, AccountKey.CLAIMS, AccountKey.NET_PAY_PAYABLE));
+            AccountKey.PAYABLE, AccountKey.GRNI, AccountKey.CASH, AccountKey.DRIVER_FLOAT, AccountKey.CLAIMS, AccountKey.NET_PAY_PAYABLE,
+            AccountKey.PETTY_CASH));
 
     private ManualJournals() {
     }

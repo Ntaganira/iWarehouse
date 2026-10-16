@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{pettyCash.title}, ~{::content})}">
+<head><title>Petty cash - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{pettyCash.title}">Petty cash</h1>
+            <div class="subtitle" th:text="#{pettyCash.subtitle}">A float per site kept by its custodian: vouchers with their receipt, top-ups, daily and surprise counts</div>
+        </div>
+        <div class="btn-group">
+            <a href="/petty-cash/funds/new" class="btn btn-outline" sec:authorize="hasAuthority('PERM_MANAGE_PETTY_CASH')" th:text="#{pettyCash.open}">Open a fund</a>
+            <a href="/petty-cash/vouchers/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_RECORD_PETTY_CASH')" th:if="${!myFunds.isEmpty()}">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{pettyCash.voucher.new}">Record a voucher</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waiting > 0}">
+        <span th:text="#{pettyCash.waitingNote(${waiting})}">2 petty cash vouchers wait for approval.</span>
+        <a th:href="@{/petty-cash(status='waiting')}" th:text="#{expense.showWaiting}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{pettyCash.funds}">Funds</span>
+                <span class="section-count" th:text="${fundPage.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{pettyCash.fund}">Fund</th>
+                        <th th:text="#{pettyCash.custodian}">Custodian</th>
+                        <th class="num" th:text="#{pettyCash.imprest}">Float (RWF)</th>
+                        <th class="num" th:text="#{pettyCash.balance}">Holds (RWF)</th>
+                        <th th:text="#{pettyCash.lastCount}">Last daily count</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="f : ${fundPage.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/petty-cash/funds/{id}(id=${f.fund.id})}" th:text="${f.fund.code}">PC-WH</a>
+                            <div class="cell-sub" th:text="${f.fund.location.name}">Main warehouse</div>
+                        </td>
+                        <td th:text="${f.fund.custodianName}">cashier1</td>
+                        <td class="num" th:text="${@num.money(f.fund.imprest)}">200,000</td>
+                        <td class="num" th:text="${@num.money(f.balance)}">150,000</td>
+                        <td class="nowrap">
+                            <span th:text="${f.lastDaily != null} ? ${#temporals.format(f.lastDaily.countedOn, 'dd/MM/yyyy')} : '—'">15/10/2026</span>
+                            <div class="cell-sub" th:if="${!f.notCounted.isEmpty()}" th:text="#{pettyCash.notCountedSub(${#lists.size(f.notCounted)})}">2 working days not counted</div>
+                        </td>
+                        <td><th:block th:replace="~{petty-cash/list :: fundStatus(${f})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${fundPage.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{pettyCash.noFunds}">No petty cash fund yet</h3>
+                                <p th:text="#{pettyCash.noFundsHint}">Finance opens a fund for a site with its custodian and float; Treasury then tops it up from the vault or the bank.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${fundPage}, '/petty-cash', ${fundQuery}, 'fpage')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{pettyCash.vouchers}">Vouchers</span>
+                <span class="section-count" th:text="${vouchers.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/petty-cash}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{pettyCash.searchPh}" th:aria-label="#{pettyCash.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="waiting" th:selected="${status == 'waiting'}" th:text="#{expense.filter.waiting}">Waiting</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'pettyCash.voucher.status.' + st}}">Approved</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{pettyCash.voucher.number}">Voucher</th>
+                        <th th:text="#{pettyCash.voucher.date}">Date</th>
+                        <th th:text="#{pettyCash.fund}">Fund</th>
+                        <th th:text="#{pettyCash.voucher.payee}">Paid to</th>
+                        <th class="num" th:text="#{pettyCash.voucher.amount}">Amount (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="v : ${vouchers.content}">
+                        <td><a class="row-link strong mono" th:href="@{/petty-cash/vouchers/{id}(id=${v.id})}" th:text="${v.number}">PCV-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(v.voucherDate, 'dd/MM/yyyy')}">16/10/2026</td>
+                        <td class="mono" th:text="${v.fund.code}">PC-WH</td>
+                        <td>
+                            <span th:text="${v.payee}">Moto taxi</span>
+                            <div class="cell-sub" th:text="${v.purpose}">Delivery of documents to RRA</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(v.amount)}">3,000</td>
+                        <td><th:block th:replace="~{petty-cash/list :: voucherStatus(${v})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${vouchers.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{pettyCash.voucher.empty}">No vouchers yet</h3>
+                                <p th:text="#{pettyCash.voucher.emptyHint}">The custodian records each payment with its receipt; another person approves it before it is posted.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${vouchers}, '/petty-cash', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A fund's state: closed, to be topped up, a surprise count due, or fine */-->
+<th:block th:fragment="fundStatus(f)">
+    <span th:if="${!f.fund.active}" class="badge badge-secondary" th:text="#{pettyCash.status.CLOSED}">Closed</span>
+    <th:block th:if="${f.fund.active}">
+        <span th:if="${f.low}" class="badge badge-warning" th:text="#{pettyCash.low}">To top up</span>
+        <span th:if="${f.auditDue}" class="badge badge-warning" th:text="#{pettyCash.auditDue}">Surprise count due</span>
+        <span th:if="${!f.low and !f.auditDue}" class="badge badge-success" th:text="#{pettyCash.status.ACTIVE}">In use</span>
+    </th:block>
+</th:block>
+
+<!--/* A voucher's status as a badge */-->
+<th:block th:fragment="voucherStatus(v)" th:switch="${v.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{pettyCash.voucher.status.DRAFT}">Draft</span>
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{pettyCash.voucher.status.SUBMITTED}">Submitted</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{pettyCash.voucher.status.APPROVED}">Approved</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{pettyCash.voucher.status.REJECTED}">Rejected</span>
+    <span th:case="'REVERSED'" class="badge badge-info" th:text="#{pettyCash.voucher.status.REVERSED}">Reversed</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{pettyCash.voucher.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

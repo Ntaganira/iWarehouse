@@ -33,7 +33,7 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE, EXPENSE, EXPENSE_RATIFIED, REQUISITION }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE, EXPENSE, EXPENSE_RATIFIED, REQUISITION, STAFF_ADVANCE }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -69,6 +69,7 @@ public class ExceptionsReportService {
     private final com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo;
     private final DelegationOfAuthority authority;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
@@ -80,10 +81,12 @@ public class ExceptionsReportService {
                                    SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, TripRepository tripRepo,
                                    com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo, DelegationOfAuthority authority,
                                    com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo,
-                                   com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo) {
+                                   com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo,
+                                   com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo) {
         this.damageRepo = damageRepo;
         this.expenseBillRepo = expenseBillRepo;
         this.requisitionRepo = requisitionRepo;
+        this.advanceRepo = advanceRepo;
         this.authority = authority;
         this.deliveryNoteRepo = deliveryNoteRepo;
         this.tripRepo = tripRepo;
@@ -269,6 +272,17 @@ public class ExceptionsReportService {
             rows.add(new Row(Kind.REQUISITION, r.getNumber(), "/requisitions/" + r.getId(), r.getDecidedAt(), r.getCostCentre().getCode() + " · " + r.getTitle(),
                     r.getEstimatedTotal(), false, null, r.getRequestedBy(), r.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED,
                     r.getDecisionNote()));
+        }
+        // Staff advances decided by the Managing Director (CMP 08)
+        for (com.ntaganira.heritier.iWarehouse.entity.StaffAdvance a : advanceRepo.findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(from, to,
+                List.of(com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.APPROVED, com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.PAID,
+                        com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.RETIRED, com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.RECOVERED,
+                        com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.REJECTED))) {
+            boolean rejected = a.getStatus() == com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.REJECTED;
+            rows.add(new Row(Kind.STAFF_ADVANCE, a.getNumber(), "/payroll/advances/" + a.getId(), a.getDecidedAt(), a.getEmployee().getFullName() + " · "
+                    + a.getPurpose(), a.getAmount(), false, a.getAuthorityLevel() != null ? a.getAuthorityLevel()
+                    : authority.required(AuthorityDecision.STAFF_ADVANCE, a.getAmount()), a.getRequestedBy(), a.getDecidedBy(),
+                    rejected ? Outcome.REJECTED : Outcome.APPROVED, a.getDecisionNote()));
         }
         rows.sort(Comparator.comparing(Row::at).thenComparing(Row::number));
         Map<Kind, Long> counts = new EnumMap<>(Kind.class);

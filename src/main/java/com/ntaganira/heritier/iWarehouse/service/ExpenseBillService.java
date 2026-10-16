@@ -215,6 +215,23 @@ public class ExpenseBillService {
         return me != null && (me.equals(bill.getEnteredById()) || me.equals(bill.getRecommendedById()) || me.equals(bill.getReviewedById()));
     }
 
+    /** The managers the bill's cost centres name (its heads of department). */
+    public Set<Long> managers(ExpenseBill bill) {
+        Set<Long> managers = new LinkedHashSet<>();
+        bill.getLines().forEach(l -> {
+            if (l.getCostCentre().getManagerUserId() != null) {
+                managers.add(l.getCostCentre().getManagerUserId());
+            }
+        });
+        return managers;
+    }
+
+    /** Whether the signed-in user may recommend it as head of department (CMP 05). */
+    public boolean isHead(ExpenseBill bill) {
+        return Expenditure.mayActAsHead(managers(bill), AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null),
+                authority.currentLevel().orElse(null));
+    }
+
     public boolean isEnterer(ExpenseBill bill) {
         return AppUserPrincipal.current().map(u -> u.getId().equals(bill.getEnteredById())).orElse(false);
     }
@@ -386,6 +403,9 @@ public class ExpenseBillService {
         }
         if (tookPart(bill)) {
             throw BusinessException.of("expense.ownStep", bill.getNumber());
+        }
+        if (!isHead(bill)) {
+            throw BusinessException.of("expense.notHead", bill.getNumber());
         }
         Optional<AppUserPrincipal> me = AppUserPrincipal.current();
         bill.setRecommendedBy(me.map(AppUserPrincipal::getUsername).orElse("system"));
@@ -559,6 +579,16 @@ public class ExpenseBillService {
     /** Tells whoever signs next: the recommenders, the reviewers or the approvers. */
     private void tellNext(ExpenseBill bill) {
         String step = nextStep(bill);
+        Long me = AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null);
+        if ("RECOMMEND".equals(step) && !managers(bill).isEmpty()) {
+            for (Long manager : managers(bill)) {                    // the departments' heads, when they are named
+                if (!manager.equals(me)) {
+                    notifier.user(manager, NotificationKind.APPROVAL, "notify.expense.waiting", "notify.expense.waitingText", link(bill), bill.getNumber(),
+                            bill.getSupplier().getName(), bill.getAmount().setScale(0, RoundingMode.HALF_UP).toPlainString(), bill.getDescription());
+                }
+            }
+            return;
+        }
         String permission = switch (step) {
             case "RECOMMEND" -> "RECOMMEND_EXPENSE";
             case "REVIEW" -> "REVIEW_EXPENSE";

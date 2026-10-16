@@ -123,6 +123,7 @@ public class ExpenseBillController {
         model.addAttribute("journals", billService.journals(bill));
         model.addAttribute("mine", billService.isEnterer(bill));
         model.addAttribute("tookPart", billService.tookPart(bill));
+        model.addAttribute("head", billService.isHead(bill));
         model.addAttribute("step", billService.nextStep(bill));
         model.addAttribute("authority", bill.isWaiting() ? billService.authorityOf(bill) : null);
         model.addAttribute("decision", billService.decisionOf(bill));

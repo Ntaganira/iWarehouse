@@ -46,7 +46,9 @@ public enum AuthorityDecision {
     /** Spending outside the budget (CMP 05): the MD up to 500K, the Board above. */
     EXPENSE_UNBUDGETED(false),
     /** An emergency (CMP 05): the MD approves, the Board ratifies. */
-    EXPENSE_EMERGENCY(false);
+    EXPENSE_EMERGENCY(false),
+    /** A staff advance (CMP 08): approved by the Managing Director. */
+    STAFF_ADVANCE(false);
 
     private final boolean percent;
 

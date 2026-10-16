@@ -114,7 +114,17 @@ class MessageCoverageTest {
             Map.entry("expense.status.", com.ntaganira.heritier.iWarehouse.enums.ExpenseBillStatus.class),
             Map.entry("requisition.status.", com.ntaganira.heritier.iWarehouse.enums.RequisitionStatus.class),
             Map.entry("requisition.sourcing.", com.ntaganira.heritier.iWarehouse.enums.SourcingMethod.class),
-            Map.entry("count.closeConfirmBlind.", com.ntaganira.heritier.iWarehouse.enums.CountPhase.class));
+            Map.entry("count.closeConfirmBlind.", com.ntaganira.heritier.iWarehouse.enums.CountPhase.class),
+            Map.entry("pettyCash.voucher.status.", com.ntaganira.heritier.iWarehouse.enums.PettyCashVoucherStatus.class),
+            Map.entry("pettyCash.status.", com.ntaganira.heritier.iWarehouse.enums.PettyCashFundStatus.class),
+            Map.entry("pettyCash.source.", com.ntaganira.heritier.iWarehouse.enums.PettyCashSource.class),
+            Map.entry("pettyCash.kind.", com.ntaganira.heritier.iWarehouse.enums.PettyCashReplenishmentKind.class),
+            Map.entry("pettyCash.countKind.", com.ntaganira.heritier.iWarehouse.enums.PettyCashCountKind.class),
+            Map.entry("perDiem.category.", com.ntaganira.heritier.iWarehouse.enums.PerDiemCategory.class),
+            Map.entry("perDiem.categoryHint.", com.ntaganira.heritier.iWarehouse.enums.PerDiemCategory.class),
+            Map.entry("advance.status.", com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.class),
+            Map.entry("advance.kind.", com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceKind.class),
+            Map.entry("advance.method.", com.ntaganira.heritier.iWarehouse.enums.AdvancePayMethod.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

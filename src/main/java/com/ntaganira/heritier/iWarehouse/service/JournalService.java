@@ -316,6 +316,15 @@ public class JournalService {
         return balances;
     }
 
+    /** What each location holds on an account (CMP 07: a site's petty cash), debits less credits; never a second balance. */
+    public Map<UUID, BigDecimal> locationBalances(AccountKey key) {
+        Map<UUID, BigDecimal> balances = new HashMap<>();
+        for (Object[] row : lineRepo.balanceByLocation(account(key).getId())) {
+            balances.put((UUID) row[0], (BigDecimal) row[1]);
+        }
+        return balances;
+    }
+
     private Account account(AccountKey key) {
         return accountRepo.findBySystemKey(key).orElseThrow(() -> new IllegalStateException("No account " + key));
     }

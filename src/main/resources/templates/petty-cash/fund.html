@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${fund.code}, ~{::content})}">
+<head><title>Petty cash fund - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/petty-cash/funds/' + fund.id},
+        canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_PETTY_CASH'')')},
+        canTopUp=${#authorization.expression('hasAuthority(''PERM_REPLENISH_PETTY_CASH'')')},
+        canRecord=${#authorization.expression('hasAuthority(''PERM_RECORD_PETTY_CASH'')')},
+        canAudit=${#authorization.expression('hasAuthority(''PERM_AUDIT_PETTY_CASH'')')},
+        canCount=${fund.active and ((custodian and canRecord) or (!custodian and canAudit))}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${fund.code}">PC-WH</h1>
+            <div class="subtitle">
+                <span th:text="${fund.location.code + ' · ' + fund.location.name}">WH · Main warehouse</span>
+                &middot; <th:block th:replace="~{petty-cash/list :: fundStatus(${row})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/petty-cash" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${fund.active and canManage}">
+                <a th:href="@{/petty-cash/funds/{id}/edit(id=${fund.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="close-modal" th:text="#{pettyCash.close}">Close the fund</button>
+            </th:block>
+            <button type="button" class="btn btn-outline" data-modal-open="count-modal" th:if="${canCount}"
+                    th:text="${custodian} ? #{pettyCash.countDaily} : #{pettyCash.countSurprise}">Count the cash</button>
+            <button type="button" class="btn btn-outline" data-modal-open="topup-modal" th:if="${fund.active and canTopUp and !custodian}" th:text="#{pettyCash.topUp}">Top up</button>
+            <a th:if="${fund.active and custodian and canRecord}" th:href="@{/petty-cash/vouchers/new(fund=${fund.id})}" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{pettyCash.voucher.new}">Record a voucher</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${!fund.active}">
+        <strong th:text="#{pettyCash.closedBy(${fund.closedBy}, ${#temporals.format(fund.closedAt, 'dd/MM/yyyy HH:mm')})}">Closed by finance1 on 31/10/2026 17:00:</strong>
+        <span th:text="${fund.closeReason}">The site closed</span>
+    </div>
+    <th:block th:if="${fund.active}">
+        <div class="doc-note is-warning" th:if="${row.low}" th:text="#{pettyCash.lowNote(${@num.money(row.balance)}, ${@num.money(row.trigger)}, ${@num.money(topUp)})}">
+            It holds 40,000, below 50,000: top it up by 160,000 to bring it back to its float.</div>
+        <div class="doc-note is-warning" th:if="${row.auditDue}" th:text="#{pettyCash.auditDueNote}">No surprise count by Finance yet this month.</div>
+        <div class="doc-note is-warning" th:if="${!row.notCounted.isEmpty()}">
+            <span th:text="#{pettyCash.notCountedNote(${#lists.size(row.notCounted)})}">2 working days this month without the custodian's count:</span>
+            <span th:each="d, st : ${row.notCounted}" th:text="${#temporals.format(d, 'dd/MM') + (st.last ? '' : ', ')}">13/10, </span>
+        </div>
+        <div class="doc-note is-warning" th:if="${waitingVouchers > 0}" th:text="#{pettyCash.fundWaiting(${waitingVouchers})}">1 voucher of this fund waits for approval.</div>
+    </th:block>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{pettyCash.balance}">Holds (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(row.balance)}">150,000</div>
+                    <div class="cell-sub" th:text="#{pettyCash.balanceSub}">Its site's lines on the Petty Cash account</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{pettyCash.imprest}">Float (RWF)</label>
+                    <div class="value" th:text="${@num.money(fund.imprest)}">200,000</div>
+                    <div class="cell-sub" th:text="#{pettyCash.triggerSub(${@num.money(row.trigger)})}">topped up below 50,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{pettyCash.custodian}">Custodian</label>
+                    <div class="value" th:text="${fund.custodianName}">cashier1</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{pettyCash.lastCount}">Last daily count</label>
+                    <div class="value">
+                        <span th:text="${row.lastDaily != null} ? ${#temporals.format(row.lastDaily.countedAt, 'dd/MM/yyyy HH:mm')} : '—'">15/10/2026 17:30</span>
+                        <div class="cell-sub" th:if="${row.lastDaily != null}" th:text="${row.lastDaily.countedBy}">cashier1</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{pettyCash.lastSurprise}">Last surprise count</label>
+                    <div class="value">
+                        <span th:text="${row.lastSurprise != null} ? ${#temporals.format(row.lastSurprise.countedAt, 'dd/MM/yyyy HH:mm')} : '—'">03/10/2026 10:15</span>
+                        <div class="cell-sub" th:if="${row.lastSurprise != null}" th:text="${row.lastSurprise.countedBy}">finance1</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{pettyCash.opened}">Opened</label>
+                    <div class="value">
+                        <span th:text="${#temporals.format(fund.openedAt, 'dd/MM/yyyy')}">01/10/2026</span>
+                        <div class="cell-sub" th:text="${fund.openedBy}">finance1</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-vouchers" th:classappend="${tab == 'vouchers'} ? 'active'">
+                <span th:text="#{pettyCash.vouchers}">Vouchers</span>
+                <span class="section-count" th:text="${vouchers.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-movements" th:classappend="${tab == 'movements'} ? 'active'">
+                <span th:text="#{pettyCash.movements}">Top-ups</span>
+                <span class="section-count" th:text="${movements.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-counts" th:classappend="${tab == 'counts'} ? 'active'">
+                <span th:text="#{pettyCash.counts}">Counts</span>
+                <span class="section-count" th:text="${counts.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-vouchers" th:classappend="${tab == 'vouchers'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{pettyCash.voucher.number}">Voucher</th>
+                                <th th:text="#{pettyCash.voucher.date}">Date</th>
+                                <th th:text="#{pettyCash.voucher.payee}">Paid to</th>
+                                <th th:text="#{pettyCash.voucher.costCentre}">Cost centre</th>
+                                <th class="num" th:text="#{pettyCash.voucher.amount}">Amount (RWF)</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="v : ${vouchers.content}">
+                                <td><a class="row-link strong mono" th:href="@{/petty-cash/vouchers/{id}(id=${v.id})}" th:text="${v.number}">PCV-WH-2026-000001</a></td>
+                                <td class="nowrap" th:text="${#temporals.format(v.voucherDate, 'dd/MM/yyyy')}">16/10/2026</td>
+                                <td>
+                                    <span th:text="${v.payee}">Moto taxi</span>
+                                    <div class="cell-sub" th:text="${v.purpose}">Documents to RRA</div>
+                                </td>
+                                <td class="mono" th:text="${v.costCentre.code}">FIN</td>
+                                <td class="num" th:text="${@num.money(v.amount)}">3,000</td>
+                                <td><th:block th:replace="~{petty-cash/list :: voucherStatus(${v})}"></th:block></td>
+                            </tr>
+                            <tr th:if="${vouchers.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state"><p th:text="#{pettyCash.voucher.empty}">No vouchers yet</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${vouchers}, ${base}, 'tab=vouchers')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-movements" th:classappend="${tab == 'movements'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{pettyCash.movement.number}">Number</th>
+                                <th th:text="#{pettyCash.movement.date}">Date</th>
+                                <th th:text="#{pettyCash.movement.kind}">Movement</th>
+                                <th th:text="#{pettyCash.movement.source}">From or to</th>
+                                <th class="num" th:text="#{pettyCash.voucher.amount}">Amount (RWF)</th>
+                                <th class="num" th:text="#{pettyCash.movement.after}">Holds after (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="m : ${movements.content}">
+                                <td class="mono" th:text="${m.number}">PCR-WH-2026-000001</td>
+                                <td class="nowrap">
+                                    <span th:text="${#temporals.format(m.txnDate, 'dd/MM/yyyy')}">16/10/2026</span>
+                                    <div class="cell-sub" th:text="${m.madeBy}">treasury1</div>
+                                </td>
+                                <td th:text="#{${'pettyCash.kind.' + m.kind}}">Top-up</td>
+                                <td>
+                                    <span th:text="#{${'pettyCash.source.' + m.source}}">Main cash vault</span>
+                                    <div class="cell-sub mono" th:if="${m.reference != null}" th:text="${m.reference}">BK-221</div>
+                                </td>
+                                <td class="num" th:text="${@num.money(m.amount)}">160,000</td>
+                                <td class="num" th:text="${@num.money(m.balanceAfter)}">200,000</td>
+                            </tr>
+                            <tr th:if="${movements.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state"><p th:text="#{pettyCash.movement.empty}">Not topped up yet</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${movements}, ${base}, 'tab=movements')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-counts" th:classappend="${tab == 'counts'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{pettyCash.count.when}">Counted</th>
+                                <th th:text="#{pettyCash.count.kind}">Count</th>
+                                <th class="num" th:text="#{pettyCash.count.expected}">Expected (RWF)</th>
+                                <th class="num" th:text="#{pettyCash.count.counted}">Counted (RWF)</th>
+                                <th class="num" th:text="#{pettyCash.count.difference}">Difference (RWF)</th>
+                                <th th:text="#{pettyCash.count.note}">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${counts.content}">
+                                <td class="nowrap">
+                                    <span th:text="${#temporals.format(c.countedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 17:30</span>
+                                    <div class="cell-sub" th:text="${c.countedBy}">cashier1</div>
+                                </td>
+                                <td th:text="#{${'pettyCash.countKind.' + c.kind}}">Daily</td>
+                                <td class="num" th:text="${@num.money(c.expected)}">150,000</td>
+                                <td class="num" th:text="${@num.money(c.counted)}">149,500</td>
+                                <td class="num">
+                                    <span th:if="${c.difference.signum() == 0}" class="badge badge-success" th:text="#{pettyCash.count.agrees}">Agrees</span>
+                                    <span th:if="${c.difference.signum() != 0}" class="badge badge-danger" th:text="${(c.difference.signum() > 0 ? '+' : '') + @num.money(c.difference)}">-500</span>
+                                </td>
+                                <td th:text="${c.note != null} ? ${c.note} : '—'">Change given twice</td>
+                            </tr>
+                            <tr th:if="${counts.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state"><p th:text="#{pettyCash.count.empty}">Not counted yet</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${counts}, ${base}, 'tab=counts')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!--/* Topping up: the amount (to its float at most), where it comes from, the bank's reference, the day */-->
+    <div class="modal-overlay" id="topup-modal" th:if="${fund.active and canTopUp and !custodian}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="topup-title">
+            <div class="modal-header">
+                <h3 id="topup-title" th:text="#{pettyCash.topUpTitle(${fund.code})}">Top up PC-WH</h3>
+                <button type="button" class="modal-close" data-modal-close="topup-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/petty-cash/funds/{id}/top-up(id=${fund.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{pettyCash.topUpText(${@num.money(topUp)})}">Brings the fund back to its float: at most 160,000. Posted at once (Dr Petty Cash / Cr the vault or the bank).</p>
+                    <div class="form-group">
+                        <label for="topup-amount" th:text="#{pettyCash.voucher.amount}">Amount (RWF)</label>
+                        <input type="number" id="topup-amount" name="amount" min="1" step="1" th:attr="max=${topUp}" th:value="${topUp.signum() > 0 ? topUp.intValue() : ''}" required inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="topup-source" th:text="#{pettyCash.movement.from}">From</label>
+                        <select id="topup-source" name="source" required>
+                            <option th:each="s : ${sources}" th:value="${s}" th:text="#{${'pettyCash.source.' + s}}">Main cash vault</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="topup-reference" th:text="#{pettyCash.reference}">Reference</label>
+                        <input type="text" id="topup-reference" name="reference" maxlength="60" autocomplete="off" class="input-code">
+                        <span class="hint" th:text="#{pettyCash.referenceHint}">The cheque or transfer number, needed from the bank</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="topup-date" th:text="#{pettyCash.movement.date}">Date</label>
+                        <input type="date" id="topup-date" name="txnDate" th:value="${today}" th:max="${today}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="topup-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{pettyCash.topUp}">Top up</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--/* Counting: the cash in the box; a difference needs a note and posts to Cash Over and Short */-->
+    <div class="modal-overlay" id="count-modal" th:if="${canCount}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="count-title">
+            <div class="modal-header">
+                <h3 id="count-title" th:text="${custodian} ? #{pettyCash.countDailyTitle(${fund.code})} : #{pettyCash.countSurpriseTitle(${fund.code})}">Count PC-WH</h3>
+                <button type="button" class="modal-close" data-modal-close="count-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/petty-cash/funds/{id}/count(id=${fund.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="${custodian} ? #{pettyCash.countDailyText} : #{pettyCash.countSurpriseText}">Count the notes and coins in the box and give the total.</p>
+                    <div class="form-group">
+                        <label for="count-counted" th:text="#{pettyCash.count.counted}">Counted (RWF)</label>
+                        <input type="number" id="count-counted" name="counted" min="0" step="1" required inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="count-note" th:text="#{pettyCash.count.note}">Note</label>
+                        <input type="text" id="count-note" name="note" maxlength="500" autocomplete="off">
+                        <span class="hint" th:text="#{pettyCash.count.noteHint}">Needed when the cash differs from what the books hold</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="count-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{pettyCash.count.save}">Record the count</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--/* Closing: the reason, where its cash goes back to */-->
+    <div class="modal-overlay" id="close-modal" th:if="${fund.active and canManage}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="close-title">
+            <div class="modal-header">
+                <h3 id="close-title" th:text="#{pettyCash.closeTitle(${fund.code})}">Close PC-WH</h3>
+                <button type="button" class="modal-close" data-modal-close="close-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/petty-cash/funds/{id}/close(id=${fund.id})}" method="post" class="reason-form" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{pettyCash.closeText(${@num.money(row.balance)})}">What it holds (150,000) goes back to the vault or the bank. No voucher may be waiting.</p>
+                    <div class="form-group">
+                        <label for="close-source" th:text="#{pettyCash.movement.to}">Back to</label>
+                        <select id="close-source" name="source" required>
+                            <option th:each="s : ${sources}" th:value="${s}" th:text="#{${'pettyCash.source.' + s}}">Main cash vault</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="close-reference" th:text="#{pettyCash.reference}">Reference</label>
+                        <input type="text" id="close-reference" name="reference" maxlength="60" autocomplete="off" class="input-code">
+                    </div>
+                    <div class="form-group">
+                        <label for="close-reason" th:text="#{reason.label}">Reason</label>
+                        <input type="text" id="close-reason" name="reason" maxlength="500" required autocomplete="off" th:placeholder="#{reason.placeholder}">
+                        <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="close-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-danger" th:text="#{pettyCash.close}">Close the fund</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

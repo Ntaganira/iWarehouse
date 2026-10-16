@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{perDiem.editTitle(${#messages.msg('perDiem.category.' + rate.category)})}, ~{::content})}">
+<head><title>Per diem rate - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{perDiem.editTitle(${#messages.msg('perDiem.category.' + rate.category)})}">Upcountry per diem</h1>
+            <div class="subtitle" th:text="#{${'perDiem.categoryHint.' + rate.category}}">Outside Kigali, in Rwanda</div>
+        </div>
+        <a href="/payroll/per-diem" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="@{/payroll/per-diem/{id}/edit(id=${rate.id})}" th:object="${rateDto}" method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="currencyCode" th:text="#{perDiem.currency}">Currency</label>
+                    <select id="currencyCode" th:field="*{currencyCode}" required th:classappend="${#fields.hasErrors('currencyCode')} ? 'is-invalid'">
+                        <option th:each="c : ${currencies}" th:value="${c.code}" th:text="${c.code + ' · ' + c.name}">RWF · Rwandan Franc</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('currencyCode')}" th:errors="*{currencyCode}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="meal" th:text="#{perDiem.meal}">Meals a day</label>
+                    <input type="number" id="meal" th:field="*{meal}" min="0" step="0.01" required inputmode="decimal" th:classappend="${#fields.hasErrors('meal')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('meal')}" th:errors="*{meal}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="incidentals" th:text="#{perDiem.incidentals}">Incidentals a day</label>
+                    <input type="number" id="incidentals" th:field="*{incidentals}" min="0" step="0.01" required inputmode="decimal" th:classappend="${#fields.hasErrors('incidentals')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('incidentals')}" th:errors="*{incidentals}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="accommodation" th:text="#{perDiem.accommodation}">Accommodation a night</label>
+                    <input type="number" id="accommodation" th:field="*{accommodation}" min="0" step="0.01" required inputmode="decimal" th:classappend="${#fields.hasErrors('accommodation')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('accommodation')}" th:errors="*{accommodation}"></span>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{perDiem.formNote}">Advances already asked keep the per diem they were worked out with.</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+                <a href="/payroll/per-diem" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/payroll/per-diem/' + rate.id + '/edit'}, '')}"></th:block>
+        </div>
+    </div>
+</div>
+</body>
+</html>

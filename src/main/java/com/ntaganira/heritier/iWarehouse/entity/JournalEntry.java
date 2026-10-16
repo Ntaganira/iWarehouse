@@ -43,7 +43,7 @@ public class JournalEntry {
     private LocalDate entryDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source_type", nullable = false, length = 20)
+    @Column(name = "source_type", nullable = false, length = 30)
     private JournalSource sourceType;
 
     @Column(name = "source_id")

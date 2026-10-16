@@ -912,6 +912,90 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.pettyCash}">Petty cash and staff advances</h3>
+                <p class="hint" th:text="#{settings.group.pettyCashHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="pettyCashMaxFloat" th:text="#{settings.pettyCashMaxFloat}">pettyCashMaxFloat</label>
+                    <div class="input-unit">
+                        <input type="number" id="pettyCashMaxFloat" th:field="*{pettyCashMaxFloat}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('pettyCashMaxFloat')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('pettyCashMaxFloat')}" th:errors="*{pettyCashMaxFloat}"></span>
+                    <span class="hint" th:text="#{settings.pettyCashMaxFloatHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="pettyCashMaxPayment" th:text="#{settings.pettyCashMaxPayment}">pettyCashMaxPayment</label>
+                    <div class="input-unit">
+                        <input type="number" id="pettyCashMaxPayment" th:field="*{pettyCashMaxPayment}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('pettyCashMaxPayment')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('pettyCashMaxPayment')}" th:errors="*{pettyCashMaxPayment}"></span>
+                    <span class="hint" th:text="#{settings.pettyCashMaxPaymentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="pettyCashReplenishPercent" th:text="#{settings.pettyCashReplenishPercent}">pettyCashReplenishPercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="pettyCashReplenishPercent" th:field="*{pettyCashReplenishPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('pettyCashReplenishPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('pettyCashReplenishPercent')}" th:errors="*{pettyCashReplenishPercent}"></span>
+                    <span class="hint" th:text="#{settings.pettyCashReplenishPercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="pettyCashReceiptRequired" th:text="#{settings.pettyCashReceiptRequired}">pettyCashReceiptRequired</label>
+                    <select id="pettyCashReceiptRequired" th:field="*{pettyCashReceiptRequired}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.pettyCashReceiptRequiredHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="pettyCashAuditDay" th:text="#{settings.pettyCashAuditDay}">pettyCashAuditDay</label>
+                    <input type="number" id="pettyCashAuditDay" th:field="*{pettyCashAuditDay}" step="1" min="1" max="28" required
+                           th:classappend="${#fields.hasErrors('pettyCashAuditDay')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('pettyCashAuditDay')}" th:errors="*{pettyCashAuditDay}"></span>
+                    <span class="hint" th:text="#{settings.pettyCashAuditDayHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="advanceRetireDays" th:text="#{settings.advanceRetireDays}">advanceRetireDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="advanceRetireDays" th:field="*{advanceRetireDays}" step="1" min="1" max="60" required
+                               th:classappend="${#fields.hasErrors('advanceRetireDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.workingDaysUnit}">working days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('advanceRetireDays')}" th:errors="*{advanceRetireDays}"></span>
+                    <span class="hint" th:text="#{settings.advanceRetireDaysHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="advanceBlockOpen" th:text="#{settings.advanceBlockOpen}">advanceBlockOpen</label>
+                    <select id="advanceBlockOpen" th:field="*{advanceBlockOpen}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.advanceBlockOpenHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="advanceReceiptsRequired" th:text="#{settings.advanceReceiptsRequired}">advanceReceiptsRequired</label>
+                    <select id="advanceReceiptsRequired" th:field="*{advanceReceiptsRequired}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.advanceReceiptsRequiredHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="advancePayrollRecovery" th:text="#{settings.advancePayrollRecovery}">advancePayrollRecovery</label>
+                    <select id="advancePayrollRecovery" th:field="*{advancePayrollRecovery}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.advancePayrollRecoveryHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

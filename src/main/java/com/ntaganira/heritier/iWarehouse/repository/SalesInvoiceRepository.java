@@ -126,8 +126,11 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     java.math.BigDecimal issuedTotal(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 
-    /** Sales given up before they were issued in a period (voids, M.14): how many and what they came to. */
-    @Query("select count(i), coalesce(sum(i.totalAmount), 0) from SalesInvoice i where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.CANCELLED"
-            + " and i.updatedAt between :from and :to")
+    /**
+     * Sales given up before they were issued in a period (voids, M.14): how many and what their lines came to. A draft never keeps a
+     * total, so its lines are added up; one cancelled with nothing on it is no void.
+     */
+    @Query("select count(distinct i.id), coalesce(sum(l.amount), 0) from SalesInvoiceLine l join l.invoice i"
+            + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.CANCELLED and i.updatedAt between :from and :to")
     List<Object[]> voidedIn(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 }

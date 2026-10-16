@@ -201,6 +201,22 @@ public class SupplierAccountService {
         return new PayablesReport(aged, totals, total);
     }
 
+    /** What is owed to suppliers by due date, in RWF as booked, at each supplier's terms (the cash-flow forecast, P.11). */
+    public List<Ageing.Due> payablesDue() {
+        Map<UUID, List<JournalLine>> bySupplier = new LinkedHashMap<>();
+        Map<UUID, Supplier> suppliers = new HashMap<>();
+        for (JournalLine l : journalService.payableLines()) {
+            bySupplier.computeIfAbsent(l.getSupplier().getId(), k -> new ArrayList<>()).add(l);
+            suppliers.putIfAbsent(l.getSupplier().getId(), l.getSupplier());
+        }
+        List<Ageing.Due> due = new ArrayList<>();
+        for (Map.Entry<UUID, List<JournalLine>> e : bySupplier.entrySet()) {
+            due.addAll(Ageing.open(items(e.getValue()).stream().map(l -> new Ageing.Entry(l.getEntry().getEntryDate(), l.getCredit(), l.getDebit())).toList(),
+                    suppliers.get(e.getKey()).getPaymentTermsDays()));
+        }
+        return due;
+    }
+
     public SupplierInvoice findInvoice(UUID id) {
         return invoiceRepo.findDetailedById(id).orElseThrow(() -> new NotFoundException("SupplierInvoice", id));
     }

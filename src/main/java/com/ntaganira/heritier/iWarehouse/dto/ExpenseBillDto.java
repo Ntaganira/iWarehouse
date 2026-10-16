@@ -55,6 +55,14 @@ public class ExpenseBillDto {
 
     private UUID requisitionId;
 
+    /** Tax withheld for RRA (U.14): ticked, the rate applies to the amount before VAT. */
+    private boolean withhold;
+
+    @DecimalMin(value = "0", message = "{expense.wht.range}")
+    @DecimalMax(value = "100", message = "{expense.wht.range}")
+    @Digits(integer = 3, fraction = 2, message = "{expense.wht.range}")
+    private BigDecimal whtRate;
+
     @Valid
     private List<Line> lines = new ArrayList<>();
 

@@ -98,7 +98,7 @@
         </thead>
         <tbody>
             <tr th:each="t : ${rows}">
-                <td th:text="${scope == 'MARKET'} ? #{${'order.market.' + t.key}} : ${t.label}">KGL · Kigali</td>
+                <td th:text="${scope == 'MARKET'} ? #{${'order.market.' + t.key}} : (${scope == 'TERRITORY' and t.key == '-'} ? #{order.noTerritory} : ${t.label})">KGL · Kigali</td>
                 <td class="num" th:text="${@num.money(t.actual)}">20,000,000</td>
                 <td class="num" th:text="${@num.money(t.target)}">25,000,000</td>
                 <td class="num" th:classappend="${t.gap.signum() < 0} ? 'text-danger'" th:text="${@num.money(t.gap)}">-5,000,000</td>

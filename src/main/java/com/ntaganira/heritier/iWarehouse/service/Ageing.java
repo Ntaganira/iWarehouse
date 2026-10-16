@@ -74,7 +74,43 @@ public final class Ageing {
         }
     }
 
+    /** A charge still open: the day it is due and what is left of it. */
+    public record Due(LocalDate due, BigDecimal amount) {
+    }
+
     public static Result of(List<Entry> entries, int termsDays, LocalDate asOf) {
+        Settled settled = settle(entries, termsDays);
+        Map<Bucket, BigDecimal> buckets = new EnumMap<>(Bucket.class);
+        BigDecimal owed = BigDecimal.ZERO;
+        for (Open o : settled.open) {
+            buckets.merge(Bucket.of(ChronoUnit.DAYS.between(o.due, asOf)), o.left, BigDecimal::add);
+            owed = owed.add(o.left);
+        }
+        return new Result(buckets, owed.subtract(settled.waiting), settled.waiting, settled.open.isEmpty() ? null : settled.open.peekFirst().due);
+    }
+
+    /**
+     * The charges still open, oldest first, each with its due date and what is left of it, once credit waiting has been taken
+     * off the oldest (the cash-flow forecast, P.11: what is expected and when).
+     */
+    public static List<Due> open(List<Entry> entries, int termsDays) {
+        Settled settled = settle(entries, termsDays);
+        List<Due> due = new ArrayList<>();
+        BigDecimal waiting = settled.waiting;
+        for (Open o : settled.open) {
+            BigDecimal used = waiting.min(o.left);
+            waiting = waiting.subtract(used);
+            if (o.left.subtract(used).signum() > 0) {
+                due.add(new Due(o.due, o.left.subtract(used)));
+            }
+        }
+        return due;
+    }
+
+    private record Settled(Deque<Open> open, BigDecimal waiting) {
+    }
+
+    private static Settled settle(List<Entry> entries, int termsDays) {
         List<Entry> sorted = new ArrayList<>(entries);
         sorted.sort(Comparator.comparing(Entry::date));
         Deque<Open> open = new ArrayDeque<>();
@@ -103,13 +139,7 @@ public final class Ageing {
                 waiting = waiting.add(credit);
             }
         }
-        Map<Bucket, BigDecimal> buckets = new EnumMap<>(Bucket.class);
-        BigDecimal owed = BigDecimal.ZERO;
-        for (Open o : open) {
-            buckets.merge(Bucket.of(ChronoUnit.DAYS.between(o.due, asOf)), o.left, BigDecimal::add);
-            owed = owed.add(o.left);
-        }
-        return new Result(buckets, owed.subtract(waiting), waiting, open.isEmpty() ? null : open.peekFirst().due);
+        return new Settled(open, waiting);
     }
 
     private static BigDecimal nz(BigDecimal value) {

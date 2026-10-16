@@ -90,6 +90,12 @@
                     <label th:text="#{delivery.destination}">Destination</label>
                     <div class="value" th:text="${note.destination ?: '—'}">Kicukiro site</div>
                 </div>
+                <div class="item" th:if="${note.scheduledOn != null}">
+                    <label th:text="#{delivery.schedule.plannedFor}">Planned for</label>
+                    <div class="value">
+                        <a th:href="@{/delivery-notes/schedule(week=${note.scheduledOn})}" th:text="${#temporals.format(note.scheduledOn, 'dd/MM/yyyy')}">16/10/2026</a>
+                    </div>
+                </div>
                 <div class="item">
                     <label th:text="#{delivery.store}">Store</label>
                     <div class="value" th:text="${site != null} ? ${site.name} : '—'">Main warehouse</div>

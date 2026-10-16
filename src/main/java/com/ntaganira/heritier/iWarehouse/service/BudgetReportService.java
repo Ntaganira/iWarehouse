@@ -82,8 +82,14 @@ public class BudgetReportService {
     public record Report(Budget budget, int year, int month, List<Row> rows, List<Unbudgeted> unbudgeted, Coo coo, SupplyChain supplyChain,
                          BigDecimal tolerance, BudgetReview review, boolean ended, LocalDate reviewDue) {
 
+        /** Budget lines beyond the tolerance. */
+        public long getFlaggedLines() {
+            return rows.stream().filter(Row::flagged).count();
+        }
+
+        /** What signing off explains: the budget lines beyond the tolerance and what was posted with no budget line. */
         public long getFlagged() {
-            return rows.stream().filter(Row::flagged).count() + unbudgeted.size();
+            return getFlaggedLines() + unbudgeted.size();
         }
     }
 

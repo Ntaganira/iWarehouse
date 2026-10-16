@@ -81,6 +81,87 @@ public class DeliveryNoteService {
         this.clock = clock;
     }
 
+    /**
+     * A day of the delivery schedule (G.23): the notes planned for it, the kg of glass and the pieces on each, against the
+     * warehouse's daily capacity (the Settings' kg and number of notes).
+     */
+    public record DayLoad(LocalDate day, List<DeliveryNote> notes, Map<UUID, BigDecimal> kg, Map<UUID, Long> pieces, BigDecimal capacityKg,
+                          int capacityNotes) {
+
+        public BigDecimal getTotalKg() {
+            return notes.stream().map(n -> kg.getOrDefault(n.getId(), BigDecimal.ZERO)).reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        public long getTotalPieces() {
+            return notes.stream().mapToLong(n -> pieces.getOrDefault(n.getId(), 0L)).sum();
+        }
+
+        public boolean isOverKg() {
+            return capacityKg.signum() > 0 && getTotalKg().compareTo(capacityKg) > 0;
+        }
+
+        public boolean isOverNotes() {
+            return capacityNotes > 0 && notes.size() > capacityNotes;
+        }
+
+        public boolean isOver() {
+            return isOverKg() || isOverNotes();
+        }
+
+        /** The share of the kg capacity used, whole per cent (0 without a capacity). */
+        public int getKgPercent() {
+            return capacityKg.signum() <= 0 ? 0 : getTotalKg().multiply(BigDecimal.valueOf(100)).divide(capacityKg, 0, RoundingMode.HALF_UP).intValue();
+        }
+    }
+
+    /** The week of a day (Monday to Sunday): each day's notes, released or waiting, with their weight against the capacity (G.23). */
+    public List<DayLoad> schedule(LocalDate monday) {
+        LocalDate sunday = monday.plusDays(6);
+        List<DeliveryNote> notes = repo.findByScheduledOnBetweenAndStatusNotOrderByScheduledOnAscNumberAsc(monday, sunday, DeliveryNoteStatus.CANCELLED);
+        Map<UUID, BigDecimal> kg = new HashMap<>();
+        Map<UUID, Long> pieces = new HashMap<>();
+        if (!notes.isEmpty()) {
+            List<UUID> ids = notes.stream().map(DeliveryNote::getId).toList();
+            BigDecimal density = settingService.getDecimal(SettingKey.GLASS_DENSITY);
+            for (Object[] r : repo.volumeByNote(ids)) {             // mm x mm x mm / 1,000,000 = m2 x mm; x density = kg
+                BigDecimal volume = new BigDecimal(r[1].toString());
+                kg.put((UUID) r[0], volume.multiply(density).divide(BigDecimal.valueOf(1_000_000), 1, RoundingMode.HALF_UP));
+            }
+            for (Object[] r : repo.piecesByNote(ids)) {
+                pieces.put((UUID) r[0], ((Number) r[1]).longValue());
+            }
+        }
+        BigDecimal capacityKg = settingService.getDecimal(SettingKey.DELIVERY_CAPACITY_KG);
+        int capacityNotes = settingService.getInt(SettingKey.DELIVERY_CAPACITY_NOTES);
+        List<DayLoad> days = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = monday.plusDays(i);
+            days.add(new DayLoad(day, notes.stream().filter(n -> day.equals(n.getScheduledOn())).toList(), kg, pieces, capacityKg, capacityNotes));
+        }
+        return days;
+    }
+
+    /** The notes waiting for release, by the day they are planned for. */
+    public List<DeliveryNote> drafts() {
+        return repo.findByStatusOrderByScheduledOnAscNumberAsc(DeliveryNoteStatus.DRAFT);
+    }
+
+    /** Plans a note waiting for release for another day, from today on (G.23, PERM_SCHEDULE_DELIVERY): the day's load after it. */
+    @Transactional
+    public DayLoad reschedule(UUID id, LocalDate day) {
+        DeliveryNote note = repo.lockById(id).orElseThrow(() -> new NotFoundException("DeliveryNote", id));
+        if (!note.isDraft()) {
+            throw BusinessException.of("delivery.schedule.notDraft", note.getNumber());
+        }
+        if (day == null || day.isBefore(today())) {
+            throw BusinessException.onField("scheduledOn", "delivery.schedule.past");
+        }
+        note.setScheduledOn(day);
+        LocalDate monday = day.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        repo.flush();
+        return schedule(monday).stream().filter(d -> d.day().equals(day)).findFirst().orElseThrow();
+    }
+
     /** What is prepared: the units chosen, and the transport or the customer collecting; why less than ready, if so. */
     public record Form(Collection<UUID> unitIds, boolean collected, String vehiclePlate, String driverName, String destination,
                        String shortReason) {
@@ -279,6 +360,7 @@ public class DeliveryNoteService {
         note.setPreparedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
         note.setPreparedById(user.map(AppUserPrincipal::getId).orElse(null));
         note.setPreparedAt(LocalDateTime.now(clock));
+        note.setScheduledOn(today());                                 // G.23: planned for today until Dispatch moves it
         note.setStatus(DeliveryNoteStatus.DRAFT);
         repo.save(note);
         Set<UUID> sheetIds = ready.sheets().stream().map(StockUnit::getId).collect(Collectors.toSet());

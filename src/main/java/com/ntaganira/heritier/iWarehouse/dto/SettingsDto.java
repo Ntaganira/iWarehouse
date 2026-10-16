@@ -567,6 +567,35 @@ public class SettingsDto {
     @Max(value = 28, message = "{settings.budgetReviewDay.range}")
     private Integer budgetReviewDay;
 
+    // --- Tax, cash flow and deliveries (M18: U.14, P.11, G.23) ---
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal taxWhtRate;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal taxCitRate;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.cashflowWeeks.range}")
+    @Max(value = 52, message = "{settings.cashflowWeeks.range}")
+    private Integer cashflowWeeks;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.deliveryCapacityKg.range}")
+    @Digits(integer = 9, fraction = 0, message = "{settings.deliveryCapacityKg.range}")
+    private BigDecimal deliveryCapacityKg;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 0, message = "{settings.deliveryCapacityNotes.range}")
+    @Max(value = 999, message = "{settings.deliveryCapacityNotes.range}")
+    private Integer deliveryCapacityNotes;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

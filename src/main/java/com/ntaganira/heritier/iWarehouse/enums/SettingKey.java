@@ -240,6 +240,16 @@ public enum SettingKey {
     BUDGET_MARGIN_TARGET("budget.margin-target", "budgetMarginTarget", "25"),
     /** The month's budget against actual is signed off by this day of the next month (CMP 04: the 10th). */
     BUDGET_REVIEW_DAY("budget.review-day", "budgetReviewDay", "10"),
+    /** The withholding tax a bill withholds by default when it withholds (U.14: 15 %). */
+    TAX_WHT_RATE("tax.wht-rate", "taxWhtRate", "15"),
+    /** The corporate income tax rate of the estimate (U.14: 30 %). */
+    TAX_CIT_RATE("tax.cit-rate", "taxCitRate", "30"),
+    /** What the warehouse can deliver in a day, in kg of glass (G.23). */
+    DELIVERY_CAPACITY_KG("delivery.daily-capacity-kg", "deliveryCapacityKg", "8000"),
+    /** How many delivery notes the warehouse can send out in a day (G.23). */
+    DELIVERY_CAPACITY_NOTES("delivery.daily-capacity-notes", "deliveryCapacityNotes", "12"),
+    /** Weeks the cash-flow forecast looks ahead (P.11: a rolling 13 weeks). */
+    CASHFLOW_WEEKS("cashflow.weeks", "cashflowWeeks", "13"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

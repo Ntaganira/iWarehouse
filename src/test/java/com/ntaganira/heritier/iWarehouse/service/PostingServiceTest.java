@@ -918,6 +918,111 @@ class PostingServiceTest {
         assertThat(line(last(), AccountKey.CASH_VAULT).costCentreId()).isNull();
     }
 
+    @Test
+    void aBillWithholdingTaxOwesTheSupplierTheRestAndRraTheTax() {   // U.14, AT-10
+        Supplier cleaners = supplier("Kigali Cleaning");
+        CostCentre ho = centre("HO");
+        ExpenseBill bill = new ExpenseBill();
+        bill.setId(UUID.randomUUID());
+        bill.setNumber("EXP-WH-2026-000009");
+        bill.setSupplier(cleaners);
+        bill.setSupplierRef("CL-55");
+        bill.setBillDate(LocalDate.of(2026, 10, 15));
+        bill.setDescription("Cleaning, October");
+        bill.getLines().add(billLine(bill, 1, ExpenseCategory.PROFESSIONAL_FEES, "Cleaning", ho, null, "300000", "54000"));
+        bill.setNetAmount(new BigDecimal("300000"));
+        bill.setVatAmount(new BigDecimal("54000"));
+        bill.setAmount(new BigDecimal("354000"));
+        bill.setWhtRate(new BigDecimal("15"));
+        bill.setWhtAmount(ExpenseBillService.withheld(bill.getNetAmount(), bill.getWhtRate()));
+        assertThat(bill.getWhtAmount()).isEqualByComparingTo("45000");
+
+        postings.expenseBill(bill);
+        Journal j = last();
+        assertThat(line(j, AccountKey.PAYABLE).credit()).isEqualByComparingTo("309000");                 // 354,000 less 45,000
+        assertThat(line(j, AccountKey.WHT_PAYABLE).credit()).isEqualByComparingTo("45000");
+        assertThat(line(j, AccountKey.WHT_PAYABLE).supplierId()).isEqualTo(cleaners.getId());
+        assertThat(j.isBalanced()).isTrue();
+        assertThat(ExpenseBillService.withheld(new BigDecimal("211864.41"), new BigDecimal("15"))).isEqualByComparingTo("31780");   // whole francs
+    }
+
+    @Test
+    void fixedAssetsAreRegisteredDepreciatedAndDisposedOfOnBalancedJournals() {   // C.08, U.12, AT-10
+        UUID sc = UUID.randomUUID();
+        UUID site = UUID.randomUUID();
+        // An asset owned before the register: cost 6,000,000, 1,800,000 depreciated before
+        FixedAsset truck = new FixedAsset();
+        truck.setId(UUID.randomUUID());
+        truck.setNumber("FA-WH-00001");
+        truck.setName("Delivery truck");
+        truck.setCostCentreId(sc);
+        truck.setLocationId(site);
+        truck.setCost(new BigDecimal("6000000"));
+        truck.setOpeningAccumulated(new BigDecimal("1800000"));
+        postings.assetOpening(truck, LocalDate.of(2026, 10, 16));
+        Journal opening = last();
+        assertThat(opening.source()).isEqualTo(JournalSource.ASSET_OPENING);
+        assertThat(line(opening, AccountKey.FIXED_ASSETS).debit()).isEqualByComparingTo("6000000");
+        assertThat(line(opening, AccountKey.FIXED_ASSETS).costCentreId()).isEqualTo(sc);
+        assertThat(line(opening, AccountKey.ACCUMULATED_DEPRECIATION).credit()).isEqualByComparingTo("1800000");
+        assertThat(line(opening, AccountKey.OPENING_EQUITY).credit()).isEqualByComparingTo("4200000");
+
+        // A month's run: each asset's share on Depreciation, naming its cost centre and place, on the month's last day
+        FixedAsset forklift = new FixedAsset();
+        forklift.setId(UUID.randomUUID());
+        forklift.setNumber("FA-WH-00002");
+        forklift.setCostCentreId(sc);
+        forklift.setCost(new BigDecimal("4000000"));
+        DepreciationRun run = new DepreciationRun();
+        run.setId(UUID.randomUUID());
+        run.setNumber("DEP-WH-2026-000001");
+        run.setPeriod(LocalDate.of(2026, 10, 1));
+        DepreciationLine a = new DepreciationLine();
+        a.setAsset(truck);
+        a.setAmount(new BigDecimal("150000"));
+        DepreciationLine b = new DepreciationLine();
+        b.setAsset(forklift);
+        b.setAmount(new BigDecimal("102857.14"));
+        postings.depreciation(run, List.of(a, b));
+        Journal dep = last();
+        assertThat(dep.date()).isEqualTo(LocalDate.of(2026, 10, 31));
+        assertThat(dep.lines().stream().filter(l -> l.account() == AccountKey.DEPRECIATION).map(Journal.Line::debit)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("252857.14");
+        assertThat(dep.lines().stream().filter(l -> l.account() == AccountKey.DEPRECIATION).allMatch(l -> sc.equals(l.costCentreId()))).isTrue();
+        assertThat(dep.lines().stream().filter(l -> l.account() == AccountKey.DEPRECIATION && site.equals(l.locationId())).findFirst()
+                .orElseThrow().debit()).isEqualByComparingTo("150000");                                    // the truck's, at its site
+
+        // Sold for 3,000,000 by bank with 1,950,000 depreciated: a loss of 1,050,000
+        truck.setDisposedOn(LocalDate.of(2026, 11, 5));
+        truck.setProceeds(new BigDecimal("3000000"));
+        truck.setProceedsMethod("BANK");
+        truck.setProceedsReference("TRF-88");
+        truck.setDisposalReason("Sold");
+        postings.assetDisposal(truck, new BigDecimal("1950000"));
+        Journal sold = last();
+        assertThat(line(sold, AccountKey.ACCUMULATED_DEPRECIATION).debit()).isEqualByComparingTo("1950000");
+        assertThat(line(sold, AccountKey.BANK).debit()).isEqualByComparingTo("3000000");
+        assertThat(line(sold, AccountKey.ASSET_DISPOSAL).debit()).isEqualByComparingTo("1050000");
+        assertThat(line(sold, AccountKey.FIXED_ASSETS).credit()).isEqualByComparingTo("6000000");
+
+        // The forklift scrapped for nothing after 102,857.14: its whole book value is a loss; sold above it, a gain
+        forklift.setDisposedOn(LocalDate.of(2026, 11, 5));
+        forklift.setProceeds(BigDecimal.ZERO);
+        forklift.setDisposalReason("Scrapped");
+        postings.assetDisposal(forklift, new BigDecimal("102857.14"));
+        assertThat(line(last(), AccountKey.ASSET_DISPOSAL).debit()).isEqualByComparingTo("3897142.86");
+        assertThat(last().lines().stream().noneMatch(l -> l.account() == AccountKey.BANK || l.account() == AccountKey.CASH_VAULT)).isTrue();
+        forklift.setProceeds(new BigDecimal("4000000"));
+        forklift.setProceedsMethod("CASH_VAULT");
+        postings.assetDisposal(forklift, new BigDecimal("102857.14"));
+        assertThat(line(last(), AccountKey.ASSET_DISPOSAL).credit()).isEqualByComparingTo("102857.14");
+
+        // Fixed Assets less Accumulated Depreciation on the truck nets to nothing once it is gone
+        assertThat(lines(AccountKey.FIXED_ASSETS).stream().filter(l -> "FA-WH-00001".equals(l.memo())).map(Journal.Line::signed)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("0");
+        assertThat(posted).allMatch(Journal::isBalanced);
+    }
+
     private static ExpenseBillLine billLine(ExpenseBill bill, int no, ExpenseCategory category, String description, CostCentre centre, UUID location,
                                             String net, String vat) {
         ExpenseBillLine line = new ExpenseBillLine();

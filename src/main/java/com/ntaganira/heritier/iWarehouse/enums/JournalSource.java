@@ -67,7 +67,13 @@ public enum JournalSource {
     /** A staff advance paid: Dr Staff Advances / Cr what paid it (CMP 08). */
     STAFF_ADVANCE("/payroll/advances/"),
     /** A staff advance retired: Dr what it paid for and the cash returned / Cr Staff Advances (CMP 08). */
-    ADVANCE_RETIREMENT("/payroll/advances/");
+    ADVANCE_RETIREMENT("/payroll/advances/"),
+    /** A fixed asset registered at its value to date: Dr Fixed Assets / Cr Accumulated Depreciation and Opening Balance Equity. */
+    ASSET_OPENING("/fixed-assets/"),
+    /** A month's depreciation: Dr Depreciation (each asset's cost centre and place) / Cr Accumulated Depreciation (C.08). */
+    DEPRECIATION("/fixed-assets/depreciation/"),
+    /** A fixed asset sold or scrapped: its cost and depreciation out, what it fetched in, the loss or gain. */
+    ASSET_DISPOSAL("/fixed-assets/");
 
     private final String path;
 

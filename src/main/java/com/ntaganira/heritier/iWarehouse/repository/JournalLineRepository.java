@@ -190,6 +190,20 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
     List<Object[]> customerLinesUntil(@Param("accountId") UUID accountId, @Param("to") LocalDate to);
 
     /**
+     * The cash moved by each journal of a period on some accounts (the money accounts): (date, source, debits less credits), one
+     * row per journal. A journal moving cash between them nets to nothing (the weekly cash report, P.11).
+     */
+    @Query("select e.entryDate, e.sourceType, sum(l.debit) - sum(l.credit) from JournalLine l join l.entry e join l.account a"
+            + " where a.systemKey in :keys and e.entryDate between :from and :to group by e.id, e.entryDate, e.sourceType")
+    List<Object[]> cashByJournal(@Param("keys") Collection<com.ntaganira.heritier.iWarehouse.enums.AccountKey> keys,
+                                 @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** The balance (debits less credits) of some accounts up to and including a day. */
+    @Query("select coalesce(sum(l.debit - l.credit), 0) from JournalLine l where l.account.systemKey in :keys and l.entry.entryDate <= :day")
+    java.math.BigDecimal balanceOfKeysAt(@Param("keys") Collection<com.ntaganira.heritier.iWarehouse.enums.AccountKey> keys,
+                                         @Param("day") LocalDate day);
+
+    /**
      * Expense lines of a period as (account code, account name, account key, cost centre id, location id, source, debits less
      * credits), on the expense accounts and Fixed Assets: the expenditure report (T.05, T.06).
      */

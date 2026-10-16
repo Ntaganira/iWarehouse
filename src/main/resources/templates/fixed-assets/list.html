@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{asset.title}, ~{::content})}">
+<head><title>Fixed assets - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{asset.title}">Fixed assets</h1>
+            <div class="subtitle" th:text="#{asset.subtitle}">The register: what the business owns, its cost, its depreciation to date and its book value</div>
+        </div>
+        <div class="btn-group">
+            <a href="/fixed-assets/depreciation" class="btn btn-outline" th:text="#{depreciation.title}">Depreciation</a>
+            <a href="/fixed-assets/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_FIXED_ASSETS')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{asset.new}">Register an asset</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{asset.inUse}">Assets in use</div>
+                <div class="kpi-value" th:text="${totals.assets}">12</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{asset.totalCost}">Cost (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(totals.cost)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">24,000,000</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{asset.totalDepreciation}">Depreciation to date (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(totals.accumulated)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">6,200,000</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{asset.totalBookValue}">Book value (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(totals.bookValue)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">17,800,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{asset.nextRunSub(${#temporals.format(nextRun.atDay(1), 'MM/yyyy')})}">next run: 10/2026</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{asset.sectionTitle}">Register</span>
+                <span class="section-count" th:text="${assets.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/fixed-assets}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{asset.searchPh}" th:aria-label="#{asset.searchPh}">
+                </div>
+                <select name="category" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{asset.category}">
+                    <option value="" th:selected="${category == null or category == ''}" th:text="#{asset.allCategories}">All categories</option>
+                    <option th:each="c : ${categories}" th:value="${c}" th:selected="${c.name() == category}" th:text="#{${'asset.category.' + c}}">Vehicles</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'asset.status.' + st}}">In use</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{asset.number}">Asset</th>
+                        <th th:text="#{asset.category}">Category</th>
+                        <th th:text="#{asset.where}">Cost centre and place</th>
+                        <th th:text="#{asset.acquiredOn}">Acquired</th>
+                        <th class="num" th:text="#{asset.cost}">Cost (RWF)</th>
+                        <th class="num" th:text="#{asset.accumulated}">Depreciation</th>
+                        <th class="num" th:text="#{asset.bookValue}">Book value</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${assets.content}" th:with="acc=${accumulated.get(a.id)}, cc=${a.costCentreId != null ? costCentres.get(a.costCentreId) : null},
+                            pl=${a.locationId != null ? places.get(a.locationId) : null}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/fixed-assets/{id}(id=${a.id})}" th:text="${a.number}">FA-WH-00001</a>
+                            <div class="cell-sub" th:text="${a.name}">Forklift Toyota 2.5 t</div>
+                        </td>
+                        <td th:text="#{${'asset.category.' + a.category}}">Machinery</td>
+                        <td>
+                            <span class="mono" th:text="${cc != null} ? ${cc.code} : '—'">SC</span>
+                            <div class="cell-sub mono" th:if="${pl != null}" th:text="${pl.code}">WH-GAH</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(a.acquiredOn, 'dd/MM/yyyy')}">20/08/2026</td>
+                        <td class="num" th:text="${@num.money(a.cost)}">4,000,000</td>
+                        <td class="num" th:text="${@num.money(acc)}">300,000</td>
+                        <td class="num strong" th:text="${a.active} ? ${@num.money(a.cost.subtract(acc))} : '—'">3,700,000</td>
+                        <td><th:block th:replace="~{fixed-assets/list :: assetStatus(${a})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${assets.totalElements == 0}">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <h3 th:text="#{asset.empty}">No fixed assets yet</h3>
+                                <p th:text="#{asset.emptyHint}">Capital items of approved expense bills join the register by themselves; register what the business owned before at its value to date.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${assets}, '/fixed-assets', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* An asset's status as a badge */-->
+<th:block th:fragment="assetStatus(a)" th:switch="${a.status.name()}">
+    <span th:case="'ACTIVE'" class="badge badge-success" th:text="#{asset.status.ACTIVE}">In use</span>
+    <span th:case="'DISPOSED'" class="badge badge-secondary" th:text="#{asset.status.DISPOSED}">Disposed of</span>
+    <span th:case="*" class="badge badge-danger" th:text="#{asset.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

@@ -85,6 +85,57 @@ public class DeliveryNoteController {
         return "delivery-notes/list";
     }
 
+    /** The week's delivery schedule (G.23): each day's notes against the warehouse's capacity. */
+    @GetMapping("/schedule")
+    @PreAuthorize(VIEW)
+    public String schedule(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
+                           @RequestParam(defaultValue = "0") int page, Model model) {
+        LocalDate today = noteService.today();
+        LocalDate monday = (week == null ? today : week).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        List<DeliveryNoteService.DayLoad> days = noteService.schedule(monday);
+        List<DeliveryNote> notes = days.stream().flatMap(d -> d.notes().stream()).toList();
+        model.addAttribute("days", days);
+        model.addAttribute("notes", Paging.of(notes, Paging.page(page)));
+        model.addAttribute("kg", days.isEmpty() ? Map.of() : days.get(0).kg());
+        model.addAttribute("pieces", days.isEmpty() ? Map.of() : days.get(0).pieces());
+        model.addAttribute("drafts", noteService.drafts());
+        model.addAttribute("monday", monday);
+        model.addAttribute("sunday", monday.plusDays(6));
+        model.addAttribute("today", today);
+        model.addAttribute("capacityKg", settingService.getDecimal(SettingKey.DELIVERY_CAPACITY_KG));
+        model.addAttribute("capacityNotes", settingService.getInt(SettingKey.DELIVERY_CAPACITY_NOTES));
+        model.addAttribute("paginationQuery", QueryString.of("week", monday.toString()));
+        return "delivery-notes/schedule";
+    }
+
+    @PostMapping("/schedule")
+    @PreAuthorize("hasAuthority('PAGE_DELIVERY_NOTES') and hasAuthority('PERM_SCHEDULE_DELIVERY')")
+    public String reschedule(@RequestParam(required = false) UUID noteId, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate scheduledOn,
+                             RedirectAttributes redirect) {
+        LocalDate day = scheduledOn == null ? noteService.today() : scheduledOn;
+        if (noteId == null) {
+            redirect.addFlashAttribute("flashError", messages.get("delivery.schedule.noteRequired"));
+            return "redirect:/delivery-notes/schedule";
+        }
+        DeliveryNote note = noteService.findDetailed(noteId);
+        try {
+            DeliveryNoteService.DayLoad load = noteService.reschedule(noteId, scheduledOn);
+            activityLogService.record(MODULE, "UPDATE_DELIVERY_SCHEDULE", "Planned delivery note " + note.getNumber() + " for " + load.day()
+                    + (load.isOver() ? " (over the day's capacity)" : ""), ActivityStatus.SUCCESS);
+            String day1 = load.day().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            if (load.isOver()) {
+                redirect.addFlashAttribute("flashError", messages.get("delivery.schedule.over", note.getNumber(), day1));
+            } else {
+                redirect.addFlashAttribute("flashSuccess", messages.get("delivery.schedule.done", note.getNumber(), day1));
+            }
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "UPDATE_DELIVERY_SCHEDULE", "Failed to plan delivery note " + note.getNumber() + ": " + error, ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/delivery-notes/schedule?week=" + day;
+    }
+
     @GetMapping("/new")
     @PreAuthorize(PREPARE)
     public String form(@RequestParam UUID invoice, Model model, RedirectAttributes redirect) {

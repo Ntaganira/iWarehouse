@@ -610,7 +610,8 @@ public class PostingService {
 
     /**
      * An expense bill approved (CMP 01, F-16): Dr each line's category account, before VAT, naming its cost centre and location,
-     * and VAT Input / Cr Payable naming the supplier: it shows on the supplier's account and is paid as a supplier payment.
+     * and VAT Input / Cr Payable naming the supplier: it shows on the supplier's account and is paid as a supplier payment. Tax
+     * withheld (U.14) is owed to RRA instead: Cr Withholding Tax Payable naming the supplier, the supplier owed the rest.
      */
     public JournalEntry expenseBill(ExpenseBill bill) {
         Journal journal = Journal.of(JournalSource.EXPENSE_BILL, bill.getId(), bill.getNumber(), bill.getBillDate(),
@@ -619,8 +620,61 @@ public class PostingService {
             journal.addTagged(l.getCategory().account(), l.getNetAmount(), null, l.getDescription(), l.getCostCentre().getId(), l.getLocationId());
         }
         journal.debit(AccountKey.VAT_INPUT, bill.getVatAmount());
-        journal.add(AccountKey.PAYABLE, bill.getAmount().negate(), null, bill.getSupplier().getId(), bill.getSupplierRef() + " · " + bill.getNumber(),
-                null);
+        String memo = bill.getSupplierRef() + " · " + bill.getNumber();
+        journal.add(AccountKey.WHT_PAYABLE, bill.getWhtAmount().negate(), null, bill.getSupplier().getId(), memo, null);
+        journal.add(AccountKey.PAYABLE, bill.getPayable().negate(), null, bill.getSupplier().getId(), memo, null);
+        return journalService.post(journal);
+    }
+
+    // ---------------------------------------------------------------- fixed assets (C.08, U.12)
+
+    /**
+     * A fixed asset registered at its value to date (C.08): Dr Fixed Assets its cost / Cr Accumulated Depreciation the depreciation
+     * before the register and Opening Balance Equity its book value, the asset lines naming its cost centre and place.
+     */
+    public JournalEntry assetOpening(FixedAsset asset, LocalDate date) {
+        Journal journal = Journal.of(JournalSource.ASSET_OPENING, asset.getId(), asset.getNumber(), date,
+                "Fixed asset " + asset.getNumber() + " registered: " + asset.getName());
+        journal.addTagged(AccountKey.FIXED_ASSETS, asset.getCost(), null, asset.getNumber(), asset.getCostCentreId(), asset.getLocationId())
+                .addTagged(AccountKey.ACCUMULATED_DEPRECIATION, asset.getOpeningAccumulated().negate(), null, asset.getNumber(),
+                        asset.getCostCentreId(), asset.getLocationId())
+                .balanceOn(AccountKey.OPENING_EQUITY);
+        return journalService.post(journal);
+    }
+
+    /**
+     * A month's depreciation (C.08, U.12), on the month's last day: Dr Depreciation / Cr Accumulated Depreciation, each asset's
+     * share naming its cost centre and place (the budget against actual reads it by cost centre).
+     */
+    public JournalEntry depreciation(DepreciationRun run, List<DepreciationLine> lines) {
+        Journal journal = Journal.of(JournalSource.DEPRECIATION, run.getId(), run.getNumber(), run.getPeriod().withDayOfMonth(run.getPeriod().lengthOfMonth()),
+                "Depreciation of " + PAY_MONTH.format(run.getPeriod()) + " (" + run.getNumber() + ")");
+        for (DepreciationLine l : lines) {
+            FixedAsset a = l.getAsset();
+            journal.addTagged(AccountKey.DEPRECIATION, l.getAmount(), null, run.getNumber(), a.getCostCentreId(), a.getLocationId())
+                    .addTagged(AccountKey.ACCUMULATED_DEPRECIATION, l.getAmount().negate(), null, run.getNumber(), a.getCostCentreId(), a.getLocationId());
+        }
+        return journalService.post(journal);
+    }
+
+    /**
+     * A fixed asset sold or scrapped (C.08), on the day: Dr Accumulated Depreciation its depreciation to date and the vault, the
+     * bank or mobile money what it fetched / Cr Fixed Assets its cost; the difference, its book value less what it fetched, to
+     * Loss (Gain) on Disposal: a loss a debit, a gain a credit.
+     */
+    public JournalEntry assetDisposal(FixedAsset asset, BigDecimal accumulated) {
+        UUID centre = asset.getCostCentreId();
+        UUID place = asset.getLocationId();
+        BigDecimal proceeds = asset.getProceeds() == null ? ZERO : asset.getProceeds();
+        Journal journal = Journal.of(JournalSource.ASSET_DISPOSAL, asset.getId(), asset.getNumber(), asset.getDisposedOn(),
+                "Fixed asset " + asset.getNumber() + " disposed of: " + asset.getDisposalReason());
+        journal.addTagged(AccountKey.ACCUMULATED_DEPRECIATION, accumulated, null, asset.getNumber(), centre, place);
+        if (proceeds.signum() > 0) {
+            journal.add(AccountKey.valueOf(asset.getProceedsMethod()), proceeds, null, null,
+                    asset.getProceedsReference() == null ? asset.getNumber() : asset.getProceedsReference(), null);
+        }
+        journal.addTagged(AccountKey.ASSET_DISPOSAL, FixedAssets.disposalLoss(asset.getCost(), accumulated, proceeds), null, asset.getNumber(), centre, place)
+                .addTagged(AccountKey.FIXED_ASSETS, asset.getCost().negate(), null, asset.getNumber(), centre, place);
         return journalService.post(journal);
     }
 

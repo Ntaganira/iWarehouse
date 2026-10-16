@@ -42,6 +42,8 @@ import java.util.stream.Collectors;
 public class SalesTargetService {
 
     public static final String COMPANY = "COMPANY";
+    /** The territory key of the sales of customers with no territory (shown as "No territory"). */
+    public static final String NO_TERRITORY = "-";
 
     /** A row of the grid: its key, what it reads as, and the twelve months' targets. */
     public record GridRow(String key, String label, BigDecimal[] months) {
@@ -166,9 +168,9 @@ public class SalesTargetService {
         }
         for (SalesAnalysis.Fact f : facts) {
             actual.get(SalesTargetScope.COMPANY).merge(COMPANY, f.net(), BigDecimal::add);
-            if (f.invoice().territoryCode() != null) {
-                actual.get(SalesTargetScope.TERRITORY).merge(f.invoice().territoryCode(), f.net(), BigDecimal::add);
-            }
+            // Sales of no territory get their own row, so the territories add up to the business
+            actual.get(SalesTargetScope.TERRITORY).merge(f.invoice().territoryCode() == null ? NO_TERRITORY : f.invoice().territoryCode(), f.net(),
+                    BigDecimal::add);
             if (f.invoice().salesperson() != null) {
                 actual.get(SalesTargetScope.SALESPERSON).merge(f.invoice().salesperson(), f.net(), BigDecimal::add);
             }

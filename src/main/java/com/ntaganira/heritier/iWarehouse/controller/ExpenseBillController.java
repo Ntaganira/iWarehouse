@@ -121,6 +121,7 @@ public class ExpenseBillController {
         String open = "history".equals(tab) || "journal".equals(tab) ? tab : "documents";
         model.addAttribute("bill", bill);
         model.addAttribute("journals", billService.journals(bill));
+        model.addAttribute("assets", bill.getNature() == com.ntaganira.heritier.iWarehouse.enums.ExpenseNature.CAPEX ? billService.assets(bill) : java.util.List.of());
         model.addAttribute("mine", billService.isEnterer(bill));
         model.addAttribute("tookPart", billService.tookPart(bill));
         model.addAttribute("head", billService.isHead(bill));

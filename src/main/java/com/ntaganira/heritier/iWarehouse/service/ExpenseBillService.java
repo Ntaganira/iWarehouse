@@ -64,6 +64,7 @@ public class ExpenseBillService {
     private final AlertStateRepository alertRepo;
     private final RequisitionService requisitions;
     private final BudgetService budgets;
+    private final FixedAssetService fixedAssets;
     private final AttachmentService attachments;
     private final StockService stockService;
     private final PostingService postingService;
@@ -77,7 +78,7 @@ public class ExpenseBillService {
 
     public ExpenseBillService(ExpenseBillRepository repo, SupplierRepository supplierRepo, CostCentreRepository costCentreRepo,
                               CurrencyRepository currencyRepo, AlertStateRepository alertRepo, RequisitionService requisitions,
-                              BudgetService budgets, AttachmentService attachments, StockService stockService, PostingService postingService, JournalService journalService,
+                              BudgetService budgets, FixedAssetService fixedAssets, AttachmentService attachments, StockService stockService, PostingService postingService, JournalService journalService,
                               DocumentNumberService numbers, DelegationOfAuthority authority, PeriodLock periods, SettingService settings,
                               Notifier notifier, Clock clock) {
         this.repo = repo;
@@ -87,6 +88,7 @@ public class ExpenseBillService {
         this.alertRepo = alertRepo;
         this.requisitions = requisitions;
         this.budgets = budgets;
+        this.fixedAssets = fixedAssets;
         this.attachments = attachments;
         this.stockService = stockService;
         this.postingService = postingService;
@@ -137,6 +139,11 @@ public class ExpenseBillService {
 
     public long toRatifyCount() {
         return repo.findByEmergencyTrueAndStatusAndRatifiedAtIsNullOrderByDecidedAtAsc(ExpenseBillStatus.APPROVED).size();
+    }
+
+    /** The fixed assets its capital items became (C.08). */
+    public List<FixedAsset> assets(ExpenseBill bill) {
+        return fixedAssets.ofBill(bill);
     }
 
     /** Its journal and, once reversed, the reversal. */
@@ -253,8 +260,14 @@ public class ExpenseBillService {
         return purchase && requisitions.isRequired(bill.getAmount());
     }
 
+    /** The withholding tax rate a bill withholds by default (U.14: the Settings). */
+    public BigDecimal defaultWhtRate() {
+        return settings.getDecimal(SettingKey.TAX_WHT_RATE);
+    }
+
     public ExpenseBillDto newForm() {
         ExpenseBillDto dto = new ExpenseBillDto();
+        dto.setWhtRate(defaultWhtRate());
         dto.setBillDate(today());
         dto.getLines().add(new ExpenseBillDto.Line());
         return dto;
@@ -270,6 +283,8 @@ public class ExpenseBillService {
         dto.setBudgeted(bill.isBudgeted());
         dto.setEmergency(bill.isEmergency());
         dto.setRequisitionId(bill.getRequisition() == null ? null : bill.getRequisition().getId());
+        dto.setWithhold(bill.getWhtRate().signum() > 0);
+        dto.setWhtRate(bill.getWhtRate().signum() > 0 ? bill.getWhtRate() : defaultWhtRate());
         for (ExpenseBillLine l : bill.getLines()) {
             ExpenseBillDto.Line line = new ExpenseBillDto.Line();
             line.setCategory(l.getCategory());
@@ -376,6 +391,12 @@ public class ExpenseBillService {
         bill.setNetAmount(net);
         bill.setVatAmount(vat);
         bill.setAmount(net.add(vat));
+        BigDecimal rate = dto.isWithhold() ? (dto.getWhtRate() == null ? defaultWhtRate() : dto.getWhtRate()) : BigDecimal.ZERO;
+        if (dto.isWithhold() && rate.signum() <= 0) {
+            throw BusinessException.onField("whtRate", "expense.wht.range");
+        }
+        bill.setWhtRate(rate.setScale(2, RoundingMode.HALF_UP));
+        bill.setWhtAmount(withheld(net, rate));                       // U.14: on the amount before VAT, whole francs
         if (!overBudget(bill).isEmpty()) {
             bill.setBudgeted(false);                                 // T.04: beyond what is left of the year's approved budget
         }
@@ -466,6 +487,7 @@ public class ExpenseBillService {
         AuthorityLevel level = authority.require(decisionOf(bill), bill.getAmount(), clean);
         Optional<AppUserPrincipal> me = AppUserPrincipal.current();
         JournalEntry entry = postingService.expenseBill(bill);
+        fixedAssets.fromBill(bill);                                  // C.08: each capital item into the register
         LocalDateTime now = LocalDateTime.now(clock);
         bill.setDecidedBy(me.map(AppUserPrincipal::getUsername).orElse("system"));
         bill.setDecidedById(me.map(AppUserPrincipal::getId).orElse(null));
@@ -557,6 +579,7 @@ public class ExpenseBillService {
         }
         periods.requireOpen(day);
         String clean = reason(reason);
+        fixedAssets.billReversed(bill, day, clean);                  // its assets cancelled, unless depreciated or disposed of
         JournalEntry reversal = journalService.reverse(journalService.findById(bill.getJournalId()), day,
                 "Reversal of " + bill.getNumber() + ": " + clean);
         bill.setReversalJournalId(reversal.getId());
@@ -621,6 +644,11 @@ public class ExpenseBillService {
         bill.setDecidedAt(LocalDateTime.now(clock));
         bill.setDecisionNote(note);
         bill.setStatus(status);
+    }
+
+    /** The tax withheld on an amount before VAT at a rate (%), whole francs, half up (U.14). */
+    static BigDecimal withheld(BigDecimal net, BigDecimal rate) {
+        return net.multiply(rate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP).setScale(2);
     }
 
     private static String link(ExpenseBill bill) {

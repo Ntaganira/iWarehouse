@@ -93,7 +93,7 @@
                     <span th:text="#{budgetReport.lines}">Budget lines</span>
                     <span class="section-count" th:text="${rowPage.totalElements}">0</span>
                 </h2>
-                <span class="badge badge-warning" th:if="${r.flagged > 0}" th:text="#{budgetReport.flaggedCount(${r.flagged}, ${@num.percent(r.tolerance)})}">3 beyond 5 %</span>
+                <span class="badge badge-warning" th:if="${r.flaggedLines > 0}" th:text="#{budgetReport.flaggedCount(${r.flaggedLines}, ${@num.percent(r.tolerance)})}">3 beyond 5 %</span>
             </div>
             <div class="table-container">
                 <table>

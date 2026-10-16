@@ -44,6 +44,21 @@ public interface ExpenseBillRepository extends JpaRepository<ExpenseBill, UUID>,
 
     long countByStatusIn(Collection<ExpenseBillStatus> statuses);
 
+    /** The bill of a line (a fixed asset names the line it came from). */
+    @Query("select b from ExpenseBill b join fetch b.supplier where b.id = (select l.bill.id from ExpenseBillLine l where l.id = :lineId)")
+    Optional<ExpenseBill> findByLineId(@Param("lineId") UUID lineId);
+
+    /** Bills withholding tax dated in a period, in the given states, with their supplier (the withholding tax return, U.14). */
+    @EntityGraph(attributePaths = {"supplier"})
+    List<ExpenseBill> findByWhtAmountGreaterThanAndBillDateBetweenAndStatusInOrderByBillDateAscNumberAsc(java.math.BigDecimal zero, LocalDate from,
+                                                                                                      LocalDate to, Collection<ExpenseBillStatus> statuses);
+
+    /** Bills withholding tax reversed in a period, with their supplier. */
+    @EntityGraph(attributePaths = {"supplier"})
+    List<ExpenseBill> findByWhtAmountGreaterThanAndReversalDateBetweenAndStatusOrderByReversalDateAscNumberAsc(java.math.BigDecimal zero,
+                                                                                                           LocalDate from, LocalDate to,
+                                                                                                           ExpenseBillStatus status);
+
     /** Bills decided in a period (the exceptions report). */
     @EntityGraph(attributePaths = {"supplier"})
     List<ExpenseBill> findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(LocalDateTime from, LocalDateTime to,

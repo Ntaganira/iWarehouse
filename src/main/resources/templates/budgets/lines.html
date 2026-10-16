@@ -40,7 +40,7 @@
                     <span th:text="#{expense.addLine}">Add a line</span>
                 </button>
             </div>
-            <div class="section-body"><div th:replace="~{layout/errors :: error-summary}"></div></div>
+            <div class="section-body" th:if="${#fields.hasErrors('*')}"><div th:replace="~{layout/errors :: error-summary}"></div></div>
             <div class="table-container">
                 <table class="line-table budget-line-table">
                     <thead>

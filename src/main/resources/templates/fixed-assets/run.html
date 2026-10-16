@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${run.number}, ~{::content})}">
+<head><title>Depreciation run - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="base=${'/fixed-assets/depreciation/' + run.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${run.number}">DEP-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{depreciation.ofMonth(${#temporals.format(run.period, 'MM/yyyy')}, ${run.runBy}, ${#temporals.format(run.runAt, 'dd/MM/yyyy HH:mm')})}">Depreciation of 09/2026, posted by accountant on 01/10/2026 09:00</span>
+                &middot; <span class="badge" th:classappend="${run.posted} ? 'badge-success' : 'badge-secondary'" th:text="#{${'depreciation.status.' + run.status}}">Posted</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/fixed-assets/depreciation" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reverse-modal" th:if="${run.posted and latest}"
+                    sec:authorize="hasAuthority('PERM_RUN_DEPRECIATION')" th:text="#{depreciation.reverse}">Reverse</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${!run.posted}">
+        <strong th:text="#{depreciation.reversedBy(${run.reversedBy}, ${#temporals.format(run.reversedAt, 'dd/MM/yyyy HH:mm')})}">Reversed by accountant on 02/10/2026 10:00:</strong>
+        <span th:text="${run.reversalReason}">Wrong life on an asset</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{depreciation.month}">Month</label>
+                    <div class="value" th:text="${#temporals.format(run.period, 'MM/yyyy')}">09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{depreciation.assets}">Assets</label>
+                    <div class="value" th:text="${run.assets}">4</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{depreciation.amount}">Depreciation (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(run.total)}">350,000</div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{depreciation.linesTab}">Assets</span>
+                <span class="section-count" th:text="${lines.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{asset.number}">Asset</th>
+                                <th th:text="#{asset.category}">Category</th>
+                                <th class="num" th:text="#{depreciation.amount}">Depreciation (RWF)</th>
+                                <th class="num" th:text="#{depreciation.accumulatedAfter}">To date after it</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines.content}">
+                                <td>
+                                    <a class="mono" th:href="@{/fixed-assets/{id}(id=${l.asset.id})}" th:text="${l.asset.number}">FA-WH-00001</a>
+                                    <div class="cell-sub" th:text="${l.asset.name}">Forklift</div>
+                                </td>
+                                <td th:text="#{${'asset.category.' + l.asset.category}}">Machinery</td>
+                                <td class="num" th:text="${@num.money(l.amount)}">100,000</td>
+                                <td class="num" th:text="${@num.money(l.accumulatedAfter)}">100,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${lines}, ${base}, 'tab=lines')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:if="${run.posted and latest}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('reverse-modal', #{depreciation.reverseTitle(${run.number})},
+                @{/fixed-assets/depreciation/{id}/reverse(id=${run.id})}, #{depreciation.reverseText}, #{depreciation.reverse})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

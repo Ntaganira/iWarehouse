@@ -59,6 +59,13 @@
                         </th:block>
                     </div>
                 </div>
+                <div class="item" th:if="${checklist.depreciationMissing}">
+                    <label th:text="#{period.depreciation}">Depreciation</label>
+                    <div class="value">
+                        <span class="badge badge-warning" th:text="#{period.revaluation.DUE}">To do</span>
+                        <a th:href="@{/fixed-assets/depreciation}" sec:authorize="hasAuthority('PERM_RUN_DEPRECIATION')" th:text="#{period.runDepreciation}">Run</a>
+                    </div>
+                </div>
             </div>
             <p class="form-note" th:unless="${checklist.ready}" th:text="#{period.notReady}">Decide the manual journals waiting and revalue the foreign balances first.</p>
             <form th:action="@{/accounting/periods/close}" method="post" class="form-actions confirm-submit" sec:authorize="hasAuthority('PERM_CLOSE_PERIOD')"

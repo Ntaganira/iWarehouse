@@ -1042,6 +1042,58 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.taxCash}">Tax, cash flow and deliveries</h3>
+                <p class="hint" th:text="#{settings.group.taxCashHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="taxWhtRate" th:text="#{settings.taxWhtRate}">taxWhtRate</label>
+                    <div class="input-unit">
+                        <input type="number" id="taxWhtRate" th:field="*{taxWhtRate}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('taxWhtRate')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('taxWhtRate')}" th:errors="*{taxWhtRate}"></span>
+                    <span class="hint" th:text="#{settings.taxWhtRateHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="taxCitRate" th:text="#{settings.taxCitRate}">taxCitRate</label>
+                    <div class="input-unit">
+                        <input type="number" id="taxCitRate" th:field="*{taxCitRate}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('taxCitRate')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('taxCitRate')}" th:errors="*{taxCitRate}"></span>
+                    <span class="hint" th:text="#{settings.taxCitRateHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="cashflowWeeks" th:text="#{settings.cashflowWeeks}">cashflowWeeks</label>
+                    <div class="input-unit">
+                        <input type="number" id="cashflowWeeks" th:field="*{cashflowWeeks}" step="1" min="1" max="52" required
+                               th:classappend="${#fields.hasErrors('cashflowWeeks')} ? 'is-invalid'">
+                        <span th:text="#{settings.unit.weeks}">weeks</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('cashflowWeeks')}" th:errors="*{cashflowWeeks}"></span>
+                    <span class="hint" th:text="#{settings.cashflowWeeksHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryCapacityKg" th:text="#{settings.deliveryCapacityKg}">deliveryCapacityKg</label>
+                    <div class="input-unit">
+                        <input type="number" id="deliveryCapacityKg" th:field="*{deliveryCapacityKg}" step="1" min="0" required
+                               th:classappend="${#fields.hasErrors('deliveryCapacityKg')} ? 'is-invalid'">
+                        <span>kg</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('deliveryCapacityKg')}" th:errors="*{deliveryCapacityKg}"></span>
+                    <span class="hint" th:text="#{settings.deliveryCapacityKgHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="deliveryCapacityNotes" th:text="#{settings.deliveryCapacityNotes}">deliveryCapacityNotes</label>
+                    <input type="number" id="deliveryCapacityNotes" th:field="*{deliveryCapacityNotes}" step="1" min="0" max="999" required
+                           th:classappend="${#fields.hasErrors('deliveryCapacityNotes')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('deliveryCapacityNotes')}" th:errors="*{deliveryCapacityNotes}"></span>
+                    <span class="hint" th:text="#{settings.deliveryCapacityNotesHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

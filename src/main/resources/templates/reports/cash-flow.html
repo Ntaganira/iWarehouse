@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{cashflow.title}, ~{::content})}">
+<head><title>Cash flow - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="f=${forecast}, canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_CASH_FORECAST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{cashflow.title}">Cash flow</h1>
+            <div class="subtitle" th:text="#{cashflow.subtitle(${#lists.size(f.weeks)})}">The cash expected over the next 13 weeks, and the cash of each week as it happened</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/cash-flow/export(week=${monday})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${f.firstShort != null}"
+         th:text="#{cashflow.shortNote(${f.firstShort.no}, ${#temporals.format(f.firstShort.from, 'dd/MM/yyyy')}, ${@num.money(f.firstShort.closing)})}">Week 4 (from 06/11/2026) closes at -1,200,000: plan the cash before then.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cashflow.cashToday}">Cash today (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(f.opening)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">12,500,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cashflow.cashTodaySub}">vault, bank, mobile money, petty cash, tills, drivers</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cashflow.expectedIn}">Expected in (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(f.totalIn)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">30,000,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cashflow.overdueInSub(${@num.money(f.overdueReceivables)})}">of which overdue 4,000,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cashflow.expectedOut}">Expected out (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(f.totalOut)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">28,000,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cashflow.overdueOutSub(${@num.money(f.overduePayables)})}">of which overdue 2,000,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{cashflow.closingIn(${#temporals.format(f.end, 'dd/MM/yyyy')})}">Cash on 14/01/2027</div>
+                <div class="kpi-value" th:with="v=${@num.money(f.closing)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">14,500,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{cashflow.lowestSub(${@num.money(f.lowest)})}">lowest 3,100,000</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-forecast" th:classappend="${tab == 'forecast'} ? 'active'" th:text="#{cashflow.forecastTab}">Forecast</button>
+            <button type="button" class="tab" data-tab="tab-weekly" th:classappend="${tab == 'weekly'} ? 'active'" th:text="#{cashflow.weeklyTab}">Weekly cash</button>
+            <button type="button" class="tab" data-tab="tab-planned" th:classappend="${tab == 'planned'} ? 'active'">
+                <span th:text="#{cashflow.plannedTab}">Planned items</span>
+                <span class="section-count" th:text="${items.totalElements}">0</span>
+            </button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-forecast" th:classappend="${tab == 'forecast'} ? 'active'">
+                <div class="tab-toolbar"><p class="tab-intro" th:text="#{cashflow.forecastIntro}">What customers owe by due date at their terms, what is owed to suppliers by due date, the net pay at each month's end, RRA and RSSB on the 15th, and the planned items. Overdue amounts fall in the first week.</p></div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{cashflow.week}">Week</th>
+                                <th class="num" th:text="#{cashflow.opening}">Opening</th>
+                                <th class="num" th:each="k : ${columns}" th:text="#{${'cashflow.kind.' + k}}">Customers</th>
+                                <th class="num" th:text="#{cashflow.planned}">Planned</th>
+                                <th class="num" th:text="#{cashflow.closing}">Closing</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="w : ${f.weeks}">
+                                <td class="nowrap">
+                                    <span class="strong" th:text="#{cashflow.weekNo(${w.no})}">Week 1</span>
+                                    <div class="cell-sub" th:text="${#temporals.format(w.from, 'dd/MM') + ' – ' + #temporals.format(w.to, 'dd/MM/yyyy')}">16/10 – 22/10/2026</div>
+                                </td>
+                                <td class="num" th:text="${@num.money(w.opening)}">12,500,000</td>
+                                <td class="num" th:each="k : ${columns}" th:text="${w.get(k).signum() == 0} ? '—' : ${(k.in ? '' : '−') + @num.money(w.get(k))}">2,000,000</td>
+                                <td class="num" th:text="${w.planned.signum() == 0} ? '—' : ${(w.planned.signum() < 0 ? '−' : '') + @num.money(w.planned.abs())}">−1,500,000</td>
+                                <td class="num strong" th:classappend="${w.short} ? 'text-danger'" th:text="${@num.money(w.closing)}">13,200,000</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="2" th:text="#{fin.total}">Total</th>
+                                <th class="num" th:each="k : ${columns}" th:text="${(k.in ? '' : '−') + @num.money(f.getTotal(k))}">0</th>
+                                <th class="num" th:text="${(f.totalPlanned.signum() < 0 ? '−' : '') + @num.money(f.totalPlanned.abs())}">0</th>
+                                <th class="num" th:text="${@num.money(f.closing)}">0</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <p class="form-note" th:if="${f.payrollBasis != null}"
+                   th:text="#{cashflow.payrollNote(${f.payrollBasis.number}, ${@num.money(f.payrollBasis.totalNet)})}">Net pay of a month without a posted run: as PAY-WH-2026-000003, 4,200,000.</p>
+            </div>
+
+            <div class="tab-content" id="tab-weekly" th:classappend="${tab == 'weekly'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{cashflow.weeklyIntro}">The money accounts' journals week by week, Monday to Sunday; money moved between them is left out.</p>
+                    <div class="btn-group">
+                        <a class="btn btn-outline btn-sm" th:href="@{/reports/cash-flow(tab='weekly', week=${previousWeek})}" th:text="#{cashflow.previousWeek}">Previous week</a>
+                        <a class="btn btn-outline btn-sm" th:if="${nextWeek != null}" th:href="@{/reports/cash-flow(tab='weekly', week=${nextWeek})}" th:text="#{cashflow.nextWeek}">Next week</a>
+                    </div>
+                </div>
+                <h3 class="detail-heading" th:text="#{cashflow.weekOf(${#temporals.format(week.from, 'dd/MM/yyyy')}, ${#temporals.format(week.to, 'dd/MM/yyyy')})}">Week of 12/10/2026 to 18/10/2026</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{cashflow.source}">From</th>
+                                <th class="num" th:text="#{cashflow.in}">In</th>
+                                <th class="num" th:text="#{cashflow.out}">Out</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="strong" th:text="#{cashflow.opening}">Opening</td>
+                                <td class="num strong" th:text="${@num.money(week.opening)}">12,000,000</td>
+                                <td></td>
+                            </tr>
+                            <tr th:each="s : ${week.sources}">
+                                <td th:text="#{${'journal.source.' + s}}">Counter sale</td>
+                                <td class="num" th:text="${week.in.get(s) != null} ? ${@num.money(week.in.get(s))} : '—'">3,000,000</td>
+                                <td class="num" th:text="${week.out.get(s) != null} ? ${@num.money(week.out.get(s))} : '—'">—</td>
+                            </tr>
+                            <tr th:if="${week.sources.isEmpty()}">
+                                <td colspan="3">
+                                    <div class="empty-state"><h3 th:text="#{cashflow.weekEmpty}">No cash moved this week</h3></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th th:text="#{fin.total}">Total</th>
+                                <th class="num" th:text="${@num.money(week.totalIn)}">3,000,000</th>
+                                <th class="num" th:text="${@num.money(week.totalOut)}">1,000,000</th>
+                            </tr>
+                            <tr>
+                                <th th:text="#{cashflow.closing}">Closing</th>
+                                <th class="num" th:text="${@num.money(week.closing)}">14,000,000</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <h3 class="detail-heading" th:text="#{cashflow.weeksBefore}">The weeks before</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{cashflow.week}">Week</th>
+                                <th class="num" th:text="#{cashflow.opening}">Opening</th>
+                                <th class="num" th:text="#{cashflow.in}">In</th>
+                                <th class="num" th:text="#{cashflow.out}">Out</th>
+                                <th class="num" th:text="#{cashflow.closing}">Closing</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="w : ${weeks}">
+                                <td class="nowrap"><a th:href="@{/reports/cash-flow(tab='weekly', week=${w.from})}"
+                                       th:text="${#temporals.format(w.from, 'dd/MM') + ' – ' + #temporals.format(w.to, 'dd/MM/yyyy')}">12/10 – 18/10/2026</a></td>
+                                <td class="num" th:text="${@num.money(w.opening)}">12,000,000</td>
+                                <td class="num" th:text="${@num.money(w.totalIn)}">3,000,000</td>
+                                <td class="num" th:text="${@num.money(w.totalOut)}">1,000,000</td>
+                                <td class="num strong" th:text="${@num.money(w.closing)}">14,000,000</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab-planned" th:classappend="${tab == 'planned'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{cashflow.plannedIntro}">Money expected that no document carries yet: a loan repayment, rent, a capital purchase, a capital injection.</p>
+                    <button type="button" class="btn btn-primary" data-modal-open="item-modal" th:if="${canManage}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        <span th:text="#{cashflow.item.new}">Plan an item</span>
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{cashflow.item.date}">Expected on</th>
+                                <th th:text="#{cashflow.item.description}">What</th>
+                                <th th:text="#{cashflow.item.repeats}">Repeats</th>
+                                <th class="num" th:text="#{cashflow.item.amount}">Amount (RWF)</th>
+                                <th th:if="${canManage}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="i : ${items.content}">
+                                <td class="nowrap" th:text="${#temporals.format(i.expectedOn, 'dd/MM/yyyy')}">05/11/2026</td>
+                                <td>
+                                    <span th:text="${i.description}">Warehouse rent</span>
+                                    <div class="cell-sub" th:text="#{${'cashflow.direction.' + i.direction}}">Out</div>
+                                </td>
+                                <td>
+                                    <span th:text="#{${'cashflow.repeat.' + i.repeats}}">Every month</span>
+                                    <div class="cell-sub" th:if="${i.until != null}" th:text="#{cashflow.item.untilSub(${#temporals.format(i.until, 'dd/MM/yyyy')})}">until 31/12/2027</div>
+                                </td>
+                                <td class="num" th:text="${(i.direction.name() == 'OUT' ? '−' : '') + @num.money(i.amount)}">−1,500,000</td>
+                                <td th:if="${canManage}" class="actions">
+                                    <form th:action="@{/reports/cash-flow/items/{id}/cancel(id=${i.id})}" method="post" class="row-action-form confirm-submit danger"
+                                          th:attr="data-confirm=#{cashflow.item.cancelConfirm(${i.description})}">
+                                        <button type="submit" class="btn btn-outline btn-sm" th:text="#{cashflow.item.cancel}">Cancel</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${items.totalElements == 0}">
+                                <td th:attr="colspan=${canManage ? 5 : 4}">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{cashflow.item.empty}">No planned items</h3>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${items}, '/reports/cash-flow', 'tab=planned')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!--/* Planning an item */-->
+    <div class="modal-overlay" id="item-modal" th:if="${canManage}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="item-title">
+            <div class="modal-header">
+                <h3 id="item-title" th:text="#{cashflow.item.new}">Plan an item</h3>
+                <button type="button" class="modal-close" data-modal-close="item-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/reports/cash-flow/items}" method="post" novalidate>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="item-direction" th:text="#{cashflow.item.direction}">In or out</label>
+                        <select id="item-direction" name="direction" required>
+                            <option th:each="d : ${directions}" th:value="${d}" th:selected="${d.name() == 'OUT'}" th:text="#{${'cashflow.direction.' + d}}">Out</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-description" th:text="#{cashflow.item.description}">What</label>
+                        <input type="text" id="item-description" name="description" maxlength="200" required autocomplete="off" th:placeholder="#{cashflow.item.descriptionPh}">
+                    </div>
+                    <div class="form-group">
+                        <label for="item-amount" th:text="#{cashflow.item.amount}">Amount (RWF)</label>
+                        <div class="input-unit">
+                            <input type="number" id="item-amount" name="amount" min="1" step="0.01" inputmode="decimal" required>
+                            <span>RWF</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-date" th:text="#{cashflow.item.date}">Expected on</label>
+                        <input type="date" id="item-date" name="expectedOn" th:value="${today}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-repeats" th:text="#{cashflow.item.repeats}">Repeats</label>
+                        <select id="item-repeats" name="repeats">
+                            <option th:each="r : ${repeats}" th:value="${r}" th:text="#{${'cashflow.repeat.' + r}}">Once</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-until" th:text="#{cashflow.item.until}">Until</label>
+                        <input type="date" id="item-until" name="until">
+                        <span class="hint" th:text="#{cashflow.item.untilHint}">For a repeating item; empty: no end</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="item-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{cashflow.item.save}">Plan it</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

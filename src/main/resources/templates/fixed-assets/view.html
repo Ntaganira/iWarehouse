@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${asset.number}, ~{::content})}">
+<head><title>Fixed asset - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${asset.status.name()}, base=${'/fixed-assets/' + asset.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${asset.number}">FA-WH-00001</h1>
+            <div class="subtitle">
+                <span th:text="${asset.name}">Forklift Toyota 2.5 t</span>
+                &middot; <th:block th:replace="~{fixed-assets/list :: assetStatus(${asset})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/fixed-assets" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:if="${s == 'ACTIVE'}" th:href="@{/fixed-assets/{id}/edit(id=${asset.id})}" class="btn btn-outline" sec:authorize="hasAuthority('PERM_MANAGE_FIXED_ASSETS')"
+               th:text="#{common.edit}">Edit</a>
+            <button type="button" class="btn btn-primary" data-modal-open="dispose-modal" th:if="${s == 'ACTIVE'}" sec:authorize="hasAuthority('PERM_DISPOSE_ASSET')"
+                    th:text="#{asset.dispose}">Dispose of</button>
+        </div>
+    </div>
+
+    <div class="doc-note" th:if="${s == 'DISPOSED'}">
+        <strong th:text="#{asset.disposedBy(${asset.disposedBy}, ${#temporals.format(asset.disposedOn, 'dd/MM/yyyy')})}">Disposed of by accountant on 20/10/2026:</strong>
+        <span th:text="${asset.disposalReason}">Sold to a garage</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{asset.cancelledNote(${#temporals.format(asset.disposedOn, 'dd/MM/yyyy')})}">Cancelled on 20/10/2026: its bill was reversed.</strong>
+        <span th:text="${asset.disposalReason}">Entered twice</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{asset.category}">Category</label>
+                    <div class="value" th:text="#{${'asset.category.' + asset.category}}">Machinery</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.costCentre}">Cost centre</label>
+                    <div class="value">
+                        <th:block th:if="${costCentre != null}">
+                            <span class="mono" th:text="${costCentre.code}">SC</span>
+                            <div class="cell-sub" th:text="${costCentre.name}">Supply Chain</div>
+                        </th:block>
+                        <span th:if="${costCentre == null}">—</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.place}">Place</label>
+                    <div class="value">
+                        <th:block th:if="${place != null}">
+                            <span class="mono" th:text="${place.code}">WH-GAH</span>
+                            <div class="cell-sub" th:text="${place.name}">Gahanga</div>
+                        </th:block>
+                        <span th:if="${place == null}">—</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.serial}">Serial or plate</label>
+                    <div class="value mono" th:text="${asset.serialNumber != null} ? ${asset.serialNumber} : '—'">TY-88213</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.source}">From</label>
+                    <div class="value">
+                        <th:block th:if="${bill != null}">
+                            <a class="mono" th:href="@{/expenses/{id}(id=${bill.id})}" th:text="${bill.number}">EXP-WH-2026-000004</a>
+                            <div class="cell-sub" th:text="${bill.supplier.name}">Toyota Rwanda</div>
+                        </th:block>
+                        <span th:if="${bill == null}" th:text="#{${'asset.source.' + asset.source}}">Registered at its value to date</span>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.acquiredOn}">Acquired</label>
+                    <div class="value" th:text="${#temporals.format(asset.acquiredOn, 'dd/MM/yyyy')}">20/08/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.cost}">Cost (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(asset.cost)}">4,000,000</div>
+                    <div class="cell-sub" th:if="${asset.residualValue.signum() > 0}" th:text="#{asset.residualSub(${@num.money(asset.residualValue)})}">residual value 400,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.life}">Useful life</label>
+                    <div class="value" th:text="#{asset.lifeValue(${asset.usefulLifeMonths})}">36 months</div>
+                    <div class="cell-sub" th:text="#{asset.fromSub(${#temporals.format(asset.depreciateFrom, 'MM/yyyy')})}">depreciated from 09/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.accumulated}">Depreciation</label>
+                    <div class="value" th:text="${@num.money(row.accumulated)}">300,000</div>
+                    <div class="cell-sub" th:if="${asset.openingAccumulated.signum() > 0}" th:text="#{asset.openingSub(${@num.money(asset.openingAccumulated)})}">of which 1,800,000 before the register</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{asset.bookValue}">Book value</label>
+                    <div class="value strong" th:text="${s == 'ACTIVE'} ? ${@num.money(row.bookValue)} : '—'">3,700,000</div>
+                </div>
+                <div class="item" th:if="${s == 'DISPOSED'}">
+                    <label th:text="#{asset.proceeds}">Fetched</label>
+                    <div class="value">
+                        <span th:text="${asset.proceeds.signum() > 0} ? ${@num.money(asset.proceeds) + ' · ' + #messages.msg('asset.method.' + asset.proceedsMethod)} : #{asset.scrapped}">2,500,000 · Bank</span>
+                        <div class="cell-sub mono" th:if="${asset.proceedsReference != null}" th:text="${asset.proceedsReference}">TRF-5521</div>
+                    </div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-depreciation" th:classappend="${tab == 'depreciation'} ? 'active'">
+                <span th:text="#{asset.depreciationTab}">Depreciation</span>
+                <span class="section-count" th:text="${lines.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-depreciation" th:classappend="${tab == 'depreciation'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{depreciation.month}">Month</th>
+                                <th th:text="#{depreciation.run}">Run</th>
+                                <th class="num" th:text="#{depreciation.amount}">Depreciation (RWF)</th>
+                                <th class="num" th:text="#{depreciation.accumulatedAfter}">To date after it</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${lines.content}" th:with="l=${r[0]}, run=${r[1]}">
+                                <td class="nowrap" th:text="${#temporals.format(run.period, 'MM/yyyy')}">09/2026</td>
+                                <td><a class="mono" th:href="@{/fixed-assets/depreciation/{id}(id=${run.id})}" th:text="${run.number}">DEP-WH-2026-000001</a></td>
+                                <td class="num" th:text="${@num.money(l.amount)}">100,000</td>
+                                <td class="num" th:text="${@num.money(l.accumulatedAfter)}">100,000</td>
+                                <td>
+                                    <span class="badge" th:classappend="${run.posted} ? 'badge-success' : 'badge-secondary'"
+                                          th:text="#{${'depreciation.status.' + run.status}}">Posted</span>
+                                </td>
+                            </tr>
+                            <tr th:if="${lines.totalElements == 0}">
+                                <td colspan="5">
+                                    <div class="empty-state">
+                                        <h3 th:text="#{asset.noDepreciation}">Not depreciated yet</h3>
+                                        <p th:text="#{asset.noDepreciationHint}">Each month's run depreciates it from its first month.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${lines}, ${base}, 'tab=depreciation')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!--/* Disposing: the day, what it fetched and how, the reason */-->
+    <div class="modal-overlay" id="dispose-modal" th:if="${s == 'ACTIVE'}" sec:authorize="hasAuthority('PERM_DISPOSE_ASSET')">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dispose-title">
+            <div class="modal-header">
+                <h3 id="dispose-title" th:text="#{asset.disposeTitle(${asset.number})}">Dispose of FA-WH-00001</h3>
+                <button type="button" class="modal-close" data-modal-close="dispose-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/fixed-assets/{id}/dispose(id=${asset.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{asset.disposeText(${@num.money(row.bookValue)})}">Its book value of 3,700,000 leaves the register against what it fetched: the difference is a loss or a gain.</p>
+                    <div class="form-group">
+                        <label for="dispose-date" th:text="#{asset.disposedOn}">Disposed of on</label>
+                        <input type="date" id="dispose-date" name="disposedOn" th:value="${today}" th:max="${today}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dispose-proceeds" th:text="#{asset.proceeds}">Fetched</label>
+                        <div class="input-unit">
+                            <input type="number" id="dispose-proceeds" name="proceeds" min="0" step="0.01" value="0" inputmode="decimal" data-proceeds>
+                            <span>RWF</span>
+                        </div>
+                        <span class="hint" th:text="#{asset.proceedsHint}">0 when it is scrapped</span>
+                    </div>
+                    <div class="form-group" data-paid-only hidden>
+                        <label for="dispose-method" th:text="#{asset.method}">Paid into</label>
+                        <select id="dispose-method" name="method" data-asset-method>
+                            <option value="CASH_VAULT" th:text="#{asset.method.CASH_VAULT}">Main cash vault</option>
+                            <option value="BANK" th:text="#{asset.method.BANK}">Bank</option>
+                            <option value="MOBILE_MONEY" th:text="#{asset.method.MOBILE_MONEY}">Mobile money</option>
+                        </select>
+                    </div>
+                    <div class="form-group" data-asset-reference hidden>
+                        <label for="dispose-reference" th:text="#{pettyCash.reference}">Reference</label>
+                        <input type="text" id="dispose-reference" name="reference" maxlength="60" autocomplete="off" class="input-code">
+                    </div>
+                    <div class="form-group">
+                        <label for="dispose-reason" th:text="#{reason.label}">Reason</label>
+                        <input type="text" id="dispose-reason" name="reason" maxlength="500" required autocomplete="off" th:placeholder="#{asset.reasonPh}">
+                        <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="dispose-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-danger" th:text="#{asset.dispose}">Dispose of</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script defer src="/js/asset-form.js"></script>
+</div>
+</body>
+</html>

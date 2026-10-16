@@ -78,6 +78,13 @@ public class ExpenseBill extends BaseEntity {
     @Column(name = "vat_amount", nullable = false, precision = 18, scale = 2)
     private BigDecimal vatAmount = BigDecimal.ZERO;
 
+    /** Withholding tax (U.14): the share of the amount before VAT withheld for RRA, 0 when none. */
+    @Column(name = "wht_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal whtRate = BigDecimal.ZERO;
+
+    @Column(name = "wht_amount", nullable = false, precision = 18, scale = 2)
+    private BigDecimal whtAmount = BigDecimal.ZERO;
+
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount = BigDecimal.ZERO;
 
@@ -177,6 +184,11 @@ public class ExpenseBill extends BaseEntity {
     @OneToMany(mappedBy = "bill", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNo")
     private List<ExpenseBillLine> lines = new ArrayList<>();
+
+    /** What the supplier is owed: the bill less the tax withheld. */
+    public BigDecimal getPayable() {
+        return amount.subtract(whtAmount);
+    }
 
     public boolean isDraft() {
         return status == ExpenseBillStatus.DRAFT;

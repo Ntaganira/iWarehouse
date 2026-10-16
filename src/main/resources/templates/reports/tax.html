@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{taxReturn.title}, ~{::content})}">
+<head><title>Tax returns - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="r=${report}, monthText=${#temporals.format(month.atEndOfMonth(), 'MMMM yyyy')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{taxReturn.title}">Tax returns</h1>
+            <div class="subtitle" th:text="#{taxReturn.subtitle(${monthText}, ${#temporals.format(r.dueDate, 'dd/MM/yyyy')})}">September 2026, due by 15/10/2026</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/tax/export(month=${month})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/reports/tax}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{fxRevaluation.month}">Month</span>
+                    <select name="month" class="toolbar-filter" onchange="this.form.submit()">
+                        <option th:each="m : ${months}" th:value="${m}" th:selected="${m == month}" th:text="${#temporals.format(m.atEndOfMonth(), 'MMMM yyyy')}">October 2026</option>
+                    </select>
+                </label>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{tb.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{taxReturn.summaryTitle}">Returns of the month</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{taxReturn.tax}">Return</th>
+                        <th th:text="#{taxReturn.to}">To</th>
+                        <th class="num" th:text="#{taxReturn.amount}">Amount (RWF)</th>
+                        <th th:text="#{taxReturn.from}">From</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="strong" th:text="#{taxReturn.vat}">VAT</td>
+                        <td>RRA</td>
+                        <td class="num" th:text="${(r.vat.payable.signum() < 0 ? '−' : '') + @num.money(r.vat.payable.abs())}">54,000</td>
+                        <td>
+                            <a sec:authorize="hasAuthority('PAGE_VAT_REPORT')" th:href="@{/accounting/vat-report(month=${month})}" th:text="#{vatReport.title}">VAT report</a>
+                            <div class="cell-sub" th:if="${r.vat.payable.signum() < 0}" th:text="#{taxReturn.vatCredit}">a credit carried forward</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="strong" th:text="#{taxReturn.paye}">PAYE</td>
+                        <td>RRA</td>
+                        <td class="num" th:text="${r.payRun != null} ? ${@num.money(r.payRun.totalPaye)} : '—'">320,000</td>
+                        <td>
+                            <a th:if="${r.payRun != null}" class="mono" sec:authorize="hasAuthority('PAGE_PAY_RUNS')" th:href="@{/payroll/runs/{id}(id=${r.payRun.id})}" th:text="${r.payRun.number}">PAY-WH-2026-000003</a>
+                            <span th:if="${r.payRun == null}" class="cell-sub" th:text="#{taxReturn.noPayRun}">no pay run posted for the month</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="strong" th:text="#{taxReturn.rssb}">RSSB (pension, maternity, CBHI)</td>
+                        <td>RSSB</td>
+                        <td class="num" th:text="${r.payRun != null} ? ${@num.money(r.payRun.totalRssb)} : '—'">410,000</td>
+                        <td>
+                            <a th:if="${r.payRun != null}" class="mono" sec:authorize="hasAuthority('PAGE_PAY_RUNS')" th:href="@{/payroll/runs/{id}(id=${r.payRun.id})}" th:text="${r.payRun.number}">PAY-WH-2026-000003</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="strong" th:text="#{taxReturn.wht}">Withholding tax</td>
+                        <td>RRA</td>
+                        <td class="num" th:text="${@num.money(r.whtTotal)}">45,000</td>
+                        <td class="cell-sub" th:text="#{taxReturn.whtFrom(${#lists.size(r.wht)})}">3 expense bills, below</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{taxReturn.note}">Each return is filed and paid by the 15th of the next month; the payment to RRA or RSSB is a manual journal from the tax account.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{taxReturn.whtTitle}">Withholding tax return</span>
+                <span class="section-count" th:text="${#lists.size(r.wht)}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{taxReturn.supplier}">Supplier</th>
+                        <th th:text="#{expense.number}">Bill</th>
+                        <th th:text="#{taxReturn.date}">Date</th>
+                        <th class="num" th:text="#{taxReturn.net}">Before VAT (RWF)</th>
+                        <th class="num" th:text="#{taxReturn.rate}">Rate</th>
+                        <th class="num" th:text="#{taxReturn.withheld}">Withheld (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${whtLines.content}">
+                        <td>
+                            <span th:text="${l.bill.supplier.name}">Kigali Cleaning Services</span>
+                            <div class="cell-sub mono" th:text="${l.bill.supplier.tin != null} ? #{order.tin(${l.bill.supplier.tin})} : '—'">TIN 101234567</div>
+                        </td>
+                        <td>
+                            <a class="mono" sec:authorize="hasAuthority('PAGE_EXPENSE_BILLS')" th:href="@{/expenses/{id}(id=${l.bill.id})}" th:text="${l.bill.number}">EXP-WH-2026-000003</a>
+                            <span class="mono" sec:authorize="!hasAuthority('PAGE_EXPENSE_BILLS')" th:text="${l.bill.number}">EXP-WH-2026-000003</span>
+                            <div class="cell-sub" th:text="${l.reversal} ? #{taxReturn.reversal} : ${l.bill.supplierRef}">INV-221</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(l.date, 'dd/MM/yyyy')}">12/09/2026</td>
+                        <td class="num" th:text="${@num.money(l.net)}">300,000</td>
+                        <td class="num" th:text="${@num.percent(l.bill.whtRate) + ' %'}">15 %</td>
+                        <td class="num strong" th:text="${@num.money(l.amount)}">45,000</td>
+                    </tr>
+                    <tr th:if="${r.wht.isEmpty()}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{taxReturn.whtEmpty}">No tax withheld this month</h3>
+                                <p th:text="#{taxReturn.whtEmptyHint(${@num.percent(r.whtRate)})}">An expense bill withholds tax when it is ticked on the bill (15 % by default).</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${!r.wht.isEmpty()}">
+                    <tr>
+                        <th colspan="3" th:text="#{fin.total}">Total</th>
+                        <th class="num" th:text="${@num.money(r.whtNet)}">300,000</th>
+                        <th></th>
+                        <th class="num" th:text="${@num.money(r.whtTotal)}">45,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${whtLines}, '/reports/tax', ${query})}"></th:block>
+        <p class="form-note" th:text="#{taxReturn.whtOwedNote(${#temporals.format(r.to, 'dd/MM/yyyy')}, ${@num.money(r.whtOwed)})}">On 30/09/2026 the Withholding Tax Payable account owes RRA 45,000.</p>
+    </div>
+
+    <div class="section" th:with="c=${r.cit}">
+        <div class="section-header"><h2 th:text="#{taxReturn.citTitle}">Corporate income tax estimate</h2></div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{taxReturn.profitToDate(${#temporals.format(c.to, 'dd/MM/yyyy')})}">Profit from 01/01 to 30/09/2026</label>
+                    <div class="value strong" th:text="${@num.money(c.profit)}">12,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{taxReturn.citToDate(${@num.percent(c.rate)})}">Tax on it at 30 %</label>
+                    <div class="value strong" th:text="${@num.money(c.estimate)}">3,600,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{taxReturn.yearProfit}">The year at the same pace</label>
+                    <div class="value" th:text="${@num.money(c.yearProfit)}">16,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{taxReturn.yearCit}">Tax on the year</label>
+                    <div class="value" th:text="${@num.money(c.yearEstimate)}">4,800,000</div>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{taxReturn.citNote}">An estimate from the income statement before adjustments for tax: the accountant's return replaces it.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

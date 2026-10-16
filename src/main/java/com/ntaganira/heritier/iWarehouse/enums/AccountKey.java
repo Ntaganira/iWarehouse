@@ -76,5 +76,13 @@ public enum AccountKey {
     EXPENSE_TAXES,
     EXPENSE_OTHER,
     /** The petty cash imprest of each site (CMP 07): its lines name the site. */
-    PETTY_CASH
+    PETTY_CASH,
+    /** The fixed assets' depreciation to date (C.08): a credit balance against Fixed Assets. */
+    ACCUMULATED_DEPRECIATION,
+    /** Tax withheld from suppliers, owed to RRA (U.14). */
+    WHT_PAYABLE,
+    /** The month's depreciation (C.08, U.12). */
+    DEPRECIATION,
+    /** What a fixed asset fetched against its book value: a loss is a debit, a gain a credit. */
+    ASSET_DISPOSAL
 }

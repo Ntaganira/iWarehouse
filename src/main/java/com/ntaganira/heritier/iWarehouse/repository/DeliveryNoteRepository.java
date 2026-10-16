@@ -50,6 +50,24 @@ public interface DeliveryNoteRepository extends JpaRepository<DeliveryNote, UUID
     List<DeliveryNote> findByStatusAndReleasedAtBetween(DeliveryNoteStatus status, LocalDateTime from, LocalDateTime to);
 
     /** Releasing, recording the copy and cancelling take this lock, so a note moves once. */
+    /** Notes planned for days (G.23), not cancelled, with their invoice and customer. */
+    @EntityGraph(attributePaths = {"invoice", "invoice.customer"})
+    List<DeliveryNote> findByScheduledOnBetweenAndStatusNotOrderByScheduledOnAscNumberAsc(java.time.LocalDate from, java.time.LocalDate to,
+                                                                                         DeliveryNoteStatus status);
+
+    /** The glass on notes by note: (note id, the sum of width x height x thickness in mm), for its weight. */
+    @Query("select l.deliveryNoteId, coalesce(sum(l.widthMm * l.heightMm * p.thicknessMm), 0) from DeliveryNoteLine l, StockUnit u"
+            + " join u.product p where u.id = l.stockUnitId and l.deliveryNoteId in :noteIds group by l.deliveryNoteId")
+    List<Object[]> volumeByNote(@Param("noteIds") java.util.Collection<UUID> noteIds);
+
+    /** Notes in a state, by the day they are planned for: the drafts Dispatch may move (G.23). */
+    @EntityGraph(attributePaths = {"invoice", "invoice.customer"})
+    List<DeliveryNote> findByStatusOrderByScheduledOnAscNumberAsc(DeliveryNoteStatus status);
+
+    /** Pieces on notes by note: (note id, count). */
+    @Query("select l.deliveryNoteId, count(l) from DeliveryNoteLine l where l.deliveryNoteId in :noteIds group by l.deliveryNoteId")
+    List<Object[]> piecesByNote(@Param("noteIds") java.util.Collection<UUID> noteIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select n from DeliveryNote n where n.id = :id")
     Optional<DeliveryNote> lockById(@Param("id") UUID id);

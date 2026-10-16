@@ -128,7 +128,14 @@ class MessageCoverageTest {
             Map.entry("budget.status.", com.ntaganira.heritier.iWarehouse.enums.BudgetStatus.class),
             Map.entry("budget.department.status.", com.ntaganira.heritier.iWarehouse.enums.BudgetDepartmentStatus.class),
             Map.entry("budget.revision.status.", com.ntaganira.heritier.iWarehouse.enums.BudgetRevisionStatus.class),
-            Map.entry("salesTarget.scope.", com.ntaganira.heritier.iWarehouse.enums.SalesTargetScope.class));
+            Map.entry("salesTarget.scope.", com.ntaganira.heritier.iWarehouse.enums.SalesTargetScope.class),
+            Map.entry("asset.category.", com.ntaganira.heritier.iWarehouse.enums.FixedAssetCategory.class),
+            Map.entry("asset.status.", com.ntaganira.heritier.iWarehouse.enums.FixedAssetStatus.class),
+            Map.entry("asset.source.", com.ntaganira.heritier.iWarehouse.enums.FixedAssetSource.class),
+            Map.entry("depreciation.status.", com.ntaganira.heritier.iWarehouse.enums.DepreciationRunStatus.class),
+            Map.entry("cashflow.direction.", com.ntaganira.heritier.iWarehouse.enums.CashDirection.class),
+            Map.entry("cashflow.repeat.", com.ntaganira.heritier.iWarehouse.enums.CashRepeat.class),
+            Map.entry("cashflow.kind.", com.ntaganira.heritier.iWarehouse.service.CashFlow.Kind.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

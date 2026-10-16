@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{depreciation.title}, ~{::content})}">
+<head><title>Depreciation - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="p=${preview}, monthText=${#temporals.format(month.atDay(1), 'MM/yyyy')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{depreciation.title}">Depreciation</h1>
+            <div class="subtitle" th:text="#{depreciation.subtitle}">Each month once it has ended, in order: every asset in use depreciated straight line, posted on the month's last day</div>
+        </div>
+        <div class="btn-group">
+            <a href="/fixed-assets" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <form th:action="@{/fixed-assets/depreciation/run}" method="post" class="row-action-form confirm-submit" sec:authorize="hasAuthority('PERM_RUN_DEPRECIATION')"
+                  th:if="${p.runnable}" th:attr="data-confirm=#{depreciation.runConfirm(${monthText}, ${@num.money(p.total)}, ${#lists.size(p.lines)})}">
+                <input type="hidden" name="month" th:value="${month}">
+                <button type="submit" class="btn btn-primary" th:text="#{depreciation.runMonth(${monthText})}">Post 09/2026</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/fixed-assets/depreciation}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{depreciation.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${month}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${blockedText != null}" th:text="${blockedText}">The depreciation of 10/2026 can be posted once the month has ended.</div>
+    <div class="doc-note" th:if="${blockedText == null and !p.runnable}" th:text="#{depreciation.nothingNote(${monthText})}">No asset in use is due to be depreciated in 09/2026.</div>
+    <div class="doc-note" th:if="${firstRun == null}" th:text="#{depreciation.firstNote}">No month has been run yet: choose the first month the register depreciates; the months after it then follow in order.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{depreciation.previewTitle(${monthText})}">09/2026 to post</span>
+                <span class="section-count" th:text="${#lists.size(p.lines)}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{asset.number}">Asset</th>
+                        <th th:text="#{asset.category}">Category</th>
+                        <th class="num" th:text="#{asset.cost}">Cost (RWF)</th>
+                        <th class="num" th:text="#{depreciation.before}">To date before</th>
+                        <th class="num" th:text="#{depreciation.amount}">Depreciation (RWF)</th>
+                        <th class="num" th:text="#{depreciation.bookAfter}">Book value after</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${previewLines.content}">
+                        <td>
+                            <a class="row-link mono" th:href="@{/fixed-assets/{id}(id=${l.asset.id})}" th:text="${l.asset.number}">FA-WH-00001</a>
+                            <div class="cell-sub" th:text="${l.asset.name}">Forklift</div>
+                        </td>
+                        <td th:text="#{${'asset.category.' + l.asset.category}}">Machinery</td>
+                        <td class="num" th:text="${@num.money(l.asset.cost)}">4,000,000</td>
+                        <td class="num" th:text="${@num.money(l.accumulated)}">0</td>
+                        <td class="num strong" th:text="${@num.money(l.amount)}">100,000</td>
+                        <td class="num" th:text="${@num.money(l.bookValueAfter)}">3,900,000</td>
+                    </tr>
+                    <tr th:if="${p.lines.isEmpty()}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{depreciation.previewEmpty}">Nothing to depreciate this month</h3>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${!p.lines.isEmpty()}">
+                    <tr>
+                        <th colspan="4" th:text="#{fin.total}">Total</th>
+                        <th class="num" th:text="${@num.money(p.total)}">100,000</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${previewLines}, '/fixed-assets/depreciation', ${previewQuery}, 'ppage')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{depreciation.runsTitle}">Runs</span>
+                <span class="section-count" th:text="${runs.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{depreciation.run}">Run</th>
+                        <th th:text="#{depreciation.month}">Month</th>
+                        <th class="num" th:text="#{depreciation.assets}">Assets</th>
+                        <th class="num" th:text="#{depreciation.amount}">Depreciation (RWF)</th>
+                        <th th:text="#{depreciation.runBy}">Posted by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${runs.content}">
+                        <td><a class="row-link strong mono" th:href="@{/fixed-assets/depreciation/{id}(id=${r.id})}" th:text="${r.number}">DEP-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(r.period, 'MM/yyyy')}">09/2026</td>
+                        <td class="num" th:text="${r.assets}">4</td>
+                        <td class="num" th:text="${@num.money(r.total)}">350,000</td>
+                        <td>
+                            <span th:text="${r.runBy}">accountant</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.runAt, 'dd/MM/yyyy HH:mm')}">01/10/2026 09:00</div>
+                        </td>
+                        <td><span class="badge" th:classappend="${r.posted} ? 'badge-success' : 'badge-secondary'" th:text="#{${'depreciation.status.' + r.status}}">Posted</span></td>
+                    </tr>
+                    <tr th:if="${runs.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{depreciation.empty}">No depreciation posted yet</h3>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${runs}, '/fixed-assets/depreciation', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

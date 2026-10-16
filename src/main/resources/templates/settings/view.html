@@ -930,6 +930,52 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.taxCash}">Tax, cash flow and deliveries</div>
+                                <div class="role-card-desc" th:text="#{settings.group.taxCashHint}">hint</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.taxWhtRate}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.taxWhtRateHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.taxWhtRate}">15</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.taxCitRate}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.taxCitRateHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.taxCitRate}">30</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.cashflowWeeks}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.cashflowWeeksHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.cashflowWeeks}">13</span> <span class="unit" th:text="#{settings.unit.weeks}">weeks</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.deliveryCapacityKg}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.deliveryCapacityKgHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.kg(settings.deliveryCapacityKg)}">8,000</span> <span class="unit">kg</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.deliveryCapacityNotes}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.deliveryCapacityNotesHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.deliveryCapacityNotes}">12</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

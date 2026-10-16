@@ -94,6 +94,10 @@ public enum DocumentType {
     BUDGET("BUD"),
     /** A line of an approved budget revised (CMP 04). */
     BUDGET_REVISION("BRV"),
+    /** A fixed asset in the register (C.08): FA-WH-00001, never reset. */
+    FIXED_ASSET("FA"),
+    /** A month's depreciation run (C.08). */
+    DEPRECIATION_RUN("DEP"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

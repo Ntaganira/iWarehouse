@@ -61,6 +61,10 @@ public class DeliveryNote extends BaseEntity {
     @Column(length = 150)
     private String destination;
 
+    /** The day it is planned to leave (G.23: against the warehouse's daily capacity). */
+    @Column(name = "scheduled_on")
+    private LocalDate scheduledOn;
+
     /** Why less was released than was ready (F-04: short delivery). */
     @Column(name = "short_reason", length = 255)
     private String shortReason;

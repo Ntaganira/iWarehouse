@@ -37,7 +37,8 @@ public class ExpenditureReportService {
 
     /** Expense accounts that are not spending: the cost of stock, FX differences, bad debts, the till's over and short. */
     static final Set<AccountKey> NOT_SPENDING = EnumSet.of(AccountKey.COGS, AccountKey.SPOILAGE, AccountKey.STOCK_ADJUSTMENT,
-            AccountKey.STOCK_REVALUATION, AccountKey.FX_GAIN_LOSS, AccountKey.FX_UNREALISED, AccountKey.BAD_DEBTS, AccountKey.CASH_OVER_SHORT);
+            AccountKey.STOCK_REVALUATION, AccountKey.FX_GAIN_LOSS, AccountKey.FX_UNREALISED, AccountKey.BAD_DEBTS, AccountKey.CASH_OVER_SHORT,
+            AccountKey.DEPRECIATION, AccountKey.ASSET_DISPOSAL);
     private static final List<ExpenseBillStatus> COUNTED = List.of(ExpenseBillStatus.SUBMITTED, ExpenseBillStatus.RECOMMENDED,
             ExpenseBillStatus.REVIEWED, ExpenseBillStatus.APPROVED, ExpenseBillStatus.REVERSED);
     private static final List<PurchaseOrderStatus> COMMITTED = List.of(PurchaseOrderStatus.PENDING_APPROVAL, PurchaseOrderStatus.ORDERED,

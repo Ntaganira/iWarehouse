@@ -53,30 +53,36 @@ public class PeriodService {
     private final ManualJournalRepository manualJournalRepo;
     private final VehicleCostRepository vehicleCostRepo;
     private final FxRevaluationService fxRevaluationService;
+    private final FixedAssetService fixedAssets;
     private final EntityManager em;
     private final Clock clock;
 
     public PeriodService(AccountingPeriodRepository repo, JournalEntryRepository entryRepo, ManualJournalRepository manualJournalRepo,
-                         VehicleCostRepository vehicleCostRepo, FxRevaluationService fxRevaluationService, EntityManager em, Clock clock) {
+                         VehicleCostRepository vehicleCostRepo, FxRevaluationService fxRevaluationService, FixedAssetService fixedAssets,
+                         EntityManager em, Clock clock) {
         this.repo = repo;
         this.entryRepo = entryRepo;
         this.manualJournalRepo = manualJournalRepo;
         this.vehicleCostRepo = vehicleCostRepo;
         this.fxRevaluationService = fxRevaluationService;
+        this.fixedAssets = fixedAssets;
         this.em = em;
         this.clock = clock;
     }
 
-    /** What closing a month waits for: the manual journals and vehicle costs still to decide, and the FX revaluation. */
+    /**
+     * What closing a month waits for: the manual journals and vehicle costs still to decide, the FX revaluation, and the month's
+     * depreciation once runs have started (U.12).
+     */
     public record Checklist(YearMonth month, long manualJournalsWaiting, long vehicleCostsWaiting, FxRevaluationService.MonthState revaluation,
-                            FxRevaluation revaluationDone) {
+                            FxRevaluation revaluationDone, boolean depreciationMissing) {
 
         public LocalDate getPeriodEnd() {
             return month.atEndOfMonth();
         }
 
         public boolean isReady() {
-            return manualJournalsWaiting == 0 && vehicleCostsWaiting == 0 && revaluation != FxRevaluationService.MonthState.DUE;
+            return manualJournalsWaiting == 0 && vehicleCostsWaiting == 0 && revaluation != FxRevaluationService.MonthState.DUE && !depreciationMissing;
         }
     }
 
@@ -109,7 +115,8 @@ public class PeriodService {
         LocalDate end = month.atEndOfMonth();
         long waiting = manualJournalRepo.countByStatusAndEntryDateLessThanEqual(ManualJournalStatus.PENDING_APPROVAL, end);
         long costs = vehicleCostRepo.countByStatusAndCostDateLessThanEqual(VehicleCostStatus.PENDING_APPROVAL, end);
-        return new Checklist(month, waiting, costs, fxRevaluationService.state(month), fxRevaluationService.ofMonth(month).orElse(null));
+        return new Checklist(month, waiting, costs, fxRevaluationService.state(month), fxRevaluationService.ofMonth(month).orElse(null),
+                fixedAssets.missingRun(month));
     }
 
     public Page<AccountingPeriod> findPage(int page, int size) {
@@ -151,6 +158,9 @@ public class PeriodService {
         }
         if (checklist.revaluation() == FxRevaluationService.MonthState.DUE) {
             throw BusinessException.of("period.revaluationDue", month.atEndOfMonth().format(DAY));
+        }
+        if (checklist.depreciationMissing()) {
+            throw BusinessException.of("period.depreciationMissing", month.atEndOfMonth().format(DAY));
         }
         AccountingPeriod period = repo.findByPeriodEnd(month.atEndOfMonth()).orElseGet(() -> {
             AccountingPeriod p = new AccountingPeriod();

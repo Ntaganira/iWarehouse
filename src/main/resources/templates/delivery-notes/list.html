@@ -11,6 +11,7 @@
         </div>
         <div class="btn-group">
             <a href="/invoices" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_INVOICES')" th:text="#{nav.invoices}">Invoices</a>
+            <a href="/delivery-notes/schedule" class="btn btn-outline" th:text="#{delivery.schedule.title}">Delivery schedule</a>
         </div>
     </div>
 

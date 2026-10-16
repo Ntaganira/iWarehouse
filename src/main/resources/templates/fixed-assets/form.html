@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${asset == null} ? #{asset.new} : #{asset.editTitle(${asset.number})}, ~{::content})}">
+<head><title>Fixed asset - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="opening=${asset == null}, fixed=${depreciated}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${asset == null} ? #{asset.new} : #{asset.editTitle(${asset.number})}">Register an asset</h1>
+            <div class="subtitle" th:text="${asset == null} ? #{asset.newSubtitle} : #{asset.editSubtitle}">An asset the business owned before the register, at its value to date: posted against Opening Balance Equity.</div>
+        </div>
+        <a th:href="${asset == null} ? @{/fixed-assets} : @{/fixed-assets/{id}(id=${asset.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${asset == null} ? @{/fixed-assets/new} : @{/fixed-assets/{id}/edit(id=${asset.id})}" th:object="${assetDto}"
+              method="post" class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="doc-note" th:if="${fixed}" th:text="#{asset.fixedNote}">It has been depreciated: its category, residual value, life and first month no longer change.</div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="name" th:text="#{asset.name}">What it is</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="150" required autocomplete="off" th:placeholder="#{asset.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="category" th:text="#{asset.category}">Category</label>
+                    <select id="category" th:field="*{category}" required th:disabled="${fixed}" data-life-select>
+                        <option th:each="c : ${categories}" th:value="${c}" th:attr="data-life=${lifeOf.get(c.name())}" th:text="#{${'asset.category.' + c}}">Machinery</option>
+                    </select>
+                    <input type="hidden" th:if="${fixed}" name="category" th:value="*{category}">
+                    <span class="hint" th:text="#{asset.categoryHint}">Choosing a category proposes its usual life</span>
+                </div>
+                <div class="form-group">
+                    <label for="serialNumber" th:text="#{asset.serial}">Serial or plate</label>
+                    <input type="text" id="serialNumber" th:field="*{serialNumber}" maxlength="60" autocomplete="off" class="input-code"
+                           th:classappend="${#fields.hasErrors('serialNumber')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('serialNumber')}" th:errors="*{serialNumber}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="costCentreId" th:text="#{asset.costCentre}">Cost centre</label>
+                    <select id="costCentreId" th:field="*{costCentreId}" th:classappend="${#fields.hasErrors('costCentreId')} ? 'is-invalid'">
+                        <option value="" th:text="#{asset.noCostCentre}">None</option>
+                        <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">SC · Supply Chain</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('costCentreId')}" th:errors="*{costCentreId}"></span>
+                    <span class="hint" th:text="#{asset.costCentreHint}">Its depreciation is charged to it</span>
+                </div>
+                <div class="form-group">
+                    <label for="locationId" th:text="#{asset.place}">Place</label>
+                    <select id="locationId" th:field="*{locationId}" th:classappend="${#fields.hasErrors('locationId')} ? 'is-invalid'">
+                        <option value="" th:text="#{asset.noPlace}">None</option>
+                        <option th:each="l : ${places}" th:value="${l.id}" th:text="${l.code + ' · ' + l.name}">WH-GAH · Gahanga</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('locationId')}" th:errors="*{locationId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="acquiredOn" th:text="#{asset.acquiredOn}">Acquired</label>
+                    <input type="date" id="acquiredOn" th:field="*{acquiredOn}" th:max="${today}" required th:readonly="${!opening}"
+                           th:classappend="${#fields.hasErrors('acquiredOn')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('acquiredOn')}" th:errors="*{acquiredOn}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="cost" th:text="#{asset.cost}">Cost (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="cost" th:field="*{cost}" min="1" step="0.01" inputmode="decimal" required th:readonly="${!opening}"
+                               th:classappend="${#fields.hasErrors('cost')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('cost')}" th:errors="*{cost}"></span>
+                    <span class="hint" th:unless="${opening}" th:text="#{asset.costFixedHint}">Its cost comes from its bill or registration and does not change</span>
+                </div>
+                <div class="form-group">
+                    <label for="residualValue" th:text="#{asset.residual}">Residual value (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="residualValue" th:field="*{residualValue}" min="0" step="0.01" inputmode="decimal" th:readonly="${fixed}"
+                               th:classappend="${#fields.hasErrors('residualValue')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('residualValue')}" th:errors="*{residualValue}"></span>
+                    <span class="hint" th:text="#{asset.residualHint}">What it should fetch at the end of its life</span>
+                </div>
+                <div class="form-group">
+                    <label for="usefulLifeMonths" th:text="#{asset.life}">Useful life</label>
+                    <div class="input-unit">
+                        <input type="number" id="usefulLifeMonths" th:field="*{usefulLifeMonths}" min="1" max="1200" step="1" inputmode="numeric" required
+                               th:readonly="${fixed}" th:classappend="${#fields.hasErrors('usefulLifeMonths')} ? 'is-invalid'">
+                        <span th:text="#{asset.months}">months</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('usefulLifeMonths')}" th:errors="*{usefulLifeMonths}"></span>
+                    <span class="hint" th:text="#{asset.lifeHint}">Its life starts the month after it was acquired</span>
+                </div>
+                <div class="form-group">
+                    <label for="depreciateFrom" th:text="#{asset.depreciateFrom}">Depreciated from</label>
+                    <input type="date" id="depreciateFrom" th:field="*{depreciateFrom}" th:readonly="${fixed}"
+                           th:classappend="${#fields.hasErrors('depreciateFrom')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('depreciateFrom')}" th:errors="*{depreciateFrom}"></span>
+                    <span class="hint" th:text="#{asset.depreciateFromHint}">The first month the register depreciates it (its first day is kept)</span>
+                </div>
+                <div class="form-group" th:if="${opening}">
+                    <label for="openingAccumulated" th:text="#{asset.opening}">Depreciation before that month (RWF)</label>
+                    <div class="input-unit">
+                        <input type="number" id="openingAccumulated" th:field="*{openingAccumulated}" min="0" step="0.01" inputmode="decimal"
+                               th:classappend="${#fields.hasErrors('openingAccumulated')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('openingAccumulated')}" th:errors="*{openingAccumulated}"></span>
+                    <span class="hint" th:text="#{asset.openingHint}">From the previous books; 0 for a new asset</span>
+                </div>
+            </div>
+            <p class="form-note" th:if="${opening}" th:text="#{asset.formNote}">Registering posts Dr Fixed Assets the cost / Cr Accumulated Depreciation the depreciation before the register and Opening Balance Equity the rest, today.</p>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="${opening} ? #{asset.register} : #{common.save}">Register</button>
+                <a th:href="${asset == null} ? @{/fixed-assets} : @{/fixed-assets/{id}(id=${asset.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/asset-form.js"></script>
+</div>
+</body>
+</html>

@@ -220,7 +220,8 @@ public class SalesTargetController {
         Excel.Builder sheet = Excel.sheet(title, title, sub, messages.get("salesTarget.key"), messages.get("salesTarget.actual"), messages.get("salesTarget.target"),
                 messages.get("salesTarget.gap"), messages.get("salesTarget.achieved"));
         for (SalesTargetService.TargetRow t : rows) {
-            sheet.row(company ? messages.get("salesTarget.company") : t.label(), t.actual(), t.target(), t.getGap(), t.getAchieved());
+            sheet.row(company ? messages.get("salesTarget.company") : SalesTargetService.NO_TERRITORY.equals(t.key()) ? messages.get("order.noTerritory") : t.label(),
+                    t.actual(), t.target(), t.getGap(), t.getAchieved());
         }
         return sheet;
     }

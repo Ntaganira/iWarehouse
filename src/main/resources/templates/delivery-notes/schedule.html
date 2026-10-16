@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{delivery.schedule.title}, ~{::content})}">
+<head><title>Delivery schedule - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canPlan=${#authorization.expression('hasAuthority(''PERM_SCHEDULE_DELIVERY'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{delivery.schedule.title}">Delivery schedule</h1>
+            <div class="subtitle" th:text="#{delivery.schedule.subtitle(${#temporals.format(monday, 'dd/MM/yyyy')}, ${#temporals.format(sunday, 'dd/MM/yyyy')})}">Week of 12/10/2026 to 18/10/2026 against the warehouse's daily capacity</div>
+        </div>
+        <div class="btn-group">
+            <a href="/delivery-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" data-modal-open="plan-modal" th:if="${canPlan and !drafts.isEmpty()}" th:text="#{delivery.schedule.plan}">Plan a note</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/delivery-notes/schedule}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{salesTarget.weekOf}">Week of</span>
+                    <input type="date" name="week" class="toolbar-filter" th:value="${monday}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+                <a class="btn btn-outline btn-sm" th:href="@{/delivery-notes/schedule(week=${monday.minusWeeks(1)})}" th:text="#{cashflow.previousWeek}">Previous week</a>
+                <a class="btn btn-outline btn-sm" th:href="@{/delivery-notes/schedule(week=${monday.plusWeeks(1)})}" th:text="#{cashflow.nextWeek}">Next week</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{delivery.schedule.days}">The week</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{delivery.schedule.day}">Day</th>
+                        <th class="num" th:text="#{delivery.schedule.notes}">Notes</th>
+                        <th class="num" th:text="#{delivery.schedule.pieces}">Pieces</th>
+                        <th class="num" th:text="#{delivery.schedule.kg}">Glass (kg)</th>
+                        <th class="num" th:text="#{delivery.schedule.used}">Of the capacity</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${days}">
+                        <td class="nowrap">
+                            <span class="strong" th:text="${#temporals.format(d.day, 'EEEE')}">Monday</span>
+                            <div class="cell-sub" th:text="${#temporals.format(d.day, 'dd/MM/yyyy')}">12/10/2026</div>
+                        </td>
+                        <td class="num" th:text="${#lists.size(d.notes) + ' / ' + d.capacityNotes}">3 / 12</td>
+                        <td class="num" th:text="${d.totalPieces}">14</td>
+                        <td class="num" th:text="${@num.kg(d.totalKg) + ' / ' + @num.kg(d.capacityKg)}">2,400 / 8,000</td>
+                        <td class="num" th:text="${d.kgPercent + ' %'}">30 %</td>
+                        <td>
+                            <span th:if="${d.over}" class="badge badge-danger" th:text="#{delivery.schedule.overBadge}">Over capacity</span>
+                            <span th:if="${!d.over and !d.notes.isEmpty()}" class="badge badge-success" th:text="#{delivery.schedule.fits}">Fits</span>
+                            <span th:if="${d.notes.isEmpty()}" class="cell-sub">—</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{delivery.schedule.note(${@num.kg(capacityKg)}, ${capacityNotes})}">Capacity: 8,000 kg of glass and 12 notes a day (Settings). The weight is each piece's m² x thickness x the glass density.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{delivery.schedule.notesTitle}">Notes of the week</span>
+                <span class="section-count" th:text="${notes.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{delivery.schedule.day}">Day</th>
+                        <th th:text="#{delivery.number}">Note</th>
+                        <th th:text="#{delivery.invoice}">Invoice</th>
+                        <th th:text="#{delivery.transport}">Transport</th>
+                        <th class="num" th:text="#{delivery.schedule.pieces}">Pieces</th>
+                        <th class="num" th:text="#{delivery.schedule.kg}">Glass (kg)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="n : ${notes.content}">
+                        <td class="nowrap" th:text="${#temporals.format(n.scheduledOn, 'EEE dd/MM')}">Mon 12/10</td>
+                        <td><a class="row-link strong mono" th:href="@{/delivery-notes/{id}(id=${n.id})}" th:text="${n.number}">DN-WH-2026-000004</a></td>
+                        <td>
+                            <span th:text="${n.invoice.customer.name}">Kigali Heights</span>
+                            <div class="cell-sub mono" th:text="${n.invoice.number}">INV-WH-2026-000120</div>
+                        </td>
+                        <td>
+                            <span th:if="${n.collected}" th:text="#{delivery.collected}">Collected by the customer</span>
+                            <th:block th:unless="${n.collected}">
+                                <span class="mono" th:text="${n.vehiclePlate}">RAD 123 A</span>
+                                <div class="cell-sub" th:text="${n.destination ?: ''}">Kicukiro site</div>
+                            </th:block>
+                        </td>
+                        <td class="num" th:text="${pieces.get(n.id) != null} ? ${pieces.get(n.id)} : 0">4</td>
+                        <td class="num" th:text="${kg.get(n.id) != null} ? ${@num.kg(kg.get(n.id))} : '0'">620</td>
+                        <td><span class="badge" th:classappend="${n.draft} ? 'badge-warning' : 'badge-success'" th:text="#{${'delivery.status.' + n.status}}">Draft</span></td>
+                    </tr>
+                    <tr th:if="${notes.totalElements == 0}">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <h3 th:text="#{delivery.schedule.empty}">No delivery planned this week</h3>
+                                <p th:text="#{delivery.schedule.emptyHint}">A note is planned for the day it is prepared; Dispatch moves it to another day.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${notes}, '/delivery-notes/schedule', ${paginationQuery})}"></th:block>
+    </div>
+
+    <!--/* Planning a note waiting for release for a day */-->
+    <div class="modal-overlay" id="plan-modal" th:if="${canPlan and !drafts.isEmpty()}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="plan-title">
+            <div class="modal-header">
+                <h3 id="plan-title" th:text="#{delivery.schedule.plan}">Plan a note</h3>
+                <button type="button" class="modal-close" data-modal-close="plan-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/delivery-notes/schedule}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{delivery.schedule.planText}">A note waiting for release moves to another day, from today on. The day may go over its capacity: the schedule then says so.</p>
+                    <div class="form-group">
+                        <label for="plan-note" th:text="#{delivery.number}">Note</label>
+                        <select id="plan-note" name="noteId" data-searchable required>
+                            <option th:each="n : ${drafts}" th:value="${n.id}"
+                                    th:text="${n.number + ' · ' + n.invoice.customer.name + ' · ' + (n.scheduledOn != null ? #temporals.format(n.scheduledOn, 'dd/MM/yyyy') : '—')}">DN-WH-2026-000004 · Kigali Heights · 12/10/2026</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="plan-day" th:text="#{delivery.schedule.plannedFor}">Planned for</label>
+                        <input type="date" id="plan-day" name="scheduledOn" th:min="${today}" th:value="${today}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="plan-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{delivery.schedule.planSave}">Plan it</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

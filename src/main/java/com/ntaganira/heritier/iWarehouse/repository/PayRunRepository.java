@@ -43,4 +43,9 @@ public interface PayRunRepository extends JpaRepository<PayRun, UUID>, JpaSpecif
 
     /** The latest month with a run, to offer the next one. */
     Optional<PayRun> findFirstByStatusNotOrderByPeriodDesc(PayRunStatus status);
+
+    /** The latest run in the given states: the payroll the cash-flow forecast expects each month (P.11). */
+    Optional<PayRun> findFirstByStatusInOrderByPeriodDesc(Collection<PayRunStatus> statuses);
+
+    Optional<PayRun> findFirstByPeriodAndStatusIn(LocalDate period, Collection<PayRunStatus> statuses);
 }

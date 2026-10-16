@@ -76,7 +76,9 @@ class PeriodServiceTest {
         EntityManager em = mock(EntityManager.class);
         lock = mock(Query.class);
         when(em.createNativeQuery(anyString())).thenReturn(lock);
-        service = new PeriodService(repo, entryRepo, manualJournalRepo, costRepo, fx, em, CLOCK);
+        FixedAssetService assets = mock(FixedAssetService.class);
+        when(assets.missingRun(any())).thenReturn(false);
+        service = new PeriodService(repo, entryRepo, manualJournalRepo, costRepo, fx, assets, em, CLOCK);
     }
 
     @AfterEach

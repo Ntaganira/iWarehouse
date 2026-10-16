@@ -121,6 +121,20 @@
                     <div class="value strong" th:text="${@num.money(bill.amount)}">250,000</div>
                     <div class="cell-sub" th:if="${bill.vatAmount.signum() > 0}" th:text="#{expense.vatSub(${@num.money(bill.vatAmount)}, ${@num.money(bill.netAmount)})}">VAT 38,136 · before VAT 211,864</div>
                 </div>
+                <div class="item" th:if="${!assets.isEmpty()}" sec:authorize="hasAuthority('PAGE_FIXED_ASSETS') and hasAuthority('PERM_VIEW_FIXED_ASSETS')">
+                    <label th:text="#{expense.assets}">Fixed assets</label>
+                    <div class="value">
+                        <div th:each="a : ${assets}">
+                            <a class="mono" th:href="@{/fixed-assets/{id}(id=${a.id})}" th:text="${a.number}">FA-WH-00001</a>
+                            <span class="cell-sub" th:text="${a.name}">Forklift</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="item" th:if="${bill.whtAmount.signum() > 0}">
+                    <label th:text="#{expense.wht}">Withholding tax</label>
+                    <div class="value" th:text="${@num.money(bill.whtAmount)}">31,780</div>
+                    <div class="cell-sub" th:text="#{expense.whtSub(${@num.percent(bill.whtRate)}, ${@num.money(bill.payable)})}">15 % for RRA · the supplier is owed 218,220</div>
+                </div>
                 <div class="item">
                     <label th:text="#{expense.trail}">Signed</label>
                     <div class="value">

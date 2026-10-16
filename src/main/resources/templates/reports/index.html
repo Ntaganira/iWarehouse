@@ -44,7 +44,7 @@
         </div>
     </div>
 
-    <div class="section" sec:authorize="hasAnyAuthority('PAGE_RECEIVABLES', 'PAGE_PAYABLES', 'PAGE_TRIAL_BALANCE', 'PAGE_FINANCIAL_STATEMENTS', 'PAGE_VAT_REPORT', 'PAGE_MANAGEMENT_PACK', 'PAGE_EXPENDITURE_REPORT')">
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_RECEIVABLES', 'PAGE_PAYABLES', 'PAGE_TRIAL_BALANCE', 'PAGE_FINANCIAL_STATEMENTS', 'PAGE_VAT_REPORT', 'PAGE_MANAGEMENT_PACK', 'PAGE_EXPENDITURE_REPORT', 'PAGE_BUDGET_REPORT', 'PAGE_SALES_TARGET_REPORT', 'PAGE_WEEKLY_REPORT', 'PAGE_CASH_FLOW', 'PAGE_TAX_RETURNS')">
         <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.accounting}">Accounting</h2></div></div>
         <div class="quick-grid">
             <th:block sec:authorize="hasAuthority('PAGE_RECEIVABLES')"><a th:replace="~{reports/index :: tile('/accounting/receivables', 'purple', #{receivables.title}, 'clock')}">Receivables</a></th:block>
@@ -56,6 +56,8 @@
                 <a th:replace="~{reports/index :: tile('/accounting/general-ledger', 'neutral', #{fin.ledger.title}, 'chart')}">General ledger</a>
             </th:block>
             <th:block sec:authorize="hasAuthority('PAGE_VAT_REPORT')"><a th:replace="~{reports/index :: tile('/accounting/vat-report', 'neutral', #{vatReport.title}, 'chart')}">VAT report</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_TAX_RETURNS')"><a th:replace="~{reports/index :: tile('/reports/tax', 'neutral', #{taxReturn.title}, 'chart')}">Tax returns</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_CASH_FLOW')"><a th:replace="~{reports/index :: tile('/reports/cash-flow', 'green', #{cashflow.title}, 'clock')}">Cash flow</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_EXPENDITURE_REPORT')"><a th:replace="~{reports/index :: tile('/reports/expenditure', 'orange', #{expenditure.title}, 'chart')}">Expenditure report</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_BUDGET_REPORT')"><a th:replace="~{reports/index :: tile('/reports/budget', 'blue', #{budgetReport.title}, 'chart')}">Budget against actual</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_SALES_TARGET_REPORT')"><a th:replace="~{reports/index :: tile('/reports/sales-targets', 'green', #{salesTarget.reportTitle}, 'chart')}">Sales against target</a></th:block>

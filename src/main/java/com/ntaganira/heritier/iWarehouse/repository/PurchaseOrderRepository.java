@@ -39,4 +39,9 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, UU
     long countByStatus(PurchaseOrderStatus status);
 
     List<PurchaseOrder> findByApprovedAtBetweenOrderByApprovedAtAsc(LocalDateTime from, LocalDateTime to);
+
+    /** Orders of a period that commit money (placed, waiting or received), with their lines (the expenditure report). */
+    @EntityGraph(attributePaths = {"supplier", "lines"})
+    List<PurchaseOrder> findByOrderDateBetweenAndStatusIn(java.time.LocalDate from, java.time.LocalDate to,
+                                                          java.util.Collection<com.ntaganira.heritier.iWarehouse.enums.PurchaseOrderStatus> statuses);
 }

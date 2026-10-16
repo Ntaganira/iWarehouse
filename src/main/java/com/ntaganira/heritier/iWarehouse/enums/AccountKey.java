@@ -56,5 +56,23 @@ public enum AccountKey {
     /** Receivables written off on approval (V43, F-14). */
     BAD_DEBTS,
     /** Damage losses charged to a customer, an employee, an insurer, a supplier or a driver (V49, F-07 C). */
-    DAMAGE_RECOVERIES
+    DAMAGE_RECOVERIES,
+    /** Capital items bought on expense bills (V51, CMP 05 CAPEX). */
+    FIXED_ASSETS,
+    /** The expense accounts of expense bills, by category (V51, CMP 01). */
+    EXPENSE_UTILITIES,
+    EXPENSE_RENT,
+    EXPENSE_COMMUNICATION,
+    EXPENSE_PROFESSIONAL,
+    EXPENSE_REPAIRS,
+    EXPENSE_TRANSPORT,
+    EXPENSE_TRAVEL,
+    EXPENSE_OFFICE,
+    EXPENSE_SECURITY,
+    EXPENSE_BANK_CHARGES,
+    EXPENSE_MARKETING,
+    EXPENSE_TRAINING,
+    EXPENSE_INSURANCE,
+    EXPENSE_TAXES,
+    EXPENSE_OTHER
 }

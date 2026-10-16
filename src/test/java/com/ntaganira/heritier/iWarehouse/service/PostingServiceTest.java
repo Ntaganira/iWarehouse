@@ -842,6 +842,96 @@ class PostingServiceTest {
         assertThat(posted).allMatch(Journal::isBalanced);
     }
 
+    @Test
+    void anExpenseBillPostsEachLineToItsCategoryAndOwesTheSupplier() {   // CMP 01, F-15 A, F-16, AT-10
+        Supplier reg = supplier("REG");
+        CostCentre ho = new CostCentre();
+        ho.setId(UUID.randomUUID());
+        ho.setCode("HO");
+        CostCentre sc = new CostCentre();
+        sc.setId(UUID.randomUUID());
+        sc.setCode("SC");
+        UUID warehouse = UUID.randomUUID();
+        ExpenseBill bill = new ExpenseBill();
+        bill.setId(UUID.randomUUID());
+        bill.setNumber("EXP-WH-2026-000001");
+        bill.setSupplier(reg);
+        bill.setSupplierRef("INV-77");
+        bill.setBillDate(LocalDate.of(2026, 10, 15));
+        bill.setDescription("Electricity and a repair");
+        bill.getLines().add(billLine(bill, 1, ExpenseCategory.UTILITIES, "Electricity, October", ho, null, "200000", "36000"));
+        bill.getLines().add(billLine(bill, 2, ExpenseCategory.REPAIRS, "Gate repaired", sc, warehouse, "50000", "0"));
+        bill.setNetAmount(new BigDecimal("250000"));
+        bill.setVatAmount(new BigDecimal("36000"));
+        bill.setAmount(new BigDecimal("286000"));
+
+        postings.expenseBill(bill);
+        Journal j = last();
+        assertThat(j.source()).isEqualTo(JournalSource.EXPENSE_BILL);
+        assertThat(j.date()).isEqualTo(LocalDate.of(2026, 10, 15));
+        Journal.Line power = line(j, AccountKey.EXPENSE_UTILITIES);
+        assertThat(power.debit()).isEqualByComparingTo("200000");
+        assertThat(power.costCentreId()).isEqualTo(ho.getId());
+        assertThat(power.locationId()).isNull();
+        Journal.Line repair = line(j, AccountKey.EXPENSE_REPAIRS);
+        assertThat(repair.debit()).isEqualByComparingTo("50000");
+        assertThat(repair.costCentreId()).isEqualTo(sc.getId());
+        assertThat(repair.locationId()).isEqualTo(warehouse);
+        assertThat(line(j, AccountKey.VAT_INPUT).debit()).isEqualByComparingTo("36000");
+        assertThat(line(j, AccountKey.PAYABLE).credit()).isEqualByComparingTo("286000");
+        assertThat(line(j, AccountKey.PAYABLE).supplierId()).isEqualTo(reg.getId());
+        assertThat(line(j, AccountKey.PAYABLE).memo()).isEqualTo("INV-77 · EXP-WH-2026-000001");
+        assertThat(j.isBalanced()).isTrue();
+
+        // A capital item goes to Fixed Assets; the reversal keeps every line's cost centre and location
+        ExpenseBill capital = new ExpenseBill();
+        capital.setId(UUID.randomUUID());
+        capital.setNumber("EXP-WH-2026-000002");
+        capital.setSupplier(reg);
+        capital.setSupplierRef("INV-78");
+        capital.setBillDate(LocalDate.of(2026, 10, 15));
+        capital.setDescription("A forklift");
+        capital.getLines().add(billLine(capital, 1, ExpenseCategory.CAPITAL_ITEM, "Forklift", sc, warehouse, "4000000", "0"));
+        capital.setNetAmount(new BigDecimal("4000000"));
+        capital.setAmount(new BigDecimal("4000000"));
+        postings.expenseBill(capital);
+        assertThat(line(last(), AccountKey.FIXED_ASSETS).debit()).isEqualByComparingTo("4000000");
+        Journal reversal = last().reversal(LocalDate.of(2026, 10, 16), "Reversal");
+        assertThat(line(reversal, AccountKey.FIXED_ASSETS).credit()).isEqualByComparingTo("4000000");
+        assertThat(line(reversal, AccountKey.FIXED_ASSETS).locationId()).isEqualTo(warehouse);
+        assertThat(posted).allMatch(Journal::isBalanced);
+    }
+
+    @Test
+    void aVehicleCostNamesTheFleetsCostCentreAndTheVehiclesPlace() {   // F-15 A, T.05, T.06
+        Vehicle rac = new Vehicle();
+        rac.setId(UUID.randomUUID());
+        rac.setPlate("RAC123A");
+        Location van = new Location();
+        van.setId(UUID.randomUUID());
+        rac.setLocation(van);
+        UUID fleet = UUID.randomUUID();
+        postings.vehicleCost(vehicleCost(rac, null, VehicleCostCategory.FUEL, "45000", "0", VehicleCostPayment.CASH_VAULT), fleet);
+        Journal.Line fuel = line(last(), AccountKey.VEHICLE_FUEL);
+        assertThat(fuel.costCentreId()).isEqualTo(fleet);
+        assertThat(fuel.locationId()).isEqualTo(van.getId());
+        assertThat(line(last(), AccountKey.CASH_VAULT).costCentreId()).isNull();
+    }
+
+    private static ExpenseBillLine billLine(ExpenseBill bill, int no, ExpenseCategory category, String description, CostCentre centre, UUID location,
+                                            String net, String vat) {
+        ExpenseBillLine line = new ExpenseBillLine();
+        line.setBill(bill);
+        line.setLineNo(no);
+        line.setCategory(category);
+        line.setDescription(description);
+        line.setCostCentre(centre);
+        line.setLocationId(location);
+        line.setNetAmount(new BigDecimal(net));
+        line.setVatAmount(new BigDecimal(vat));
+        return line;
+    }
+
     private static VehicleCost vehicleCost(Vehicle vehicle, Trip trip, VehicleCostCategory category, String amount, String vat,
                                            VehicleCostPayment payment) {
         VehicleCost c = new VehicleCost();

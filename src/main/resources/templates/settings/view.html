@@ -708,6 +708,108 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.expenditure}">Expenditure control</div>
+                                <div class="role-card-desc" th:text="#{settings.group.expenditureHint}">hint</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseRequisitionRequired}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseRequisitionRequiredHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseRequisitionRequired} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseRequisitionFrom}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseRequisitionFromHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.expenseRequisitionFrom)}">100,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseRequisitionTolerancePercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseRequisitionTolerancePercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseRequisitionTolerancePercent}">10</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseQuotesThreeFrom}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseQuotesThreeFromHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.expenseQuotesThreeFrom)}">100,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseRfqFrom}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseRfqFromHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.expenseRfqFrom)}">100,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseTenderFrom}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseTenderFromHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.expenseTenderFrom)}">100,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseQuoteDocuments}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseQuoteDocumentsHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseQuoteDocuments} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseInvoiceDocument}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseInvoiceDocumentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseInvoiceDocument} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseRecommend}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseRecommendHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseRecommend} ? #{settings.on} : #{settings.off}">Yes</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseFinanceReviewFrom}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseFinanceReviewFromHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${@num.money(settings.expenseFinanceReviewFrom)}">100,000</span> <span class="unit">RWF</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseSplitDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseSplitDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseSplitDays}">7</span> <span class="unit" th:text="#{settings.daysUnit}">days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseRatifyDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseRatifyDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.expenseRatifyDays}">7</span> <span class="unit" th:text="#{settings.daysUnit}">days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.expenseFleetCostCentre}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.expenseFleetCostCentreHint}">hint</span>
+                                </dt>
+                                <dd><span class="mono" th:text="${settings.expenseFleetCostCentre ?: '—'}">SC</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

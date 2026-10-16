@@ -69,13 +69,15 @@ public class VehicleCostService {
     private final Notifier notifier;
     private final Clock clock;
     private final DelegationOfAuthority authority;
+    private final CostCentreRepository costCentreRepo;
 
     public VehicleCostService(VehicleCostRepository repo, VehicleRepository vehicleRepo, TripRepository tripRepo, SupplierRepository supplierRepo,
                               CurrencyRepository currencyRepo, VehicleServicePlanRepository planRepo, FloatClearanceRepository clearanceRepo,
                               FloatService floatService, PostingService postingService, JournalService journalService,
                               DocumentNumberService numbers, PeriodLock periods, SettingService settings, Notifier notifier, Clock clock,
-                              DelegationOfAuthority authority) {
+                              DelegationOfAuthority authority, CostCentreRepository costCentreRepo) {
         this.authority = authority;
+        this.costCentreRepo = costCentreRepo;
         this.repo = repo;
         this.vehicleRepo = vehicleRepo;
         this.tripRepo = tripRepo;
@@ -466,7 +468,11 @@ public class VehicleCostService {
 
     /** Posts its journal, then sets POSTED with the journal and time together; the service plan it does moves forward. */
     private void post(VehicleCost cost) {
-        JournalEntry entry = postingService.vehicleCost(cost);
+        // Tagged with the fleet's cost centre (Settings) and the vehicle's location (F-15 A)
+        String centre = settings.get(SettingKey.EXPENSE_FLEET_COST_CENTRE);
+        UUID costCentreId = centre == null || centre.isBlank() ? null
+                : costCentreRepo.findByCode(centre.trim().toUpperCase(Locale.ROOT)).map(CostCentre::getId).orElse(null);
+        JournalEntry entry = postingService.vehicleCost(cost, costCentreId);
         cost.setJournalId(entry.getId());
         cost.setPostedAt(LocalDateTime.now(clock));
         cost.setStatus(VehicleCostStatus.POSTED);

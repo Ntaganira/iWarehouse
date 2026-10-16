@@ -50,6 +50,9 @@ public class PurchaseOrderDto {
     @Size(max = 500, message = "{po.notes.size}")
     private String notes;
 
+    /** The approved requisition the order uses (CMP 06). */
+    private UUID requisitionId;
+
     @Valid
     private List<Line> lines = new ArrayList<>();
 

@@ -57,6 +57,8 @@ public class AttachmentService {
     private final com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.StockCountRepository countRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo;
     private final Clock clock;
 
     public AttachmentService(AttachmentRepository repo, FileStorageService storage, GoodsReceiptRepository receiptRepo,
@@ -70,7 +72,11 @@ public class AttachmentService {
                              BalanceConfirmationRepository confirmationRepo, DailyCloseRepository dailyCloseRepo,
                              com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo,
                              com.ntaganira.heritier.iWarehouse.repository.StockCountRepository countRepo,
-                             com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo) {
+                             com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo,
+                             com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo,
+                             com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo) {
+        this.expenseBillRepo = expenseBillRepo;
+        this.requisitionRepo = requisitionRepo;
         this.damageRepo = damageRepo;
         this.countRepo = countRepo;
         this.varianceRepo = varianceRepo;
@@ -180,6 +186,8 @@ public class AttachmentService {
             case DAMAGE_REPORT -> damageRepo.existsById(id);
             case STOCK_COUNT -> countRepo.existsById(id);
             case STOCK_VARIANCE -> varianceRepo.existsById(id);
+            case EXPENSE_BILL -> expenseBillRepo.existsById(id);
+            case PURCHASE_REQUISITION -> requisitionRepo.existsById(id);
         };
         if (!exists) {
             throw new NotFoundException(owner.name(), id);

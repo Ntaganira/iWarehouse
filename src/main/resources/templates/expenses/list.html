@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{expense.title}, ~{::content})}">
+<head><title>Expense bills - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{expense.title}">Expense bills</h1>
+            <div class="subtitle" th:text="#{expense.subtitle}">Suppliers' bills for utilities, rent, services, fees, repairs, transport and capital items, approved by the expenditure matrix</div>
+        </div>
+        <a href="/expenses/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_EXPENSE')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{expense.new}">Enter a bill</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waiting > 0}">
+        <span th:text="#{expense.waitingNote(${waiting})}">2 expense bills wait to be recommended, reviewed or approved.</span>
+        <a th:href="@{/expenses(status='waiting')}" th:text="#{expense.showWaiting}">Show them</a>
+    </div>
+    <div class="doc-note is-warning" th:if="${toRatify > 0}">
+        <span th:text="#{expense.ratifyNote(${toRatify})}">1 emergency expense waits for the Board's ratification.</span>
+        <a th:href="@{/expenses(status='ratify')}" th:text="#{expense.showWaiting}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{expense.sectionTitle}">Bills</span>
+                <span class="section-count" th:text="${bills.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/expenses}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{expense.searchPh}" th:aria-label="#{expense.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="waiting" th:selected="${status == 'waiting'}" th:text="#{expense.filter.waiting}">Waiting</option>
+                    <option value="ratify" th:selected="${status == 'ratify'}" th:text="#{expense.filter.ratify}">To ratify</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'expense.status.' + st}}">Approved</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{expense.number}">Bill</th>
+                        <th th:text="#{expense.billDate}">Date</th>
+                        <th th:text="#{expense.supplier}">Supplier</th>
+                        <th th:text="#{expense.description}">Description</th>
+                        <th class="num" th:text="#{expense.amount}">Amount (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${bills.content}">
+                        <td><a class="row-link strong mono" th:href="@{/expenses/{id}(id=${b.id})}" th:text="${b.number}">EXP-WH-2026-000001</a></td>
+                        <td class="nowrap" th:text="${#temporals.format(b.billDate, 'dd/MM/yyyy')}">16/10/2026</td>
+                        <td>
+                            <span th:text="${b.supplier.name}">REG</span>
+                            <div class="cell-sub mono" th:text="${b.supplierRef}">INV-2231</div>
+                        </td>
+                        <td>
+                            <span th:text="${b.description}">Electricity for October</span>
+                            <div class="cell-sub">
+                                <span th:text="#{${'expense.nature.' + b.nature}}">Operating</span>
+                                <span th:if="${!b.budgeted}" th:text="${' · ' + #messages.msg('expense.unbudgeted')}"> · Unbudgeted</span>
+                                <span th:if="${b.emergency}" th:text="${' · ' + #messages.msg('expense.emergency')}"> · Emergency</span>
+                            </div>
+                        </td>
+                        <td class="num" th:text="${@num.money(b.amount)}">250,000</td>
+                        <td><th:block th:replace="~{expenses/list :: billStatus(${b})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${bills.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{expense.empty}">No expense bills yet</h3>
+                                <p th:text="#{expense.emptyHint}">Enter suppliers' bills as they arrive: each is approved before it is owed, and posts to the supplier's account.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${bills}, '/expenses', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A bill's status as a badge; an emergency not ratified says so */-->
+<th:block th:fragment="billStatus(b)" th:switch="${b.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{expense.status.DRAFT}">Draft</span>
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{expense.status.SUBMITTED}">Submitted</span>
+    <span th:case="'RECOMMENDED'" class="badge badge-warning" th:text="#{expense.status.RECOMMENDED}">Recommended</span>
+    <span th:case="'REVIEWED'" class="badge badge-warning" th:text="#{expense.status.REVIEWED}">Reviewed</span>
+    <th:block th:case="'APPROVED'">
+        <span class="badge badge-success" th:text="#{expense.status.APPROVED}">Approved</span>
+        <span class="badge badge-warning" th:if="${b.awaitingRatification}" th:text="#{expense.toRatify}">To ratify</span>
+    </th:block>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{expense.status.REJECTED}">Rejected</span>
+    <span th:case="'REVERSED'" class="badge badge-info" th:text="#{expense.status.REVERSED}">Reversed</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{expense.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

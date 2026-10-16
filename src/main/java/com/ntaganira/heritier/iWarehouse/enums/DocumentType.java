@@ -80,6 +80,10 @@ public enum DocumentType {
     DAMAGE_REPORT("DMG"),
     /** A count variance followed up until resolved (IMP 16, VR-010). */
     STOCK_VARIANCE("VAR"),
+    /** A supplier's bill for utilities, services, fees, repairs, transport or a capital item (CMP 01, 05). */
+    EXPENSE_BILL("EXP"),
+    /** A purchase requisition, approved before any commitment (CMP 06). */
+    PURCHASE_REQUISITION("PRF"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

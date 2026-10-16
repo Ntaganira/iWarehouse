@@ -33,7 +33,7 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE, EXPENSE, EXPENSE_RATIFIED, REQUISITION }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -67,6 +67,8 @@ public class ExceptionsReportService {
     private final DeliveryNoteRepository deliveryNoteRepo;
     private final TripRepository tripRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo;
     private final DelegationOfAuthority authority;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
@@ -76,8 +78,12 @@ public class ExceptionsReportService {
                                    SupplierPaymentRequestRepository paymentRequestRepo, CreditApplicationRepository creditApplicationRepo,
                                    PriceChangeRepository priceChangeRepo, SupplierRepository supplierRepo,
                                    SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, TripRepository tripRepo,
-                                   com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo, DelegationOfAuthority authority) {
+                                   com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo, DelegationOfAuthority authority,
+                                   com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo,
+                                   com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo) {
         this.damageRepo = damageRepo;
+        this.expenseBillRepo = expenseBillRepo;
+        this.requisitionRepo = requisitionRepo;
         this.authority = authority;
         this.deliveryNoteRepo = deliveryNoteRepo;
         this.tripRepo = tripRepo;
@@ -239,6 +245,30 @@ public class ExceptionsReportService {
             rows.add(new Row(Kind.DAMAGE, d.getNumber(), "/damage/" + d.getId(), d.getDecidedAt(), d.getLocation().getCode() + " · " + d.getDescription(),
                     d.getEstimatedLoss(), false, authority.required(AuthorityDecision.STOCK_ADJUSTMENT, d.getEstimatedLoss()), d.getReportedBy(),
                     d.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED, d.getDecisionNote()));
+        }
+        // Expense bills decided within the expenditure matrix (CMP 05), and emergencies the Board ratified
+        for (com.ntaganira.heritier.iWarehouse.entity.ExpenseBill b : expenseBillRepo.findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(from, to,
+                List.of(com.ntaganira.heritier.iWarehouse.enums.ExpenseBillStatus.APPROVED, com.ntaganira.heritier.iWarehouse.enums.ExpenseBillStatus.REVERSED,
+                        com.ntaganira.heritier.iWarehouse.enums.ExpenseBillStatus.REJECTED))) {
+            boolean rejected = b.getStatus() == com.ntaganira.heritier.iWarehouse.enums.ExpenseBillStatus.REJECTED;
+            AuthorityDecision decision = b.getDecision() == null ? AuthorityDecision.EXPENSE_OPEX : b.getDecision();
+            rows.add(new Row(Kind.EXPENSE, b.getNumber(), "/expenses/" + b.getId(), b.getDecidedAt(), b.getSupplier().getName() + " · " + b.getDescription(),
+                    b.getAmount(), false, b.getAuthorityLevel() != null ? b.getAuthorityLevel() : authority.required(decision, b.getAmount()), b.getEnteredBy(),
+                    b.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED, b.getDecisionNote()));
+            if (b.getRatifiedAt() != null && !b.getRatifiedAt().isBefore(from) && !b.getRatifiedAt().isAfter(to)) {
+                rows.add(new Row(Kind.EXPENSE_RATIFIED, b.getNumber(), "/expenses/" + b.getId(), b.getRatifiedAt(), b.getSupplier().getName() + " · "
+                        + b.getDescription(), b.getAmount(), false, AuthorityLevel.BOARD, b.getDecidedBy(), b.getRatifiedBy(), Outcome.APPROVED,
+                        b.getRatifyNote()));
+            }
+        }
+        // Requisitions decided by the heads of department (CMP 06)
+        for (com.ntaganira.heritier.iWarehouse.entity.PurchaseRequisition r : requisitionRepo.findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(from, to,
+                List.of(com.ntaganira.heritier.iWarehouse.enums.RequisitionStatus.APPROVED, com.ntaganira.heritier.iWarehouse.enums.RequisitionStatus.CLOSED,
+                        com.ntaganira.heritier.iWarehouse.enums.RequisitionStatus.REJECTED))) {
+            boolean rejected = r.getStatus() == com.ntaganira.heritier.iWarehouse.enums.RequisitionStatus.REJECTED;
+            rows.add(new Row(Kind.REQUISITION, r.getNumber(), "/requisitions/" + r.getId(), r.getDecidedAt(), r.getCostCentre().getCode() + " · " + r.getTitle(),
+                    r.getEstimatedTotal(), false, null, r.getRequestedBy(), r.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED,
+                    r.getDecisionNote()));
         }
         rows.sort(Comparator.comparing(Row::at).thenComparing(Row::number));
         Map<Kind, Long> counts = new EnumMap<>(Kind.class);

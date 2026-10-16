@@ -88,7 +88,7 @@
                     <tr th:each="r : ${rowPage.content}" th:with="f=${r.figures}">
                         <td>
                             <a th:if="${r.customerId != null}" th:href="@{/customers/{id}(id=${r.customerId})}" th:text="${r.label}">Umucyo Builders Ltd</a>
-                            <span th:if="${r.customerId == null}" th:text="${r.label ?: #messages.msg('reports.none')}">KGL · Kigali</span>
+                            <span th:if="${r.customerId == null}" class="nowrap" th:text="${r.label ?: #messages.msg('reports.none')}">KGL · Kigali</span>
                         </td>
                         <td class="num" th:text="${@num.money(f.opening)}">500,000</td>
                         <td class="num" th:text="${@num.money(f.charged)}">1,500,000</td>

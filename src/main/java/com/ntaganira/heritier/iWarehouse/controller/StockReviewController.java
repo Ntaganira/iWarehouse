@@ -215,7 +215,8 @@ public class StockReviewController {
         r.sold().forEach(x -> docs.row(messages.get("stock.movement." + x.type()), x.refNumber(), null, x.units(), seeCost ? x.cost() : null));
         r.transfers().forEach(x -> docs.row(messages.get("stock.movement." + x.type()), x.refNumber(), null, x.units(), seeCost ? x.cost() : null));
         r.adjustments().forEach(x -> docs.row(messages.get("stock.movement." + x.type()), x.refNumber(), null, x.units(), seeCost ? x.cost() : null));
-        r.exceptions().forEach(i -> docs.row(messages.get(i.kindKey()), i.number(), i.detail(), null, seeCost ? i.value() : null));
+        r.exceptions().forEach(i -> docs.row(messages.get(i.kindKey()), i.number(), i.detailKey() != null ? messages.get(i.detailKey()) : i.detail(), null,
+                seeCost ? i.value() : null));
         activityLogService.record(MODULE, "EXPORT_DAILY_STOCK", "Exported the daily inventory report of " + d + " to " + format.label(), ActivityStatus.SUCCESS);
         return reportFiles.download(format, "daily-inventory-" + d, summary.build(), sites.build(), types.build(), moves.build(), docs.build());
     }

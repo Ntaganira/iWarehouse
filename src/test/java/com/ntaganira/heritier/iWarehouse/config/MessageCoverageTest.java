@@ -108,7 +108,13 @@ class MessageCoverageTest {
             Map.entry("discounts.by.", com.ntaganira.heritier.iWarehouse.service.DiscountAnalysis.GroupBy.class),
             Map.entry("discounts.group.", com.ntaganira.heritier.iWarehouse.service.DiscountAnalysis.GroupBy.class),
             Map.entry("collections.by.", com.ntaganira.heritier.iWarehouse.service.CollectionAnalysis.GroupBy.class),
-            Map.entry("collections.group.", com.ntaganira.heritier.iWarehouse.service.CollectionAnalysis.GroupBy.class));
+            Map.entry("collections.group.", com.ntaganira.heritier.iWarehouse.service.CollectionAnalysis.GroupBy.class),
+            Map.entry("expense.category.", com.ntaganira.heritier.iWarehouse.enums.ExpenseCategory.class),
+            Map.entry("expense.nature.", com.ntaganira.heritier.iWarehouse.enums.ExpenseNature.class),
+            Map.entry("expense.status.", com.ntaganira.heritier.iWarehouse.enums.ExpenseBillStatus.class),
+            Map.entry("requisition.status.", com.ntaganira.heritier.iWarehouse.enums.RequisitionStatus.class),
+            Map.entry("requisition.sourcing.", com.ntaganira.heritier.iWarehouse.enums.SourcingMethod.class),
+            Map.entry("count.closeConfirmBlind.", com.ntaganira.heritier.iWarehouse.enums.CountPhase.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

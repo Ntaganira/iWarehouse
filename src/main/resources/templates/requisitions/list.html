@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{requisition.title}, ~{::content})}">
+<head><title>Requisitions - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{requisition.title}">Requisitions</h1>
+            <div class="subtitle" th:text="#{requisition.subtitle}">What departments need, with the quotes their value calls for, approved before any order or bill commits the money</div>
+        </div>
+        <a href="/requisitions/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_CREATE_REQUISITION')">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span th:text="#{requisition.new}">Raise a requisition</span>
+        </a>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waiting > 0}" sec:authorize="hasAuthority('PERM_APPROVE_REQUISITION')">
+        <span th:text="#{requisition.waitingNote(${waiting})}">2 requisitions wait for approval.</span>
+        <a th:href="@{/requisitions(status='waiting')}" th:text="#{expense.showWaiting}">Show them</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{requisition.sectionTitle}">Requisitions</span>
+                <span class="section-count" th:text="${requisitions.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/requisitions}" method="get" class="table-toolbar">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{requisition.searchPh}" th:aria-label="#{requisition.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="waiting" th:selected="${status == 'waiting'}" th:text="#{expense.filter.waiting}">Waiting</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'requisition.status.' + st}}">Approved</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{requisition.number}">Requisition</th>
+                        <th th:text="#{requisition.costCentre}">Department</th>
+                        <th th:text="#{requisition.titleLabel}">What</th>
+                        <th class="num" th:text="#{requisition.estimated}">Estimated (RWF)</th>
+                        <th th:text="#{requisition.requestedBy}">Asked by</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${requisitions.content}">
+                        <td><a class="row-link strong mono" th:href="@{/requisitions/{id}(id=${r.id})}" th:text="${r.number}">PRF-WH-2026-000001</a></td>
+                        <td class="mono" th:text="${r.costCentre.code}">FIN</td>
+                        <td>
+                            <span th:text="${r.title}">Printer toner</span>
+                            <div class="cell-sub" th:text="#{${'requisition.sourcing.' + r.sourcing}}">One quote</div>
+                        </td>
+                        <td class="num" th:text="${@num.money(r.estimatedTotal)}">120,000</td>
+                        <td>
+                            <span th:text="${r.requestedBy}">accountant</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.requestedAt, 'dd/MM/yyyy')}">16/10/2026</div>
+                        </td>
+                        <td><th:block th:replace="~{requisitions/list :: reqStatus(${r})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${requisitions.totalElements == 0}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3 th:text="#{requisition.empty}">No requisitions yet</h3>
+                                <p th:text="#{requisition.emptyHint}">Raise one with its items and quotes before ordering or buying: the head of department approves it.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${requisitions}, '/requisitions', ${paginationQuery})}"></th:block>
+    </div>
+</div>
+
+<!--/* A requisition's status as a badge; a closed one names what used it */-->
+<th:block th:fragment="reqStatus(r)" th:switch="${r.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{requisition.status.DRAFT}">Draft</span>
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{requisition.status.SUBMITTED}">Submitted</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{requisition.status.APPROVED}">Approved</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{requisition.status.REJECTED}">Rejected</span>
+    <span th:case="'CLOSED'" class="badge badge-info" th:text="#{requisition.usedBy(${r.usedBy})}">Used by EXP-WH-2026-000001</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{requisition.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

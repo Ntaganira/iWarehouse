@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{expenditure.title}, ~{::content})}">
+<head><title>Expenditure report - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="r=${report}, k=${report.indicators}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{expenditure.title}">Expenditure report</h1>
+            <div class="subtitle" th:text="#{expenditure.subtitle}">Spending by department, place and account, the expenditure indicators and purchases split under a threshold</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/expenditure/export(from=${from}, to=${to})})}"></th:block>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/reports/expenditure}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${#temporals.format(from, 'yyyy-MM-dd')}" th:attr="max=${today}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${#temporals.format(to, 'yyyy-MM-dd')}" th:attr="max=${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note is-danger" th:if="${!r.splits.isEmpty()}" th:text="#{expenditure.splitsNote(${#lists.size(r.splits)})}">2 groups of orders or bills to one supplier together reach a threshold none of them reaches alone: see them below.</div>
+    <div class="doc-note is-warning" th:if="${r.toRatify > 0}" th:text="#{expense.ratifyNote(${r.toRatify})}">1 emergency expense waits for the Board's ratification.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.operating}">Operating spending (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(r.operating)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">4,250,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.capitalSub(${@num.money(r.capital)})}">capital 1,200,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.poCompliance}">PO compliance</div>
+                <div class="kpi-value" th:text="${k.poCompliance != null} ? ${@num.percent(k.poCompliance) + ' %'} : '—'">100 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.poComplianceSub(${k.withRequisition}, ${k.purchasesNeeding})}">4 of 4 purchases cited a requisition</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1"></rect></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.onRegister}">Spend with suppliers on the register</div>
+                <div class="kpi-value" th:text="${k.onRegisterPercent != null} ? ${@num.percent(k.onRegisterPercent) + ' %'} : '—'">100 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.onRegisterSub(${@num.money(k.spend)})}">of 5,450,000 ordered or billed</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{expenditure.untagged}">Spending with no cost centre</div>
+                <div class="kpi-value" th:with="v=${@num.money(k.untagged)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">320,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{expenditure.manualSub(${@num.money(k.manualSpend)})}">by manual journal 150,000</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{expenditure.byCentre}">By cost centre</h2></div>
+        <th:block th:replace="~{reports/expenditure :: amounts(${r.byCentre}, #{expense.line.costCentre})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{expenditure.byLocation}">By location</h2></div>
+        <th:block th:replace="~{reports/expenditure :: amounts(${r.byLocation}, #{expense.line.location})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{expenditure.byAccount}">By account</span>
+                <span class="section-count" th:text="${accountPage.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{fin.code}">Code</th>
+                        <th th:text="#{fin.account}">Account</th>
+                        <th class="num" th:text="#{expenditure.amount}">Amount (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${accountPage.content}">
+                        <td class="mono" th:text="${a.code}">6310</td>
+                        <td th:text="${a.name}">Utilities</td>
+                        <td class="num" th:text="${@num.money(a.amount)}">250,000</td>
+                    </tr>
+                    <tr th:if="${accountPage.totalElements == 0}">
+                        <td colspan="3"><div class="empty-state"><p th:text="#{expenditure.none}">No spending in this period</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${accountPage}, '/reports/expenditure', ${query})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{expenditure.bills}">Expense bills of the period</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{common.status}">Status</th>
+                        <th class="num" th:text="#{expenditure.count}">Bills</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="st : ${statuses}" th:if="${r.bills.get(st) != null}">
+                        <td><a th:href="@{/expenses(status=${st})}" sec:authorize="hasAuthority('PAGE_EXPENSE_BILLS')" th:text="#{${'expense.status.' + st}}">Approved</a>
+                            <span sec:authorize="!hasAuthority('PAGE_EXPENSE_BILLS')" th:text="#{${'expense.status.' + st}}">Approved</span></td>
+                        <td class="num" th:text="${r.bills.get(st)}">3</td>
+                    </tr>
+                    <tr th:if="${r.bills.isEmpty()}">
+                        <td colspan="2"><div class="empty-state"><p th:text="#{expenditure.noBills}">No expense bill dated in this period</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{expenditure.splitsTitle}">Purchases split under a threshold</span>
+                <span class="section-count" th:text="${#lists.size(r.splits)}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{expense.supplier}">Supplier</th>
+                        <th th:text="#{expenditure.split.documents}">Orders and bills</th>
+                        <th th:text="#{expenditure.split.days}">Days</th>
+                        <th class="num" th:text="#{expenditure.split.total}">Together (RWF)</th>
+                        <th class="num" th:text="#{expenditure.split.threshold}">Threshold (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="f : ${r.splits}">
+                        <td th:text="${f.supplierName}">Kigali Office Supplies</td>
+                        <td>
+                            <th:block th:each="p, st : ${f.purchases}"><a class="mono" th:href="${p.link}" th:text="${p.number}">EXP-WH-2026-000001</a><span th:unless="${st.last}">, </span></th:block>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(f.from, 'dd/MM') + ' – ' + #temporals.format(f.to, 'dd/MM/yyyy')}">10/10 – 14/10/2026</td>
+                        <td class="num" th:text="${@num.money(f.total)}">180,000</td>
+                        <td class="num" th:text="${@num.money(f.threshold)}">100,000</td>
+                    </tr>
+                    <tr th:if="${r.splits.isEmpty()}">
+                        <td colspan="5"><div class="empty-state"><p th:text="#{expenditure.noSplits}">No orders or bills to one supplier together reach a threshold none reaches alone</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{expenditure.note}">Operating spending: the expense accounts (salaries, vehicles, bills, petty cash) from the journals, without the cost of glass sold, stock adjustments, FX differences, bad debts and the tills' over and short. PO compliance: orders and purchase bills that needed a requisition and cited one. Split purchases: two or more orders or bills to one supplier within the Settings' days, each under a quote or tender threshold, together reaching it.</p>
+    </div>
+</div>
+
+<!--/* Spending grouped: the group's code and name (none: not named), and its amount */-->
+<div th:fragment="amounts(rows, label)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="${label}">Cost centre</th>
+                <th class="num" th:text="#{expenditure.amount}">Amount (RWF)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="row : ${rows}">
+                <td>
+                    <th:block th:if="${!#strings.isEmpty(row.code)}"><span class="mono" th:text="${row.code}">COM</span><div class="cell-sub" th:if="${row.name != null}" th:text="${row.name}">Commercial</div></th:block>
+                    <span th:if="${#strings.isEmpty(row.code)}" class="text-muted" th:text="#{expenditure.notNamed}">Not named</span>
+                </td>
+                <td class="num" th:text="${@num.money(row.amount)}">250,000</td>
+            </tr>
+            <tr th:if="${rows.isEmpty()}">
+                <td colspan="2"><div class="empty-state"><p th:text="#{expenditure.none}">No spending in this period</p></div></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

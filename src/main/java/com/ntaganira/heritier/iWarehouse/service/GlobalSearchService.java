@@ -106,6 +106,8 @@ public class GlobalSearchService {
     private final TicketService ticketService;
     private final DamageService damageService;
     private final StockVarianceService varianceService;
+    private final ExpenseBillService expenseBillService;
+    private final RequisitionService requisitionService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -121,7 +123,10 @@ public class GlobalSearchService {
                                Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService,
                                CreditApplicationService creditApplicationService, PriceChangeService priceChangeService,
                                SiteTransferService siteTransferService, TicketService ticketService,
-                               DeliveryNoteService deliveryNoteService, DamageService damageService, StockVarianceService varianceService) {
+                               DeliveryNoteService deliveryNoteService, DamageService damageService, StockVarianceService varianceService,
+                               ExpenseBillService expenseBillService, RequisitionService requisitionService) {
+        this.expenseBillService = expenseBillService;
+        this.requisitionService = requisitionService;
         this.damageService = damageService;
         this.varianceService = varianceService;
         this.deliveryNoteService = deliveryNoteService;
@@ -330,6 +335,12 @@ public class GlobalSearchService {
             new Source<>("nav.stockVariances", "/stock-variances", null, List.of("PAGE_STOCK_VARIANCES", "PERM_VIEW_STOCK_VARIANCE"),
                 q -> varianceService.findPage(q, null, 0, PER_GROUP),
                 v -> new Hit(v.getNumber(), v.getCount().getNumber(), v.getResponsibleOfficer(), "/stock-variances/" + v.getId())),
+            new Source<>("nav.expenseBills", "/expenses", null, List.of("PAGE_EXPENSE_BILLS", "PERM_VIEW_EXPENSE"),
+                q -> expenseBillService.findPage(q, null, 0, PER_GROUP),
+                b -> new Hit(b.getNumber(), b.getDescription(), join(b.getSupplier().getName(), date(b.getBillDate())), "/expenses/" + b.getId())),
+            new Source<>("nav.requisitions", "/requisitions", null, List.of("PAGE_REQUISITIONS", "PERM_VIEW_REQUISITION"),
+                q -> requisitionService.findPage(q, null, 0, PER_GROUP),
+                r -> new Hit(r.getNumber(), r.getTitle(), join(r.getCostCentre().getCode(), date(r.getRequestedAt())), "/requisitions/" + r.getId())),
             new Source<>("nav.damage", "/damage", null, List.of("PAGE_DAMAGE", "PERM_VIEW_DAMAGE"),
                 q -> damageService.findPage(q, null, 0, PER_GROUP),
                 d -> new Hit(d.getNumber(), d.getDescription(), join(d.getLocation().getCode(), date(d.getReportedAt())), "/damage/" + d.getId())),

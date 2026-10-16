@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -98,6 +99,10 @@ public class PurchaseOrder extends BaseEntity {
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
+
+    /** The approved requisition it uses (CMP 06: no commitment without one). */
+    @Column(name = "requisition_id")
+    private UUID requisitionId;
 
     /** The approver's note, or why the order was sent back. */
     @Column(name = "approval_note", length = 255)

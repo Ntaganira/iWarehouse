@@ -117,7 +117,7 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
     Optional<SalesInvoice> findMobileByClientId(@Param("clientId") UUID clientId);
 
     /** Rows of (invoice id, salesperson, extra terms days) of these invoices: who sold what a customer owes (Q.05). */
-    @Query("select i.id, i.salesperson, i.extraTermsDays from SalesInvoice i where i.id in :ids")
+    @Query("select i.id, coalesce(i.salesperson, i.createdBy), i.extraTermsDays from SalesInvoice i where i.id in :ids")
     List<Object[]> sellersOf(@Param("ids") java.util.Collection<UUID> ids);
 
     /** What the invoices issued in a period charged (VAT included): the discount analysis's base (R.06). */

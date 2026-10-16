@@ -79,4 +79,12 @@ public class JournalLine {
 
     @Column(precision = 18, scale = 6)
     private BigDecimal rate;
+
+    /** The department the line is for (F-15 A, T.05): expense lines name one. */
+    @Column(name = "cost_centre_id", updatable = false)
+    private UUID costCentreId;
+
+    /** Where the line is for: a site or a vehicle (F-15 A, T.06). */
+    @Column(name = "location_id", updatable = false)
+    private UUID locationId;
 }

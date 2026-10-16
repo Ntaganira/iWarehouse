@@ -164,6 +164,7 @@ public class PurchaseOrderController {
         dto.setIncoterm(order.getIncoterm());
         dto.setSupplierRef(order.getSupplierRef());
         dto.setNotes(order.getNotes());
+        dto.setRequisitionId(order.getRequisitionId());
         for (PurchaseOrderLine line : order.getLines()) {
             PurchaseOrderDto.Line row = new PurchaseOrderDto.Line();
             row.setId(line.getId());
@@ -340,6 +341,7 @@ public class PurchaseOrderController {
         model.addAttribute("suppliers", suppliers);
         model.addAttribute("products", orderService.productsFor(current));
         model.addAttribute("incoterms", Incoterm.values());
+        model.addAttribute("requisitions", orderService.requisitionsFor(dto.getRequisitionId()));
         model.addAttribute("decimals", currencyDecimals());
         return "purchase-orders/form";
     }

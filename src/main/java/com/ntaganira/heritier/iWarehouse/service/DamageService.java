@@ -219,7 +219,8 @@ public class DamageService {
 
         String link = "/damage/" + report.getId();
         String perm = inspectionRequired() ? "INSPECT_DAMAGE" : "APPROVE_DAMAGE";
-        notifier.holders(perm, me.getId(), NotificationKind.DAMAGE, "notify.damage.reported", "notify.damage.reportedText", link,
+        notifier.holders(perm, me.getId(), NotificationKind.DAMAGE, "notify.damage.reported",
+                damaged.size() == 1 ? "notify.damage.reportedTextOne" : "notify.damage.reportedText", link,
                 report.getNumber(), place.getCode(), String.valueOf(damaged.size()), num.money(loss), me.getUsername());
         if (loss.compareTo(settings.getDecimal(SettingKey.DAMAGE_ALERT_VALUE)) >= 0) {
             notifier.holders("ALERT_DAMAGE", me.getId(), NotificationKind.DAMAGE, "notify.damage.alert", "notify.damage.alertText", link,

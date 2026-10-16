@@ -30,7 +30,7 @@
             <th:block th:if="${s == 'OPEN' and canCount}">
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{count.cancel}">Cancel the count</button>
                 <form th:action="@{/stock-counts/{id}/close(id=${count.id})}" method="post" class="row-action-form confirm-submit"
-                      th:attr="data-confirm=${hideExpected} ? #{count.closeConfirmBlind(${count.number}, ${scans.totalElements})} : #{count.closeConfirm(${count.number}, ${scans.totalElements}, ${todo.totalElements})}">
+                      th:attr="data-confirm=${hideExpected} ? #{${'count.closeConfirmBlind.' + count.phase}(${count.number}, ${scans.totalElements})} : #{count.closeConfirm(${count.number}, ${scans.totalElements}, ${todo.totalElements})}">
                     <button type="submit" class="btn btn-primary"
                             th:text="${count.phase.name() == 'FIRST'} ? #{count.close} : (${count.phase.name() == 'SECOND'} ? #{count.closeSecond} : #{count.closeRecount})">Close and record</button>
                 </form>

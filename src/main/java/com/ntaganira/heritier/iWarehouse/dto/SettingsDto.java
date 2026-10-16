@@ -442,6 +442,64 @@ public class SettingsDto {
     @Digits(integer = 3, fraction = 1, message = "{settings.kpiOrderDaysTarget.range}")
     private BigDecimal kpiOrderDaysTarget;
 
+    // --- Expenditure control (M17: Cost Management & Expenditure Control Policy 05, 06, 09) ---
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean expenseRequisitionRequired;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal expenseRequisitionFrom;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal expenseRequisitionTolerancePercent;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal expenseQuotesThreeFrom;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal expenseRfqFrom;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal expenseTenderFrom;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean expenseQuoteDocuments;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean expenseInvoiceDocument;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean expenseRecommend;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal expenseFinanceReviewFrom;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.expenseSplitDays.range}")
+    @Max(value = 90, message = "{settings.expenseSplitDays.range}")
+    private Integer expenseSplitDays;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.expenseRatifyDays.range}")
+    @Max(value = 90, message = "{settings.expenseRatifyDays.range}")
+    private Integer expenseRatifyDays;
+
+    @Pattern(regexp = "^$|^[A-Za-z0-9-]{2,10}$", message = "{costCentre.code.pattern}")
+    private String expenseFleetCostCentre;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

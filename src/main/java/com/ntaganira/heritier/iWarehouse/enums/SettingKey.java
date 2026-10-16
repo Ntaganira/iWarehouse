@@ -185,6 +185,34 @@ public enum SettingKey {
     /** Days from payment to the last hand-over aimed at (Annex D: the agreed target). */
     KPI_ORDER_DAYS_TARGET("kpi.order-days-target", "kpiOrderDaysTarget", "3"),
 
+    // Expenditure control (M17: Cost Management & Expenditure Control Policy 05, 06, 09)
+    /** An approved requisition comes before any order or purchase bill (CMP 06). */
+    EXPENSE_REQUISITION_REQUIRED("expense.requisition-required", "expenseRequisitionRequired", "true"),
+    /** From this amount (RWF) an order or a purchase bill needs a requisition; 0: always (CMP 06). */
+    EXPENSE_REQUISITION_FROM("expense.requisition-from", "expenseRequisitionFrom", "0"),
+    /** An order or bill may exceed its requisition's chosen quote by at most this % (CMP 06). */
+    EXPENSE_REQUISITION_TOLERANCE_PERCENT("expense.requisition-tolerance-percent", "expenseRequisitionTolerancePercent", "10"),
+    /** From this amount three written quotes (CMP 06: 100K). */
+    EXPENSE_QUOTES_THREE_FROM("expense.quotes-three-from", "expenseQuotesThreeFrom", "100000"),
+    /** From this amount a formal request for quotation (CMP 06: 1M). */
+    EXPENSE_RFQ_FROM("expense.rfq-from", "expenseRfqFrom", "1000000"),
+    /** From this amount a tender (CMP 06: 5M). */
+    EXPENSE_TENDER_FROM("expense.tender-from", "expenseTenderFrom", "5000000"),
+    /** Each quote needed is kept as a document on the requisition (CMP 06: written quotes). */
+    EXPENSE_QUOTE_DOCUMENTS("expense.quote-documents", "expenseQuoteDocuments", "true"),
+    /** An expense bill is submitted with the supplier's original invoice as a document (CMP 07). */
+    EXPENSE_INVOICE_DOCUMENT("expense.invoice-document", "expenseInvoiceDocument", "true"),
+    /** The head of department recommends an expense bill before it is approved (CMP 05). */
+    EXPENSE_RECOMMEND("expense.recommend", "expenseRecommend", "true"),
+    /** From this amount Finance reviews an expense bill before it is approved (CMP 05: 500K). */
+    EXPENSE_FINANCE_REVIEW_FROM("expense.finance-review-from", "expenseFinanceReviewFrom", "500000"),
+    /** Orders and bills to one supplier within this many days are looked at together for splitting (CMP 06, 09). */
+    EXPENSE_SPLIT_DAYS("expense.split-days", "expenseSplitDays", "7"),
+    /** Days the Board has to ratify emergency spending before it is reported (CMP 05). */
+    EXPENSE_RATIFY_DAYS("expense.ratify-days", "expenseRatifyDays", "10"),
+    /** The cost centre vehicle costs are posted to (F-15 A). */
+    EXPENSE_FLEET_COST_CENTRE("expense.fleet-cost-centre", "expenseFleetCostCentre", "SC"),
+
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),
     /** Documents refuse a rate older than this many days, so a forgotten update is noticed (ACC-02). */

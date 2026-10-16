@@ -335,11 +335,17 @@ public class PostingService {
      * driver's float naming the driver (they paid it from the trip's cash, so the float to hand back is that much less).
      */
     public JournalEntry vehicleCost(VehicleCost cost) {
+        return vehicleCost(cost, null);
+    }
+
+    /** The same, its expense line naming the fleet's cost centre and the vehicle's location (F-15 A, T.05, T.06). */
+    public JournalEntry vehicleCost(VehicleCost cost, UUID costCentreId) {
         String plate = cost.getVehicle().getPlate();
         String trip = cost.getTrip() == null ? null : cost.getTrip().getNumber();
         Journal journal = Journal.of(JournalSource.VEHICLE_COST, cost.getId(), cost.getNumber(), cost.getCostDate(),
                 "Vehicle cost " + cost.getNumber() + " of " + plate + ": " + cost.getDescription());
-        journal.add(cost.getCategory().account(), cost.getNetAmount(), null, null, trip == null ? plate : plate + " · " + trip, null)
+        journal.addTagged(cost.getCategory().account(), cost.getNetAmount(), null, trip == null ? plate : plate + " · " + trip, costCentreId,
+                        cost.getVehicle().getLocation() == null ? null : cost.getVehicle().getLocation().getId())
                 .debit(AccountKey.VAT_INPUT, cost.getVatAmount());
         switch (cost.getPayment()) {
             case CREDIT -> journal.add(AccountKey.PAYABLE, cost.getAmount().negate(), null, cost.getSupplier().getId(),
@@ -591,6 +597,26 @@ public class PostingService {
      * Recoveries. The write-off itself posts through its adjustment.
      */
     public JournalEntry damageRecovery(DamageReport report) {
+        return damageRecoveryJournal(report);
+    }
+
+    /**
+     * An expense bill approved (CMP 01, F-16): Dr each line's category account, before VAT, naming its cost centre and location,
+     * and VAT Input / Cr Payable naming the supplier: it shows on the supplier's account and is paid as a supplier payment.
+     */
+    public JournalEntry expenseBill(ExpenseBill bill) {
+        Journal journal = Journal.of(JournalSource.EXPENSE_BILL, bill.getId(), bill.getNumber(), bill.getBillDate(),
+                "Expense bill " + bill.getNumber() + " of " + bill.getSupplier().getName() + ": " + bill.getDescription());
+        for (ExpenseBillLine l : bill.getLines()) {
+            journal.addTagged(l.getCategory().account(), l.getNetAmount(), null, l.getDescription(), l.getCostCentre().getId(), l.getLocationId());
+        }
+        journal.debit(AccountKey.VAT_INPUT, bill.getVatAmount());
+        journal.add(AccountKey.PAYABLE, bill.getAmount().negate(), null, bill.getSupplier().getId(), bill.getSupplierRef() + " · " + bill.getNumber(),
+                null);
+        return journalService.post(journal);
+    }
+
+    private JournalEntry damageRecoveryJournal(DamageReport report) {
         BigDecimal amount = report.getRecoverAmount();
         String party = report.getRecoverParty();
         Journal journal = Journal.of(JournalSource.DAMAGE_RECOVERY, report.getId(), report.getNumber(), report.getDecidedAt().toLocalDate(),

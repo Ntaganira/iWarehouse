@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${centre == null} ? #{costCentre.newTitle} : #{costCentre.editTitle(${centre.code})}, ~{::content})}">
+<head><title>Cost centre - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${centre == null} ? #{costCentre.newTitle} : #{costCentre.editTitle(${centre.code})}">New cost centre</h1>
+        </div>
+        <a href="/cost-centres" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${centre == null} ? @{/cost-centres/new} : @{/cost-centres/{id}/edit(id=${centre.id})}" th:object="${centreDto}" method="post"
+              class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="code" th:text="#{costCentre.code}">Code</label>
+                    <input type="text" id="code" th:field="*{code}" maxlength="10" required class="input-code" autocapitalize="characters"
+                           th:placeholder="#{costCentre.codePh}" th:classappend="${#fields.hasErrors('code')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="name" th:text="#{costCentre.name}">Name</label>
+                    <input type="text" id="name" th:field="*{name}" maxlength="100" required th:placeholder="#{costCentre.namePh}"
+                           th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="managerUserId" th:text="#{costCentre.manager}">Manager</label>
+                    <select id="managerUserId" th:field="*{managerUserId}" data-searchable th:classappend="${#fields.hasErrors('managerUserId')} ? 'is-invalid'">
+                        <option value="" th:text="#{costCentre.noManager}">Not named yet</option>
+                        <option th:each="u : ${users}" th:value="${u.id}" th:text="${(u.fullName ?: u.username) + ' · ' + u.username}">Jean Bosco · jbosco</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('managerUserId')}" th:errors="*{managerUserId}"></span>
+                    <span class="hint" th:text="#{costCentre.managerHint}">Recommends the department's expense bills and approves its requisitions</span>
+                </div>
+                <div class="form-group" th:if="${centre != null}">
+                    <label for="enabled" th:text="#{common.status}">Status</label>
+                    <select id="enabled" th:field="*{enabled}">
+                        <option value="true" th:text="#{common.active}">Active</option>
+                        <option value="false" th:text="#{common.inactive}">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+                <a href="/cost-centres" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

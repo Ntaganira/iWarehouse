@@ -174,4 +174,14 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
             + " where l.account.id = :accountId and l.customer is not null and l.entry.entryDate <= :to"
             + " order by l.entry.entryDate, l.entry.postedAt, l.entry.number, l.lineNo")
     List<Object[]> customerLinesUntil(@Param("accountId") UUID accountId, @Param("to") LocalDate to);
+
+    /**
+     * Expense lines of a period as (account code, account name, account key, cost centre id, location id, source, debits less
+     * credits), on the expense accounts and Fixed Assets: the expenditure report (T.05, T.06).
+     */
+    @Query("select a.code, a.name, a.systemKey, l.costCentreId, l.locationId, e.sourceType, sum(l.debit) - sum(l.credit) from JournalLine l"
+            + " join l.entry e join l.account a where (a.type = com.ntaganira.heritier.iWarehouse.enums.AccountType.EXPENSE"
+            + " or a.systemKey = com.ntaganira.heritier.iWarehouse.enums.AccountKey.FIXED_ASSETS) and e.entryDate between :from and :to"
+            + " group by a.code, a.name, a.systemKey, l.costCentreId, l.locationId, e.sourceType")
+    List<Object[]> expenseLines(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

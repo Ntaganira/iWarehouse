@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${bill == null} ? #{expense.new} : #{expense.editTitle(${bill.number})}, ~{::content})}">
+<head><title>Expense bill - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${bill == null} ? #{expense.new} : #{expense.editTitle(${bill.number})}">Enter a bill</h1>
+            <div class="subtitle" th:text="#{expense.formSubtitle}">Saved as a draft; submitted with the supplier's invoice attached, it is recommended, reviewed and approved before it is owed.</div>
+        </div>
+        <a th:href="${bill == null} ? @{/expenses} : @{/expenses/{id}(id=${bill.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${bill == null} ? @{/expenses/new} : @{/expenses/{id}/edit(id=${bill.id})}" th:object="${billDto}" method="post"
+          class="expense-form" novalidate>
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{expense.group.bill}">The bill</h2></div>
+            <div class="section-body">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="supplierId" th:text="#{expense.supplier}">Supplier</label>
+                        <select id="supplierId" th:field="*{supplierId}" data-searchable required th:classappend="${#fields.hasErrors('supplierId')} ? 'is-invalid'">
+                            <option value="" th:text="#{expense.chooseSupplier}">Choose the supplier</option>
+                            <option th:each="s : ${suppliers}" th:value="${s.id}" th:text="${s.name}">REG</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('supplierId')}" th:errors="*{supplierId}"></span>
+                        <span class="hint" th:text="#{expense.supplierHint}">Approved suppliers on the register that bill in RWF</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="supplierRef" th:text="#{expense.supplierRef}">Supplier's invoice number</label>
+                        <input type="text" id="supplierRef" th:field="*{supplierRef}" maxlength="60" required class="input-code" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('supplierRef')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('supplierRef')}" th:errors="*{supplierRef}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="billDate" th:text="#{expense.billDate}">Date</label>
+                        <input type="date" id="billDate" th:field="*{billDate}" required th:attr="max=${today}"
+                               th:classappend="${#fields.hasErrors('billDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('billDate')}" th:errors="*{billDate}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="dueDate" th:text="#{expense.dueDate}">Due</label>
+                        <input type="date" id="dueDate" th:field="*{dueDate}" th:classappend="${#fields.hasErrors('dueDate')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('dueDate')}" th:errors="*{dueDate}"></span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="description" th:text="#{expense.description}">Description</label>
+                        <input type="text" id="description" th:field="*{description}" maxlength="255" required th:placeholder="#{expense.descriptionPh}"
+                               th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="requisitionId" th:text="#{expense.requisition}">Requisition</label>
+                        <select id="requisitionId" th:field="*{requisitionId}" th:classappend="${#fields.hasErrors('requisitionId')} ? 'is-invalid'">
+                            <option value="" th:text="#{expense.noRequisition}">None</option>
+                            <option th:each="r : ${requisitions}" th:value="${r.id}"
+                                    th:text="${r.number + ' · ' + r.title + ' · ' + @num.money(r.chosenQuote != null ? r.chosenQuote.amount : r.estimatedTotal)}">PRF-WH-2026-000001 · Printer toner · 120,000</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('requisitionId')}" th:errors="*{requisitionId}"></span>
+                        <span class="hint" th:text="#{expense.requisitionHint}">A purchase (repairs, services, fees, supplies, capital items) needs an approved requisition; recurring bills do not</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="budgeted" th:text="#{expense.budgeted}">In the budget</label>
+                        <select id="budgeted" th:field="*{budgeted}">
+                            <option value="true" th:text="#{expense.budgeted.yes}">Yes, budgeted</option>
+                            <option value="false" th:text="#{expense.budgeted.no}">No: unbudgeted</option>
+                        </select>
+                        <span class="hint" th:text="#{expense.budgetedHint}">Unbudgeted spending needs the Managing Director, the Board above 500,000</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="emergency" th:text="#{expense.emergency}">Emergency</label>
+                        <select id="emergency" th:field="*{emergency}">
+                            <option value="false" th:text="#{common.no}">No</option>
+                            <option value="true" th:text="#{expense.emergency.yes}">Yes: the MD approves, the Board ratifies</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{expense.linesTitle}">Lines</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add" data-for="lines">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{expense.addLine}">Add a line</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table expense-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{expense.line.category}">Category</th>
+                            <th th:text="#{expense.line.description}">What</th>
+                            <th th:text="#{expense.line.costCentre}">Cost centre</th>
+                            <th th:text="#{expense.line.location}">Location</th>
+                            <th class="num" th:text="#{expense.line.net}">Before VAT</th>
+                            <th class="num" th:text="#{expense.line.vat}">VAT</th>
+                            <th class="num" th:text="#{expense.line.amount}">Amount</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body" data-prefix="lines">
+                        <tr class="line-row" th:each="row, st : *{lines}">
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].category}" th:aria-label="#{expense.line.category}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].category')} ? 'is-invalid'">
+                                    <option value="" th:text="#{expense.chooseCategory}">Choose</option>
+                                    <option th:each="c : ${categories}" th:value="${c}" th:text="#{${'expense.category.' + c}}">Utilities</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].category')}" th:errors="*{lines[__${st.index}__].category}"></span>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{lines[__${st.index}__].description}" maxlength="255" th:aria-label="#{expense.line.description}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].description')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].description')}" th:errors="*{lines[__${st.index}__].description}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].costCentreId}" th:aria-label="#{expense.line.costCentre}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].costCentreId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                                    <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">COM · Commercial</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].costCentreId')}" th:errors="*{lines[__${st.index}__].costCentreId}"></span>
+                            </td>
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].locationId}" th:aria-label="#{expense.line.location}">
+                                    <option value="" th:text="#{expense.noLocation}">Not one place</option>
+                                    <option th:each="l : ${locations}" th:value="${l.id}" th:text="${l.code + ' · ' + l.name}">WH · Main warehouse</option>
+                                </select>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].netAmount}" min="0.01" step="0.01" inputmode="decimal" th:aria-label="#{expense.line.net}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].netAmount')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].netAmount')}" th:errors="*{lines[__${st.index}__].netAmount}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].vatAmount}" min="0" step="0.01" inputmode="decimal" th:aria-label="#{expense.line.vat}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].vatAmount')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].vatAmount')}" th:errors="*{lines[__${st.index}__].vatAmount}"></span>
+                            </td>
+                            <td class="num line-amount">—</td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="4" th:text="#{cutting.total}">Total</th>
+                            <th class="num bill-net">0</th>
+                            <th class="num bill-vat">0</th>
+                            <th class="num bill-total">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{expense.linesNote}">Each line names its category (the account), the cost centre it is for and, when it is for one place, the site or vehicle. VAT is at most 18 % of a line before VAT and is claimed back. A bill is all operating or all capital: a capital item makes it capital expenditure.</p>
+        </div>
+
+        <template class="line-template" data-for="lines">
+            <tr class="line-row">
+                <td>
+                    <select name="lines[{i}].category" th:aria-label="#{expense.line.category}">
+                        <option value="" th:text="#{expense.chooseCategory}">Choose</option>
+                        <option th:each="c : ${categories}" th:value="${c}" th:text="#{${'expense.category.' + c}}">Utilities</option>
+                    </select>
+                </td>
+                <td><input type="text" name="lines[{i}].description" maxlength="255" th:aria-label="#{expense.line.description}"></td>
+                <td>
+                    <select name="lines[{i}].costCentreId" th:aria-label="#{expense.line.costCentre}">
+                        <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                        <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">COM · Commercial</option>
+                    </select>
+                </td>
+                <td>
+                    <select name="lines[{i}].locationId" th:aria-label="#{expense.line.location}">
+                        <option value="" th:text="#{expense.noLocation}">Not one place</option>
+                        <option th:each="l : ${locations}" th:value="${l.id}" th:text="${l.code + ' · ' + l.name}">WH · Main warehouse</option>
+                    </select>
+                </td>
+                <td class="num"><input type="number" name="lines[{i}].netAmount" min="0.01" step="0.01" inputmode="decimal" th:aria-label="#{expense.line.net}"></td>
+                <td class="num"><input type="number" name="lines[{i}].vatAmount" min="0" step="0.01" inputmode="decimal" th:aria-label="#{expense.line.vat}"></td>
+                <td class="num line-amount">—</td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{expense.saveDraft}">Save the draft</button>
+            <a th:href="${bill == null} ? @{/expenses} : @{/expenses/{id}(id=${bill.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/expense-form.js"></script>
+</div>
+</body>
+</html>

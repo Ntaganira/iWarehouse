@@ -788,6 +788,130 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.expenditure}">Expenditure control</h3>
+                <p class="hint" th:text="#{settings.group.expenditureHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="expenseRequisitionRequired" th:text="#{settings.expenseRequisitionRequired}">expenseRequisitionRequired</label>
+                    <select id="expenseRequisitionRequired" th:field="*{expenseRequisitionRequired}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.expenseRequisitionRequiredHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseRequisitionFrom" th:text="#{settings.expenseRequisitionFrom}">expenseRequisitionFrom</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseRequisitionFrom" th:field="*{expenseRequisitionFrom}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('expenseRequisitionFrom')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseRequisitionFrom')}" th:errors="*{expenseRequisitionFrom}"></span>
+                    <span class="hint" th:text="#{settings.expenseRequisitionFromHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseRequisitionTolerancePercent" th:text="#{settings.expenseRequisitionTolerancePercent}">expenseRequisitionTolerancePercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseRequisitionTolerancePercent" th:field="*{expenseRequisitionTolerancePercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('expenseRequisitionTolerancePercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseRequisitionTolerancePercent')}" th:errors="*{expenseRequisitionTolerancePercent}"></span>
+                    <span class="hint" th:text="#{settings.expenseRequisitionTolerancePercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseQuotesThreeFrom" th:text="#{settings.expenseQuotesThreeFrom}">expenseQuotesThreeFrom</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseQuotesThreeFrom" th:field="*{expenseQuotesThreeFrom}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('expenseQuotesThreeFrom')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseQuotesThreeFrom')}" th:errors="*{expenseQuotesThreeFrom}"></span>
+                    <span class="hint" th:text="#{settings.expenseQuotesThreeFromHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseRfqFrom" th:text="#{settings.expenseRfqFrom}">expenseRfqFrom</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseRfqFrom" th:field="*{expenseRfqFrom}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('expenseRfqFrom')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseRfqFrom')}" th:errors="*{expenseRfqFrom}"></span>
+                    <span class="hint" th:text="#{settings.expenseRfqFromHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseTenderFrom" th:text="#{settings.expenseTenderFrom}">expenseTenderFrom</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseTenderFrom" th:field="*{expenseTenderFrom}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('expenseTenderFrom')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseTenderFrom')}" th:errors="*{expenseTenderFrom}"></span>
+                    <span class="hint" th:text="#{settings.expenseTenderFromHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseQuoteDocuments" th:text="#{settings.expenseQuoteDocuments}">expenseQuoteDocuments</label>
+                    <select id="expenseQuoteDocuments" th:field="*{expenseQuoteDocuments}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.expenseQuoteDocumentsHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseInvoiceDocument" th:text="#{settings.expenseInvoiceDocument}">expenseInvoiceDocument</label>
+                    <select id="expenseInvoiceDocument" th:field="*{expenseInvoiceDocument}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.expenseInvoiceDocumentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseRecommend" th:text="#{settings.expenseRecommend}">expenseRecommend</label>
+                    <select id="expenseRecommend" th:field="*{expenseRecommend}" required>
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="hint" th:text="#{settings.expenseRecommendHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseFinanceReviewFrom" th:text="#{settings.expenseFinanceReviewFrom}">expenseFinanceReviewFrom</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseFinanceReviewFrom" th:field="*{expenseFinanceReviewFrom}" step="1" min="0"  required
+                               th:classappend="${#fields.hasErrors('expenseFinanceReviewFrom')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseFinanceReviewFrom')}" th:errors="*{expenseFinanceReviewFrom}"></span>
+                    <span class="hint" th:text="#{settings.expenseFinanceReviewFromHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseSplitDays" th:text="#{settings.expenseSplitDays}">expenseSplitDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseSplitDays" th:field="*{expenseSplitDays}" step="1" min="1" max="90" required
+                               th:classappend="${#fields.hasErrors('expenseSplitDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.daysUnit}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseSplitDays')}" th:errors="*{expenseSplitDays}"></span>
+                    <span class="hint" th:text="#{settings.expenseSplitDaysHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseRatifyDays" th:text="#{settings.expenseRatifyDays}">expenseRatifyDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="expenseRatifyDays" th:field="*{expenseRatifyDays}" step="1" min="1" max="90" required
+                               th:classappend="${#fields.hasErrors('expenseRatifyDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.daysUnit}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseRatifyDays')}" th:errors="*{expenseRatifyDays}"></span>
+                    <span class="hint" th:text="#{settings.expenseRatifyDaysHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="expenseFleetCostCentre" th:text="#{settings.expenseFleetCostCentre}">expenseFleetCostCentre</label>
+                    <input type="text" id="expenseFleetCostCentre" th:field="*{expenseFleetCostCentre}" maxlength="10" class="input-code" autocapitalize="characters"
+                           th:classappend="${#fields.hasErrors('expenseFleetCostCentre')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('expenseFleetCostCentre')}" th:errors="*{expenseFleetCostCentre}"></span>
+                    <span class="hint" th:text="#{settings.expenseFleetCostCentreHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

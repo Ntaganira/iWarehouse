@@ -67,7 +67,8 @@ class PurchaseOrderServiceTest {
         when(settings.getDecimal(SettingKey.APPROVAL_PURCHASE_ORDER_LIMIT)).thenReturn(new BigDecimal("1000000000"));   // placed at once
         authority = mock(DelegationOfAuthority.class);
         service = new PurchaseOrderService(repo, mock(PurchaseOrderLineRepository.class), receiptRepo, supplierRepo,
-                productRepo, mock(CurrencyRepository.class), numbers, clock, rates, authority, settings, mock(Notifier.class));
+                productRepo, mock(CurrencyRepository.class), numbers, clock, rates, authority, settings, mock(Notifier.class),
+                mock(RequisitionService.class));
     }
 
     @AfterEach

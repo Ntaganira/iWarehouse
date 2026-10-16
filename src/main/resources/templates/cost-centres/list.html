@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{costCentre.title}, ~{::content})}">
+<head><title>Cost centres - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{costCentre.title}">Cost centres</h1>
+            <div class="subtitle" th:text="#{costCentre.subtitle}">The departments every expense is posted to, so spending is reported by department</div>
+        </div>
+        <div class="btn-group">
+            <a href="/cost-centres/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_COST_CENTRES')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{costCentre.new}">New cost centre</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{costCentre.title}">Cost centres</span>
+                <span class="section-count" th:text="${centres.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{costCentre.code}">Code</th>
+                        <th th:text="#{costCentre.name}">Name</th>
+                        <th th:text="#{costCentre.manager}">Manager</th>
+                        <th th:text="#{common.status}">Status</th>
+                        <th sec:authorize="hasAuthority('PERM_MANAGE_COST_CENTRES')"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${centres.content}">
+                        <td class="mono strong" th:text="${c.code}">COM</td>
+                        <td th:text="${c.name}">Commercial</td>
+                        <td th:text="${c.managerName ?: '—'}">—</td>
+                        <td><span class="badge" th:classappend="${c.enabled} ? 'badge-success' : 'badge-secondary'"
+                                  th:text="${c.enabled} ? #{common.active} : #{common.inactive}">Active</span></td>
+                        <td sec:authorize="hasAuthority('PERM_MANAGE_COST_CENTRES')">
+                            <a class="action-icon edit" th:href="@{/cost-centres/{id}/edit(id=${c.id})}" th:title="#{common.edit}" th:aria-label="#{common.edit}">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr th:if="${centres.totalElements == 0}">
+                        <td colspan="5"><div class="empty-state"><h3 th:text="#{costCentre.empty}">No cost centres yet</h3></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${centres}, '/cost-centres', '')}"></th:block>
+        <p class="form-note" th:text="#{costCentre.note}">Expense bills, petty cash and vehicle costs name a cost centre on each line; a cost centre is deactivated, never deleted.</p>
+    </div>
+</div>
+</body>
+</html>

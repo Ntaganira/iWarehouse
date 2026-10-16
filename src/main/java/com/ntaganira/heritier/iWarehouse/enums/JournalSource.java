@@ -55,7 +55,9 @@ public enum JournalSource {
     /** Collections banked during a trip: Dr Bank or Mobile Money / Cr Driver Float naming the driver. */
     TRIP_DEPOSIT("/trips/"),
     /** A damage loss charged to whoever pays it back (F-07 C). */
-    DAMAGE_RECOVERY("/damage/");
+    DAMAGE_RECOVERY("/damage/"),
+    /** An expense bill approved: Dr its categories' accounts and VAT Input / Cr Payable naming the supplier (CMP 01). */
+    EXPENSE_BILL("/expenses/");
 
     private final String path;
 

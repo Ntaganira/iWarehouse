@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${req == null} ? #{requisition.new} : #{requisition.editTitle(${req.number})}, ~{::content})}">
+<head><title>Requisition - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${req == null} ? #{requisition.new} : #{requisition.editTitle(${req.number})}">Raise a requisition</h1>
+            <div class="subtitle" th:text="#{requisition.formSubtitle(${@num.money(tiers.threeFrom)}, ${@num.money(tiers.rfqFrom)}, ${@num.money(tiers.tenderFrom)})}">One quote below 100,000 RWF, three written quotes from 100,000, a formal RFQ from 1,000,000, a tender from 5,000,000.</div>
+        </div>
+        <a th:href="${req == null} ? @{/requisitions} : @{/requisitions/{id}(id=${req.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <form th:action="${req == null} ? @{/requisitions/new} : @{/requisitions/{id}/edit(id=${req.id})}" th:object="${requisitionDto}" method="post"
+          class="requisition-form" novalidate>
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{requisition.group.need}">What is needed</h2></div>
+            <div class="section-body">
+                <div th:replace="~{layout/errors :: error-summary}"></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="costCentreId" th:text="#{requisition.costCentre}">Department</label>
+                        <select id="costCentreId" th:field="*{costCentreId}" required th:classappend="${#fields.hasErrors('costCentreId')} ? 'is-invalid'">
+                            <option value="" th:text="#{expense.chooseCostCentre}">Choose</option>
+                            <option th:each="c : ${costCentres}" th:value="${c.id}" th:text="${c.code + ' · ' + c.name}">FIN · Finance</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('costCentreId')}" th:errors="*{costCentreId}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="title" th:text="#{requisition.titleLabel}">What</label>
+                        <input type="text" id="title" th:field="*{title}" maxlength="150" required th:placeholder="#{requisition.titlePh}"
+                               th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></span>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="justification" th:text="#{requisition.justification}">Why it is needed</label>
+                        <textarea id="justification" th:field="*{justification}" rows="2" maxlength="1000" th:classappend="${#fields.hasErrors('justification')} ? 'is-invalid'"></textarea>
+                        <span class="field-error" th:if="${#fields.hasErrors('justification')}" th:errors="*{justification}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="neededBy" th:text="#{requisition.neededBy}">Needed by</label>
+                        <input type="date" id="neededBy" th:field="*{neededBy}" th:attr="min=${today}" th:classappend="${#fields.hasErrors('neededBy')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('neededBy')}" th:errors="*{neededBy}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="budgetCode" th:text="#{requisition.budgetCode}">Budget code</label>
+                        <input type="text" id="budgetCode" th:field="*{budgetCode}" maxlength="30" class="input-code" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('budgetCode')} ? 'is-invalid'">
+                        <span class="field-error" th:if="${#fields.hasErrors('budgetCode')}" th:errors="*{budgetCode}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="budgeted" th:text="#{expense.budgeted}">In the budget</label>
+                        <select id="budgeted" th:field="*{budgeted}">
+                            <option value="true" th:text="#{expense.budgeted.yes}">Yes, budgeted</option>
+                            <option value="false" th:text="#{expense.budgeted.no}">No: unbudgeted</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="nature" th:text="#{requisition.nature}">Kind of spending</label>
+                        <select id="nature" th:field="*{nature}">
+                            <option th:each="n : ${natures}" th:value="${n}" th:text="#{${'expense.nature.' + n}}">Operating</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{requisition.linesTitle}">Items</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add" data-for="lines">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{requisition.addLine}">Add an item</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table requisition-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{requisition.line.item}">Item</th>
+                            <th class="num" th:text="#{requisition.line.quantity}">Quantity</th>
+                            <th th:text="#{requisition.line.unit}">Unit</th>
+                            <th class="num" th:text="#{requisition.line.unitCost}">Estimated unit cost</th>
+                            <th class="num" th:text="#{expense.line.amount}">Amount</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body" data-prefix="lines">
+                        <tr class="line-row" th:each="row, st : *{lines}">
+                            <td>
+                                <input type="text" th:field="*{lines[__${st.index}__].item}" maxlength="200" th:aria-label="#{requisition.line.item}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].item')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].item')}" th:errors="*{lines[__${st.index}__].item}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].quantity}" min="0.01" step="0.01" inputmode="decimal" th:aria-label="#{requisition.line.quantity}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].quantity')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].quantity')}" th:errors="*{lines[__${st.index}__].quantity}"></span>
+                            </td>
+                            <td><input type="text" th:field="*{lines[__${st.index}__].unit}" maxlength="20" th:aria-label="#{requisition.line.unit}"></td>
+                            <td class="num">
+                                <input type="number" th:field="*{lines[__${st.index}__].unitCost}" min="0" step="0.01" inputmode="decimal" th:aria-label="#{requisition.line.unitCost}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].unitCost')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].unitCost')}" th:errors="*{lines[__${st.index}__].unitCost}"></span>
+                            </td>
+                            <td class="num line-amount">—</td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="4" th:text="#{requisition.estimated}">Estimated (RWF)</th>
+                            <th class="num req-total">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note">
+                <span th:text="#{requisition.sourcingLabel}">Its value calls for:</span>
+                <strong class="req-sourcing" th:attr="data-t-three=${tiers.threeFrom}, data-t-rfq=${tiers.rfqFrom}, data-t-tender=${tiers.tenderFrom},
+                        data-l-single=#{requisition.sourcing.SINGLE_QUOTE}, data-l-three=#{requisition.sourcing.THREE_QUOTES},
+                        data-l-rfq=#{requisition.sourcing.RFQ}, data-l-tender=#{requisition.sourcing.TENDER}"
+                        th:text="#{requisition.sourcing.SINGLE_QUOTE}">One quote</strong>
+            </p>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{requisition.quotesTitle}">Quotes</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add" data-for="quotes">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{requisition.addQuote}">Add a quote</span>
+                </button>
+            </div>
+            <div class="table-container">
+                <table class="line-table requisition-quote-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{requisition.quote.chosen}">Chosen</th>
+                            <th th:text="#{requisition.quote.supplier}">Supplier on the register</th>
+                            <th th:text="#{requisition.quote.supplierName}">Or by name</th>
+                            <th th:text="#{requisition.quote.ref}">Quote no.</th>
+                            <th th:text="#{requisition.quote.date}">Date</th>
+                            <th class="num" th:text="#{requisition.quote.amount}">Amount (RWF)</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body" data-prefix="quotes">
+                        <tr class="line-row" th:each="row, st : *{quotes}">
+                            <td><input type="radio" name="chosenQuote" class="quote-choice" th:value="${st.index}" th:checked="${requisitionDto.chosenQuote != null and requisitionDto.chosenQuote == st.index}" th:aria-label="#{requisition.quote.chosen}"></td>
+                            <td>
+                                <select th:field="*{quotes[__${st.index}__].supplierId}" th:aria-label="#{requisition.quote.supplier}">
+                                    <option value="" th:text="#{requisition.quote.notRegistered}">Not on the register</option>
+                                    <option th:each="s : ${suppliers}" th:value="${s.id}" th:text="${s.name}">Kigali Office Supplies</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" th:field="*{quotes[__${st.index}__].supplierName}" maxlength="150" th:aria-label="#{requisition.quote.supplierName}"
+                                       th:classappend="${#fields.hasErrors('quotes[__${st.index}__].supplierName')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('quotes[__${st.index}__].supplierName')}" th:errors="*{quotes[__${st.index}__].supplierName}"></span>
+                            </td>
+                            <td><input type="text" th:field="*{quotes[__${st.index}__].quoteRef}" maxlength="60" class="input-code" th:aria-label="#{requisition.quote.ref}"></td>
+                            <td><input type="date" th:field="*{quotes[__${st.index}__].quoteDate}" th:aria-label="#{requisition.quote.date}"></td>
+                            <td class="num">
+                                <input type="number" th:field="*{quotes[__${st.index}__].amount}" min="0.01" step="0.01" inputmode="decimal" th:aria-label="#{requisition.quote.amount}"
+                                       th:classappend="${#fields.hasErrors('quotes[__${st.index}__].amount')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('quotes[__${st.index}__].amount')}" th:errors="*{quotes[__${st.index}__].amount}"></span>
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-container quote-choice-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="sourcingRef" th:text="#{requisition.sourcingRef}">RFQ or tender reference</label>
+                        <input type="text" id="sourcingRef" th:field="*{sourcingRef}" maxlength="100" class="input-code" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('sourcingRef')} ? 'is-invalid'">
+                        <span class="hint" th:text="#{requisition.sourcingRefHint}">Needed from the RFQ threshold</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="chosenReason" th:text="#{requisition.chosenReason}">Why not the cheapest</label>
+                        <input type="text" id="chosenReason" th:field="*{chosenReason}" maxlength="500" autocomplete="off"
+                               th:classappend="${#fields.hasErrors('chosenReason')} ? 'is-invalid'">
+                        <span class="hint" th:text="#{requisition.chosenReasonHint}">Needed when the chosen quote is not the cheapest</span>
+                    </div>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{requisition.quotesNote}">Choose the quote to buy from. Keep each written quote, and the RFQ or tender papers, as documents of the requisition before you submit it: the head of department approves what you chose.</p>
+        </div>
+
+        <template class="line-template" data-for="lines">
+            <tr class="line-row">
+                <td><input type="text" name="lines[{i}].item" maxlength="200" th:aria-label="#{requisition.line.item}"></td>
+                <td class="num"><input type="number" name="lines[{i}].quantity" min="0.01" step="0.01" inputmode="decimal" th:aria-label="#{requisition.line.quantity}"></td>
+                <td><input type="text" name="lines[{i}].unit" maxlength="20" th:aria-label="#{requisition.line.unit}"></td>
+                <td class="num"><input type="number" name="lines[{i}].unitCost" min="0" step="0.01" inputmode="decimal" th:aria-label="#{requisition.line.unitCost}"></td>
+                <td class="num line-amount">—</td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+        <template class="line-template" data-for="quotes">
+            <tr class="line-row">
+                <td><input type="radio" name="chosenQuote" class="quote-choice" value="0" th:aria-label="#{requisition.quote.chosen}"></td>
+                <td>
+                    <select name="quotes[{i}].supplierId" th:aria-label="#{requisition.quote.supplier}">
+                        <option value="" th:text="#{requisition.quote.notRegistered}">Not on the register</option>
+                        <option th:each="s : ${suppliers}" th:value="${s.id}" th:text="${s.name}">Kigali Office Supplies</option>
+                    </select>
+                </td>
+                <td><input type="text" name="quotes[{i}].supplierName" maxlength="150" th:aria-label="#{requisition.quote.supplierName}"></td>
+                <td><input type="text" name="quotes[{i}].quoteRef" maxlength="60" class="input-code" th:aria-label="#{requisition.quote.ref}"></td>
+                <td><input type="date" name="quotes[{i}].quoteDate" th:aria-label="#{requisition.quote.date}"></td>
+                <td class="num"><input type="number" name="quotes[{i}].amount" min="0.01" step="0.01" inputmode="decimal" th:aria-label="#{requisition.quote.amount}"></td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{expense.saveDraft}">Save the draft</button>
+            <a th:href="${req == null} ? @{/requisitions} : @{/requisitions/{id}(id=${req.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/expense-form.js"></script>
+</div>
+</body>
+</html>

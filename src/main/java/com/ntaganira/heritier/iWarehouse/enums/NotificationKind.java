@@ -42,5 +42,7 @@ public enum NotificationKind {
     /** A count variance above the tolerance, material, or not resolved in time (IMP 16). */
     VARIANCE,
     /** Inventory accuracy below target for the set number of months: a formal review is due (IMP 19). */
-    KPI
+    KPI,
+    /** Expenditure: emergency spending not ratified in time (CMP 05). */
+    EXPENSE
 }

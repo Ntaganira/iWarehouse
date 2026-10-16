@@ -118,6 +118,8 @@ public class JournalService {
             line.setSupplier(l.supplierId() == null ? null : supplierRepo.getReferenceById(l.supplierId()));
             line.setCustomer(l.customerId() == null ? null : customerRepo.getReferenceById(l.customerId()));
             line.setDriver(l.driverId() == null ? null : driverRepo.getReferenceById(l.driverId()));
+            line.setCostCentreId(l.costCentreId());
+            line.setLocationId(l.locationId());
             if (l.fx() != null) {
                 line.setCurrencyCode(l.fx().currencyCode());
                 line.setFxAmount(l.fx().amount());
@@ -192,6 +194,8 @@ public class JournalService {
             line.setSupplier(l.getSupplier());
             line.setCustomer(l.getCustomer());
             line.setDriver(l.getDriver());
+            line.setCostCentreId(l.getCostCentreId());
+            line.setLocationId(l.getLocationId());
             line.setCurrencyCode(l.getCurrencyCode());
             line.setFxAmount(l.getFxAmount());
             line.setRate(l.getRate());

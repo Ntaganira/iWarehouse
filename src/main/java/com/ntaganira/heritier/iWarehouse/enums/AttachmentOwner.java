@@ -54,7 +54,11 @@ public enum AttachmentOwner {
     /** A stock count: the count sheets signed on paper (PF-06, F-08). */
     STOCK_COUNT("PAGE_STOCK_COUNTS", "/stock-counts/"),
     /** A count variance: what the investigation found (VR-010). */
-    STOCK_VARIANCE("PAGE_STOCK_VARIANCES", "/stock-variances/");
+    STOCK_VARIANCE("PAGE_STOCK_VARIANCES", "/stock-variances/"),
+    /** An expense bill: the supplier's original invoice (CMP 07). */
+    EXPENSE_BILL("PAGE_EXPENSE_BILLS", "/expenses/"),
+    /** A purchase requisition: the written quotes, the RFQ or tender papers (CMP 06). */
+    PURCHASE_REQUISITION("PAGE_REQUISITIONS", "/requisitions/");
 
     private final String page;
     private final String path;

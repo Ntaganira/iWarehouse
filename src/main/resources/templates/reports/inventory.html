@@ -341,7 +341,7 @@
 
 <!--/* A KPI's target: at least, below or at most */-->
 <th:block th:fragment="kpiTarget(k)"><span th:if="${k.target == null}" th:text="#{inventoryKpi.noTarget}">Not set</span><span th:unless="${k.target == null}" class="nowrap"
-        th:text="${k.code.name() == 'TURNOVER'} ? #{inventoryKpi.atLeastTimes(${@num.percent(k.target)})} : (${k.code.name() == 'ORDER_TO_DELIVERY'} ? #{inventoryKpi.atMostDays(${@num.percent(k.target)})} : (${k.ceiling} ? #{inventoryKpi.below(${@num.percent(k.target)})} : #{inventoryKpi.atLeast(${@num.percent(k.target)})}))">≥ 99 %</span></th:block>
+        th:text="${k.code.name() == 'TURNOVER'} ? #{inventoryKpi.atLeastTimes(${@num.percent(k.target)})} : (${k.code.name() == 'ORDER_TO_DELIVERY'} ? #{inventoryKpi.atMostDays(${@num.percent(k.target)})} : (${k.ceiling} ? #{inventoryKpi.below(${@num.percent(k.target)})} : (${k.target.doubleValue() == 100} ? #{inventoryKpi.all} : #{inventoryKpi.atLeast(${@num.percent(k.target)})})))">≥ 99 %</span></th:block>
 
 <!--/* A KPI's state as a badge */-->
 <th:block th:fragment="kpiState(k)"><span class="badge" th:classappend="${k.state.name() == 'MET'} ? 'badge-success' : (${k.state.name() == 'MISSED'} ? 'badge-danger' : 'badge-secondary')"

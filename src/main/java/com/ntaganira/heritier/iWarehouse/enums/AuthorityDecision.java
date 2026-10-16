@@ -38,7 +38,15 @@ public enum AuthorityDecision {
     /** A customer's credit limit, by the limit asked (F-02 D). */
     CREDIT_LIMIT(false),
     /** Prices of a price list changed (SDP 5): no amount, so the lowest office allowed decides. */
-    PRICE_CHANGE(false);
+    PRICE_CHANGE(false),
+    /** Operating expenditure on an expense bill (CMP 05): Finance up to 500K, the MD up to 2M, the Board above. */
+    EXPENSE_OPEX(false),
+    /** Capital expenditure (CMP 05): the MD up to 5M, the Board above. */
+    EXPENSE_CAPEX(false),
+    /** Spending outside the budget (CMP 05): the MD up to 500K, the Board above. */
+    EXPENSE_UNBUDGETED(false),
+    /** An emergency (CMP 05): the MD approves, the Board ratifies. */
+    EXPENSE_EMERGENCY(false);
 
     private final boolean percent;
 

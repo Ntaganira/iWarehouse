@@ -172,7 +172,7 @@
                     <tr th:each="i : ${r.exceptions}">
                         <td th:text="#{${i.kindKey}}">Damage reported</td>
                         <td><a class="mono" th:href="${i.link}" th:text="${i.number}">DMG-WH-2026-000001</a></td>
-                        <td th:text="${i.detail}">WH-A-OC · 2</td>
+                        <td th:text="${i.detailKey != null} ? #{${i.detailKey}} : ${i.detail}">WH-A-OC · 2</td>
                         <td class="num" th:if="${seeCost}" th:text="${i.value != null} ? ${@num.money(i.value)} : '—'">63,527</td>
                     </tr>
                     <tr th:if="${r.exceptions.isEmpty() and r.adjustments.isEmpty()}">

@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.dto.PurchaseOrderDto;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.entity.Product;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrder;
+import com.ntaganira.heritier.iWarehouse.entity.PurchaseRequisition;
 import com.ntaganira.heritier.iWarehouse.entity.PurchaseOrderLine;
 import com.ntaganira.heritier.iWarehouse.entity.Supplier;
 import com.ntaganira.heritier.iWarehouse.enums.AuthorityDecision;
@@ -73,12 +74,14 @@ public class PurchaseOrderService {
     private final DelegationOfAuthority authority;
     private final SettingService settingService;
     private final Notifier notifier;
+    private final RequisitionService requisitions;
 
     public PurchaseOrderService(PurchaseOrderRepository repo, PurchaseOrderLineRepository lineRepo,
                                 GoodsReceiptRepository receiptRepo, SupplierRepository supplierRepo,
                                 ProductRepository productRepo, CurrencyRepository currencyRepo,
                                 DocumentNumberService numbers, Clock clock, ExchangeRateService rates, DelegationOfAuthority authority,
-                                SettingService settingService, Notifier notifier) {
+                                SettingService settingService, Notifier notifier, RequisitionService requisitions) {
+        this.requisitions = requisitions;
         this.rates = rates;
         this.authority = authority;
         this.settingService = settingService;
@@ -222,8 +225,12 @@ public class PurchaseOrderService {
                 throw BusinessException.of("po.line.product.inactive", line.getLineNo(), line.getProduct().getCode());
             }
         }
-        // Above the Settings limit (RWF at today's rate) another person approves it first (CMP 06, Annex E)
         BigDecimal rwf = inRwf(order);
+        // An approved requisition before any commitment (CMP 06): the order uses it
+        if (requisitions.isRequired(rwf) || order.getRequisitionId() != null) {
+            requisitions.use(order.getRequisitionId(), order.getNumber(), order.getSupplier(), rwf, null);
+        }
+        // Above the Settings limit (RWF at today's rate) another person approves it first (CMP 06, Annex E)
         if (rwf.compareTo(settingService.getDecimal(SettingKey.APPROVAL_PURCHASE_ORDER_LIMIT)) > 0) {
             Optional<AppUserPrincipal> user = AppUserPrincipal.current();
             order.setApprovalAmount(rwf);
@@ -242,6 +249,15 @@ public class PurchaseOrderService {
         order.setOrderedAt(LocalDateTime.now(clock));
         order.setOrderedBy(AppUserPrincipal.currentUsername());
         return order;
+    }
+
+    /** Approved requisitions an order may use, and the one it names already (CMP 06). */
+    public List<PurchaseRequisition> requisitionsFor(UUID chosen) {
+        List<PurchaseRequisition> list = new ArrayList<>(requisitions.approvedUnused());
+        if (chosen != null && list.stream().noneMatch(r -> r.getId().equals(chosen))) {
+            list.add(0, requisitions.findDetailed(chosen));
+        }
+        return list;
     }
 
     /** The order's total in RWF at today's rate (its own currency's rate; RWF as it is). */
@@ -297,6 +313,7 @@ public class PurchaseOrderService {
         }
         order.setApprovalNote(reason.trim());
         order.setStatus(PurchaseOrderStatus.DRAFT);
+        requisitions.release(order.getRequisitionId(), order.getNumber());     // placed again later, it uses it again
         notifier.user(order.getSubmittedById(), NotificationKind.DECISION, "notify.purchaseOrder.sentBack", "notify.decidedBy",
                 "/purchase-orders/" + order.getId(), order.getNumber(), AppUserPrincipal.currentUsername());
         return order;
@@ -311,6 +328,7 @@ public class PurchaseOrderService {
             throw BusinessException.of("po.cancel.notAllowed", order.getNumber());
         }
         requireNoDraftReceipts(order);
+        requisitions.release(order.getRequisitionId(), order.getNumber());
         order.setStatus(PurchaseOrderStatus.CANCELLED);
         order.setClosedReason(reason.trim());
         return order;
@@ -397,6 +415,7 @@ public class PurchaseOrderService {
         order.setIncoterm(dto.getIncoterm());
         order.setSupplierRef(PartyRules.clean(dto.getSupplierRef()));
         order.setNotes(PartyRules.clean(dto.getNotes()));
+        order.setRequisitionId(dto.getRequisitionId());
 
         Map<UUID, PurchaseOrderLine> existing = order.getLines().stream()
                 .collect(Collectors.toMap(PurchaseOrderLine::getId, Function.identity()));

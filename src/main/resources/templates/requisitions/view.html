@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${req.number}, ~{::content})}">
+<head><title>Requisition - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${req.status.name()}, base=${'/requisitions/' + req.id}, chosen=${req.chosenQuote},
+        canCreate=${#authorization.expression('hasAuthority(''PERM_CREATE_REQUISITION'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_REQUISITION'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${req.number}">PRF-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{requisition.raisedBy(${req.requestedBy}, ${#temporals.format(req.requestedAt, 'dd/MM/yyyy HH:mm')})}">raised by accountant on 16/10/2026 10:00</span>
+                &middot; <th:block th:replace="~{requisitions/list :: reqStatus(${req})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/requisitions" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'DRAFT' and canCreate and mine}">
+                <a th:href="@{/requisitions/{id}/edit(id=${req.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{requisition.cancel}">Cancel</button>
+                <form th:action="@{/requisitions/{id}/submit(id=${req.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{requisition.submitConfirm(${req.number})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{requisition.submit}">Submit</button>
+                </form>
+            </th:block>
+            <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${(s == 'SUBMITTED' or s == 'APPROVED') and canCreate and mine}"
+                    th:text="#{requisition.cancel}">Cancel</button>
+            <th:block th:if="${s == 'SUBMITTED' and canApprove and !mine}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{requisition.reject}">Reject</button>
+                <form th:action="@{/requisitions/{id}/approve(id=${req.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{requisition.approveConfirm(${req.number}, ${@num.money(chosen != null ? chosen.amount : req.estimatedTotal)})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{requisition.approve}">Approve</button>
+                </form>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'DRAFT'}">
+        <span th:text="#{requisition.draftNote(${#messages.msg('requisition.sourcing.' + sourcing)}, ${sourcing.quotesNeeded()}, ${documentCount})}">Its value calls for three written quotes: 3 quotes and their documents (2 attached so far).</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${s == 'SUBMITTED'}">
+        <span th:text="#{requisition.waitingApproval}">Waits for the head of department's approval.</span>
+        <span th:if="${mine}" th:text="#{requisition.notYourOwn}">You cannot approve a requisition you raised.</span>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED' or s == 'CLOSED'}">
+        <strong th:text="#{requisition.approvedBy(${req.decidedBy}, ${#temporals.format(req.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by director1 on 16/10/2026 11:00</strong>
+        <span th:if="${req.decisionNote != null}" th:text="${'· ' + req.decisionNote}">· ok</span>
+        <span th:if="${s == 'APPROVED'}" th:text="#{requisition.readyToUse}">An order or a bill may now use it.</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{requisition.rejectedBy(${req.decidedBy})} : #{requisition.cancelledBy(${req.decidedBy})}">Rejected by director1:</strong>
+        <span th:text="${req.decisionNote}">Not this year</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{requisition.costCentre}">Department</label>
+                    <div class="value">
+                        <span class="mono" th:text="${req.costCentre.code}">FIN</span>
+                        <div class="cell-sub" th:text="${req.costCentre.name}">Finance</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{requisition.neededBy}">Needed by</label>
+                    <div class="value" th:text="${req.neededBy != null} ? ${#temporals.format(req.neededBy, 'dd/MM/yyyy')} : '—'">30/10/2026</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{requisition.budgetCode}">Budget code</label>
+                    <div class="value">
+                        <span class="mono" th:text="${req.budgetCode ?: '—'}">OPX-OFF</span>
+                        <div class="cell-sub" th:text="${req.budgeted} ? #{expense.budgeted.yes} : #{expense.budgeted.no}">Yes, budgeted</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{requisition.nature}">Kind of spending</label>
+                    <div class="value" th:text="#{${'expense.nature.' + req.nature}}">Operating</div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{requisition.titleLabel}">What</label>
+                    <div class="value">
+                        <span th:text="${req.title}">Printer toner</span>
+                        <div class="cell-sub" th:if="${req.justification != null}" th:text="${req.justification}">The office printer ran out</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{requisition.estimated}">Estimated (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(req.estimatedTotal)}">120,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{requisition.sourcingLabel}">Its value calls for</label>
+                    <div class="value">
+                        <span th:text="#{${'requisition.sourcing.' + sourcing}}">Three written quotes</span>
+                        <div class="cell-sub mono" th:if="${req.sourcingRef != null}" th:text="${req.sourcingRef}">RFQ-2026-04</div>
+                    </div>
+                </div>
+                <div class="item" th:if="${req.usedBy != null}">
+                    <label th:text="#{requisition.usedByLabel}">Used by</label>
+                    <div class="value mono" th:text="${req.usedBy}">EXP-WH-2026-000001</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{requisition.linesTitle}">Items</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{requisition.line.item}">Item</th>
+                        <th class="num" th:text="#{requisition.line.quantity}">Quantity</th>
+                        <th th:text="#{requisition.line.unit}">Unit</th>
+                        <th class="num" th:text="#{requisition.line.unitCost}">Estimated unit cost</th>
+                        <th class="num" th:text="#{expense.line.amount}">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${req.lines}">
+                        <td th:text="${l.item}">Toner cartridge</td>
+                        <td class="num" th:text="${@num.plain(l.quantity)}">4</td>
+                        <td th:text="${l.unit ?: '—'}">pcs</td>
+                        <td class="num" th:text="${@num.money(l.unitCost)}">30,000</td>
+                        <td class="num" th:text="${@num.money(l.amount)}">120,000</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" th:text="#{requisition.estimated}">Estimated (RWF)</th>
+                        <th class="num" th:text="${@num.money(req.estimatedTotal)}">120,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{requisition.quotesTitle}">Quotes</span>
+                <span class="section-count" th:text="${req.quotes.size()}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{requisition.quote.supplier}">Supplier</th>
+                        <th th:text="#{requisition.quote.ref}">Quote no.</th>
+                        <th th:text="#{requisition.quote.date}">Date</th>
+                        <th class="num" th:text="#{requisition.quote.amount}">Amount (RWF)</th>
+                        <th th:text="#{requisition.quote.chosen}">Chosen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="q : ${req.quotes}">
+                        <td>
+                            <span th:text="${q.supplierName}">Kigali Office Supplies</span>
+                            <div class="cell-sub" th:if="${q.supplier == null}" th:text="#{requisition.quote.notRegistered}">Not on the register</div>
+                        </td>
+                        <td class="mono" th:text="${q.quoteRef ?: '—'}">Q-118</td>
+                        <td th:text="${q.quoteDate != null} ? ${#temporals.format(q.quoteDate, 'dd/MM/yyyy')} : '—'">14/10/2026</td>
+                        <td class="num" th:text="${@num.money(q.amount)}">118,000</td>
+                        <td><span class="badge badge-success" th:if="${chosen != null and q.id == chosen.id}" th:text="#{requisition.quote.chosenBadge}">Chosen</span></td>
+                    </tr>
+                    <tr th:if="${req.quotes.isEmpty()}">
+                        <td colspan="5"><div class="empty-state"><p th:text="#{requisition.quote.none}">No quote yet</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:if="${req.chosenReason != null}" th:text="#{requisition.chosenBecause(${req.chosenReason})}">Not the cheapest because: faster delivery.</p>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <div class="tab-toolbar" th:if="${s == 'DRAFT'}"><p class="tab-intro" th:text="#{requisition.documentsIntro}">Keep each written quote, and the RFQ or tender papers, here before you submit.</p></div>
+                <th:block th:replace="~{fragments/attachments :: documents('PURCHASE_REQUISITION', ${req.id}, ${documents}, ${base})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{requisition.rejectTitle(${req.number})},
+            @{/requisitions/{id}/reject(id=${req.id})}, #{requisition.rejectText}, #{requisition.reject})}"></div>
+    <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{requisition.cancelTitle(${req.number})},
+            @{/requisitions/{id}/cancel(id=${req.id})}, #{requisition.cancelText}, #{requisition.cancel})}"></div>
+</div>
+</body>
+</html>

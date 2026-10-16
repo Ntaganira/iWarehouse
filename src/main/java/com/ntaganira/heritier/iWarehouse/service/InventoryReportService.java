@@ -100,8 +100,12 @@ public class InventoryReportService {
     public record Doc(MovementType type, String refType, UUID refId, String refNumber, long units, BigDecimal areaM2, BigDecimal cost) {
     }
 
-    /** An exception or delivery of the day: what kind (a message key), its number and link, a detail and a value. */
-    public record Item(String kindKey, String number, String link, String detail, BigDecimal value) {
+    /** An exception or delivery of the day: what kind (a message key), its number and link, a detail (or its message key) and a value. */
+    public record Item(String kindKey, String number, String link, String detail, BigDecimal value, String detailKey) {
+
+        public Item(String kindKey, String number, String link, String detail, BigDecimal value) {
+            this(kindKey, number, link, detail, value, null);
+        }
     }
 
     /** The sites' rows and the business's total: what came into stock and left it (moves between sites are in neither). */
@@ -174,7 +178,7 @@ public class InventoryReportService {
         }
         for (StockVariance v : varianceRepo.findByCreatedAtBetweenOrderByCreatedAtAsc(from, to)) {
             exceptions.add(new Item("inventoryReport.exception.variance", v.getNumber(), "/stock-variances/" + v.getId(),
-                    v.getClassification().name(), v.getNetValue()));
+                    null, v.getNetValue(), "variance.class." + v.getClassification()));
         }
         return new Day(day, journalLineRepo.balanceAt(AccountKey.INVENTORY, day.minusDays(1)), journalLineRepo.balanceAt(AccountKey.INVENTORY, day),
                 reviewService.byType(from, to), sites, deliveries, deliveryRepo.countByDeliveredAtBetween(from, to),

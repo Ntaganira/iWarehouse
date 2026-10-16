@@ -248,6 +248,9 @@
                                         <span sec:authorize="hasAuthority('PAGE_FLEET')"> · <a href="/trips?status=PLANNED" th:text="#{dash.biz.loadRequests(${biz.loadRequests})}">0 loads</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_DAMAGE') and hasAuthority('PERM_VIEW_DAMAGE')"> · <a href="/damage?status=waiting" th:text="#{dash.biz.damageReports(${biz.damageReports})}">0 damage reports</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_STOCK_VARIANCES') and hasAuthority('PERM_VIEW_STOCK_VARIANCE')"> · <a href="/stock-variances?status=waiting" th:text="#{dash.biz.variances(${biz.variances})}">0 variances</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_EXPENSE_BILLS') and hasAuthority('PERM_VIEW_EXPENSE')"> · <a href="/expenses?status=waiting" th:text="#{dash.biz.expenseBills(${biz.expenseBills})}">0 expense bills</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_EXPENSE_BILLS') and hasAuthority('PERM_VIEW_EXPENSE')" th:if="${biz.toRatify > 0}"> · <a href="/expenses?status=ratify" th:text="#{dash.biz.toRatify(${biz.toRatify})}">0 to ratify</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_REQUISITIONS') and hasAuthority('PERM_VIEW_REQUISITION')"> · <a href="/requisitions?status=waiting" th:text="#{dash.biz.requisitions(${biz.requisitions})}">0 requisitions</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_SUPPLIERS')"> · <a href="/suppliers?status=pending" th:text="#{dash.biz.suppliersWaiting(${biz.suppliers})}">0 suppliers</a></span>
                                     </div>
                                 </td>

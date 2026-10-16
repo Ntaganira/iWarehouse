@@ -38,6 +38,16 @@
                         <span class="hint" th:text="#{po.incotermHint}">The supplier's default; change it if this order differs</span>
                     </div>
                     <div class="form-group">
+                        <label for="requisitionId" th:text="#{expense.requisition}">Requisition</label>
+                        <select id="requisitionId" th:field="*{requisitionId}" th:classappend="${#fields.hasErrors('requisitionId')} ? 'is-invalid'">
+                            <option value="" th:text="#{expense.noRequisition}">None</option>
+                            <option th:each="r : ${requisitions}" th:value="${r.id}"
+                                    th:text="${r.number + ' · ' + r.title + ' · ' + @num.money(r.chosenQuote != null ? r.chosenQuote.amount : r.estimatedTotal)}">PRF-WH-2026-000001 · Glass for the Musanze site · 12,000,000</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('requisitionId')}" th:errors="*{requisitionId}"></span>
+                        <span class="hint" th:text="#{po.requisitionHint}">An approved requisition comes before any order (the Settings' threshold); placing the order uses it</span>
+                    </div>
+                    <div class="form-group">
                         <label for="orderDate" th:text="#{po.orderDate}">Order date</label>
                         <input type="date" id="orderDate" th:field="*{orderDate}" required th:classappend="${#fields.hasErrors('orderDate')} ? 'is-invalid'">
                         <span class="field-error" th:if="${#fields.hasErrors('orderDate')}" th:errors="*{orderDate}"></span>

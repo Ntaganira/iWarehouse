@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${bill.number}, ~{::content})}">
+<head><title>Expense bill - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${bill.status.name()}, base=${'/expenses/' + bill.id},
+        canCreate=${#authorization.expression('hasAuthority(''PERM_CREATE_EXPENSE'')')},
+        canRecommend=${#authorization.expression('hasAuthority(''PERM_RECOMMEND_EXPENSE'')')},
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_EXPENSE'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_EXPENSE'')')},
+        canRatify=${#authorization.expression('hasAuthority(''PERM_RATIFY_EXPENSE'')')},
+        canReverse=${#authorization.expression('hasAuthority(''PERM_REVERSE_EXPENSE'')')},
+        signer=${(step == 'RECOMMEND' and canRecommend) or (step == 'REVIEW' and canReview) or (step == 'APPROVE' and canApprove)}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${bill.number}">EXP-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{expense.enteredBy(${bill.enteredBy}, ${#temporals.format(bill.enteredAt, 'dd/MM/yyyy HH:mm')})}">entered by accountant on 16/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{expenses/list :: billStatus(${bill})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/expenses" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'DRAFT' and canCreate and mine}">
+                <a th:href="@{/expenses/{id}/edit(id=${bill.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{expense.cancel}">Cancel</button>
+                <form th:action="@{/expenses/{id}/submit(id=${bill.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{expense.submitConfirm(${bill.number}, ${@num.money(bill.amount)})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{expense.submit}">Submit</button>
+                </form>
+            </th:block>
+            <th:block th:if="${bill.waiting}">
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canCreate and mine}" th:text="#{expense.cancel}">Cancel</button>
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:if="${signer and !tookPart}"
+                        th:text="#{expense.reject}">Reject</button>
+                <form th:if="${step == 'RECOMMEND' and canRecommend and !tookPart}" th:action="@{/expenses/{id}/recommend(id=${bill.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{expense.recommendConfirm(${bill.number})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{expense.recommend}">Recommend</button>
+                </form>
+                <form th:if="${step == 'REVIEW' and canReview and !tookPart}" th:action="@{/expenses/{id}/review(id=${bill.id})}" method="post"
+                      class="row-action-form confirm-submit" th:attr="data-confirm=#{expense.reviewConfirm(${bill.number})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{expense.review}">Mark reviewed</button>
+                </form>
+                <th:block th:if="${step == 'APPROVE' and canApprove and !tookPart}">
+                    <th:block th:replace="~{fragments/authority :: approve(@{/expenses/{id}/approve(id=${bill.id})}, #{expense.approveConfirm(${bill.number}, ${@num.money(bill.amount)}, ${bill.supplier.name})}, #{expense.approve}, ${authority})}"></th:block>
+                </th:block>
+            </th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="ratify-modal" th:if="${bill.awaitingRatification and canRatify}"
+                    th:text="#{expense.ratify}">Ratify</button>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reverse-modal" th:if="${s == 'APPROVED' and canReverse}"
+                    th:text="#{expense.reverse}">Reverse</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'DRAFT'}">
+        <span th:text="#{expense.draftNote}">A draft: nothing is owed until it is submitted and approved.</span>
+        <span th:if="${requisitionRequired and bill.requisition == null}" th:text="#{expense.draftNeedsRequisition}">It is a purchase: choose its approved requisition before you submit it.</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${bill.waiting}">
+        <span th:text="#{${'expense.step.' + step}}">Waits for the head of department's recommendation.</span>
+        <span th:if="${tookPart}" th:text="#{expense.notYourStep}">You took part in this bill: another person signs the next step.</span>
+        <th:block th:if="${step == 'APPROVE'}"><th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${tookPart})}"></th:block></th:block>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{expense.rejectedBy(${bill.decidedBy})} : #{expense.cancelledBy(${bill.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${bill.decisionNote}">Not ours</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${bill.awaitingRatification}" th:text="#{expense.ratifyWaiting}">An emergency approved by the Managing Director: the Board ratifies it.</div>
+    <div class="doc-note" th:if="${bill.ratifiedAt != null}">
+        <strong th:text="#{expense.ratifiedBy(${bill.ratifiedBy}, ${#temporals.format(bill.ratifiedAt, 'dd/MM/yyyy HH:mm')})}">Ratified by board1 on 20/10/2026 09:00:</strong>
+        <span th:text="${bill.ratifyNote}">Resolution 2026/14</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REVERSED'}">
+        <strong th:text="#{expense.reversedBy(${bill.reversedBy}, ${#temporals.format(bill.reversalDate, 'dd/MM/yyyy')})}">Reversed by accountant on 17/10/2026:</strong>
+        <span th:text="${bill.reversalReason}">Entered twice</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{expense.supplier}">Supplier</label>
+                    <div class="value">
+                        <a sec:authorize="hasAuthority('PAGE_SUPPLIERS')" th:href="@{/suppliers/{id}(id=${bill.supplier.id}, tab='account')}" th:text="${bill.supplier.name}">REG</a>
+                        <span sec:authorize="!hasAuthority('PAGE_SUPPLIERS')" th:text="${bill.supplier.name}">REG</span>
+                        <div class="cell-sub mono" th:text="${bill.supplierRef}">INV-2231</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{expense.billDate}">Date</label>
+                    <div class="value">
+                        <span th:text="${#temporals.format(bill.billDate, 'dd/MM/yyyy')}">16/10/2026</span>
+                        <div class="cell-sub" th:if="${bill.dueDate != null}" th:text="#{expense.dueOn(${#temporals.format(bill.dueDate, 'dd/MM/yyyy')})}">due 30/10/2026</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{expense.matrixRow}">Approved under</label>
+                    <div class="value">
+                        <span th:text="#{${'authority.decision.' + decision}}">Operating expenditure</span>
+                        <div class="cell-sub" th:if="${bill.authorityLevel != null}" th:text="#{expense.approvedAs(${#messages.msg('authority.level.' + bill.authorityLevel)})}">within the limit of the Managing Director</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{expense.requisition}">Requisition</label>
+                    <div class="value">
+                        <a class="mono" th:if="${bill.requisition != null}" th:href="@{/requisitions/{id}(id=${bill.requisition.id})}" th:text="${bill.requisition.number}">PRF-WH-2026-000001</a>
+                        <span th:if="${bill.requisition == null}" th:text="${requisitionRequired} ? #{expense.requisitionMissing} : '—'">—</span>
+                    </div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{expense.description}">Description</label>
+                    <div class="value" th:text="${bill.description}">Electricity for October</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{expense.amount}">Amount (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(bill.amount)}">250,000</div>
+                    <div class="cell-sub" th:if="${bill.vatAmount.signum() > 0}" th:text="#{expense.vatSub(${@num.money(bill.vatAmount)}, ${@num.money(bill.netAmount)})}">VAT 38,136 · before VAT 211,864</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{expense.trail}">Signed</label>
+                    <div class="value">
+                        <div th:if="${bill.recommendedBy != null}" th:text="#{expense.trail.recommended(${bill.recommendedBy}, ${#temporals.format(bill.recommendedAt, 'dd/MM/yyyy HH:mm')})}">Recommended by director1, 16/10/2026 11:00</div>
+                        <div th:if="${bill.reviewedBy != null}" th:text="#{expense.trail.reviewed(${bill.reviewedBy}, ${#temporals.format(bill.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by finance1, 16/10/2026 12:00</div>
+                        <div th:if="${s == 'APPROVED' or s == 'REVERSED'}" th:text="#{expense.trail.approved(${bill.decidedBy}, ${#temporals.format(bill.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by md1, 16/10/2026 14:00</div>
+                        <div th:if="${bill.recommendedBy == null and bill.reviewedBy == null and s != 'APPROVED' and s != 'REVERSED'}">—</div>
+                    </div>
+                </div>
+                <th:block th:replace="~{journals/list :: journalItem(${journals})}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{expense.linesTitle}">Lines</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{expense.line.category}">Category</th>
+                        <th th:text="#{expense.line.description}">What</th>
+                        <th th:text="#{expense.line.costCentre}">Cost centre</th>
+                        <th th:text="#{expense.line.location}">Location</th>
+                        <th class="num" th:text="#{expense.line.net}">Before VAT</th>
+                        <th class="num" th:text="#{expense.line.vat}">VAT</th>
+                        <th class="num" th:text="#{expense.line.amount}">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${bill.lines}">
+                        <td th:text="#{${'expense.category.' + l.category}}">Utilities</td>
+                        <td th:text="${l.description}">Electricity, October</td>
+                        <td class="mono" th:text="${l.costCentre.code}">HO</td>
+                        <td class="mono" th:text="${l.locationId != null and locationCodes.get(l.locationId) != null} ? ${locationCodes.get(l.locationId)} : '—'">WH</td>
+                        <td class="num" th:text="${@num.money(l.netAmount)}">211,864</td>
+                        <td class="num" th:text="${@num.money(l.vatAmount)}">38,136</td>
+                        <td class="num" th:text="${@num.money(l.amount)}">250,000</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${@num.money(bill.netAmount)}">211,864</th>
+                        <th class="num" th:text="${@num.money(bill.vatAmount)}">38,136</th>
+                        <th class="num" th:text="${@num.money(bill.amount)}">250,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <div class="tab-toolbar" th:if="${s == 'DRAFT'}"><p class="tab-intro" th:text="#{expense.documentsIntro}">Attach the supplier's original invoice before you submit the bill.</p></div>
+                <th:block th:replace="~{fragments/attachments :: documents('EXPENSE_BILL', ${bill.id}, ${documents}, ${base})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{expense.rejectTitle(${bill.number})},
+            @{/expenses/{id}/reject(id=${bill.id})}, #{expense.rejectText}, #{expense.reject})}"></div>
+    <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{expense.cancelTitle(${bill.number})},
+            @{/expenses/{id}/cancel(id=${bill.id})}, #{expense.cancelText}, #{expense.cancel})}"></div>
+
+    <!--/* The Board ratifies an emergency: the resolution */-->
+    <div class="modal-overlay" id="ratify-modal" th:if="${bill.awaitingRatification and canRatify}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ratify-title">
+            <div class="modal-header">
+                <h3 id="ratify-title" th:text="#{expense.ratifyTitle(${bill.number})}">Ratify EXP-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="ratify-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/expenses/{id}/ratify(id=${bill.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{expense.ratifyText}">The Board ratifies emergency spending the Managing Director approved. Only a holder of the Board's office does it: give the resolution.</p>
+                    <div class="form-group">
+                        <label for="ratify-note" th:text="#{authority.boardResolution.label}">The Board's resolution</label>
+                        <input type="text" id="ratify-note" name="note" maxlength="200" required autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="ratify-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{expense.ratify}">Ratify</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--/* Reversing: the day of the opposite journal (from the bill's day to today) and the reason */-->
+    <div class="modal-overlay" id="reverse-modal" th:if="${s == 'APPROVED' and canReverse}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reverse-modal-title">
+            <div class="modal-header">
+                <h3 id="reverse-modal-title" th:text="#{expense.reverseTitle(${bill.number})}">Reverse EXP-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="reverse-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/expenses/{id}/reverse(id=${bill.id})}" class="reason-form">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{expense.reverseText}">A new journal posts every line the other way: the supplier is owed that much less. The bill and its journal stay as they are.</p>
+                    <div class="form-group">
+                        <label for="reverse-modal-date" th:text="#{vehicleCost.reversalDate}">Reversal date</label>
+                        <input type="date" id="reverse-modal-date" name="reversalDate" required th:value="${today}" th:min="${bill.billDate}" th:max="${today}">
+                    </div>
+                    <div class="form-group">
+                        <label for="reverse-modal-reason" th:text="#{reason.label}">Reason</label>
+                        <input type="text" id="reverse-modal-reason" name="reason" maxlength="255" required autocomplete="off" th:placeholder="#{reason.placeholder}">
+                        <span class="hint" th:text="#{reason.hint}">Kept in the change log with your name</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="reverse-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-danger" th:text="#{expense.reverse}">Reverse</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div th:replace="~{fragments/authority :: boardModal(@{/expenses/{id}/approve(id=${bill.id})}, #{expense.approve}, ${authority})}"></div>
+</div>
+</body>
+</html>

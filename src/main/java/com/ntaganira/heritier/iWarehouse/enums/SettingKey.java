@@ -230,6 +230,16 @@ public enum SettingKey {
     ADVANCE_RECEIPTS_REQUIRED("advance.receipts-required", "advanceReceiptsRequired", "true"),
     /** An advance not retired in time is taken from the next salary (CMP 08). */
     ADVANCE_PAYROLL_RECOVERY("advance.payroll-recovery", "advancePayrollRecovery", "true"),
+    /** The departments submit their budget for the next year by this day (CMP 04: 30 November). Month and day, MM-dd. */
+    BUDGET_SUBMIT_BY("budget.submit-by", "budgetSubmitBy", "11-30"),
+    /** The Board approves the next year's budget by this day (CMP 04: before 1 January). MM-dd. */
+    BUDGET_APPROVE_BY("budget.approve-by", "budgetApproveBy", "12-31"),
+    /** A line of the budget against actual beyond this share of its budget is flagged (CMP 04: 5 %). */
+    BUDGET_VARIANCE_PERCENT("budget.variance-percent", "budgetVariancePercent", "5"),
+    /** The gross margin the COO watches against (Annex D: at least 25 %). */
+    BUDGET_MARGIN_TARGET("budget.margin-target", "budgetMarginTarget", "25"),
+    /** The month's budget against actual is signed off by this day of the next month (CMP 04: the 10th). */
+    BUDGET_REVIEW_DAY("budget.review-day", "budgetReviewDay", "10"),
 
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),

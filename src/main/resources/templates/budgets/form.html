@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${budget == null} ? #{budget.new} : #{budget.editTitle(${budget.number})}, ~{::content})}">
+<head><title>Budget - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${budget == null} ? #{budget.new} : #{budget.editTitle(${budget.number})}">Start a budget</h1>
+            <div class="subtitle" th:text="#{budget.formSubtitle}">Each department in use gets its part to fill in and submit; Finance adds the company's lines (revenue).</div>
+        </div>
+        <a th:href="${budget == null} ? @{/budgets} : @{/budgets/{id}(id=${budget.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="section">
+        <form th:action="${budget == null} ? @{/budgets/new} : @{/budgets/{id}/edit(id=${budget.id})}" th:object="${budgetDto}" method="post"
+              class="form-container" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="budgetYear" th:text="#{budget.year}">Year</label>
+                    <input type="number" id="budgetYear" th:field="*{budgetYear}" min="2020" max="2100" step="1" required th:readonly="${budget != null}"
+                           th:classappend="${#fields.hasErrors('budgetYear')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('budgetYear')}" th:errors="*{budgetYear}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="title" th:text="#{budget.titleLabel}">Title</label>
+                    <input type="text" id="title" th:field="*{title}" maxlength="150" autocomplete="off" th:placeholder="#{budget.titlePh}"
+                           th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="landedCostBudget" th:text="#{budget.landedCost}">Landed cost for the year</label>
+                    <div class="input-unit">
+                        <input type="number" id="landedCostBudget" th:field="*{landedCostBudget}" min="0" step="1" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('landedCostBudget')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('landedCostBudget')}" th:errors="*{landedCostBudget}"></span>
+                    <span class="hint" th:text="#{budget.landedCostHint}">Freight, duty, clearing and the rest on the year's imports</span>
+                </div>
+                <div class="form-group">
+                    <label for="demurrageCeiling" th:text="#{budget.demurrageCeiling}">Demurrage ceiling per consignment</label>
+                    <div class="input-unit">
+                        <input type="number" id="demurrageCeiling" th:field="*{demurrageCeiling}" min="0" step="1" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('demurrageCeiling')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('demurrageCeiling')}" th:errors="*{demurrageCeiling}"></span>
+                    <span class="hint" th:text="#{budget.demurrageHint}">Demurrage and storage one consignment may cost</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+                <a th:href="${budget == null} ? @{/budgets} : @{/budgets/{id}(id=${budget.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

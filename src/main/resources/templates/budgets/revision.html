@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${revision.number}, ~{::content})}">
+<head><title>Budget revision - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${revision.status.name()}, line=${revision.line},
+        canDecide=${#authorization.expression('hasAuthority(''PERM_APPROVE_BUDGET_REVISION'')')},
+        canRevise=${#authorization.expression('hasAuthority(''PERM_REVISE_BUDGET'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${revision.number}">BRV-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="#{budget.revision.requestedBy(${revision.requestedBy}, ${#temporals.format(revision.requestedAt, 'dd/MM/yyyy HH:mm')})}">asked by finance1 on 16/10/2026 10:30</span>
+                &middot; <th:block th:replace="~{budgets/list :: revisionStatus(${revision})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/budgets/{id}(id=${revision.budget.id}, tab='revisions')}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${revision.waiting and mine and canRevise}" th:text="#{expense.cancel}">Cancel</button>
+            <th:block th:if="${revision.waiting and canDecide and !mine}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{expense.reject}">Reject</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/budgets/revisions/{id}/approve(id=${revision.id})}, #{budget.revision.approveConfirm(${revision.number}, ${@num.money(revision.newTotal)})}, #{expense.approve}, ${authority})}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${revision.waiting}">
+        <span th:text="#{budget.revision.waitingNote(${@num.percent(revision.changePercent)})}">It changes the line by 12 %.</span>
+        <span th:if="${mine}" th:text="#{budget.revision.notYours}">You asked for it: another person decides it.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canDecide}, ${mine})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED'}">
+        <strong th:text="#{expense.trail.approved(${revision.decidedBy}, ${#temporals.format(revision.decidedAt, 'dd/MM/yyyy HH:mm')})}">Approved by owner, 17/10/2026 09:00</strong>
+        <span th:if="${revision.authorityLevel != null}" th:text="${' · ' + #messages.msg('authority.lowestAllowed', #messages.msg('authority.level.' + revision.authorityLevel))}"> · lowest office allowed: Managing Director</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
+        <strong th:text="${s == 'REJECTED'} ? #{expense.rejectedBy(${revision.decidedBy})} : #{expense.cancelledBy(${revision.decidedBy})}">Rejected by owner:</strong>
+        <span th:text="${revision.decisionNote}">Not needed</span>
+    </div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{budget.revision.line}">Line</label>
+                    <div class="value">
+                        <span class="mono" th:text="${(line.costCentre != null ? line.costCentre.code + ' · ' : '') + line.account.code}">COM · 6360</span>
+                        <div class="cell-sub" th:text="${line.account.name}">Transport</div>
+                    </div>
+                </div>
+                <div class="item">
+                    <label th:text="#{budget.revision.from}">From (RWF)</label>
+                    <div class="value" th:text="${@num.money(revision.oldTotal)}">10,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{budget.revision.to}">To (RWF)</label>
+                    <div class="value strong" th:text="${@num.money(revision.newTotal)}">11,200,000</div>
+                    <div class="cell-sub" th:text="${@num.percent(revision.changePercent) + ' %'}">12 %</div>
+                </div>
+                <div class="item item-full">
+                    <label th:text="#{budget.revision.reasonLabel}">Why</label>
+                    <div class="value" th:text="${revision.reason}">Fuel prices went up</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{budget.revision.newMonths}">The new months</h2></div>
+        <div class="table-container">
+            <table data-cards="off">
+                <thead>
+                    <tr>
+                        <th th:each="d : ${monthStarts}" class="num" th:text="${#temporals.format(d, 'MMM')}">Jan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="num" th:each="d, ms : ${monthStarts}" th:text="${@num.money(revision.month(ms.count))}">933,333</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+        <div class="section-header"><h2 th:text="#{user.history}">History</h2></div>
+        <div class="section-body">
+            <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+            <th:block th:replace="~{layout/pagination :: pager(${history}, ${'/budgets/revisions/' + revision.id}, '')}"></th:block>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/reason-modal :: reasonModal('reject-modal', #{budget.revision.rejectTitle(${revision.number})},
+            @{/budgets/revisions/{id}/reject(id=${revision.id})}, #{budget.revision.rejectText}, #{expense.reject})}"></div>
+    <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{budget.revision.cancelTitle(${revision.number})},
+            @{/budgets/revisions/{id}/cancel(id=${revision.id})}, #{budget.revision.cancelText}, #{expense.cancel})}"></div>
+    <th:block th:if="${revision.waiting}">
+        <div th:replace="~{fragments/authority :: boardModal(@{/budgets/revisions/{id}/approve(id=${revision.id})}, #{expense.approve}, ${authority})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{budget.reviseTitle}, ~{::content})}">
+<head><title>Revise a budget line - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{budget.reviseTitle}">Revise a budget line</h1>
+            <div class="subtitle">
+                <a class="mono" th:href="@{/budgets/{id}(id=${line.budget.id})}" th:text="${line.budget.number}">BUD-WH-2026-000001</a>
+                <span th:text="${' · ' + (line.costCentre != null ? line.costCentre.code + ' · ' : '') + line.account.code + ' ' + line.account.name}"> · COM · 6360 Transport</span>
+            </div>
+        </div>
+        <a th:href="@{/budgets/{id}(id=${line.budget.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+    <div class="doc-note is-warning" th:text="#{budget.reviseNote(${@num.money(line.total)})}">The line holds 10,000,000 for the year. The Managing Director approves a change of up to 15 %, the Board more.</div>
+    <form th:action="@{/budgets/lines/{lid}/revise(lid=${line.id})}" th:object="${revisionDto}" method="post" class="revise-form" novalidate>
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{budget.revision.newMonths}">The new months</h2></div>
+            <div class="section-body"><div th:replace="~{layout/errors :: error-summary}"></div></div>
+            <div class="table-container">
+                <table class="line-table budget-line-table" data-cards="off">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th class="num" th:text="#{budget.lineTotal}">Year (RWF)</th>
+                            <th class="num" th:each="d : ${monthStarts}" th:text="${#temporals.format(d, 'MMM')}">Jan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th th:text="#{budget.revision.now}">Now</th>
+                            <td class="num" th:text="${@num.money(line.total)}">10,000,000</td>
+                            <td class="num" th:each="d, ms : ${monthStarts}" th:text="${@num.money(line.month(ms.count))}">833,333</td>
+                        </tr>
+                        <tr class="budget-row">
+                            <th th:text="#{budget.revision.new}">New</th>
+                            <td class="num"><input type="number" class="budget-annual" min="0" step="1" inputmode="numeric" th:aria-label="#{budget.lineTotal}"></td>
+                            <td class="num" th:each="d, ms : ${monthStarts}">
+                                <input type="number" class="budget-month" th:name="${'months[' + ms.index + ']'}" min="0" step="1" inputmode="numeric"
+                                       th:value="${revisionDto.months.size() > ms.index ? revisionDto.months.get(ms.index) : ''}" th:aria-label="${#temporals.format(d, 'MMMM')}">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="section">
+            <div class="section-body">
+                <div class="form-group">
+                    <label for="reason" th:text="#{budget.revision.reasonLabel}">Why</label>
+                    <input type="text" id="reason" th:field="*{reason}" maxlength="500" required autocomplete="off" th:placeholder="#{budget.revision.reasonPh}"
+                           th:classappend="${#fields.hasErrors('reason')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                </div>
+            </div>
+        </div>
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{budget.revision.ask}">Ask for the revision</button>
+            <a th:href="@{/budgets/{id}(id=${line.budget.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+    <script defer src="/js/budget-form.js"></script>
+</div>
+</body>
+</html>

@@ -33,7 +33,8 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE, EXPENSE, EXPENSE_RATIFIED, REQUISITION, STAFF_ADVANCE }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE, EXPENSE, EXPENSE_RATIFIED, REQUISITION, STAFF_ADVANCE,
+        BUDGET, BUDGET_REVISION }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -70,6 +71,8 @@ public class ExceptionsReportService {
     private final com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo;
     private final com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.BudgetRepository budgetRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.BudgetRevisionRepository budgetRevisionRepo;
     private final DelegationOfAuthority authority;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
@@ -82,11 +85,15 @@ public class ExceptionsReportService {
                                    com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo, DelegationOfAuthority authority,
                                    com.ntaganira.heritier.iWarehouse.repository.ExpenseBillRepository expenseBillRepo,
                                    com.ntaganira.heritier.iWarehouse.repository.PurchaseRequisitionRepository requisitionRepo,
-                                   com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo) {
+                                   com.ntaganira.heritier.iWarehouse.repository.StaffAdvanceRepository advanceRepo,
+                                   com.ntaganira.heritier.iWarehouse.repository.BudgetRepository budgetRepo,
+                                   com.ntaganira.heritier.iWarehouse.repository.BudgetRevisionRepository budgetRevisionRepo) {
         this.damageRepo = damageRepo;
         this.expenseBillRepo = expenseBillRepo;
         this.requisitionRepo = requisitionRepo;
         this.advanceRepo = advanceRepo;
+        this.budgetRepo = budgetRepo;
+        this.budgetRevisionRepo = budgetRevisionRepo;
         this.authority = authority;
         this.deliveryNoteRepo = deliveryNoteRepo;
         this.tripRepo = tripRepo;
@@ -283,6 +290,22 @@ public class ExceptionsReportService {
                     + a.getPurpose(), a.getAmount(), false, a.getAuthorityLevel() != null ? a.getAuthorityLevel()
                     : authority.required(AuthorityDecision.STAFF_ADVANCE, a.getAmount()), a.getRequestedBy(), a.getDecidedBy(),
                     rejected ? Outcome.REJECTED : Outcome.APPROVED, a.getDecisionNote()));
+        }
+        // The year's budget approved by the Board, and revisions decided within the Delegation of Authority (CMP 04)
+        for (com.ntaganira.heritier.iWarehouse.entity.Budget b : budgetRepo.findByDecidedAtBetweenAndStatusOrderByDecidedAtAsc(from, to,
+                com.ntaganira.heritier.iWarehouse.enums.BudgetStatus.APPROVED)) {
+            rows.add(new Row(Kind.BUDGET, b.getNumber(), "/budgets/" + b.getId(), b.getDecidedAt(), b.getTitle(), null, false, AuthorityLevel.BOARD,
+                    b.getSubmittedBy(), b.getDecidedBy(), Outcome.APPROVED, b.getDecisionNote()));
+        }
+        for (com.ntaganira.heritier.iWarehouse.entity.BudgetRevision r : budgetRevisionRepo.findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(from, to,
+                List.of(com.ntaganira.heritier.iWarehouse.enums.BudgetRevisionStatus.APPROVED, com.ntaganira.heritier.iWarehouse.enums.BudgetRevisionStatus.REJECTED))) {
+            boolean rejected = r.getStatus() == com.ntaganira.heritier.iWarehouse.enums.BudgetRevisionStatus.REJECTED;
+            String line = (r.getLine().getCostCentre() == null ? "" : r.getLine().getCostCentre().getCode() + " · ") + r.getLine().getAccount().getCode() + " "
+                    + r.getLine().getAccount().getName();
+            rows.add(new Row(Kind.BUDGET_REVISION, r.getNumber(), "/budgets/revisions/" + r.getId(), r.getDecidedAt(), line + " · " + r.getReason(),
+                    r.getChangePercent(), true, r.getAuthorityLevel() != null ? r.getAuthorityLevel()
+                    : authority.required(AuthorityDecision.BUDGET_REVISION, r.getChangePercent()), r.getRequestedBy(), r.getDecidedBy(),
+                    rejected ? Outcome.REJECTED : Outcome.APPROVED, r.getDecisionNote()));
         }
         rows.sort(Comparator.comparing(Row::at).thenComparing(Row::number));
         Map<Kind, Long> counts = new EnumMap<>(Kind.class);

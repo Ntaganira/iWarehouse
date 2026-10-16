@@ -63,9 +63,10 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
 
     /**
      * Invoices issued in a period as (id, number, date, customer id, customer name, buyer name, posted by, net, order channel,
-     * channel, territory code, territory name), for the sales reports (RPT-05, G.19, G.20).
+     * channel, territory code, territory name, market), for the sales reports and targets (RPT-05, G.19, G.20, T.07, T.09).
      */
-    @Query("select i.id, i.number, i.invoiceDate, c.id, c.name, i.buyerName, i.postedBy, i.netAmount, i.orderChannel, i.channel, t.code, t.name"
+    @Query("select i.id, i.number, i.invoiceDate, c.id, c.name, i.buyerName, i.postedBy, i.netAmount, i.orderChannel, i.channel, t.code, t.name,"
+            + " i.market"
             + " from SalesInvoice i join i.customer c left join Territory t on t.id = i.territoryId"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
@@ -124,4 +125,9 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
     @Query("select coalesce(sum(i.totalAmount), 0) from SalesInvoice i"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     java.math.BigDecimal issuedTotal(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
+
+    /** Sales given up before they were issued in a period (voids, M.14): how many and what they came to. */
+    @Query("select count(i), coalesce(sum(i.totalAmount), 0) from SalesInvoice i where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.CANCELLED"
+            + " and i.updatedAt between :from and :to")
+    List<Object[]> voidedIn(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
 }

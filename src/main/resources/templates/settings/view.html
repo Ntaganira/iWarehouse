@@ -884,6 +884,52 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.budget}">Budgets</div>
+                                <div class="role-card-desc" th:text="#{settings.group.budgetHint}">hint</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.budgetSubmitBy}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.budgetSubmitByHint}">hint</span>
+                                </dt>
+                                <dd><span class="mono" th:text="${settings.budgetSubmitBy}">11-30</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.budgetApproveBy}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.budgetApproveByHint}">hint</span>
+                                </dt>
+                                <dd><span class="mono" th:text="${settings.budgetApproveBy}">11-30</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.budgetVariancePercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.budgetVariancePercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.budgetVariancePercent}">5</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.budgetMarginTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.budgetMarginTargetHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.budgetMarginTarget}">5</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.budgetReviewDay}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.budgetReviewDayHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.budgetReviewDay}">10</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

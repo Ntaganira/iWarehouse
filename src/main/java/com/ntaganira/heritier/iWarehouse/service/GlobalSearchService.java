@@ -110,6 +110,7 @@ public class GlobalSearchService {
     private final RequisitionService requisitionService;
     private final PettyCashVoucherService voucherService;
     private final StaffAdvanceService advanceService;
+    private final BudgetService budgetService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -127,11 +128,12 @@ public class GlobalSearchService {
                                SiteTransferService siteTransferService, TicketService ticketService,
                                DeliveryNoteService deliveryNoteService, DamageService damageService, StockVarianceService varianceService,
                                ExpenseBillService expenseBillService, RequisitionService requisitionService, PettyCashVoucherService voucherService,
-                               StaffAdvanceService advanceService) {
+                               StaffAdvanceService advanceService, BudgetService budgetService) {
         this.expenseBillService = expenseBillService;
         this.requisitionService = requisitionService;
         this.voucherService = voucherService;
         this.advanceService = advanceService;
+        this.budgetService = budgetService;
         this.damageService = damageService;
         this.varianceService = varianceService;
         this.deliveryNoteService = deliveryNoteService;
@@ -352,6 +354,9 @@ public class GlobalSearchService {
             new Source<>("nav.staffAdvances", "/payroll/advances", null, List.of("PAGE_STAFF_ADVANCES", "PERM_VIEW_ADVANCE"),
                 q -> advanceService.findPage(q, null, 0, PER_GROUP),
                 a -> new Hit(a.getNumber(), a.getPurpose(), join(a.getEmployee().getFullName(), date(a.getRequestedAt())), "/payroll/advances/" + a.getId())),
+            new Source<>("nav.budgets", "/budgets", null, List.of("PAGE_BUDGETS", "PERM_VIEW_BUDGET"),
+                q -> budgetService.search(q, 0, PER_GROUP),
+                b -> new Hit(b.getNumber(), b.getTitle(), String.valueOf(b.getBudgetYear()), "/budgets/" + b.getId())),
             new Source<>("nav.damage", "/damage", null, List.of("PAGE_DAMAGE", "PERM_VIEW_DAMAGE"),
                 q -> damageService.findPage(q, null, 0, PER_GROUP),
                 d -> new Hit(d.getNumber(), d.getDescription(), join(d.getLocation().getCode(), date(d.getReportedAt())), "/damage/" + d.getId())),

@@ -150,6 +150,15 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
     List<Object[]> balanceByLocation(@Param("accountId") UUID accountId);
 
     /**
+     * A period's debits and credits by account and cost centre, for accounts of the given types (the budget against actual,
+     * CMP 04): (account id, cost centre id or null, debits, credits).
+     */
+    @Query("select l.account.id, l.costCentreId, coalesce(sum(l.debit), 0), coalesce(sum(l.credit), 0) from JournalLine l"
+            + " where l.entry.entryDate between :from and :to and l.account.type in :types group by l.account.id, l.costCentreId")
+    List<Object[]> movementsByAccountAndCentre(@Param("from") LocalDate from, @Param("to") LocalDate to,
+                                               @Param("types") java.util.Collection<com.ntaganira.heritier.iWarehouse.enums.AccountType> types);
+
+    /**
      * Cost of Goods Sold and Inventory posted for documents, as (source, source id, account key, product id, debits less credits),
      * from journals dated on or after a day: what each sale, hand-over and credit note cost, and the stock value of each glass
      * it moved (RPT-05).

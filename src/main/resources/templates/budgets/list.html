@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{budget.title}, ~{::content})}">
+<head><title>Budgets - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{budget.title}">Budgets</h1>
+            <div class="subtitle" th:text="#{budget.subtitle}">The year's budget by department and account: submitted by the departments, approved by the Board, revised within the Delegation of Authority</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports/budget" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_BUDGET_REPORT')" th:text="#{budgetReport.title}">Budget against actual</a>
+            <a href="/budgets/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_PREPARE_BUDGET')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{budget.new}">Start a budget</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${waiting > 0}" th:text="#{budget.waitingNote(${waiting})}">1 budget waits for the Board's approval.</div>
+    <div class="doc-note is-warning" th:if="${revisionsWaiting > 0}" th:text="#{budget.revisionsWaitingNote(${revisionsWaiting})}">2 budget revisions wait for a decision.</div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{budget.sectionTitle}">Budgets</span>
+                <span class="section-count" th:text="${budgets.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{budget.number}">Budget</th>
+                        <th th:text="#{budget.year}">Year</th>
+                        <th class="num" th:text="#{budget.revenue}">Revenue (RWF)</th>
+                        <th class="num" th:text="#{budget.expenses}">Expenses (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${budgets.content}" th:with="t=${totals.get(b.id)}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/budgets/{id}(id=${b.id})}" th:text="${b.number}">BUD-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${b.title}">Budget 2027</div>
+                        </td>
+                        <td class="num" th:text="${b.budgetYear}">2027</td>
+                        <td class="num" th:text="${@num.money(t.revenue)}">850,000,000</td>
+                        <td class="num" th:text="${@num.money(t.expenses)}">620,000,000</td>
+                        <td><th:block th:replace="~{budgets/list :: budgetStatus(${b})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${budgets.totalElements == 0}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{budget.empty}">No budget yet</h3>
+                                <p th:text="#{budget.emptyHint}">Finance starts next year's budget; each department enters and submits its part by 30 November.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${budgets}, '/budgets', '')}"></th:block>
+    </div>
+</div>
+
+<th:block th:fragment="budgetStatus(b)" th:switch="${b.status.name()}">
+    <span th:case="'DRAFT'" class="badge badge-secondary" th:text="#{budget.status.DRAFT}">Prepared</span>
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{budget.status.SUBMITTED}">With the Board</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{budget.status.APPROVED}">Approved</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{budget.status.CANCELLED}">Cancelled</span>
+</th:block>
+
+<th:block th:fragment="revisionStatus(r)" th:switch="${r.status.name()}">
+    <span th:case="'SUBMITTED'" class="badge badge-warning" th:text="#{budget.revision.status.SUBMITTED}">Waiting</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{budget.revision.status.APPROVED}">Approved</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{budget.revision.status.REJECTED}">Rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{budget.revision.status.CANCELLED}">Cancelled</span>
+</th:block>
+</body>
+</html>

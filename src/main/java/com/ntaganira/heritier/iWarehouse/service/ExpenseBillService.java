@@ -63,6 +63,7 @@ public class ExpenseBillService {
     private final CurrencyRepository currencyRepo;
     private final AlertStateRepository alertRepo;
     private final RequisitionService requisitions;
+    private final BudgetService budgets;
     private final AttachmentService attachments;
     private final StockService stockService;
     private final PostingService postingService;
@@ -76,7 +77,7 @@ public class ExpenseBillService {
 
     public ExpenseBillService(ExpenseBillRepository repo, SupplierRepository supplierRepo, CostCentreRepository costCentreRepo,
                               CurrencyRepository currencyRepo, AlertStateRepository alertRepo, RequisitionService requisitions,
-                              AttachmentService attachments, StockService stockService, PostingService postingService, JournalService journalService,
+                              BudgetService budgets, AttachmentService attachments, StockService stockService, PostingService postingService, JournalService journalService,
                               DocumentNumberService numbers, DelegationOfAuthority authority, PeriodLock periods, SettingService settings,
                               Notifier notifier, Clock clock) {
         this.repo = repo;
@@ -85,6 +86,7 @@ public class ExpenseBillService {
         this.currencyRepo = currencyRepo;
         this.alertRepo = alertRepo;
         this.requisitions = requisitions;
+        this.budgets = budgets;
         this.attachments = attachments;
         this.stockService = stockService;
         this.postingService = postingService;
@@ -232,6 +234,15 @@ public class ExpenseBillService {
                 authority.currentLevel().orElse(null));
     }
 
+    /** The bill's departments and accounts that go beyond what is left of the year's approved budget (T.04): flagged unbudgeted. */
+    public List<String> overBudget(ExpenseBill bill) {
+        Map<UUID, Map<AccountKey, BigDecimal>> amounts = new HashMap<>();
+        for (ExpenseBillLine l : bill.getLines()) {
+            amounts.computeIfAbsent(l.getCostCentre().getId(), k -> new EnumMap<>(AccountKey.class)).merge(l.getCategory().account(), l.getNetAmount(), BigDecimal::add);
+        }
+        return budgets.overBudget(bill.getBillDate().getYear(), amounts);
+    }
+
     public boolean isEnterer(ExpenseBill bill) {
         return AppUserPrincipal.current().map(u -> u.getId().equals(bill.getEnteredById())).orElse(false);
     }
@@ -365,6 +376,9 @@ public class ExpenseBillService {
         bill.setNetAmount(net);
         bill.setVatAmount(vat);
         bill.setAmount(net.add(vat));
+        if (!overBudget(bill).isEmpty()) {
+            bill.setBudgeted(false);                                 // T.04: beyond what is left of the year's approved budget
+        }
         bill.setDecision(decisionOf(bill));
         return repo.save(bill);
     }

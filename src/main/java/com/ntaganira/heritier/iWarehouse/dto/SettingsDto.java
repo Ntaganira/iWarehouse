@@ -540,6 +540,33 @@ public class SettingsDto {
     @NotNull(message = "{settings.value.required}")
     private Boolean advancePayrollRecovery;
 
+    // --- Budgets (M18: Cost Management & Expenditure Control Policy 04, Annex D) ---
+
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$", message = "{settings.monthDay.pattern}")
+    private String budgetSubmitBy;
+
+    @NotBlank(message = "{settings.value.required}")
+    @Pattern(regexp = "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$", message = "{settings.monthDay.pattern}")
+    private String budgetApproveBy;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal budgetVariancePercent;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal budgetMarginTarget;
+
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.budgetReviewDay.range}")
+    @Max(value = 28, message = "{settings.budgetReviewDay.range}")
+    private Integer budgetReviewDay;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

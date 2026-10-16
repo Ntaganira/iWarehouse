@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{salesTarget.title}, ~{::content})}">
+<head><title>Sales targets - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canManage=${#authorization.expression('hasAuthority(''PERM_MANAGE_SALES_TARGETS'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{salesTarget.title}">Sales targets</h1>
+            <div class="subtitle" th:text="#{salesTarget.subtitle}">Month by month, net of VAT: for the business, each territory, salesperson and market</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports/sales-targets" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_SALES_TARGET_REPORT')" th:text="#{salesTarget.reportTitle}">Sales against target</a>
+            <a href="/reports/weekly" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_WEEKLY_REPORT')" th:text="#{weekly.title}">Weekly report</a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{${'salesTarget.scope.' + scope}}">By territory</h2>
+            <form th:action="@{/sales-targets}" method="get" class="table-toolbar">
+                <input type="number" name="year" class="toolbar-filter" min="2020" max="2100" th:value="${year}" th:aria-label="#{budget.year}" onchange="this.form.submit()">
+                <select name="scope" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{salesTarget.scopeLabel}">
+                    <option th:each="sc : ${scopes}" th:value="${sc}" th:selected="${sc == scope}" th:text="#{${'salesTarget.scope.' + sc}}">By territory</option>
+                </select>
+            </form>
+        </div>
+        <form th:action="@{/sales-targets}" method="post" class="budget-form targets-form" novalidate>
+            <input type="hidden" name="year" th:value="${year}">
+            <input type="hidden" name="scope" th:value="${scope}">
+            <div class="table-container">
+                <table class="line-table budget-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{salesTarget.key}">For</th>
+                            <th class="num" th:each="d : ${monthStarts}" th:text="${#temporals.format(d, 'MMM')}">Jan</th>
+                            <th class="num" th:text="#{budget.lineTotal}">Year (RWF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="row : ${rows}" class="budget-row">
+                            <td th:switch="${scope.name()}">
+                                <span th:case="'COMPANY'" class="strong" th:text="#{salesTarget.company}">The business</span>
+                                <span th:case="'MARKET'" class="strong" th:text="#{${'order.market.' + row.key}}">Domestic</span>
+                                <span th:case="*" class="strong" th:text="${row.label}">KGL · Kigali</span>
+                            </td>
+                            <td class="num" th:each="d, ms : ${monthStarts}">
+                                <input th:if="${canManage}" type="number" class="budget-month" th:name="${'target[' + row.key + '][' + ms.count + ']'}" min="0" step="1"
+                                       inputmode="numeric" th:value="${row.months[ms.index].signum() == 0 ? '' : row.months[ms.index].intValue()}"
+                                       th:aria-label="${row.label + ' · ' + #temporals.format(d, 'MMMM')}">
+                                <span th:unless="${canManage}" th:text="${@num.money(row.months[ms.index])}">10,000,000</span>
+                            </td>
+                            <td class="num strong">
+                                <input th:if="${canManage}" type="number" class="budget-annual" min="0" step="1" inputmode="numeric" th:aria-label="#{budget.lineTotal}"
+                                       th:value="${row.total.intValue()}">
+                                <span th:unless="${canManage}" th:text="${@num.money(row.total)}">120,000,000</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${rows.isEmpty()}">
+                            <td colspan="14"><div class="empty-state"><p th:text="#{salesTarget.noSalespeople}">No salesperson has a target yet: add one below.</p></div></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th th:text="#{cutting.total}">Total</th>
+                            <th class="num budget-month-total" th:each="t : ${monthTotals}" th:text="${@num.money(t)}">0</th>
+                            <th class="num budget-total" th:text="${@num.money(#aggregates.sum(monthTotals))}">0</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="section-body" th:if="${canManage and scope.name() == 'SALESPERSON'}">
+                <div class="form-group">
+                    <label for="addKey" th:text="#{salesTarget.addSalesperson}">Add a salesperson</label>
+                    <select id="addKey" name="addKey" data-searchable>
+                        <option value="" th:text="#{salesTarget.chooseSalesperson}">Choose</option>
+                        <option th:each="u : ${salespeople}" th:value="${u.username}" th:text="${(u.fullName ?: u.username) + ' · ' + u.username}">Jean Bosco · jbosco</option>
+                    </select>
+                    <span class="hint" th:text="#{salesTarget.addHint}">Saved with a row of zeros: give their months, then save again</span>
+                </div>
+            </div>
+            <p class="form-note" th:text="#{salesTarget.note}">Targets are net of VAT, as the sales report reads sales: each invoice less its credit notes. Typing a year spreads it over the months. A week's target is each month's target times the share of its days the week covers.</p>
+            <div class="form-actions sticky-actions" th:if="${canManage}">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/budget-form.js"></script>
+</div>
+</body>
+</html>

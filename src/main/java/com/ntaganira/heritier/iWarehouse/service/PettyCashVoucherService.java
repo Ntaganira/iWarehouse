@@ -59,13 +59,14 @@ public class PettyCashVoucherService {
     private final PeriodLock periods;
     private final SettingService settings;
     private final Notifier notifier;
+    private final DelegationOfAuthority authority;
     private final NumberFormats num;
     private final Clock clock;
 
     public PettyCashVoucherService(PettyCashVoucherRepository repo, CostCentreRepository costCentreRepo, PettyCashService pettyCash,
                                    AttachmentService attachments, PostingService postingService, JournalService journalService,
                                    DocumentNumberService numbers, PeriodLock periods, SettingService settings, Notifier notifier,
-                                   NumberFormats num, Clock clock) {
+                                   DelegationOfAuthority authority, NumberFormats num, Clock clock) {
         this.repo = repo;
         this.costCentreRepo = costCentreRepo;
         this.pettyCash = pettyCash;
@@ -76,6 +77,7 @@ public class PettyCashVoucherService {
         this.periods = periods;
         this.settings = settings;
         this.notifier = notifier;
+        this.authority = authority;
         this.num = num;
         this.clock = clock;
     }
@@ -145,6 +147,13 @@ public class PettyCashVoucherService {
     /** Who recorded it, or keeps the fund, does not approve it. */
     public boolean tookPart(PettyCashVoucher v) {
         return isRecorder(v) || pettyCash.isCustodian(v.getFund());
+    }
+
+    /** Whether the signed-in user may decide it as head of its department: the cost centre's manager when named, or the COO and above. */
+    public boolean isHead(PettyCashVoucher v) {
+        Long manager = v.getCostCentre().getManagerUserId();
+        return Expenditure.mayActAsHead(manager == null ? Set.of() : Set.of(manager), AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null),
+                authority.currentLevel().orElse(null));
     }
 
     public LocalDate today() {
@@ -245,8 +254,14 @@ public class PettyCashVoucherService {
         }
         v.setSubmittedAt(LocalDateTime.now(clock));
         v.setStatus(PettyCashVoucherStatus.SUBMITTED);
-        notifier.holders("APPROVE_PETTY_CASH", v.getRecordedById(), NotificationKind.APPROVAL, "notify.pettyCash.waiting", "notify.pettyCash.waitingText",
-                link(v), v.getNumber(), v.getFund().getCode(), num.money(v.getAmount()), v.getPayee(), v.getPurpose());
+        Long manager = v.getCostCentre().getManagerUserId();
+        if (manager != null && !manager.equals(v.getRecordedById())) {                // the department's head, when named
+            notifier.user(manager, NotificationKind.APPROVAL, "notify.pettyCash.waiting", "notify.pettyCash.waitingText", link(v), v.getNumber(),
+                    v.getFund().getCode(), num.money(v.getAmount()), v.getPayee(), v.getPurpose());
+        } else {
+            notifier.holders("APPROVE_PETTY_CASH", v.getRecordedById(), NotificationKind.APPROVAL, "notify.pettyCash.waiting", "notify.pettyCash.waitingText",
+                    link(v), v.getNumber(), v.getFund().getCode(), num.money(v.getAmount()), v.getPayee(), v.getPurpose());
+        }
         return v;
     }
 
@@ -260,6 +275,7 @@ public class PettyCashVoucherService {
         if (tookPart(v)) {
             throw BusinessException.of("pettyCash.voucher.ownStep", v.getNumber());
         }
+        requireHead(v);
         PettyCashFund fund = pettyCash.lockForPayment(v.getFund().getId());
         periods.requireOpen(v.getVoucherDate(), "voucherDate");
         BigDecimal balance = pettyCash.balance(fund);
@@ -297,6 +313,7 @@ public class PettyCashVoucherService {
         if (tookPart(v)) {
             throw BusinessException.of("pettyCash.voucher.ownStep", v.getNumber());
         }
+        requireHead(v);
         close(v, PettyCashVoucherStatus.REJECTED, reason(reason));
         notifier.user(v.getRecordedById(), NotificationKind.DECISION, "notify.pettyCash.rejected", "notify.rejectedBy", link(v), v.getNumber(),
                 v.getDecidedBy(), v.getDecisionNote());
@@ -347,6 +364,12 @@ public class PettyCashVoucherService {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    private void requireHead(PettyCashVoucher v) {
+        if (!isHead(v)) {
+            throw BusinessException.of("pettyCash.voucher.notHead", v.getNumber(), v.getCostCentre().getCode(), v.getCostCentre().getManagerName());
+        }
+    }
 
     private void close(PettyCashVoucher v, PettyCashVoucherStatus status, String note) {
         Optional<AppUserPrincipal> me = AppUserPrincipal.current();

@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.enums.AccountKey;
 import com.ntaganira.heritier.iWarehouse.enums.CreditNoteKind;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
+import com.ntaganira.heritier.iWarehouse.enums.Market;
 import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SaleChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SaleLineKind;
@@ -107,6 +108,11 @@ public class SalesReportService {
 
     // ---------------------------------------------------------------- the period's documents
 
+    /** The period's invoices, each less its credit notes and with its cost (the sales targets, T.07, T.09). */
+    public List<SalesAnalysis.Fact> factsOf(LocalDate from, LocalDate to) {
+        return facts(from, to);
+    }
+
     private List<SalesAnalysis.Fact> facts(LocalDate from, LocalDate to) {
         Map<String, String> names = userRepo.findAll().stream()
                 .collect(Collectors.toMap(User::getUsername, u -> u.getFullName() == null ? u.getUsername() : u.getFullName(), (a, b) -> a));
@@ -167,7 +173,8 @@ public class SalesReportService {
                     : OrderChannel.COUNTER.name();
             String territory = r[10] == null ? null : r[10] + " · " + r[11];
             invoices.add(new SalesAnalysis.Invoice(id, (String) r[1], (LocalDate) r[2], (UUID) r[3], (String) r[4], (String) r[5], postedBy,
-                    postedBy == null ? "" : names.getOrDefault(postedBy, postedBy), (BigDecimal) r[7], toHandOver > 0, channel, territory));
+                    postedBy == null ? "" : names.getOrDefault(postedBy, postedBy), (BigDecimal) r[7], toHandOver > 0, channel, territory,
+                    (String) r[10], r[12] == null ? null : ((Market) r[12]).name()));
         }
 
         // Cost of Goods Sold of each journal of an invoice (sale, a vehicle's sale, hand-over, credit note), with its inventory lines per glass

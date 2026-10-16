@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{salesTarget.reportTitle}, ~{::content})}">
+<head><title>Sales against target - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="r=${report}, c=${report.company}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{salesTarget.reportTitle}">Sales against target</h1>
+            <div class="subtitle" th:text="#{fin.period(${#temporals.format(r.from, 'dd/MM/yyyy')}, ${#temporals.format(r.to, 'dd/MM/yyyy')})}">01/10/2026 to 31/10/2026</div>
+        </div>
+        <div class="btn-group">
+            <a href="/sales-targets" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_SALES_TARGETS')" th:text="#{salesTarget.title}">Sales targets</a>
+            <th:block th:replace="~{fragments/export :: buttons(${r.week} ? @{/reports/sales-targets/export(period='week', day=${r.from})} : @{/reports/sales-targets/export(period='month', year=${year}, month=${month})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/reports/sales-targets}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <select name="period" class="toolbar-filter" th:aria-label="#{salesTarget.period}">
+                    <option value="month" th:selected="${!r.week}" th:text="#{salesTarget.period.month}">A month</option>
+                    <option value="week" th:selected="${r.week}" th:text="#{salesTarget.period.week}">A week</option>
+                </select>
+                <label class="filter-field">
+                    <span th:text="#{salesTarget.monthOf}">Month</span>
+                    <input type="month" name="ym" class="toolbar-filter" th:value="${#temporals.format(r.from, 'yyyy-MM')}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{salesTarget.weekOf}">Week of</span>
+                    <input type="date" name="day" class="toolbar-filter" th:value="${#temporals.format(r.from, 'yyyy-MM-dd')}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{salesTarget.actual}">Sales (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(c.actual)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">54,000,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{salesTarget.againstSub(${@num.money(c.target)})}">target 60,000,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{salesTarget.achieved}">Achieved</div>
+                <div class="kpi-value" th:text="${c.achieved != null} ? ${@num.percent(c.achieved) + ' %'} : '—'">90 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{salesTarget.gapSub(${@num.money(c.gap)})}">gap -6,000,000</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{salesTarget.byTerritory}">By territory</span>
+                <span class="section-count" th:text="${territoryPage.totalElements}">0</span>
+            </h2>
+        </div>
+        <th:block th:replace="~{reports/sales-targets :: targetTable(${territoryPage.content}, 'TERRITORY')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${territoryPage}, '/reports/sales-targets', ${query})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{salesTarget.byMarket}">By market</h2></div>
+        <th:block th:replace="~{reports/sales-targets :: targetTable(${r.markets}, 'MARKET')}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{salesTarget.bySalesperson}">By salesperson</span>
+                <span class="section-count" th:text="${#lists.size(r.salespeople)}">0</span>
+            </h2>
+        </div>
+        <th:block th:replace="~{reports/sales-targets :: targetTable(${r.salespeople}, 'SALESPERSON')}"></th:block>
+        <p class="form-note" th:text="#{salesTarget.reportNote}">Sales are net of VAT, each invoice less its credit notes, by the territory and salesperson the sale keeps. A period's target is each month's target times the share of its days the period covers.</p>
+    </div>
+</div>
+
+<!--/* Rows of sales against target: for whom, sales, target, gap and the share achieved */-->
+<div th:fragment="targetTable(rows, scope)" class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th th:text="#{salesTarget.key}">For</th>
+                <th class="num" th:text="#{salesTarget.actual}">Sales (RWF)</th>
+                <th class="num" th:text="#{salesTarget.target}">Target (RWF)</th>
+                <th class="num" th:text="#{salesTarget.gap}">Gap</th>
+                <th class="num" th:text="#{salesTarget.achieved}">Achieved</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="t : ${rows}">
+                <td th:text="${scope == 'MARKET'} ? #{${'order.market.' + t.key}} : ${t.label}">KGL · Kigali</td>
+                <td class="num" th:text="${@num.money(t.actual)}">20,000,000</td>
+                <td class="num" th:text="${@num.money(t.target)}">25,000,000</td>
+                <td class="num" th:classappend="${t.gap.signum() < 0} ? 'text-danger'" th:text="${@num.money(t.gap)}">-5,000,000</td>
+                <td class="num">
+                    <span th:if="${t.met}" class="badge badge-success" th:text="${@num.percent(t.achieved) + ' %'}">104 %</span>
+                    <span th:unless="${t.met}" th:text="${t.achieved != null} ? ${@num.percent(t.achieved) + ' %'} : '—'">80 %</span>
+                </td>
+            </tr>
+            <tr th:if="${rows.isEmpty()}">
+                <td colspan="5"><div class="empty-state"><p th:text="#{salesTarget.none}">No sales and no target in this period</p></div></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

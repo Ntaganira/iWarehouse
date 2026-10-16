@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${department == null} ? #{budget.companyLinesTitle(${#strings.toString(budget.budgetYear)})} : #{budget.departmentLinesTitle(${department.costCentre.code}, ${#strings.toString(budget.budgetYear)})}, ~{::content})}">
+<head><title>Budget lines - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canPrepare=${#authorization.expression('hasAuthority(''PERM_PREPARE_BUDGET'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="${department == null} ? #{budget.companyLinesTitle(${#strings.toString(budget.budgetYear)})} : #{budget.departmentLinesTitle(${department.costCentre.code}, ${#strings.toString(budget.budgetYear)})}">COM budget 2027</h1>
+            <div class="subtitle">
+                <a class="mono" th:href="@{/budgets/{id}(id=${budget.id})}" th:text="${budget.number}">BUD-WH-2026-000001</a>
+                <span th:if="${department != null}" th:text="${' · ' + department.costCentre.name}"> · Commercial</span>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/budgets/{id}(id=${budget.id}, tab='departments')}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="return-modal"
+                    th:if="${department != null and department.submitted and budget.draft and canPrepare}" th:text="#{budget.department.return}">Send back</button>
+            <form th:if="${department != null and editable}" th:action="@{/budgets/{id}/departments/{c}/submit(id=${budget.id}, c=${department.costCentre.id})}"
+                  method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{budget.department.submitConfirm(${department.costCentre.code})}">
+                <button type="submit" class="btn btn-primary" th:text="#{budget.department.submit}">Submit the department's budget</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${department != null and !department.submitted and department.returnedNote != null}">
+        <strong th:text="#{budget.department.returnedBy(${department.returnedBy})}">Sent back by finance1:</strong> <span th:text="${department.returnedNote}">Add the fuel</span>
+    </div>
+    <div class="doc-note" th:if="${department != null and department.submitted}"
+         th:text="#{budget.department.submittedNote(${department.submittedBy}, ${#temporals.format(department.submittedAt, 'dd/MM/yyyy')})}">Submitted by director1 on 28/11/2026.</div>
+    <div class="doc-note is-warning" th:if="${editable and department != null}" th:text="#{budget.department.dueNote(${#temporals.format(submitBy, 'dd/MM/yyyy')})}">Enter the department's lines and submit them by 30/11/2026.</div>
+    <div class="doc-note is-warning" th:if="${!editable and budget.draft and department != null and !department.submitted}" th:text="#{budget.department.headOnly}">Only the department's head (or Finance) enters and submits these lines.</div>
+
+    <form th:if="${editable}" th:action="@{/budgets/{id}/lines(id=${budget.id}, centre=${centre})}" th:object="${linesDto}" method="post" class="budget-form" novalidate>
+        <div class="section">
+            <div class="section-header">
+                <h2 th:text="#{budget.lines}">Lines</h2>
+                <button type="button" class="btn btn-outline btn-sm line-add" data-for="lines">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span th:text="#{expense.addLine}">Add a line</span>
+                </button>
+            </div>
+            <div class="section-body"><div th:replace="~{layout/errors :: error-summary}"></div></div>
+            <div class="table-container">
+                <table class="line-table budget-line-table">
+                    <thead>
+                        <tr>
+                            <th th:text="#{fin.account}">Account</th>
+                            <th class="num" th:text="#{budget.lineTotal}">Year (RWF)</th>
+                            <th class="num" th:each="d : ${monthStarts}" th:text="${#temporals.format(d, 'MMM')}">Jan</th>
+                            <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody class="line-body" data-prefix="lines">
+                        <tr class="line-row" th:each="row, st : *{lines}">
+                            <td>
+                                <select th:field="*{lines[__${st.index}__].accountId}" th:aria-label="#{fin.account}"
+                                        th:classappend="${#fields.hasErrors('lines[__${st.index}__].accountId')} ? 'is-invalid'">
+                                    <option value="" th:text="#{budget.chooseAccount}">Choose</option>
+                                    <option th:each="a : ${accounts}" th:value="${a.id}" th:text="${a.code + ' · ' + a.name}">6310 · Utilities</option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].accountId')}" th:errors="*{lines[__${st.index}__].accountId}"></span>
+                            </td>
+                            <td class="num">
+                                <input type="number" class="budget-annual" th:field="*{lines[__${st.index}__].annual}" min="0" step="1" inputmode="numeric" th:aria-label="#{budget.lineTotal}"
+                                       th:classappend="${#fields.hasErrors('lines[__${st.index}__].annual')} ? 'is-invalid'">
+                                <span class="field-error" th:if="${#fields.hasErrors('lines[__${st.index}__].annual')}" th:errors="*{lines[__${st.index}__].annual}"></span>
+                            </td>
+                            <td class="num" th:each="d, ms : ${monthStarts}">
+                                <input type="number" class="budget-month" th:name="${'lines[' + st.index + '].months[' + ms.index + ']'}"
+                                       th:value="${row.months.size() > ms.index ? row.months.get(ms.index) : ''}" min="0" step="1" inputmode="numeric"
+                                       th:aria-label="${#temporals.format(d, 'MMMM')}">
+                            </td>
+                            <td>
+                                <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th th:text="#{cutting.total}">Total</th>
+                            <th class="num budget-total">0</th>
+                            <th class="num budget-month-total" th:each="d : ${monthStarts}">0</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="form-note" th:text="#{budget.linesNote}">Type the year's amount to spread it evenly over the months (December takes the rest), or type each month. Revenue lines are the company's; expenses go on the department that spends.</p>
+        </div>
+        <template class="line-template" data-for="lines">
+            <tr class="line-row">
+                <td>
+                    <select name="lines[{i}].accountId" th:aria-label="#{fin.account}">
+                        <option value="" th:text="#{budget.chooseAccount}">Choose</option>
+                        <option th:each="a : ${accounts}" th:value="${a.id}" th:text="${a.code + ' · ' + a.name}">6310 · Utilities</option>
+                    </select>
+                </td>
+                <td class="num"><input type="number" class="budget-annual" name="lines[{i}].annual" min="0" step="1" inputmode="numeric" th:aria-label="#{budget.lineTotal}"></td>
+                <td class="num" th:each="d, ms : ${monthStarts}">
+                    <input type="number" class="budget-month" th:name="${'lines[{i}].months[' + ms.index + ']'}" min="0" step="1" inputmode="numeric" th:aria-label="${#temporals.format(d, 'MMMM')}">
+                </td>
+                <td>
+                    <button type="button" class="action-icon delete line-remove" th:title="#{cutting.removeRow}" th:aria-label="#{cutting.removeRow}">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </td>
+            </tr>
+        </template>
+        <div class="form-actions sticky-actions">
+            <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
+            <a th:href="@{/budgets/{id}(id=${budget.id})}" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+        </div>
+    </form>
+
+    <div class="section" th:unless="${editable}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{budget.lines}">Lines</span>
+                <span class="section-count" th:text="${#lists.size(savedLines)}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{fin.account}">Account</th>
+                        <th class="num" th:each="d : ${monthStarts}" th:text="${#temporals.format(d, 'MMM')}">Jan</th>
+                        <th class="num" th:text="#{budget.lineTotal}">Year (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${savedLines}">
+                        <td><span class="mono" th:text="${l.account.code}">6310</span> <span th:text="${l.account.name}">Utilities</span></td>
+                        <td class="num" th:each="d, ms : ${monthStarts}" th:text="${@num.money(l.month(ms.count))}">1,000,000</td>
+                        <td class="num strong" th:text="${@num.money(l.total)}">12,000,000</td>
+                    </tr>
+                    <tr th:if="${savedLines.isEmpty()}">
+                        <td colspan="14"><div class="empty-state"><p th:text="#{budget.noLinesHere}">No line here.</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <th:block th:if="${department != null and department.submitted and budget.draft and canPrepare}">
+        <div th:replace="~{fragments/reason-modal :: reasonModal('return-modal', #{budget.department.returnTitle(${department.costCentre.code})},
+                @{/budgets/{id}/departments/{c}/return(id=${budget.id}, c=${department.costCentre.id})}, #{budget.department.returnText}, #{budget.department.return})}"></div>
+    </th:block>
+    <script defer src="/js/budget-form.js"></script>
+</div>
+</body>
+</html>

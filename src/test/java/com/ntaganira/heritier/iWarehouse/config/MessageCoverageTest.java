@@ -124,7 +124,11 @@ class MessageCoverageTest {
             Map.entry("perDiem.categoryHint.", com.ntaganira.heritier.iWarehouse.enums.PerDiemCategory.class),
             Map.entry("advance.status.", com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceStatus.class),
             Map.entry("advance.kind.", com.ntaganira.heritier.iWarehouse.enums.StaffAdvanceKind.class),
-            Map.entry("advance.method.", com.ntaganira.heritier.iWarehouse.enums.AdvancePayMethod.class));
+            Map.entry("advance.method.", com.ntaganira.heritier.iWarehouse.enums.AdvancePayMethod.class),
+            Map.entry("budget.status.", com.ntaganira.heritier.iWarehouse.enums.BudgetStatus.class),
+            Map.entry("budget.department.status.", com.ntaganira.heritier.iWarehouse.enums.BudgetDepartmentStatus.class),
+            Map.entry("budget.revision.status.", com.ntaganira.heritier.iWarehouse.enums.BudgetRevisionStatus.class),
+            Map.entry("salesTarget.scope.", com.ntaganira.heritier.iWarehouse.enums.SalesTargetScope.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

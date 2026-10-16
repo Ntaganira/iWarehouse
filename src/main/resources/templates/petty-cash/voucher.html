@@ -27,7 +27,7 @@
             </th:block>
             <th:block th:if="${s == 'SUBMITTED'}">
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${canRecord and mine}" th:text="#{expense.cancel}">Cancel</button>
-                <th:block th:if="${canApprove and !tookPart}">
+                <th:block th:if="${canApprove and !tookPart and head}">
                     <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="reject-modal" th:text="#{expense.reject}">Reject</button>
                     <form th:action="@{/petty-cash/vouchers/{id}/approve(id=${voucher.id})}" method="post" class="row-action-form confirm-submit"
                           th:attr="data-confirm=#{pettyCash.voucher.approveConfirm(${voucher.number}, ${@num.money(voucher.amount)}, ${voucher.payee})}">
@@ -44,6 +44,7 @@
     <div class="doc-note is-warning" th:if="${s == 'SUBMITTED'}">
         <span th:text="#{pettyCash.voucher.waitingNote}">Waits for another person's approval (the head of department); approving pays it from the fund and posts it.</span>
         <span th:if="${tookPart}" th:text="#{pettyCash.voucher.notYourStep}">You recorded this voucher or keep the fund: another person approves it.</span>
+        <span th:if="${!tookPart and !head}" th:text="#{pettyCash.voucher.headOnly(${voucher.costCentre.code}, ${voucher.costCentre.managerName})}">FIN names its head: they, or the COO and above, decide it.</span>
         <span th:if="${balance != null and balance.compareTo(voucher.amount) < 0}" th:text="#{pettyCash.voucher.shortNote(${@num.money(balance)})}">The fund holds only 2,000: top it up first.</span>
     </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">

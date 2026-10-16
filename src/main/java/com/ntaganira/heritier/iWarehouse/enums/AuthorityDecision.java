@@ -48,7 +48,11 @@ public enum AuthorityDecision {
     /** An emergency (CMP 05): the MD approves, the Board ratifies. */
     EXPENSE_EMERGENCY(false),
     /** A staff advance (CMP 08): approved by the Managing Director. */
-    STAFF_ADVANCE(false);
+    STAFF_ADVANCE(false),
+    /** The year's budget (CMP 04): the Board approves it. */
+    BUDGET(false),
+    /** A line of the approved budget revised (CMP 04): by the share it changes, the MD up to 15 %, the Board above. */
+    BUDGET_REVISION(true);
 
     private final boolean percent;
 

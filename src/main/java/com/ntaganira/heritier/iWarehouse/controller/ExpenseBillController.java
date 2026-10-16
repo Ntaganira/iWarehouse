@@ -124,6 +124,7 @@ public class ExpenseBillController {
         model.addAttribute("mine", billService.isEnterer(bill));
         model.addAttribute("tookPart", billService.tookPart(bill));
         model.addAttribute("head", billService.isHead(bill));
+        model.addAttribute("overBudget", bill.isDraft() || bill.isWaiting() ? billService.overBudget(bill) : java.util.List.of());
         model.addAttribute("step", billService.nextStep(bill));
         model.addAttribute("authority", bill.isWaiting() ? billService.authorityOf(bill) : null);
         model.addAttribute("decision", billService.decisionOf(bill));

@@ -62,6 +62,10 @@
         <span th:if="${step == 'RECOMMEND' and !tookPart and !head}" th:text="#{expense.headOnly}">Its departments name their heads: one of them, or the COO and above, recommends it.</span>
         <th:block th:if="${step == 'APPROVE'}"><th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${tookPart})}"></th:block></th:block>
     </div>
+    <div class="doc-note is-warning" th:if="${!overBudget.isEmpty()}">
+        <span th:text="#{expense.overBudget}">Beyond what is left of the year's budget, so it is approved as unbudgeted:</span>
+        <span th:text="${#strings.listJoin(overBudget, ', ')}">HO · 6310 Utilities</span>
+    </div>
     <div class="doc-note is-danger" th:if="${s == 'REJECTED' or s == 'CANCELLED'}">
         <strong th:text="${s == 'REJECTED'} ? #{expense.rejectedBy(${bill.decidedBy})} : #{expense.cancelledBy(${bill.decidedBy})}">Rejected by owner:</strong>
         <span th:text="${bill.decisionNote}">Not ours</span>

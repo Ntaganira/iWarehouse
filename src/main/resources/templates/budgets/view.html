@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${budget.number}, ~{::content})}">
+<head><title>Budget - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="s=${budget.status.name()}, base=${'/budgets/' + budget.id},
+        canPrepare=${#authorization.expression('hasAuthority(''PERM_PREPARE_BUDGET'')')},
+        canApprove=${#authorization.expression('hasAuthority(''PERM_APPROVE_BUDGET'')')},
+        canRevise=${#authorization.expression('hasAuthority(''PERM_REVISE_BUDGET'')')}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${budget.number}">BUD-WH-2026-000001</h1>
+            <div class="subtitle">
+                <span th:text="${budget.title}">Budget 2027</span>
+                &middot; <th:block th:replace="~{budgets/list :: budgetStatus(${budget})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/budgets" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a th:href="@{/budgets/{id}/lines(id=${budget.id})}" class="btn btn-outline" th:text="#{budget.companyLines}">The company's lines</a>
+            <th:block th:if="${s == 'DRAFT' and canPrepare}">
+                <a th:href="@{/budgets/{id}/edit(id=${budget.id})}" class="btn btn-outline" th:text="#{common.edit}">Edit</a>
+                <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{budget.cancel}">Cancel</button>
+                <form th:action="@{/budgets/{id}/submit(id=${budget.id})}" method="post" class="row-action-form confirm-submit"
+                      th:attr="data-confirm=#{budget.submitConfirm(${budget.number}, ${#strings.toString(budget.budgetYear)})}">
+                    <button type="submit" class="btn btn-primary" th:text="#{budget.submit}">Submit to the Board</button>
+                </form>
+            </th:block>
+            <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:if="${s == 'SUBMITTED' and canPrepare}" th:text="#{budget.cancel}">Cancel</button>
+            <th:block th:if="${s == 'SUBMITTED' and canApprove and !own}">
+                <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="back-modal" th:text="#{budget.sendBack}">Send back</button>
+                <th:block th:replace="~{fragments/authority :: approve(@{/budgets/{id}/approve(id=${budget.id})}, #{budget.approveConfirm(${budget.number}, ${#strings.toString(budget.budgetYear)})}, #{budget.approve}, ${authority})}"></th:block>
+            </th:block>
+        </div>
+    </div>
+
+    <th:block th:if="${s == 'DRAFT'}">
+        <div class="doc-note is-warning" th:if="${budget.returnedNote != null}">
+            <strong th:text="#{budget.returned}">Sent back by the Board:</strong> <span th:text="${budget.returnedNote}">Cut transport by 10 %</span>
+        </div>
+        <div class="doc-note is-warning">
+            <span th:text="#{budget.draftNote(${#temporals.format(submitBy, 'dd/MM/yyyy')}, ${#temporals.format(approveBy, 'dd/MM/yyyy')})}">Departments submit by 30/11/2026; the Board approves by 31/12/2026.</span>
+            <span th:if="${!openDepartments.isEmpty()}" th:text="#{budget.openDepartments(${#strings.listJoin(openDepartments, ', ')})}">Still open: COM, SC.</span>
+        </div>
+    </th:block>
+    <div class="doc-note is-warning" th:if="${s == 'SUBMITTED'}">
+        <span th:text="#{budget.waitingBoard}">With the Board for approval.</span>
+        <span th:if="${own}" th:text="#{budget.notYourDecision}">You prepared or submitted it: the Board decides it.</span>
+        <th:block th:replace="~{fragments/authority :: needs(${authority}, ${canApprove}, ${own})}"></th:block>
+    </div>
+    <div class="doc-note" th:if="${s == 'APPROVED'}">
+        <strong th:text="#{budget.approvedBy(${budget.decidedBy}, ${#temporals.format(budget.decidedAt, 'dd/MM/yyyy')})}">Approved by board1 on 20/12/2026:</strong>
+        <span th:text="${budget.decisionNote}">Resolution 2026/31</span>
+    </div>
+    <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
+        <strong th:text="#{expense.cancelledBy(${budget.decidedBy})}">Cancelled by finance1:</strong> <span th:text="${budget.decisionNote}">Started twice</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${revisionsWaiting > 0}" th:text="#{budget.revisionsWaitingNote(${revisionsWaiting})}">1 revision waits for a decision.</div>
+
+    <div class="section">
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item">
+                    <label th:text="#{budget.year}">Year</label>
+                    <div class="value strong" th:text="${budget.budgetYear}">2027</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{budget.revenue}">Revenue (RWF)</label>
+                    <div class="value" th:text="${@num.money(totals.revenue)}">850,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{budget.expenses}">Expenses (RWF)</label>
+                    <div class="value" th:text="${@num.money(totals.expenses)}">620,000,000</div>
+                    <div class="cell-sub" th:text="#{budget.resultSub(${@num.money(totals.result)})}">result 230,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{budget.landedCost}">Landed cost for the year</label>
+                    <div class="value" th:text="${@num.money(budget.landedCostBudget)}">120,000,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{budget.demurrageCeiling}">Demurrage ceiling per consignment</label>
+                    <div class="value" th:text="${@num.money(budget.demurrageCeiling)}">1,500,000</div>
+                </div>
+                <div class="item">
+                    <label th:text="#{expense.trail}">Signed</label>
+                    <div class="value">
+                        <div th:text="#{budget.trail.prepared(${budget.preparedBy}, ${#temporals.format(budget.preparedAt, 'dd/MM/yyyy')})}">Prepared by finance1, 01/10/2026</div>
+                        <div th:if="${budget.submittedBy != null}" th:text="#{budget.trail.submitted(${budget.submittedBy}, ${#temporals.format(budget.submittedAt, 'dd/MM/yyyy')})}">Submitted by finance1, 02/12/2026</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{budget.lines}">Lines</span>
+                <span class="section-count" th:text="${lines.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-departments" th:classappend="${tab == 'departments'} ? 'active'">
+                <span th:text="#{budget.departments}">Departments</span>
+                <span class="section-count" th:text="${departments.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-revisions" th:classappend="${tab == 'revisions'} ? 'active'">
+                <span th:text="#{budget.revisions}">Revisions</span>
+                <span class="section-count" th:text="${revisions.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{budget.department}">Department</th>
+                                <th th:text="#{fin.account}">Account</th>
+                                <th class="num" th:text="#{budget.lineTotal}">Year (RWF)</th>
+                                <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="l : ${lines.content}">
+                                <td>
+                                    <span class="mono" th:if="${l.costCentre != null}" th:text="${l.costCentre.code}">COM</span>
+                                    <span th:if="${l.costCentre == null}" th:text="#{budget.company}">The company</span>
+                                </td>
+                                <td>
+                                    <span class="mono" th:text="${l.account.code}">6310</span> <span th:text="${l.account.name}">Utilities</span>
+                                </td>
+                                <td class="num" th:text="${@num.money(l.total)}">12,000,000</td>
+                                <td class="actions">
+                                    <a th:if="${s == 'APPROVED' and canRevise}" th:href="@{/budgets/lines/{lid}/revise(lid=${l.id})}" class="btn btn-outline btn-sm"
+                                       th:text="#{budget.revise}">Revise</a>
+                                </td>
+                            </tr>
+                            <tr th:if="${lines.totalElements == 0}">
+                                <td colspan="4"><div class="empty-state"><p th:text="#{budget.noLines}">No line yet: the departments enter theirs on the Departments tab.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${lines}, ${base}, 'tab=lines')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-departments" th:classappend="${tab == 'departments'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{budget.department}">Department</th>
+                                <th th:text="#{budget.head}">Head</th>
+                                <th class="num" th:text="#{budget.lines}">Lines</th>
+                                <th class="num" th:text="#{budget.lineTotal}">Year (RWF)</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="d : ${departments.content}">
+                                <td>
+                                    <a class="row-link strong mono" th:href="@{/budgets/{id}/lines(id=${budget.id}, centre=${d.costCentre.id})}" th:text="${d.costCentre.code}">COM</a>
+                                    <div class="cell-sub" th:text="${d.costCentre.name}">Commercial</div>
+                                </td>
+                                <td th:text="${d.costCentre.managerName ?: '—'}">Jean Bosco</td>
+                                <td class="num" th:text="${deptLines.get(d.costCentre.id) ?: 0}">6</td>
+                                <td class="num" th:text="${@num.money(deptTotals.get(d.costCentre.id) ?: 0)}">95,000,000</td>
+                                <td>
+                                    <span th:if="${d.submitted}" class="badge badge-success" th:text="#{budget.department.status.SUBMITTED}">Submitted</span>
+                                    <span th:unless="${d.submitted}" class="badge badge-secondary" th:text="#{budget.department.status.OPEN}">Open</span>
+                                    <div class="cell-sub" th:if="${d.submitted}" th:text="${d.submittedBy + ' · ' + #temporals.format(d.submittedAt, 'dd/MM/yyyy')}">director1 · 28/11/2026</div>
+                                    <div class="cell-sub" th:if="${!d.submitted and d.returnedNote != null}" th:text="#{budget.department.returnedSub(${d.returnedNote})}">sent back: add the fuel</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${departments}, ${base}, 'tab=departments')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-revisions" th:classappend="${tab == 'revisions'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{budget.revision.number}">Revision</th>
+                                <th th:text="#{budget.revision.line}">Line</th>
+                                <th class="num" th:text="#{budget.revision.from}">From (RWF)</th>
+                                <th class="num" th:text="#{budget.revision.to}">To (RWF)</th>
+                                <th class="num" th:text="#{budget.revision.change}">Change</th>
+                                <th th:text="#{common.status}">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${revisions.content}">
+                                <td>
+                                    <a class="row-link strong mono" th:href="@{/budgets/revisions/{rid}(rid=${r.id})}" th:text="${r.number}">BRV-WH-2026-000001</a>
+                                    <div class="cell-sub" th:text="${r.requestedBy}">finance1</div>
+                                </td>
+                                <td>
+                                    <span class="mono" th:text="${(r.line.costCentre != null ? r.line.costCentre.code + ' · ' : '') + r.line.account.code}">COM · 6360</span>
+                                    <div class="cell-sub" th:text="${r.line.account.name}">Transport</div>
+                                </td>
+                                <td class="num" th:text="${@num.money(r.oldTotal)}">10,000,000</td>
+                                <td class="num" th:text="${@num.money(r.newTotal)}">11,200,000</td>
+                                <td class="num" th:text="${@num.percent(r.changePercent) + ' %'}">12 %</td>
+                                <td><th:block th:replace="~{budgets/list :: revisionStatus(${r})}"></th:block></td>
+                            </tr>
+                            <tr th:if="${revisions.totalElements == 0}">
+                                <td colspan="6"><div class="empty-state"><p th:text="#{budget.revision.empty}">No revision: once approved, a line changes only by a revision.</p></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${revisions}, ${base}, 'tab=revisions')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/reason-modal :: reasonModal('back-modal', #{budget.sendBackTitle(${budget.number})},
+            @{/budgets/{id}/send-back(id=${budget.id})}, #{budget.sendBackText}, #{budget.sendBack})}"></div>
+    <div th:replace="~{fragments/reason-modal :: reasonModal('cancel-modal', #{budget.cancelTitle(${budget.number})},
+            @{/budgets/{id}/cancel(id=${budget.id})}, #{budget.cancelText}, #{budget.cancel})}"></div>
+    <th:block th:if="${s == 'SUBMITTED'}">
+        <div th:replace="~{fragments/authority :: boardModal(@{/budgets/{id}/approve(id=${budget.id})}, #{budget.approve}, ${authority})}"></div>
+    </th:block>
+</div>
+</body>
+</html>

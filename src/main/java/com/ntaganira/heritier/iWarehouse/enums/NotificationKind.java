@@ -44,5 +44,7 @@ public enum NotificationKind {
     /** Inventory accuracy below target for the set number of months: a formal review is due (IMP 19). */
     KPI,
     /** Expenditure: emergency spending not ratified in time (CMP 05). */
-    EXPENSE
+    EXPENSE,
+    /** The budget: departments late, the budget not approved in time, a month not reviewed (CMP 04). */
+    BUDGET
 }

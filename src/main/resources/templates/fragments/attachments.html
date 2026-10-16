@@ -64,7 +64,7 @@
                     <td colspan="4">
                         <div class="empty-state">
                             <h3 th:text="#{attachment.empty}">No documents yet</h3>
-                            <p th:text="#{attachment.emptyHint}">Keep the supplier's papers, customs documents and photos of breakage here</p>
+                            <p th:text="${#messages.msgOrNull('attachment.emptyHint.' + owner) ?: #messages.msg('attachment.emptyHint')}">Keep the papers that support this record here</p>
                         </div>
                     </td>
                 </tr>

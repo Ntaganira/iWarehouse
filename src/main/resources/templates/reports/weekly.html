@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{weekly.title}, ~{::content})}">
+<head><title>Weekly report - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="r=${report}, c=${report.sales.company}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{weekly.title}">Weekly report</h1>
+            <div class="subtitle" th:text="#{weekly.subtitle(${#temporals.format(r.from, 'dd/MM/yyyy')}, ${#temporals.format(r.to, 'dd/MM/yyyy')})}">Week of 12/10/2026 to 18/10/2026</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports/sales-targets?period=week" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_SALES_TARGET_REPORT')" th:text="#{salesTarget.reportTitle}">Sales against target</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/weekly/export(day=${r.from})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/reports/weekly}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{salesTarget.weekOf}">Week of</span>
+                    <input type="date" name="day" class="toolbar-filter" th:value="${#temporals.format(r.from, 'yyyy-MM-dd')}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{weekly.sales}">Sales of the week (RWF)</div>
+                <div class="kpi-value" th:with="v=${@num.money(c.actual)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">14,000,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{weekly.salesSub(${@num.money(c.target)}, ${c.achieved != null ? @num.percent(c.achieved) + ' %' : '—'})}">target 15,000,000 · 93 %</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{weekly.variances}">Count variances raised</div>
+                <div class="kpi-value" th:text="${r.variances}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{weekly.variancesSub(${@num.money(r.missingValue)}, ${@num.money(r.foundValue)})}">missing 120,000 · found 30,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{weekly.voidsAndCredits}">Voids and credit notes</div>
+                <div class="kpi-value" th:text="${r.voids + r.creditNotes}">3</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{weekly.voidsSub(${r.voids}, ${@num.money(r.voidAmount)}, ${r.creditNotes}, ${@num.money(r.creditAmount)})}">2 voids 80,000 · 1 credit note 45,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{weekly.receivablesTotal}">Receivables today</div>
+                <div class="kpi-value" th:with="v=${@num.money(r.receivablesTotal)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">22,000,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{weekly.overNinetySub(${@num.money(r.receivables.get(buckets[4]) ?: 0)})}">over 90 days 1,200,000</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{salesTarget.byTerritory}">By territory</span>
+                <span class="section-count" th:text="${territoryPage.totalElements}">0</span>
+            </h2>
+        </div>
+        <th:block th:replace="~{reports/sales-targets :: targetTable(${territoryPage.content}, 'TERRITORY')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${territoryPage}, '/reports/weekly', ${query})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{weekly.receivables}">Receivables by age</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{weekly.age}">Age</th>
+                        <th class="num" th:text="#{weekly.owed}">Owed (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${buckets}">
+                        <td th:text="#{${'ageing.' + b}}">Not due</td>
+                        <td class="num" th:text="${@num.money(r.receivables.get(b) ?: 0)}">10,000,000</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${@num.money(r.receivablesTotal)}">22,000,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{weekly.note}">Sales are net of VAT, each invoice less its credit notes. Voids are sales given up before they were issued. Bonded stock is not kept in the system.</p>
+    </div>
+</div>
+</body>
+</html>

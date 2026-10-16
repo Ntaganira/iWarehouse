@@ -108,6 +108,7 @@ public class PettyCashVoucherController {
         model.addAttribute("journals", vouchers.journals(v));
         model.addAttribute("mine", vouchers.isRecorder(v));
         model.addAttribute("tookPart", vouchers.tookPart(v));
+        model.addAttribute("head", vouchers.isHead(v));
         model.addAttribute("balance", v.getFund().isActive() ? pettyCash.balance(v.getFund()) : null);
         model.addAttribute("today", vouchers.today());
         model.addAttribute("documents", attachmentService.page(AttachmentOwner.PETTY_CASH_VOUCHER, id, Paging.pageOf("documents", open, page), Paging.SIZE));

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{budgetReport.title}, ~{::content})}">
+<head><title>Budget against actual - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{budgetReport.title}">Budget against actual</h1>
+            <div class="subtitle" th:text="#{budgetReport.pageSubtitle}">The month and the year to date by department and account, the COO's and supply chain's indicators, signed off by the 10th</div>
+        </div>
+        <div class="btn-group">
+            <a href="/budgets" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_BUDGETS')" th:text="#{budget.title}">Budgets</a>
+            <th:block th:if="${report != null}"><th:block th:replace="~{fragments/export :: buttons(@{/reports/budget/export(year=${year}, month=${month})})}"></th:block></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/reports/budget}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{budget.year}">Year</span>
+                    <input type="number" name="year" class="toolbar-filter" min="2020" max="2100" th:value="${year}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{budgetReport.month}">Month</span>
+                    <select name="month" class="toolbar-filter">
+                        <option th:each="d : ${monthStarts}" th:value="${d.monthValue}" th:selected="${d.monthValue == month}" th:text="${#temporals.format(d, 'MMMM')}">October</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="section" th:if="${report == null}">
+        <div class="empty-state">
+            <h3 th:text="#{budgetReport.noBudget(${year})}">No approved budget for 2026</h3>
+            <p th:text="#{budgetReport.noBudgetHint}">The budget against actual reads the year's approved budget: start it on Budgets and have the Board approve it.</p>
+        </div>
+    </div>
+
+    <th:block th:if="${report != null}" th:with="r=${report}, coo=${report.coo}, sc=${report.supplyChain}">
+        <div class="doc-note" th:if="${r.review != null}">
+            <strong th:text="#{budgetReport.signedBy(${r.review.signedBy}, ${#temporals.format(r.review.signedAt, 'dd/MM/yyyy HH:mm')})}">Signed off by finance1 on 09/11/2026 10:00:</strong>
+            <span th:text="${r.review.note ?: '—'}">Transport over: fuel prices</span>
+        </div>
+        <div class="doc-note is-warning" th:if="${r.review == null and r.ended}">
+            <span th:text="#{budgetReport.dueNote(${#temporals.format(r.reviewDue, 'dd/MM/yyyy')}, ${r.flagged})}">To be signed off by 10/11/2026: 3 lines beyond the tolerance.</span>
+        </div>
+        <div class="doc-note is-warning" th:if="${!r.ended}" th:text="#{budgetReport.openNote}">The month is not over: its figures still move.</div>
+
+        <div class="kpi-grid doc-kpis">
+            <div class="kpi-card">
+                <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{budgetReport.turnover}">Turnover against budget</div>
+                    <div class="kpi-value" th:with="v=${@num.money(coo.turnover.actual)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">640,000,000</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="#{budgetReport.againstSub(${@num.money(coo.turnover.budget)}, ${coo.turnover.percent != null ? @num.percent(coo.turnover.percent) + ' %' : '—'})}">budget 600,000,000 · +6.7 %</span></div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg></div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{budgetReport.margin}">Gross margin</div>
+                    <div class="kpi-value" th:text="${coo.marginPercent != null} ? ${@num.percent(coo.marginPercent) + ' %'} : '—'">27 %</div>
+                    <div class="kpi-trend flat"><span class="vs" th:classappend="${coo.marginPercent != null and !coo.marginMet} ? 'text-danger'" th:text="#{budgetReport.marginSub(${@num.percent(coo.marginTarget)})}">target 25 % or more</span></div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{budgetReport.operatingCost}">Operating cost against budget</div>
+                    <div class="kpi-value" th:with="v=${@num.money(coo.operatingCost.actual)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">120,000,000</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="#{budgetReport.againstSub(${@num.money(coo.operatingCost.budget)}, ${coo.operatingCost.percent != null ? @num.percent(coo.operatingCost.percent) + ' %' : '—'})}">budget 125,000,000 · -4 %</span></div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                <div class="kpi-body">
+                    <div class="kpi-label" th:text="#{budgetReport.landedCost}">Landed cost against budget</div>
+                    <div class="kpi-value" th:with="v=${@num.money(sc.landedCost.actual)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">95,000,000</div>
+                    <div class="kpi-trend flat"><span class="vs" th:text="#{budgetReport.landedSub(${@num.money(sc.landedCost.budget)}, ${sc.countAccuracy != null ? @num.percent(sc.countAccuracy) + ' %' : '—'})}">budget to date 100,000,000 · count accuracy 99 %</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{budgetReport.lines}">Budget lines</span>
+                    <span class="section-count" th:text="${rowPage.totalElements}">0</span>
+                </h2>
+                <span class="badge badge-warning" th:if="${r.flagged > 0}" th:text="#{budgetReport.flaggedCount(${r.flagged}, ${@num.percent(r.tolerance)})}">3 beyond 5 %</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{budget.department}">Department</th>
+                            <th th:text="#{fin.account}">Account</th>
+                            <th class="num" th:text="#{budgetReport.monthBudget}">Month budget</th>
+                            <th class="num" th:text="#{budgetReport.monthActual}">Month actual</th>
+                            <th class="num" th:text="#{budgetReport.ytdBudget}">Budget to date</th>
+                            <th class="num" th:text="#{budgetReport.ytdActual}">Actual to date</th>
+                            <th class="num" th:text="#{budgetReport.variance}">Variance</th>
+                            <th class="num" th:text="#{budgetReport.variancePercent}">%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="row : ${rowPage.content}">
+                            <td>
+                                <span class="mono" th:if="${row.centreCode != null}" th:text="${row.centreCode}">COM</span>
+                                <span th:if="${row.centreCode == null}" th:text="#{budget.company}">The company</span>
+                            </td>
+                            <td>
+                                <span class="mono" th:text="${row.accountCode}">6360</span> <span th:text="${row.accountName}">Transport</span>
+                                <div class="cell-sub" th:if="${row.revenue}" th:text="#{budgetReport.revenueLine}">Revenue</div>
+                            </td>
+                            <td class="num" th:text="${@num.money(row.month.budget)}">1,000,000</td>
+                            <td class="num" th:text="${@num.money(row.month.actual)}">1,120,000</td>
+                            <td class="num" th:text="${@num.money(row.toDate.budget)}">10,000,000</td>
+                            <td class="num" th:text="${@num.money(row.toDate.actual)}">10,600,000</td>
+                            <td class="num" th:text="${@num.money(row.toDate.amount)}">600,000</td>
+                            <td class="num">
+                                <span th:if="${row.flagged}" class="badge badge-warning" th:text="${row.toDate.percent != null ? @num.percent(row.toDate.percent) + ' %' : '—'}">6 %</span>
+                                <span th:unless="${row.flagged}" th:text="${row.toDate.percent != null ? @num.percent(row.toDate.percent) + ' %' : '—'}">2 %</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${rowPage.totalElements == 0}">
+                            <td colspan="8"><div class="empty-state"><p th:text="#{budget.noLines}">No line yet.</p></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <th:block th:replace="~{layout/pagination :: pager(${rowPage}, '/reports/budget', ${query})}"></th:block>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{budgetReport.unbudgeted}">Posted with no budget line</span>
+                    <span class="section-count" th:text="${unbudgetedPage.totalElements}">0</span>
+                </h2>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{budget.department}">Department</th>
+                            <th th:text="#{fin.account}">Account</th>
+                            <th class="num" th:text="#{budgetReport.monthActual}">Month actual</th>
+                            <th class="num" th:text="#{budgetReport.ytdActual}">Actual to date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="u : ${unbudgetedPage.content}">
+                            <td>
+                                <span class="mono" th:if="${u.centreCode != null}" th:text="${u.centreCode}">SC</span>
+                                <span th:if="${u.centreCode == null}" class="text-muted" th:text="#{expenditure.notNamed}">Not named</span>
+                            </td>
+                            <td><span class="mono" th:text="${u.accountCode}">6490</span> <span th:text="${u.accountName}">Other</span></td>
+                            <td class="num" th:text="${@num.money(u.month)}">20,000</td>
+                            <td class="num" th:text="${@num.money(u.toDate)}">150,000</td>
+                        </tr>
+                        <tr th:if="${unbudgetedPage.totalElements == 0}">
+                            <td colspan="4"><div class="empty-state"><p th:text="#{budgetReport.allBudgeted}">Everything posted this year has its budget line.</p></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <th:block th:replace="~{layout/pagination :: pagerParam(${unbudgetedPage}, '/reports/budget', ${unbudgetedQuery}, 'upage')}"></th:block>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span th:text="#{budgetReport.consignments}">Demurrage and storage per consignment</span>
+                    <span class="section-count" th:text="${consignmentPage.totalElements}">0</span>
+                </h2>
+                <span class="badge badge-warning" th:if="${sc.overCeiling > 0}" th:text="#{budgetReport.overCeiling(${sc.overCeiling})}">1 over the ceiling</span>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th th:text="#{budgetReport.consignment}">Consignment</th>
+                            <th class="num" th:text="#{budgetReport.demurrage}">Demurrage</th>
+                            <th class="num" th:text="#{budgetReport.storage}">Storage</th>
+                            <th class="num" th:text="#{budgetReport.consignmentTotal}">Together</th>
+                            <th class="num" th:text="#{budgetReport.ceiling}">Ceiling</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${consignmentPage.content}">
+                            <td><a class="mono" th:href="@{/shipments/{id}(id=${c.shipmentId})}" th:text="${c.number}">SHP-WH-2026-000003</a></td>
+                            <td class="num" th:text="${@num.money(c.demurrage)}">800,000</td>
+                            <td class="num" th:text="${@num.money(c.storage)}">300,000</td>
+                            <td class="num">
+                                <span th:if="${c.over}" class="badge badge-warning" th:text="${@num.money(c.total)}">1,100,000</span>
+                                <span th:unless="${c.over}" th:text="${@num.money(c.total)}">1,100,000</span>
+                            </td>
+                            <td class="num" th:text="${@num.money(c.ceiling)}">1,000,000</td>
+                        </tr>
+                        <tr th:if="${consignmentPage.totalElements == 0}">
+                            <td colspan="5"><div class="empty-state"><p th:text="#{budgetReport.noDemurrage}">No demurrage or storage billed this year.</p></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <th:block th:replace="~{layout/pagination :: pagerParam(${consignmentPage}, '/reports/budget', ${consignmentQuery}, 'cpage')}"></th:block>
+            <p class="form-note" th:text="#{budgetReport.note}">Actual comes from the journals: revenue as credits less debits, expenses as debits less credits, by the cost centre each line names. Operating cost leaves out the cost of glass sold, FX and stock adjustments. Landed cost is the year's import bills posted in RWF.</p>
+        </div>
+
+        <div class="section" th:if="${r.review == null and r.ended}" sec:authorize="hasAuthority('PERM_REVIEW_BUDGET')">
+            <div class="section-header"><h2 th:text="#{budgetReport.signOff}">Sign the month off</h2></div>
+            <form th:action="@{/reports/budget/sign-off}" method="post" class="section-body confirm-submit" th:attr="data-confirm=#{budgetReport.signOffConfirm(${#temporals.format(monthStarts.get(month - 1), 'MMMM yyyy')})}">
+                <input type="hidden" name="year" th:value="${year}">
+                <input type="hidden" name="month" th:value="${month}">
+                <div class="form-group">
+                    <label for="signoff-note" th:text="#{budgetReport.signOffNote}">Note</label>
+                    <input type="text" id="signoff-note" name="note" maxlength="1000" autocomplete="off" th:placeholder="#{budgetReport.signOffNotePh}">
+                    <span class="hint" th:text="#{budgetReport.signOffHint}">Needed when lines are beyond the tolerance: say why</span>
+                </div>
+                <button type="submit" class="btn btn-primary" th:text="#{budgetReport.signOff}">Sign the month off</button>
+            </form>
+        </div>
+    </th:block>
+</div>
+</body>
+</html>

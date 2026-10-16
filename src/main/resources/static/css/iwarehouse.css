@@ -4658,3 +4658,8 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 
 /* Retiring a staff advance: what the rest comes to, above how it is settled */
 .retire-settle { margin: 0 0 12px; }
+
+/* Budget lines and sales targets: twelve months in a row that scrolls in its box; each field wide enough for its amount */
+.budget-line-table input[type="number"] { min-width: 112px; }
+.budget-line-table select { min-width: 220px; }
+.budget-line-table td:first-child, .budget-line-table th:first-child { min-width: 160px; }

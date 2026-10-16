@@ -204,6 +204,7 @@ public class ReportController {
             case MONTH -> r.date().format(DateTimeFormatter.ofPattern("MM/yyyy"));
             case CHANNEL -> messages.get("order.channel." + r.label());
             case TERRITORY -> r.label() == null ? messages.get("order.noTerritory") : r.label();
+            case MARKET -> r.label() == null ? "—" : messages.get("order.market." + r.label());
             default -> r.label();
         };
     }

@@ -90,6 +90,10 @@ public enum DocumentType {
     PETTY_CASH_REPLENISHMENT("PCR"),
     /** A staff advance, retired with receipts (CMP 08). */
     STAFF_ADVANCE("ADV"),
+    /** The year's budget (CMP 04). */
+    BUDGET("BUD"),
+    /** A line of an approved budget revised (CMP 04). */
+    BUDGET_REVISION("BRV"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

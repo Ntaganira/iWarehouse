@@ -996,6 +996,52 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.budget}">Budgets</h3>
+                <p class="hint" th:text="#{settings.group.budgetHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="budgetSubmitBy" th:text="#{settings.budgetSubmitBy}">budgetSubmitBy</label>
+                    <input type="text" id="budgetSubmitBy" th:field="*{budgetSubmitBy}" maxlength="5" required class="input-code" placeholder="MM-DD"
+                           th:classappend="${#fields.hasErrors('budgetSubmitBy')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('budgetSubmitBy')}" th:errors="*{budgetSubmitBy}"></span>
+                    <span class="hint" th:text="#{settings.budgetSubmitByHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="budgetApproveBy" th:text="#{settings.budgetApproveBy}">budgetApproveBy</label>
+                    <input type="text" id="budgetApproveBy" th:field="*{budgetApproveBy}" maxlength="5" required class="input-code" placeholder="MM-DD"
+                           th:classappend="${#fields.hasErrors('budgetApproveBy')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('budgetApproveBy')}" th:errors="*{budgetApproveBy}"></span>
+                    <span class="hint" th:text="#{settings.budgetApproveByHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="budgetVariancePercent" th:text="#{settings.budgetVariancePercent}">budgetVariancePercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="budgetVariancePercent" th:field="*{budgetVariancePercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('budgetVariancePercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('budgetVariancePercent')}" th:errors="*{budgetVariancePercent}"></span>
+                    <span class="hint" th:text="#{settings.budgetVariancePercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="budgetMarginTarget" th:text="#{settings.budgetMarginTarget}">budgetMarginTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="budgetMarginTarget" th:field="*{budgetMarginTarget}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('budgetMarginTarget')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('budgetMarginTarget')}" th:errors="*{budgetMarginTarget}"></span>
+                    <span class="hint" th:text="#{settings.budgetMarginTargetHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="budgetReviewDay" th:text="#{settings.budgetReviewDay}">budgetReviewDay</label>
+                    <input type="number" id="budgetReviewDay" th:field="*{budgetReviewDay}" step="1" min="1" max="28" required
+                           th:classappend="${#fields.hasErrors('budgetReviewDay')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('budgetReviewDay')}" th:errors="*{budgetReviewDay}"></span>
+                    <span class="hint" th:text="#{settings.budgetReviewDayHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

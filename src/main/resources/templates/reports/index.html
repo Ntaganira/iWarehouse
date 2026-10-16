@@ -57,6 +57,9 @@
             </th:block>
             <th:block sec:authorize="hasAuthority('PAGE_VAT_REPORT')"><a th:replace="~{reports/index :: tile('/accounting/vat-report', 'neutral', #{vatReport.title}, 'chart')}">VAT report</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_EXPENDITURE_REPORT')"><a th:replace="~{reports/index :: tile('/reports/expenditure', 'orange', #{expenditure.title}, 'chart')}">Expenditure report</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_BUDGET_REPORT')"><a th:replace="~{reports/index :: tile('/reports/budget', 'blue', #{budgetReport.title}, 'chart')}">Budget against actual</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_SALES_TARGET_REPORT')"><a th:replace="~{reports/index :: tile('/reports/sales-targets', 'green', #{salesTarget.reportTitle}, 'chart')}">Sales against target</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_WEEKLY_REPORT')"><a th:replace="~{reports/index :: tile('/reports/weekly', 'purple', #{weekly.title}, 'chart')}">Weekly report</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_MANAGEMENT_PACK')"><a th:replace="~{reports/index :: tile('/reports/management-pack', 'purple', #{pack.pageTitle}, 'chart')}">Management pack</a></th:block>
         </div>
     </div>

@@ -18,10 +18,13 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
     private final BusinessDashboardService businessService;
+    private final com.ntaganira.heritier.iWarehouse.service.InventoryKpiService kpiService;
 
-    public DashboardController(DashboardService dashboardService, BusinessDashboardService businessService) {
+    public DashboardController(DashboardService dashboardService, BusinessDashboardService businessService,
+                               com.ntaganira.heritier.iWarehouse.service.InventoryKpiService kpiService) {
         this.dashboardService = dashboardService;
         this.businessService = businessService;
+        this.kpiService = kpiService;
     }
 
     @GetMapping({"/", "/dashboard"})
@@ -38,6 +41,10 @@ public class DashboardController {
         model.addAttribute("showChanges", showChanges);
         if (has(auth, "PERM_VIEW_BUSINESS_DASHBOARD")) {
             model.addAttribute("biz", businessService.load());
+            // Inventory accuracy below target long enough: the formal review is due (IMP 19)
+            if (has(auth, "PAGE_INVENTORY_KPIS")) {
+                model.addAttribute("kpiBreach", kpiService.breach().filter(b -> !b.isReviewed()).orElse(null));
+            }
         }
         return "dashboard";
     }

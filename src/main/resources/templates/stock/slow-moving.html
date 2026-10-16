@@ -60,6 +60,14 @@
                 <div class="kpi-trend flat"><span class="vs" th:text="#{slowMoving.kpi.unsoldHint(${days})}">no sale in 90 days</span></div>
             </div>
         </div>
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{slowMoving.kpi.obsolete(${obsoleteDays})}">Obsolete: held over 365 days</div>
+                <div class="kpi-value" th:text="${obsolete.oldPieces}">2</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="${seeCost} ? #{slowMoving.kpi.obsoleteValue(${@num.m2(obsolete.oldAreaM2)}, ${@num.money(obsolete.oldValue)})} : #{offcutAgeing.kpi.area(${@num.m2(obsolete.oldAreaM2)})}">4.20 m² · 120,000 RWF</span></div>
+            </div>
+        </div>
     </div>
 
     <div class="section">

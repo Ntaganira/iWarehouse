@@ -53,6 +53,12 @@
                             <span th:case="'EOD'" class="badge badge-warning" th:text="#{notification.kind.EOD}">End of day</span>
                             <span th:case="'CREDIT'" class="badge badge-warning" th:text="#{notification.kind.CREDIT}">Credit</span>
                             <span th:case="'TRANSFER'" class="badge badge-info" th:text="#{notification.kind.TRANSFER}">Transfer</span>
+                            <span th:case="'ORDER'" class="badge badge-info" th:text="#{notification.kind.ORDER}">Order</span>
+                            <span th:case="'DELIVERY'" class="badge badge-info" th:text="#{notification.kind.DELIVERY}">Delivery</span>
+                            <span th:case="'CLOSE'" class="badge badge-warning" th:text="#{notification.kind.CLOSE}">Daily close</span>
+                            <span th:case="'DAMAGE'" class="badge badge-danger" th:text="#{notification.kind.DAMAGE}">Damage</span>
+                            <span th:case="'VARIANCE'" class="badge badge-warning" th:text="#{notification.kind.VARIANCE}">Stock variance</span>
+                            <span th:case="'KPI'" class="badge badge-danger" th:text="#{notification.kind.KPI}">KPI</span>
                             <span th:case="*" class="badge badge-secondary" th:text="#{notification.kind.SYSTEM}">System</span>
                         </td>
                         <td class="actions">

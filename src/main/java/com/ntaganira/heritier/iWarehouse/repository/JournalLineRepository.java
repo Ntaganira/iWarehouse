@@ -159,4 +159,19 @@ public interface JournalLineRepository extends Repository<JournalLine, UUID> {
     /** An account's balance (debits less credits) up to and including a day. */
     @Query("select coalesce(sum(l.debit - l.credit), 0) from JournalLine l where l.account.systemKey = :key and l.entry.entryDate <= :day")
     java.math.BigDecimal balanceAt(@Param("key") com.ntaganira.heritier.iWarehouse.enums.AccountKey key, @Param("day") java.time.LocalDate day);
+
+    /** An account's movement (debits less credits) over a period, both days included (turnover: the cost of sales). */
+    @Query("select coalesce(sum(l.debit - l.credit), 0) from JournalLine l where l.account.systemKey = :key"
+            + " and l.entry.entryDate between :from and :to")
+    java.math.BigDecimal movementBetween(@Param("key") com.ntaganira.heritier.iWarehouse.enums.AccountKey key,
+                                         @Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
+
+    /**
+     * Rows of (customer id, date, source, source document id, debit, credit) of an account's lines naming a customer up to a
+     * day, in posting order: collection performance (Q.05) finds each charge's invoice by its source document.
+     */
+    @Query("select l.customer.id, l.entry.entryDate, l.entry.sourceType, l.entry.sourceId, l.debit, l.credit from JournalLine l"
+            + " where l.account.id = :accountId and l.customer is not null and l.entry.entryDate <= :to"
+            + " order by l.entry.entryDate, l.entry.postedAt, l.entry.number, l.lineNo")
+    List<Object[]> customerLinesUntil(@Param("accountId") UUID accountId, @Param("to") LocalDate to);
 }

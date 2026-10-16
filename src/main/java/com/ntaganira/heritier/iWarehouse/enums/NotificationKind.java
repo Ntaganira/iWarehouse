@@ -40,5 +40,7 @@ public enum NotificationKind {
     /** Damage reported, to inspect or decide, or above the Board's tolerance (F-07, IMP 13). */
     DAMAGE,
     /** A count variance above the tolerance, material, or not resolved in time (IMP 16). */
-    VARIANCE
+    VARIANCE,
+    /** Inventory accuracy below target for the set number of months: a formal review is due (IMP 19). */
+    KPI
 }

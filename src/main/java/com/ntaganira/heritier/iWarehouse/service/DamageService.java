@@ -175,7 +175,8 @@ public class DamageService {
                 throw BusinessException.onField("codes", "damage.unit.unknown", code);
             }
             if (!StockCounting.ON_RACK.contains(unit.getStatus())) {
-                throw BusinessException.onField("codes", "damage.unit.notInStock", code, unit.getStatus().name());
+                throw BusinessException.onField("codes", "damage.unit.notInStock", code,
+                        new org.springframework.context.support.DefaultMessageSourceResolvable("stock.status." + unit.getStatus()));
             }
             if (holds.containsKey(unit.getId())) {
                 throw BusinessException.onField("codes", "damage.unit.held", code, holds.get(unit.getId()));

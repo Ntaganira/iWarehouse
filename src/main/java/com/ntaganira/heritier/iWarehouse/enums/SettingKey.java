@@ -163,6 +163,28 @@ public enum SettingKey {
     /** A variance is resolved within this many working days, then escalated (IMP 14.2). */
     COUNT_VARIANCE_DAYS("count.variance-days", "countVarianceDays", "5"),
 
+    // Inventory reports and KPIs (M16: Inventory Policy 13, 19; Annex D)
+    /** Glass held longer than this many days is obsolete (IMP 13): listed apart on the slow-moving report. */
+    STOCK_OBSOLETE_DAYS("stock.obsolete-days", "stockObsoleteDays", "365"),
+    /** Inventory accuracy kept at or above this % (IMP 19). */
+    KPI_ACCURACY_TARGET("kpi.accuracy-target", "kpiAccuracyTarget", "99"),
+    /** Consecutive months below the accuracy target that call for a formal review (IMP 19: two). */
+    KPI_ACCURACY_MONTHS("kpi.accuracy-months", "kpiAccuracyMonths", "2"),
+    /** Stock lost kept below this % of the inventory value (IMP 19). */
+    KPI_LOSS_MAX_PERCENT("kpi.loss-max-percent", "kpiLossMaxPercent", "0.5"),
+    /** Damaged stock kept below this % of the inventory value (IMP 19). */
+    KPI_DAMAGE_MAX_PERCENT("kpi.damage-max-percent", "kpiDamageMaxPercent", "1"),
+    /** Inventory turnover aimed at, times a year (IMP 19: set by management); blank = no target. */
+    KPI_TURNOVER_TARGET("kpi.turnover-target", "kpiTurnoverTarget", null),
+    /** Deliveries without errors or shortages kept at or above this % (IMP 19). */
+    KPI_DELIVERY_ACCURACY_TARGET("kpi.delivery-accuracy-target", "kpiDeliveryAccuracyTarget", "98"),
+    /** Reconciliations done on time aimed at, % (IMP 19: 100). */
+    KPI_RECONCILIATION_TARGET("kpi.reconciliation-target", "kpiReconciliationTarget", "100"),
+    /** Variances resolved within their working days aimed at, % (IMP 19: 100). */
+    KPI_VARIANCE_RESOLUTION_TARGET("kpi.variance-resolution-target", "kpiVarianceResolutionTarget", "100"),
+    /** Days from payment to the last hand-over aimed at (Annex D: the agreed target). */
+    KPI_ORDER_DAYS_TARGET("kpi.order-days-target", "kpiOrderDaysTarget", "3"),
+
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),
     /** Documents refuse a rate older than this many days, so a forgotten update is noticed (ACC-02). */

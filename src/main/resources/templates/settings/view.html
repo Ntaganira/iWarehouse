@@ -627,6 +627,87 @@
                     <div class="role-card">
                         <div class="role-card-header">
                             <div>
+                                <div class="role-card-title" th:text="#{settings.group.kpis}">Inventory reports and KPIs</div>
+                                <div class="role-card-desc" th:text="#{settings.group.kpisHint}">hint</div>
+                            </div>
+                        </div>
+                        <dl class="setting-list">
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.stockObsoleteDays}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.stockObsoleteDaysHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.stockObsoleteDays}">365</span> <span class="unit" th:text="#{settings.daysUnit}">days</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiAccuracyTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiAccuracyTargetHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiAccuracyTarget}">99</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiAccuracyMonths}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiAccuracyMonthsHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiAccuracyMonths}">2</span> <span class="unit" th:text="#{settings.monthsUnit}">months</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiLossMaxPercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiLossMaxPercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiLossMaxPercent}">99</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiDamageMaxPercent}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiDamageMaxPercentHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiDamageMaxPercent}">99</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiTurnoverTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiTurnoverTargetHint}">hint</span>
+                                </dt>
+                                <dd><th:block th:if="${settings.kpiTurnoverTarget != null and !#strings.isEmpty(settings.kpiTurnoverTarget)}"><span th:text="${settings.kpiTurnoverTarget}">6</span> <span class="unit" th:text="#{settings.timesUnit}">times a year</span></th:block><span th:unless="${settings.kpiTurnoverTarget != null and !#strings.isEmpty(settings.kpiTurnoverTarget)}" th:text="#{inventoryKpi.noTarget}">Not set</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiDeliveryAccuracyTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiDeliveryAccuracyTargetHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiDeliveryAccuracyTarget}">99</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiReconciliationTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiReconciliationTargetHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiReconciliationTarget}">99</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiVarianceResolutionTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiVarianceResolutionTargetHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiVarianceResolutionTarget}">99</span> <span class="unit">%</span></dd>
+                            </div>
+                            <div class="setting-row">
+                                <dt>
+                                    <span th:text="#{settings.kpiOrderDaysTarget}">label</span>
+                                    <span class="setting-hint" th:text="#{settings.kpiOrderDaysTargetHint}">hint</span>
+                                </dt>
+                                <dd><span th:text="${settings.kpiOrderDaysTarget}">3</span> <span class="unit" th:text="#{settings.daysUnit}">days</span></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="role-card">
+                        <div class="role-card-header">
+                            <div>
                                 <div class="role-card-title" th:text="#{settings.group.currency}">Currency</div>
                                 <div class="role-card-desc" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</div>
                             </div>

@@ -4,7 +4,8 @@
 <head><title>Daily review - iWarehouse</title></head>
 <body>
 <div th:fragment="content" th:with="seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
-        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_DAILY_STOCK'')')}">
+        canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_DAILY_STOCK'')')},
+        canCountersign=${#authorization.expression('hasAuthority(''PERM_COUNTERSIGN_DAILY_STOCK'')')}, r=${report}, t=${report.sites.total}">
     <div class="page-header">
         <div>
             <h1 th:text="#{stockReview.title}">Daily review</h1>
@@ -12,6 +13,10 @@
         </div>
         <div class="btn-group">
             <a href="/stock" class="btn btn-outline" th:text="#{nav.stock}">Inventory</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/stock/daily-review/export(day=${day})})}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="countersign-modal"
+                    th:if="${canCountersign and review != null and !review.countersigned and review.reviewedBy != #authentication.name}"
+                    th:text="#{inventoryReport.countersign}">Countersign</button>
             <button type="button" class="btn btn-primary" data-modal-open="review-modal" th:if="${canReview and review == null}" th:text="#{stockReview.signOff}">Sign the day off</button>
         </div>
     </div>
@@ -40,6 +45,143 @@
         <span th:if="${review.note != null}" th:text="${review.note}">All agreed to the tickets</span>
     </div>
     <div class="doc-note is-warning" th:if="${review == null}" th:text="#{stockReview.notYet(${#temporals.format(day, 'dd/MM/yyyy')})}">The movements of 15/10/2026 are not signed off yet.</div>
+    <div class="doc-note" th:if="${review != null and review.countersigned}">
+        <strong th:text="#{inventoryReport.countersignedNote(${review.countersignedBy}, ${#temporals.format(review.countersignedAt, 'dd/MM/yyyy HH:mm')})}">Countersigned by controller1 on 16/10/2026 08:30.</strong>
+        <span th:if="${review.countersignNote != null}" th:text="${review.countersignNote}">Agreed to the delivery notes</span>
+    </div>
+    <div class="doc-note is-warning" th:if="${review != null and !review.countersigned}" th:text="#{inventoryReport.toCountersign}">The Internal Controller has not countersigned this day yet.</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card" th:if="${seeCost}">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{inventoryReport.closingValue}">Closing value</div>
+                <div class="kpi-value" th:with="v=${@num.money(r.closingValue)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">48,250,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{inventoryReport.fromOpening(${@num.money(r.openingValue)})}">opened at 48,000,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="7 13 12 18 17 13"></polyline><line x1="12" y1="18" x2="12" y2="4"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{inventoryReport.unitsIn}">Came in</div>
+                <div class="kpi-value" th:text="${t.inUnits}">12</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.inM2)})}">86.67 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="17 11 12 6 7 11"></polyline><line x1="12" y1="6" x2="12" y2="20"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{inventoryReport.unitsOut}">Went out</div>
+                <div class="kpi-value" th:text="${t.outUnits}">9</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.outM2)})}">30.24 m²</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{inventoryReport.unitsHeld}">Held at the end</div>
+                <div class="kpi-value" th:text="${t.units}">240</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{offcutAgeing.kpi.area(${@num.m2(t.areaM2)})}">1,520.40 m²</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{inventoryReport.bySite}">Closing balances by site</h2>
+        </div>
+        <th:block th:replace="~{reports/inventory :: siteTable(${report.sites}, ${seeCost})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{inventoryReport.deliveries}">Deliveries made</span>
+                <span class="section-count" th:text="${#lists.size(r.deliveries) + #lists.size(r.sold)}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{inventoryReport.section}">What</th>
+                        <th th:text="#{stock.reference}">Reference</th>
+                        <th th:text="#{inventoryReport.detail}">Detail</th>
+                        <th class="num" th:text="#{stockRecon.count}">Units</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{stockRecon.cost}">Cost (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="i : ${r.deliveries}">
+                        <td th:text="#{inventoryReport.delivery.note}">Delivery note released</td>
+                        <td><a class="mono" th:href="${i.link}" th:text="${i.number}">DN-WH-2026-000001</a></td>
+                        <td th:text="${i.detail}">INV-WH-2026-000010 · Umucyo Builders Ltd</td>
+                        <td class="num">—</td>
+                        <td class="num" th:if="${seeCost}">—</td>
+                    </tr>
+                    <tr th:each="d : ${r.sold}">
+                        <td th:text="#{${'stock.movement.' + d.type}}">Sold</td>
+                        <td><th:block th:replace="~{stock/view :: refLink(${d.refType}, ${d.refId}, ${d.refNumber})}"></th:block></td>
+                        <td>—</td>
+                        <td class="num" th:text="${d.units}">2</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(d.cost)}">120,000</td>
+                    </tr>
+                    <tr th:if="${r.deliveries.isEmpty() and r.sold.isEmpty()}">
+                        <td th:attr="colspan=${seeCost ? 5 : 4}"><div class="empty-state"><p th:text="#{inventoryReport.noDeliveries}">No goods went to customers that day</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{inventoryReport.handOversNote(${r.handOvers})}">3 cut pieces were handed over to customers.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{inventoryReport.transfers}">Transfers executed</span>
+                <span class="section-count" th:text="${#lists.size(r.transfers)}">0</span>
+            </h2>
+        </div>
+        <th:block th:replace="~{reports/inventory :: docTable(${r.transfers}, ${seeCost}, #{inventoryReport.noTransfers})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{inventoryReport.exceptions}">Exceptions</span>
+                <span class="section-count" th:text="${#lists.size(r.exceptions) + #lists.size(r.adjustments)}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{inventoryReport.section}">What</th>
+                        <th th:text="#{stock.reference}">Reference</th>
+                        <th th:text="#{inventoryReport.detail}">Detail</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{stockRecon.cost}">Cost (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${r.adjustments}">
+                        <td th:text="#{${'stock.movement.' + d.type}}">Adjustment</td>
+                        <td><th:block th:replace="~{stock/view :: refLink(${d.refType}, ${d.refId}, ${d.refNumber})}"></th:block></td>
+                        <td th:text="#{inventoryReport.unitsCount(${d.units})}">2 units</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(d.cost)}">120,000</td>
+                    </tr>
+                    <tr th:each="i : ${r.exceptions}">
+                        <td th:text="#{${i.kindKey}}">Damage reported</td>
+                        <td><a class="mono" th:href="${i.link}" th:text="${i.number}">DMG-WH-2026-000001</a></td>
+                        <td th:text="${i.detail}">WH-A-OC · 2</td>
+                        <td class="num" th:if="${seeCost}" th:text="${i.value != null} ? ${@num.money(i.value)} : '—'">63,527</td>
+                    </tr>
+                    <tr th:if="${r.exceptions.isEmpty() and r.adjustments.isEmpty()}">
+                        <td th:attr="colspan=${seeCost ? 4 : 3}"><div class="empty-state"><p th:text="#{inventoryReport.noExceptions}">No damage, adjustment, loss, count or variance that day</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <div class="section">
         <div class="section-header">
@@ -136,6 +278,7 @@
                         <th th:text="#{stockReview.day}">Day</th>
                         <th class="num" th:text="#{stockRecon.count}">Movements</th>
                         <th th:text="#{stockReview.signedBy}">Signed off by</th>
+                        <th th:text="#{inventoryReport.countersignedBy}">Countersigned by</th>
                         <th th:text="#{stockReview.note}">Note</th>
                     </tr>
                 </thead>
@@ -147,10 +290,14 @@
                             <span th:text="${r.reviewedBy}">manager1</span>
                             <div class="cell-sub" th:text="${#temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm')}">14/10/2026 18:00</div>
                         </td>
+                        <td>
+                            <span th:text="${r.countersignedBy ?: '—'}">controller1</span>
+                            <div class="cell-sub" th:if="${r.countersignedAt != null}" th:text="${#temporals.format(r.countersignedAt, 'dd/MM/yyyy HH:mm')}">15/10/2026 08:30</div>
+                        </td>
                         <td th:text="${r.note ?: '—'}">—</td>
                     </tr>
                     <tr th:if="${reviews.totalElements == 0}">
-                        <td colspan="4">
+                        <td colspan="5">
                             <div class="empty-state">
                                 <h3 th:text="#{stockReview.noReviews}">No day signed off yet</h3>
                             </div>
@@ -160,6 +307,29 @@
             </table>
         </div>
         <th:block th:replace="~{layout/pagination :: pagerParam(${reviews}, '/stock/daily-review', ${query + '&page=' + movements.number}, 'rpage')}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="countersign-modal" th:if="${canCountersign and review != null and !review.countersigned}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="countersign-title">
+            <div class="modal-header">
+                <h3 id="countersign-title" th:text="#{inventoryReport.countersignTitle(${#temporals.format(day, 'dd/MM/yyyy')})}">Countersign 15/10/2026</h3>
+                <button type="button" class="modal-close" data-modal-close="countersign-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/stock/daily-review/countersign}" method="post" novalidate>
+                <input type="hidden" name="day" th:value="${day}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{inventoryReport.countersignText}">You checked the day's stock cards against the physical movements and the delivery notes (IMP 14.1).</p>
+                    <div class="form-group">
+                        <label for="countersign-note" th:text="#{ticket.note}">Note (optional)</label>
+                        <textarea id="countersign-note" name="note" rows="3" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="countersign-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{inventoryReport.countersign}">Countersign</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="modal-overlay" id="review-modal" th:if="${canReview and review == null}">

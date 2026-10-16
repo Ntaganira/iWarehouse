@@ -11,10 +11,12 @@
         </div>
     </div>
 
-    <div class="section" sec:authorize="hasAuthority('PAGE_SALES_REPORTS')">
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_SALES_REPORTS', 'PAGE_DISCOUNTS_REPORT', 'PAGE_COLLECTIONS_REPORT')">
         <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.sales}">Sales</h2></div></div>
         <div class="quick-grid">
-            <a th:replace="~{reports/index :: tile('/reports/sales', 'green', #{salesReport.title}, 'sales')}">Sales reports</a>
+            <th:block sec:authorize="hasAuthority('PAGE_SALES_REPORTS')"><a th:replace="~{reports/index :: tile('/reports/sales', 'green', #{salesReport.title}, 'sales')}">Sales reports</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_DISCOUNTS_REPORT')"><a th:replace="~{reports/index :: tile('/reports/discounts', 'orange', #{discounts.title}, 'chart')}">Discount analysis</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_COLLECTIONS_REPORT')"><a th:replace="~{reports/index :: tile('/reports/collections', 'purple', #{collections.title}, 'clock')}">Collection performance</a></th:block>
         </div>
     </div>
 
@@ -25,7 +27,7 @@
         </div>
     </div>
 
-    <div class="section" sec:authorize="hasAnyAuthority('PAGE_STOCK_SUMMARY', 'PAGE_CUTTING_YIELD', 'PAGE_DAMAGE')">
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_STOCK_SUMMARY', 'PAGE_CUTTING_YIELD', 'PAGE_DAMAGE', 'PAGE_INVENTORY_REPORT', 'PAGE_INVENTORY_KPIS')">
         <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.stock}">Stock and production</h2></div></div>
         <div class="quick-grid">
             <th:block sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')">
@@ -35,12 +37,14 @@
                 <a th:replace="~{reports/index :: tile('/stock/card', 'blue', #{stockCard.title}, 'stock')}">Stock card</a>
                 <a th:replace="~{reports/index :: tile('/stock/daily-review', 'green', #{stockReview.title}, 'clock')}">Daily review</a>
             </th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_INVENTORY_REPORT')"><a th:replace="~{reports/index :: tile('/reports/inventory', 'blue', #{inventoryReport.title}, 'stock')}">Inventory report</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_INVENTORY_KPIS')"><a th:replace="~{reports/index :: tile('/reports/kpis', 'green', #{inventoryKpi.title}, 'chart')}">Inventory KPIs</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_CUTTING_YIELD')"><a th:replace="~{reports/index :: tile('/cutting-jobs/yield', 'green', #{cutting.yield.title}, 'cut')}">Cutting yield</a></th:block>
             <th:block sec:authorize="hasAuthority('PAGE_DAMAGE') and hasAuthority('PERM_VIEW_DAMAGE')"><a th:replace="~{reports/index :: tile('/damage/register', 'orange', #{damage.register.title}, 'clock')}">Damage register</a></th:block>
         </div>
     </div>
 
-    <div class="section" sec:authorize="hasAnyAuthority('PAGE_RECEIVABLES', 'PAGE_PAYABLES', 'PAGE_TRIAL_BALANCE', 'PAGE_FINANCIAL_STATEMENTS', 'PAGE_VAT_REPORT')">
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_RECEIVABLES', 'PAGE_PAYABLES', 'PAGE_TRIAL_BALANCE', 'PAGE_FINANCIAL_STATEMENTS', 'PAGE_VAT_REPORT', 'PAGE_MANAGEMENT_PACK')">
         <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.accounting}">Accounting</h2></div></div>
         <div class="quick-grid">
             <th:block sec:authorize="hasAuthority('PAGE_RECEIVABLES')"><a th:replace="~{reports/index :: tile('/accounting/receivables', 'purple', #{receivables.title}, 'clock')}">Receivables</a></th:block>
@@ -52,6 +56,7 @@
                 <a th:replace="~{reports/index :: tile('/accounting/general-ledger', 'neutral', #{fin.ledger.title}, 'chart')}">General ledger</a>
             </th:block>
             <th:block sec:authorize="hasAuthority('PAGE_VAT_REPORT')"><a th:replace="~{reports/index :: tile('/accounting/vat-report', 'neutral', #{vatReport.title}, 'chart')}">VAT report</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_MANAGEMENT_PACK')"><a th:replace="~{reports/index :: tile('/reports/management-pack', 'purple', #{pack.pageTitle}, 'chart')}">Management pack</a></th:block>
         </div>
     </div>
     <div class="section" sec:authorize="(hasAuthority('PAGE_EXCEPTIONS_REPORT') and hasAuthority('PERM_VIEW_EXCEPTIONS_REPORT')) or (hasAuthority('PAGE_MASTER_DATA_REPORT') and hasAuthority('PERM_VIEW_MASTER_DATA_REPORT')) or (hasAuthority('PAGE_STOCK_RECONCILIATION') and hasAuthority('PERM_VIEW_STOCK_RECONCILIATION')) or (hasAuthority('PAGE_EBM_LEDGER_REPORT') and hasAuthority('PERM_VIEW_ACCOUNTING')) or (hasAuthority('PAGE_DAILY_CLOSES') and hasAuthority('PERM_VIEW_DAILY_CLOSE')) or (hasAuthority('PAGE_RECEIVABLES') and (hasAuthority('PERM_VIEW_ACCOUNTING') or hasAuthority('PERM_VIEW_CUSTOMER_ACCOUNT'))) or (hasAuthority('PAGE_JOURNAL_REGISTER') and hasAuthority('PERM_VIEW_ACCOUNTING'))">

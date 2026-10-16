@@ -129,7 +129,10 @@
                             <div th:class="${r.causeKey != null} ? 'cell-sub' : ''" th:if="${r.cause != null}" th:text="${r.cause}">Dropped</div>
                         </td>
                         <td class="num" th:text="${r.units}">1</td>
-                        <td class="num" th:text="${@num.money(r.value)}">252,629</td>
+                        <td class="num">
+                            <span th:text="${@num.money(r.value)}">252,629</span>
+                            <div class="cell-sub" th:unless="${r.counted}" th:text="#{damage.register.estimate}">estimate</div>
+                        </td>
                         <td th:text="${r.statusKey != null} ? #{${r.statusKey}} : '—'">Approved</td>
                     </tr>
                     <tr th:if="${rows.totalElements == 0}">
@@ -139,6 +142,7 @@
             </table>
         </div>
         <th:block th:replace="~{layout/pagination :: pager(${rows}, '/damage/register', ${query})}"></th:block>
+        <p class="form-note" th:text="#{damage.register.countedNote}">Totals count decided damage: what an approved report wrote off, accepted trip breakage, cutting breakage, write-offs and returns to cullet. Reports and breakage still waiting show their estimate and are not counted; rejected ones are left out.</p>
     </div>
 </div>
 </body>

@@ -4650,3 +4650,8 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 /* M16: the count sheet's blank cells to write the labels found in; the form adding a count's participant */
 .print-doc-table td.print-doc-blank { height: 14mm; min-width: 30mm; }
 .count-participant-form { margin-top: 16px; max-width: none; }
+
+/* M16: inventory KPIs month by month (the month columns scroll inside their box) */
+.kpi-months td.kpi-name { font-weight: 600; white-space: nowrap; }
+.kpi-months td.kpi-met { color: var(--success); font-weight: 600; }
+.kpi-months td.kpi-missed { color: var(--danger); font-weight: 600; }

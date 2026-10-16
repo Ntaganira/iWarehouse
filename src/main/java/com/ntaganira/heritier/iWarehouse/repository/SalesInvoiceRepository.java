@@ -115,4 +115,13 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
 
     @Query("select i from SalesInvoice i where i.clientId = :clientId")
     Optional<SalesInvoice> findMobileByClientId(@Param("clientId") UUID clientId);
+
+    /** Rows of (invoice id, salesperson, extra terms days) of these invoices: who sold what a customer owes (Q.05). */
+    @Query("select i.id, i.salesperson, i.extraTermsDays from SalesInvoice i where i.id in :ids")
+    List<Object[]> sellersOf(@Param("ids") java.util.Collection<UUID> ids);
+
+    /** What the invoices issued in a period charged (VAT included): the discount analysis's base (R.06). */
+    @Query("select coalesce(sum(i.totalAmount), 0) from SalesInvoice i"
+            + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
+    java.math.BigDecimal issuedTotal(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 }

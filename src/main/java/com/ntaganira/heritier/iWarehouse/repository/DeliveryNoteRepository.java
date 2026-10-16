@@ -53,4 +53,10 @@ public interface DeliveryNoteRepository extends JpaRepository<DeliveryNote, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select n from DeliveryNote n where n.id = :id")
     Optional<DeliveryNote> lockById(@Param("id") UUID id);
+
+    /** Invoices with a delivery note released since a moment, with when they were paid and their last release (order-to-delivery, Annex D). */
+    @Query("select n.invoice.id, n.invoice.postedAt, max(n.releasedAt) from DeliveryNote n"
+            + " where n.status = com.ntaganira.heritier.iWarehouse.enums.DeliveryNoteStatus.RELEASED and n.releasedAt >= :since"
+            + " group by n.invoice.id, n.invoice.postedAt")
+    List<Object[]> lastReleaseSince(@Param("since") LocalDateTime since);
 }

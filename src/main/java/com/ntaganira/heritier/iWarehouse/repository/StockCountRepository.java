@@ -56,4 +56,9 @@ public interface StockCountRepository extends JpaRepository<StockCount, UUID>, J
     List<String> findOpenCovering(@Param("locationIds") Collection<UUID> locationIds);
 
     long countByStatus(StockCountStatus status);
+
+    /** Counts closed in a period with their place (the inventory reports, IMP 18). */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"location"})
+    List<StockCount> findByStatusAndClosedAtBetweenOrderByClosedAtAsc(com.ntaganira.heritier.iWarehouse.enums.StockCountStatus status,
+                                                                     java.time.LocalDateTime from, java.time.LocalDateTime to);
 }

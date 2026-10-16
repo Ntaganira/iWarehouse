@@ -54,4 +54,7 @@ public interface StockVarianceRepository extends JpaRepository<StockVariance, UU
     /** Variances opened in a period (counts closed then), with their count. */
     @EntityGraph(attributePaths = {"count", "count.location"})
     List<StockVariance> findByCreatedAtBetweenOrderByCreatedAtAsc(LocalDateTime from, LocalDateTime to);
+
+    /** Variances due in a period (variance resolution, IMP 19). */
+    List<StockVariance> findByDueOnBetween(LocalDate from, LocalDate to);
 }

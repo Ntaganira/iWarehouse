@@ -24,4 +24,7 @@ public interface StockDayReviewRepository extends JpaRepository<StockDayReview, 
     Optional<StockDayReview> findByDay(LocalDate day);
 
     Page<StockDayReview> findAllByOrderByDayDesc(Pageable pageable);
+
+    /** The days signed off in a period (reconciliation compliance, IMP 19). */
+    java.util.List<StockDayReview> findByDayBetween(LocalDate from, LocalDate to);
 }

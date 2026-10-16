@@ -49,13 +49,15 @@ public class FinancialStatementController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final ReportFiles reportFiles;
+    private final StatementSheets statementSheets;
 
     public FinancialStatementController(FinancialStatementService statementService, ActivityLogService activityLogService, Messages messages,
-                                        ReportFiles reportFiles) {
+                                        ReportFiles reportFiles, StatementSheets statementSheets) {
         this.statementService = statementService;
         this.activityLogService = activityLogService;
         this.messages = messages;
         this.reportFiles = reportFiles;
+        this.statementSheets = statementSheets;
     }
 
     /** A period: up to today, from the first day of its month by default; a start after the end starts the end's month. */
@@ -90,15 +92,8 @@ public class FinancialStatementController {
                                                         @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
         Period p = Period.of(from, to, statementService.today());
         FinancialStatements.IncomeStatement is = statementService.incomeStatement(p.from(), p.to());
-        Excel.Builder sheet = Excel.sheet(m("fin.income.title"), m("fin.income.title"), m("fin.period", p.from().format(DAY), p.to().format(DAY)),
-                m("fin.code"), m("fin.account"), m("fin.amount"));
-        section(sheet, m("fin.revenue"), is.revenue(), m("fin.totalRevenue"), is.getTotalRevenue());
-        section(sheet, m("fin.costOfSales"), is.costOfSales(), m("fin.totalCostOfSales"), is.getTotalCostOfSales());
-        sheet.bold(null, m("fin.grossProfit"), is.getGrossProfit());
-        section(sheet, m("fin.expenses"), is.expenses(), m("fin.totalExpenses"), is.getTotalExpenses());
-        sheet.bold(null, is.getNetProfit().signum() < 0 ? m("fin.netLoss") : m("fin.netProfit"), is.getNetProfit());
         return file(format, "EXPORT_INCOME_STATEMENT", "income statement from " + p.from() + " to " + p.to(),
-                "income-statement-" + p.from() + "-" + p.to(), sheet.build());
+                "income-statement-" + p.from() + "-" + p.to(), statementSheets.income(m("fin.income.title"), is, p.from(), p.to()));
     }
 
     // ---------------------------------------------------------------- balance sheet
@@ -120,19 +115,8 @@ public class FinancialStatementController {
                                                      @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
         LocalDate day = day(asOf);
         FinancialStatements.BalanceSheet bs = statementService.balanceSheet(day);
-        Excel.Builder sheet = Excel.sheet(m("fin.balance.title"), m("fin.balance.title"), m("fin.asOf", day.format(DAY)),
-                m("fin.code"), m("fin.account"), m("fin.amount"));
-        section(sheet, m("fin.assets"), bs.assets(), m("fin.totalAssets"), bs.getTotalAssets());
-        section(sheet, m("fin.liabilities"), bs.liabilities(), m("fin.totalLiabilities"), bs.getTotalLiabilities());
-        sheet.bold(m("fin.equity"));
-        bs.equity().forEach(l -> sheet.row(l.account().getCode(), l.account().getName(), l.amount()));
-        if (bs.earlierProfit().signum() != 0) {
-            sheet.row(null, m("fin.earlierProfit"), bs.earlierProfit());
-        }
-        sheet.row(null, m("fin.yearProfit", String.valueOf(day.getYear())), bs.yearProfit());
-        sheet.bold(null, m("fin.totalEquity"), bs.getTotalEquity());
-        sheet.bold(null, m("fin.totalLiabilitiesEquity"), bs.getLiabilitiesAndEquity());
-        return file(format, "EXPORT_BALANCE_SHEET", "balance sheet as at " + day, "balance-sheet-" + day, sheet.build());
+        return file(format, "EXPORT_BALANCE_SHEET", "balance sheet as at " + day, "balance-sheet-" + day,
+                statementSheets.balance(m("fin.balance.title"), bs, day));
     }
 
     // ---------------------------------------------------------------- general ledger
@@ -199,13 +183,6 @@ public class FinancialStatementController {
     }
 
     // ---------------------------------------------------------------- helpers
-
-    /** A section of a statement: its title, its accounts, its total. */
-    private static void section(Excel.Builder sheet, String title, List<FinancialStatements.Line> lines, String total, BigDecimal amount) {
-        sheet.bold(null, title);
-        lines.forEach(l -> sheet.row(l.account().getCode(), l.account().getName(), l.amount()));
-        sheet.bold(null, total, amount);
-    }
 
     /** "CLR-6 · Shandong Float Glass Co. · INV-778": what a ledger line is about. */
     static String about(JournalLine line) {

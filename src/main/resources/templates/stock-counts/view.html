@@ -30,7 +30,7 @@
             <th:block th:if="${s == 'OPEN' and canCount}">
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{count.cancel}">Cancel the count</button>
                 <form th:action="@{/stock-counts/{id}/close(id=${count.id})}" method="post" class="row-action-form confirm-submit"
-                      th:attr="data-confirm=#{count.closeConfirm(${count.number}, ${scans.totalElements}, ${todo.totalElements})}">
+                      th:attr="data-confirm=${hideExpected} ? #{count.closeConfirmBlind(${count.number}, ${scans.totalElements})} : #{count.closeConfirm(${count.number}, ${scans.totalElements}, ${todo.totalElements})}">
                     <button type="submit" class="btn btn-primary"
                             th:text="${count.phase.name() == 'FIRST'} ? #{count.close} : (${count.phase.name() == 'SECOND'} ? #{count.closeSecond} : #{count.closeRecount})">Close and record</button>
                 </form>
@@ -240,7 +240,7 @@
                                 <th th:text="#{count.label}">Label</th>
                                 <th th:text="#{count.glass}">Glass</th>
                                 <th th:text="#{count.foundAt}">Found on</th>
-                                <th th:text="#{count.recorded}">Recorded</th>
+                                <th th:unless="${hideExpected}" th:text="#{count.recorded}">Recorded</th>
                                 <th th:if="${s == 'OPEN' and !hideExpected}" th:text="#{count.soFar}">So far</th>
                                 <th th:text="#{count.scannedBy}">Scanned</th>
                                 <th th:if="${s == 'OPEN' and canCount}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
@@ -260,7 +260,7 @@
                                     <span class="text-muted" th:unless="${u != null}">—</span>
                                 </td>
                                 <td class="mono" th:text="${locations.get(r.scan.locationId) != null} ? ${locations.get(r.scan.locationId).code} : '—'">WH-A-R01</td>
-                                <td>
+                                <td th:unless="${hideExpected}">
                                     <th:block th:if="${u != null}">
                                         <span th:text="#{${'stock.status.' + u.status}}">Available</span>
                                         <div class="cell-sub mono" th:if="${u.location != null}" th:text="${u.location.code}">WH-A-R02</div>
@@ -397,7 +397,7 @@
                             <tr th:each="p : ${participants}">
                                 <td>
                                     <span class="strong" th:text="${p.name}">Jean Habimana</span>
-                                    <div class="cell-sub" th:text="${p.userId != null} ? #{count.participant.user} : #{count.participant.paper}">signs in the system</div>
+                                    <div class="cell-sub" th:text="${p.userId != null} ? #{count.participant.inSystem} : #{count.participant.paper}">signs in the system</div>
                                 </td>
                                 <td th:text="#{${'count.role.' + p.role}}">Warehouse</td>
                                 <td>

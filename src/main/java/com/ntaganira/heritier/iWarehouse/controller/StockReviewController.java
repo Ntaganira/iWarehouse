@@ -2,8 +2,11 @@ package com.ntaganira.heritier.iWarehouse.controller;
 
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
+import com.ntaganira.heritier.iWarehouse.entity.Location;
 import com.ntaganira.heritier.iWarehouse.entity.StockMovement;
 import com.ntaganira.heritier.iWarehouse.entity.StockReconciliation;
+import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.MovementType;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
@@ -21,6 +24,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -53,10 +57,14 @@ public class StockReviewController {
     private final ReportFiles reportFiles;
     private final ActivityLogService activityLogService;
     private final Messages messages;
+    private final InventoryReportService inventoryReports;
+    private final InventorySheets inventorySheets;
 
     public StockReviewController(StockCardService cardService, StockReviewService reviewService, StockSummaryService summaryService,
                                  SiteTransferService siteTransferService, ReportFiles reportFiles, ActivityLogService activityLogService,
-                                 Messages messages) {
+                                 Messages messages, InventoryReportService inventoryReports, InventorySheets inventorySheets) {
+        this.inventoryReports = inventoryReports;
+        this.inventorySheets = inventorySheets;
         this.cardService = cardService;
         this.reviewService = reviewService;
         this.summaryService = summaryService;
@@ -134,8 +142,87 @@ public class StockReviewController {
         model.addAttribute("locations", siteTransferService.locations());
         model.addAttribute("review", reviewService.dayReview(d).orElse(null));
         model.addAttribute("reviews", reviewService.dayReviews(Paging.page(rpage), Paging.SIZE));
+        // The daily inventory report (IMP 14.1, 18; DIR-011): values, sites, deliveries, transfers, exceptions
+        model.addAttribute("report", inventoryReports.day(d));
         model.addAttribute("query", QueryString.of("day", d.toString(), "type", type == null ? null : type.name()));
         return "stock/daily-review";
+    }
+
+    /** The Internal Controller countersigns a day the Warehouse Manager signed off (IMP 14.1, M.01). */
+    @PostMapping("/stock/daily-review/countersign")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_SUMMARY') and hasAuthority('PERM_COUNTERSIGN_DAILY_STOCK')")
+    public String countersignDay(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate day,
+                                 @RequestParam(required = false) String note, RedirectAttributes redirect) {
+        try {
+            var review = inventoryReports.countersign(day, note);
+            activityLogService.record(MODULE, "APPROVE_DAILY_STOCK", "Countersigned the daily inventory report of " + day + " signed off by "
+                    + review.getReviewedBy() + (review.getCountersignNote() == null ? "" : ": " + review.getCountersignNote()), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("inventoryReport.countersigned", day.format(DAY)));
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "APPROVE_DAILY_STOCK", "Failed to countersign the daily inventory report of " + day + ": " + error,
+                    ActivityStatus.FAILED);
+            redirect.addFlashAttribute("flashError", error);
+        }
+        return "redirect:/stock/daily-review?day=" + day;
+    }
+
+    /** The daily inventory report in Excel or PDF (IMP 18, DIR-011): the figures, sites, every movement, deliveries, transfers, exceptions. */
+    @GetMapping("/stock/daily-review/export")
+    @PreAuthorize(STOCK)
+    public ResponseEntity<byte[]> dayExport(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate day,
+                                            @RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
+        boolean seeCost = AppUserPrincipal.currentHas("PERM_VIEW_STOCK_COST");
+        LocalDate d = day == null || day.isAfter(reviewService.today()) ? reviewService.today() : day;
+        InventoryReportService.Day r = inventoryReports.day(d);
+        String sub = d.format(DAY);
+        Excel.Builder summary = Excel.sheet(messages.get("inventoryReport.daily"), messages.get("inventoryReport.daily"), sub,
+                messages.get("stockRecon.check"), messages.get("stockRecon.figure"));
+        if (seeCost) {
+            summary.row(messages.get("inventoryReport.openingValue"), r.openingValue());
+            summary.row(messages.get("inventoryReport.closingValue"), r.closingValue());
+            summary.bold(messages.get("inventoryReport.change"), r.getChange());
+        }
+        summary.row(messages.get("inventoryReport.unitsIn"), r.sites().total().inUnits());
+        summary.row(messages.get("inventoryReport.unitsOut"), r.sites().total().outUnits());
+        summary.row(messages.get("inventoryReport.unitsHeld"), r.sites().total().units());
+        summary.row(messages.get("inventoryReport.handOvers"), r.handOvers());
+        reviewService.dayReview(d).ifPresentOrElse(rv -> {
+            summary.row(messages.get("stockReview.signedBy"), rv.getReviewedBy() + " - " + rv.getReviewedAt().format(TIME));
+            summary.row(messages.get("inventoryReport.countersignedBy"), rv.isCountersigned()
+                    ? rv.getCountersignedBy() + " - " + rv.getCountersignedAt().format(TIME) : messages.get("inventoryReport.notCountersigned"));
+        }, () -> summary.row(messages.get("stockReview.signedBy"), messages.get("stockReview.notYet", sub)));
+        Excel.Builder sites = inventorySheets.sites(r.sites(), messages.get("inventoryReport.bySite"), sub, seeCost);
+        Excel.Builder types = Excel.sheet(messages.get("stockReview.byType"), messages.get("stockReview.byType"), sub,
+                messages.get("stock.movementType"), messages.get("stockRecon.count"), messages.get("summary.area"), messages.get("stockRecon.cost"));
+        r.byType().forEach(t -> types.row(messages.get("stock.movement." + t.type()), t.count(), t.areaM2(), seeCost ? t.cost() : null));
+        Map<UUID, Location> places = siteTransferService.locations();
+        Excel.Builder moves = Excel.sheet(messages.get("stockReview.movements"), messages.get("stockReview.movements"), sub,
+                messages.get("activity.dateTime"), messages.get("stock.movementType"), messages.get("stock.code"), messages.get("stock.fromTo"),
+                messages.get("stock.reference"), messages.get("activity.user"));
+        Page<StockMovement> all = reviewService.dayMovements(d, null, 0, 10_000);
+        Map<UUID, StockUnit> units = reviewService.unitsOf(all.getContent());
+        for (StockMovement m : all.getContent()) {
+            StockUnit u = units.get(m.getStockUnitId());
+            moves.row(m.getMovedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")), messages.get("stock.movement." + m.getType()),
+                    u == null ? "" : u.getCode(), code(places, m.getFromLocationId()) + " > " + code(places, m.getToLocationId()),
+                    m.getRefNumber(), m.getUsername());
+        }
+        Excel.Builder docs = Excel.sheet(messages.get("inventoryReport.documents"), messages.get("inventoryReport.documents"), sub,
+                messages.get("inventoryReport.section"), messages.get("stock.reference"), messages.get("inventoryReport.detail"),
+                messages.get("stockRecon.count"), messages.get("stockRecon.cost"));
+        r.deliveries().forEach(i -> docs.row(messages.get("inventoryReport.deliveries"), i.number(), i.detail(), null, null));
+        r.sold().forEach(x -> docs.row(messages.get("stock.movement." + x.type()), x.refNumber(), null, x.units(), seeCost ? x.cost() : null));
+        r.transfers().forEach(x -> docs.row(messages.get("stock.movement." + x.type()), x.refNumber(), null, x.units(), seeCost ? x.cost() : null));
+        r.adjustments().forEach(x -> docs.row(messages.get("stock.movement." + x.type()), x.refNumber(), null, x.units(), seeCost ? x.cost() : null));
+        r.exceptions().forEach(i -> docs.row(messages.get(i.kindKey()), i.number(), i.detail(), null, seeCost ? i.value() : null));
+        activityLogService.record(MODULE, "EXPORT_DAILY_STOCK", "Exported the daily inventory report of " + d + " to " + format.label(), ActivityStatus.SUCCESS);
+        return reportFiles.download(format, "daily-inventory-" + d, summary.build(), sites.build(), types.build(), moves.build(), docs.build());
+    }
+
+    private static String code(Map<UUID, Location> places, UUID id) {
+        Location l = id == null ? null : places.get(id);
+        return l == null ? "-" : l.getCode();
     }
 
     @PostMapping("/stock/daily-review")

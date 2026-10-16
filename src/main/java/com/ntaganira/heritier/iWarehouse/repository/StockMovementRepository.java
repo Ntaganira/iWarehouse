@@ -68,4 +68,30 @@ public interface StockMovementRepository extends Repository<StockMovement, UUID>
     @Query("select u.product.id, max(m.movedAt), coalesce(sum(case when m.movedAt >= :since then u.areaM2 else 0 end), 0)"
             + " from StockMovement m, StockUnit u where u.id = m.stockUnitId and m.type = :type group by u.product.id")
     List<Object[]> movedByProduct(@Param("type") MovementType type, @Param("since") LocalDateTime since);
+
+    /**
+     * Where every unit stood at a moment, from its last movement before it, counted per place and state as (location id,
+     * status name, units, m²): the stock position of a past day (IMP 14.1, the daily inventory report).
+     */
+    @Query(value = "select x.to_location_id, x.to_status, count(*), coalesce(sum(u.area_m2), 0) from (select distinct on (m.stock_unit_id)"
+            + " m.stock_unit_id, m.to_location_id, m.to_status from stock_movements m where m.moved_at < :at"
+            + " order by m.stock_unit_id, m.moved_at desc) x join stock_units u on u.id = x.stock_unit_id"
+            + " group by x.to_location_id, x.to_status", nativeQuery = true)
+    List<Object[]> positionAt(@Param("at") java.time.LocalDateTime at);
+
+    /** When the first unit moved: the business on the system (reconciliations are due from that day). */
+    @Query("select min(m.movedAt) from StockMovement m")
+    java.time.LocalDateTime firstMovementAt();
+
+    /** The movements of a period as (type, from place, from state, to place, to state, m², unit cost): what came in and went out per site. */
+    @Query("select m.type, m.fromLocationId, m.fromStatus, m.toLocationId, m.toStatus, u.areaM2, u.unitCost from StockMovement m, StockUnit u"
+            + " where u.id = m.stockUnitId and m.movedAt between :from and :to")
+    List<Object[]> flowsBetween(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
+
+    /** The documents behind a period's movements of some types as (type, ref type, ref id, ref number, units, m², cost), largest first. */
+    @Query("select m.type, m.refType, m.refId, m.refNumber, count(m), coalesce(sum(u.areaM2), 0), coalesce(sum(u.unitCost), 0)"
+            + " from StockMovement m, StockUnit u where u.id = m.stockUnitId and m.movedAt between :from and :to and m.type in :types"
+            + " group by m.type, m.refType, m.refId, m.refNumber order by count(m) desc, m.refNumber")
+    List<Object[]> documentsBetween(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to,
+                                    @Param("types") java.util.Collection<com.ntaganira.heritier.iWarehouse.enums.MovementType> types);
 }

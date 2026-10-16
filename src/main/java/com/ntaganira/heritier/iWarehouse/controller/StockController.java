@@ -369,6 +369,9 @@ public class StockController {
         model.addAttribute("product", product);
         model.addAttribute("days", d);
         model.addAttribute("defaultDays", stockReports.slowMovingDays());
+        // Obsolete glass (IMP 13, K.11): held longer than the Settings' days
+        model.addAttribute("obsoleteDays", stockReports.obsoleteDays());
+        model.addAttribute("obsolete", stockReports.slowMoving(stockReports.obsoleteDays(), product).total());
         model.addAttribute("today", stockReports.today());
         model.addAttribute("query", QueryString.of("days", String.valueOf(d), "product", product == null ? null : product.toString()));
         return "stock/slow-moving";
@@ -402,9 +405,13 @@ public class StockController {
         }
         Excel.Builder units = Excel.sheet(messages.get("slowMoving.units"), messages.get("slowMoving.units"), null, unitHeaders.toArray(String[]::new));
         report.units().forEach(u -> units.row(unitCells(u, today, seeCost)));
+        int obsoleteDays = stockReports.obsoleteDays();
+        Excel.Builder obsolete = Excel.sheet(messages.get("slowMoving.obsolete"), messages.get("slowMoving.obsolete"),
+                messages.get("slowMoving.obsoleteSubtitle", obsoleteDays, day(today)), unitHeaders.toArray(String[]::new));
+        stockReports.slowMoving(obsoleteDays, product).units().forEach(u -> obsolete.row(unitCells(u, today, seeCost)));
         activityLogService.record(MODULE, "EXPORT_SLOW_MOVING", "Exported the slow-moving stock (over " + d + " days) to " + format.label(),
                 ActivityStatus.SUCCESS);
-        return reportFiles.download(format, "slow-moving-" + today, glass.build(), units.build());
+        return reportFiles.download(format, "slow-moving-" + today, glass.build(), units.build(), obsolete.build());
     }
 
     /** The days asked, or the Settings' days; kept between 1 and 730. */

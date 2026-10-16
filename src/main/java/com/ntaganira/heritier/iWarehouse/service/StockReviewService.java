@@ -251,7 +251,8 @@ public class StockReviewService {
 
     // ---------------------------------------------------------------- helpers
 
-    private List<ByType> byType(LocalDateTime from, LocalDateTime to) {
+    /** Movements of a period by type: how many, their m² and their cost. */
+    public List<ByType> byType(LocalDateTime from, LocalDateTime to) {
         List<ByType> list = new ArrayList<>();
         for (Object[] r : movementRepo.byTypeBetween(from, to)) {
             list.add(new ByType((MovementType) r[0], ((Number) r[1]).longValue(), (BigDecimal) r[2], (BigDecimal) r[3]));

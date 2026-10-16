@@ -683,6 +683,111 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.kpis}">Inventory reports and KPIs</h3>
+                <p class="hint" th:text="#{settings.group.kpisHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="stockObsoleteDays" th:text="#{settings.stockObsoleteDays}">stockObsoleteDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="stockObsoleteDays" th:field="*{stockObsoleteDays}" step="1" min="30" max="3650" required
+                               th:classappend="${#fields.hasErrors('stockObsoleteDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.daysUnit}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('stockObsoleteDays')}" th:errors="*{stockObsoleteDays}"></span>
+                    <span class="hint" th:text="#{settings.stockObsoleteDaysHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiAccuracyTarget" th:text="#{settings.kpiAccuracyTarget}">kpiAccuracyTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiAccuracyTarget" th:field="*{kpiAccuracyTarget}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('kpiAccuracyTarget')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiAccuracyTarget')}" th:errors="*{kpiAccuracyTarget}"></span>
+                    <span class="hint" th:text="#{settings.kpiAccuracyTargetHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiAccuracyMonths" th:text="#{settings.kpiAccuracyMonths}">kpiAccuracyMonths</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiAccuracyMonths" th:field="*{kpiAccuracyMonths}" step="1" min="1" max="12" required
+                               th:classappend="${#fields.hasErrors('kpiAccuracyMonths')} ? 'is-invalid'">
+                        <span th:text="#{settings.monthsUnit}">months</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiAccuracyMonths')}" th:errors="*{kpiAccuracyMonths}"></span>
+                    <span class="hint" th:text="#{settings.kpiAccuracyMonthsHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiLossMaxPercent" th:text="#{settings.kpiLossMaxPercent}">kpiLossMaxPercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiLossMaxPercent" th:field="*{kpiLossMaxPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('kpiLossMaxPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiLossMaxPercent')}" th:errors="*{kpiLossMaxPercent}"></span>
+                    <span class="hint" th:text="#{settings.kpiLossMaxPercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiDamageMaxPercent" th:text="#{settings.kpiDamageMaxPercent}">kpiDamageMaxPercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiDamageMaxPercent" th:field="*{kpiDamageMaxPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('kpiDamageMaxPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiDamageMaxPercent')}" th:errors="*{kpiDamageMaxPercent}"></span>
+                    <span class="hint" th:text="#{settings.kpiDamageMaxPercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiTurnoverTarget" th:text="#{settings.kpiTurnoverTarget}">kpiTurnoverTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiTurnoverTarget" th:field="*{kpiTurnoverTarget}" step="0.01" min="0" max="999"
+                               th:classappend="${#fields.hasErrors('kpiTurnoverTarget')} ? 'is-invalid'">
+                        <span th:text="#{settings.timesUnit}">times a year</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiTurnoverTarget')}" th:errors="*{kpiTurnoverTarget}"></span>
+                    <span class="hint" th:text="#{settings.kpiTurnoverTargetHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiDeliveryAccuracyTarget" th:text="#{settings.kpiDeliveryAccuracyTarget}">kpiDeliveryAccuracyTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiDeliveryAccuracyTarget" th:field="*{kpiDeliveryAccuracyTarget}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('kpiDeliveryAccuracyTarget')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiDeliveryAccuracyTarget')}" th:errors="*{kpiDeliveryAccuracyTarget}"></span>
+                    <span class="hint" th:text="#{settings.kpiDeliveryAccuracyTargetHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiReconciliationTarget" th:text="#{settings.kpiReconciliationTarget}">kpiReconciliationTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiReconciliationTarget" th:field="*{kpiReconciliationTarget}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('kpiReconciliationTarget')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiReconciliationTarget')}" th:errors="*{kpiReconciliationTarget}"></span>
+                    <span class="hint" th:text="#{settings.kpiReconciliationTargetHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiVarianceResolutionTarget" th:text="#{settings.kpiVarianceResolutionTarget}">kpiVarianceResolutionTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiVarianceResolutionTarget" th:field="*{kpiVarianceResolutionTarget}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('kpiVarianceResolutionTarget')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiVarianceResolutionTarget')}" th:errors="*{kpiVarianceResolutionTarget}"></span>
+                    <span class="hint" th:text="#{settings.kpiVarianceResolutionTargetHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="kpiOrderDaysTarget" th:text="#{settings.kpiOrderDaysTarget}">kpiOrderDaysTarget</label>
+                    <div class="input-unit">
+                        <input type="number" id="kpiOrderDaysTarget" th:field="*{kpiOrderDaysTarget}" step="0.1" min="0" max="365" required
+                               th:classappend="${#fields.hasErrors('kpiOrderDaysTarget')} ? 'is-invalid'">
+                        <span th:text="#{settings.daysUnit}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('kpiOrderDaysTarget')}" th:errors="*{kpiOrderDaysTarget}"></span>
+                    <span class="hint" th:text="#{settings.kpiOrderDaysTargetHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

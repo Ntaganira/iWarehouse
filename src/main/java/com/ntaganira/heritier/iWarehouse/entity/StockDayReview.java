@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  * - Date      : 2026. 10. 15.
  * - User      : Hntaganira
  * - Desc      : A day's stock movements reviewed (IMP 12): how many there were, who reviewed them, when, and the note.
- *               One a day.
+ *               One a day. The Internal Controller countersigns the day's inventory report (IMP 14.1, M.01).
  * </pre>
  */
 @Entity
@@ -45,4 +45,21 @@ public class StockDayReview extends BaseEntity {
 
     @Column(name = "reviewed_at", nullable = false, updatable = false)
     private LocalDateTime reviewedAt;
+
+    /** The Internal Controller's countersignature of the day's inventory report (IMP 14.1, M.01). */
+    @Column(name = "countersigned_by", length = 50)
+    private String countersignedBy;
+
+    @Column(name = "countersigned_by_id")
+    private Long countersignedById;
+
+    @Column(name = "countersigned_at")
+    private LocalDateTime countersignedAt;
+
+    @Column(name = "countersign_note", length = 500)
+    private String countersignNote;
+
+    public boolean isCountersigned() {
+        return countersignedAt != null;
+    }
 }

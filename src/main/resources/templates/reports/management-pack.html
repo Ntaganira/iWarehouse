@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{pack.pageTitle}, ~{::content})}">
+<head><title>Management pack - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="p=${pack}, label=${#temporals.format(pack.from, 'MM/yyyy')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{pack.pageTitle}">Management pack</h1>
+            <div class="subtitle" th:text="#{pack.pageSubtitle}">The month's accounts, ageing, stock position, sales by territory and channel, collections and inventory KPIs in one PDF</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/management-pack/export(month=${monthValue})})}"></th:block>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/reports/management-pack}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{exceptions.month}">Month</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${monthValue}" th:attr="max=${maxMonth}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="doc-note" th:text="#{pack.basisNote(${#temporals.format(p.to, 'dd/MM/yyyy')}, ${#temporals.format(p.today, 'dd/MM/yyyy')})}">The statements run to 30/09/2026; the ageing and the stock position are as they stand today (16/10/2026).</div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{fin.totalRevenue}">Total revenue</div>
+                <div class="kpi-value" th:with="v=${@num.money(p.income.totalRevenue)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">12,500,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{pack.kpi.ytd(${@num.money(p.yearToDate.totalRevenue)})}">95,000,000 this year</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="${p.income.netProfit.signum() < 0} ? #{fin.netLoss} : #{fin.netProfit}">Net profit</div>
+                <div class="kpi-value" th:with="v=${@num.money(p.income.netProfit)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">2,100,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{pack.kpi.gross(${@num.money(p.income.grossProfit)})}">gross profit 3,400,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{receivables.title}">Receivables</div>
+                <div class="kpi-value" th:with="v=${@num.money(p.receivables.total)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">4,250,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{pack.kpi.payables(${@num.money(p.payables.total)})}">payables 6,100,000</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{pack.inventoryAccount}">Inventory account</div>
+                <div class="kpi-value" th:with="v=${@num.money(p.inventoryAccount)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">48,250,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{pack.kpi.valuation(${@num.money(p.stock.total.value)})}">stock valued at 48,250,000 today</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{pack.contents}">Contents</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{pack.part}">Part</th>
+                        <th th:text="#{pack.basis}">Basis</th>
+                        <th><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td th:text="#{pack.part.income}">Income statement, the month</td>
+                        <td th:text="#{fin.period(${#temporals.format(p.from, 'dd/MM/yyyy')}, ${#temporals.format(p.to, 'dd/MM/yyyy')})}">01/09/2026 to 30/09/2026</td>
+                        <td><a th:href="@{/accounting/income-statement(from=${p.from}, to=${p.to})}" sec:authorize="hasAuthority('PAGE_FINANCIAL_STATEMENTS')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.incomeYtd}">Income statement, the year to date</td>
+                        <td th:text="#{fin.period(${#temporals.format(p.from.withDayOfYear(1), 'dd/MM/yyyy')}, ${#temporals.format(p.to, 'dd/MM/yyyy')})}">01/01/2026 to 30/09/2026</td>
+                        <td><a th:href="@{/accounting/income-statement(from=${p.from.withDayOfYear(1)}, to=${p.to})}" sec:authorize="hasAuthority('PAGE_FINANCIAL_STATEMENTS')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.balance}">Balance sheet</td>
+                        <td th:text="#{fin.asOf(${#temporals.format(p.to, 'dd/MM/yyyy')})}">As at 30/09/2026</td>
+                        <td><a th:href="@{/accounting/balance-sheet(asOf=${p.to})}" sec:authorize="hasAuthority('PAGE_FINANCIAL_STATEMENTS')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.receivables}">Receivables ageing</td>
+                        <td th:text="#{fin.asOf(${#temporals.format(p.today, 'dd/MM/yyyy')})}">As at 16/10/2026</td>
+                        <td><a href="/accounting/receivables" sec:authorize="hasAuthority('PAGE_RECEIVABLES')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.payables}">Payables ageing</td>
+                        <td th:text="#{fin.asOf(${#temporals.format(p.today, 'dd/MM/yyyy')})}">As at 16/10/2026</td>
+                        <td><a href="/accounting/payables" sec:authorize="hasAuthority('PAGE_PAYABLES')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.stock}">Stock position</td>
+                        <td th:text="#{fin.asOf(${#temporals.format(p.today, 'dd/MM/yyyy')})}">As at 16/10/2026</td>
+                        <td><a href="/stock/summary" sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.territory}">Sales by territory</td>
+                        <td th:text="${label}">09/2026</td>
+                        <td><a th:href="@{/reports/sales(from=${p.from}, to=${p.to}, group='TERRITORY')}" sec:authorize="hasAuthority('PAGE_SALES_REPORTS')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.channel}">Sales by channel</td>
+                        <td th:text="${label}">09/2026</td>
+                        <td><a th:href="@{/reports/sales(from=${p.from}, to=${p.to}, group='CHANNEL')}" sec:authorize="hasAuthority('PAGE_SALES_REPORTS')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.collections}">Collections by territory</td>
+                        <td th:text="${label}">09/2026</td>
+                        <td><a th:href="@{/reports/collections(from=${p.from}, to=${p.to})}" sec:authorize="hasAuthority('PAGE_COLLECTIONS_REPORT')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{pack.part.kpis}">Inventory KPIs</td>
+                        <td th:text="${label}">09/2026</td>
+                        <td><a th:href="@{/reports/kpis(month=${monthValue})}" sec:authorize="hasAuthority('PAGE_INVENTORY_KPIS')" th:text="#{pack.open}">Open</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{pack.part.territory}">Sales by territory</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{salesReport.group.TERRITORY}">Territory</th>
+                        <th class="num" th:text="#{salesReport.invoices}">Invoices</th>
+                        <th class="num" th:text="#{salesReport.net}">Net sales (RWF)</th>
+                        <th class="num" th:text="#{salesReport.margin}">Gross margin (RWF)</th>
+                        <th class="num" th:text="#{salesReport.marginPercent}">Margin %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${p.byTerritory.rows}">
+                        <td th:text="${r.label != null and !#strings.isEmpty(r.label)} ? ${r.label} : #{reports.none}">KGL</td>
+                        <td class="num" th:text="${r.invoices}">12</td>
+                        <td class="num" th:text="${@num.money(r.net)}">4,500,000</td>
+                        <td class="num" th:text="${@num.money(r.margin)}">1,200,000</td>
+                        <td class="num" th:text="${r.marginPercent != null} ? ${@num.percent(r.marginPercent)} : '—'">26.7</td>
+                    </tr>
+                    <tr th:if="${p.byTerritory.rows.isEmpty()}">
+                        <td colspan="5"><div class="empty-state"><p th:text="#{pack.noSales}">No sales this month</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{pack.part.kpis}">Inventory KPIs</h2></div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{inventoryKpi.kpi}">KPI</th>
+                        <th class="num" th:text="${label}">09/2026</th>
+                        <th class="num" th:text="#{inventoryKpi.target}">Target</th>
+                        <th th:text="#{inventoryKpi.state}">State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="k : ${p.kpis.kpis}">
+                        <td th:text="#{${'inventoryKpi.code.' + k.code}}">Inventory accuracy</td>
+                        <td class="num"><th:block th:replace="~{reports/inventory :: kpiValue(${k})}"></th:block></td>
+                        <td class="num"><th:block th:replace="~{reports/inventory :: kpiTarget(${k})}"></th:block></td>
+                        <td><th:block th:replace="~{reports/inventory :: kpiState(${k})}"></th:block></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{pack.note}">The PDF holds every part on its own page, with the letterhead; the Excel workbook one sheet per part.</p>
+    </div>
+</div>
+</body>
+</html>

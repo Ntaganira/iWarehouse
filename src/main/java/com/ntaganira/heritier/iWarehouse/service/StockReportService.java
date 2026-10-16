@@ -95,6 +95,11 @@ public class StockReportService {
     }
 
     /** Days after which glass held is slow-moving (Settings). */
+    /** Glass held longer than this is obsolete (IMP 13, K.11). */
+    public int obsoleteDays() {
+        return Math.max(1, settings.getInt(SettingKey.STOCK_OBSOLETE_DAYS));
+    }
+
     public int slowMovingDays() {
         return settings.getInt(SettingKey.SLOW_MOVING_DAYS);
     }

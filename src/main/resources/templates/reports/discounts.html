@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{discounts.title}, ~{::content})}">
+<head><title>Discounts - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${report.total}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{discounts.title}">Discount analysis</h1>
+            <div class="subtitle" th:text="#{discounts.subtitle}">Lines charged below their list price, by seller, customer, glass or invoice</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/discounts/export(from=${from}, to=${to}, by=${by})})}"></th:block>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/reports/discounts}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${#temporals.format(from, 'yyyy-MM-dd')}" th:attr="max=${today}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${#temporals.format(to, 'yyyy-MM-dd')}" th:attr="max=${today}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="by" class="toolbar-filter" th:aria-label="#{discounts.groupBy}">
+                    <option th:each="g : ${groupings}" th:value="${g}" th:selected="${g == by}" th:text="#{${'discounts.by.' + g}}">By seller</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{discounts.discount}">Discount</div>
+                <div class="kpi-value" th:with="v=${@num.money(t.discount)}" th:classappend="${#strings.length(v) > 9} ? 'is-long'" th:text="${v}">125,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{discounts.kpi.share(${@num.percent(report.sharePercent)})}">1.4 % of sales</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{discounts.kpi.lines}">Lines discounted</div>
+                <div class="kpi-value" th:text="${t.lines}">14</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{discounts.kpi.invoices(${t.invoices})}">on 9 invoices</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{discounts.kpi.average}">Average discount</div>
+                <div class="kpi-value" th:text="${@num.percent(t.percent) + ' %'}">6.2 %</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{discounts.kpi.ofList}">off the list price</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{${'discounts.by.' + by}}">By seller</span>
+                <span class="section-count" th:text="${rowPage.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{${'discounts.group.' + by}}">Seller</th>
+                        <th class="num" th:text="#{discounts.lines}">Lines</th>
+                        <th class="num" th:text="#{discounts.invoices}">Invoices</th>
+                        <th class="num" th:text="#{discounts.listAmount}">At list price</th>
+                        <th class="num" th:text="#{discounts.charged}">Charged</th>
+                        <th class="num" th:text="#{discounts.discount}">Discount</th>
+                        <th class="num" th:text="#{discounts.percent}">%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rowPage.content}">
+                        <td th:switch="${by.name()}">
+                            <a th:case="'INVOICE'" class="mono" th:href="@{/invoices/{id}(id=${r.id})}" th:text="${r.label}">INV-WH-2026-000010</a>
+                            <a th:case="'CUSTOMER'" th:href="@{/customers/{id}(id=${r.id})}" th:text="${r.label}">Umucyo Builders Ltd</a>
+                            <span th:case="*" th:text="${r.label != null and !#strings.isEmpty(r.label)} ? ${r.label} : #{reports.none}">qa-admin</span>
+                        </td>
+                        <td class="num" th:text="${r.lines}">3</td>
+                        <td class="num" th:text="${r.invoices}">2</td>
+                        <td class="num" th:text="${@num.money(r.listAmount)}">480,000</td>
+                        <td class="num" th:text="${@num.money(r.amount)}">450,000</td>
+                        <td class="num" th:text="${@num.money(r.discount)}">30,000</td>
+                        <td class="num" th:text="${@num.percent(r.percent)}">6.3</td>
+                    </tr>
+                    <tr th:if="${rowPage.totalElements == 0}">
+                        <td colspan="7"><div class="empty-state"><p th:text="#{discounts.none}">No line was charged below its list price in this period</p></div></td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${rowPage.totalElements > 0}">
+                    <tr>
+                        <th th:text="#{cutting.total}">Total</th>
+                        <th class="num" th:text="${t.lines}">14</th>
+                        <th class="num" th:text="${t.invoices}">9</th>
+                        <th class="num" th:text="${@num.money(t.listAmount)}">2,000,000</th>
+                        <th class="num" th:text="${@num.money(t.amount)}">1,875,000</th>
+                        <th class="num" th:text="${@num.money(t.discount)}">125,000</th>
+                        <th class="num" th:text="${@num.percent(t.percent)}">6.2</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rowPage}, '/reports/discounts', ${query + '&lpage=' + linePage.number})}"></th:block>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{discounts.linesTitle}">Lines discounted, largest first</span>
+                <span class="section-count" th:text="${linePage.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{invoice.number}">Invoice</th>
+                        <th th:text="#{discounts.group.SELLER}">Seller</th>
+                        <th th:text="#{invoice.customer}">Customer</th>
+                        <th th:text="#{discounts.group.PRODUCT}">Glass or processing</th>
+                        <th class="num" th:text="#{discounts.listAmount}">At list price</th>
+                        <th class="num" th:text="#{discounts.discount}">Discount</th>
+                        <th th:text="#{discounts.reason}">Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="l : ${linePage.content}">
+                        <td>
+                            <a class="mono" th:href="@{/invoices/{id}(id=${l.invoiceId})}" th:text="${l.invoiceNumber}">INV-WH-2026-000010</a>
+                            <div class="cell-sub" th:text="${#temporals.format(l.day, 'dd/MM/yyyy')}">15/10/2026</div>
+                        </td>
+                        <td th:text="${l.sellerName ?: '—'}">qa-admin</td>
+                        <td th:text="${l.customerName}">Umucyo Builders Ltd</td>
+                        <td class="mono" th:text="${l.item}">CLR-6</td>
+                        <td class="num" th:text="${@num.money(l.listAmount)}">200,000</td>
+                        <td class="num" th:text="${@num.money(l.discount)}">15,000</td>
+                        <td th:text="${l.reason ?: '—'}">Loyal customer</td>
+                    </tr>
+                    <tr th:if="${linePage.totalElements == 0}">
+                        <td colspan="7"><div class="empty-state"><p th:text="#{discounts.none}">No line was charged below its list price in this period</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pagerParam(${linePage}, '/reports/discounts', ${query + '&page=' + rowPage.number}, 'lpage')}"></th:block>
+        <p class="form-note" th:text="#{discounts.note}">A line is a discount when it was charged below the list price it kept (a price changed at the counter, approved or within the cashier's limit, or a quotation's price). Amounts include VAT as the invoice charged it; credit notes are not taken off.</p>
+    </div>
+</div>
+</body>
+</html>

@@ -60,11 +60,13 @@ public class AccountingController {
     private final Messages messages;
     private final ReportFiles reportFiles;
     private final CreditControlService creditControl;
+    private final AgeingSheets ageingSheets;
 
     public AccountingController(JournalService journalService, PostingService postingService, CustomerAccountService accountService,
                                 SupplierAccountService supplierAccountService, ActivityLogService activityLogService, Messages messages,
-                                ReportFiles reportFiles, CreditControlService creditControl) {
+                                ReportFiles reportFiles, CreditControlService creditControl, AgeingSheets ageingSheets) {
         this.creditControl = creditControl;
+        this.ageingSheets = ageingSheets;
         this.reportFiles = reportFiles;
         this.journalService = journalService;
         this.postingService = postingService;
@@ -139,15 +141,8 @@ public class AccountingController {
     public ResponseEntity<byte[]> receivablesExport(@RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
         CustomerAccountService.Receivables receivables = accountService.receivables();
         LocalDate today = accountService.today();
-        Excel.Builder sheet = Excel.sheet(messages.get("receivables.title"), messages.get("receivables.title"),
-                messages.get("fin.asOf", today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), ageingHeaders(messages.get("invoice.customer"),
-                        messages.get("party.terms")));
-        for (CustomerAccountService.Aged a : receivables.customers()) {
-            sheet.row(ageingRow(a.customer().getName(), terms(a.customer().getPaymentTermsDays()), a.ageing()));
-        }
-        sheet.bold(totalRow(receivables.totals(), receivables.total()));
         activityLogService.record(MODULE, "EXPORT_RECEIVABLES", "Exported the aged receivables to " + format.label(), ActivityStatus.SUCCESS);
-        return reportFiles.download(format, "receivables-" + today, sheet.build());
+        return reportFiles.download(format, "receivables-" + today, ageingSheets.receivables(messages.get("receivables.title"), receivables, today));
     }
 
     /** The aged payables (ACC-09): every supplier owed, per currency and by days past due (RWF as booked). */
@@ -168,52 +163,8 @@ public class AccountingController {
     public ResponseEntity<byte[]> payablesExport(@RequestParam(defaultValue = "XLSX") ReportFiles.Format format) {
         SupplierAccountService.PayablesReport payables = supplierAccountService.payables();
         LocalDate today = supplierAccountService.today();
-        Excel.Builder sheet = Excel.sheet(messages.get("payables.title"), messages.get("payables.title"),
-                messages.get("fin.asOf", today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), ageingHeaders(messages.get("supplierInvoice.supplier"),
-                        messages.get("payables.owedIn")));
-        for (SupplierAccountService.Aged a : payables.suppliers()) {
-            String owed = a.open().stream().filter(o -> o.getAmount().signum() != 0)
-                    .map(o -> PrintTable.text(o.getAmount().setScale(2, java.math.RoundingMode.HALF_UP)) + " " + o.currency())
-                    .collect(java.util.stream.Collectors.joining("; "));
-            sheet.row(ageingRow(a.supplier().getName(), owed, a.ageing()));
-        }
-        sheet.bold(totalRow(payables.totals(), payables.total()));
         activityLogService.record(MODULE, "EXPORT_PAYABLES", "Exported the aged payables to " + format.label(), ActivityStatus.SUCCESS);
-        return reportFiles.download(format, "payables-" + today, sheet.build());
-    }
-
-    /** Party, a second column, one column per ageing bucket, the total. */
-    private String[] ageingHeaders(String party, String second) {
-        java.util.List<String> headers = new java.util.ArrayList<>(java.util.List.of(party, second));
-        for (Ageing.Bucket b : Ageing.Bucket.values()) {
-            headers.add(messages.get("ageing." + b));
-        }
-        headers.add(messages.get("customerAccount.total"));
-        return headers.toArray(String[]::new);
-    }
-
-    private static Object[] ageingRow(String party, String second, Ageing.Result ageing) {
-        java.util.List<Object> cells = new java.util.ArrayList<>(java.util.List.of(party, second));
-        for (Ageing.Bucket b : Ageing.Bucket.values()) {
-            cells.add(ageing.get(b));
-        }
-        cells.add(ageing.balance());
-        return cells.toArray();
-    }
-
-    private Object[] totalRow(java.util.Map<Ageing.Bucket, BigDecimal> totals, BigDecimal total) {
-        java.util.List<Object> cells = new java.util.ArrayList<>();
-        cells.add(messages.get("fin.total"));
-        cells.add(null);
-        for (Ageing.Bucket b : Ageing.Bucket.values()) {
-            cells.add(totals.getOrDefault(b, BigDecimal.ZERO));
-        }
-        cells.add(total);
-        return cells.toArray();
-    }
-
-    private String terms(int days) {
-        return days == 0 ? messages.get("party.termsNone") : messages.get("party.termsDays", days);
+        return reportFiles.download(format, "payables-" + today, ageingSheets.payables(messages.get("payables.title"), payables, today));
     }
 
     @GetMapping("/trial-balance")

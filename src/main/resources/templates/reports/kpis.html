@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{inventoryKpi.title}, ~{::content})}">
+<head><title>Inventory KPIs - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="canReview=${#authorization.expression('hasAuthority(''PERM_REVIEW_INVENTORY_KPI'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{inventoryKpi.title}">Inventory KPIs</h1>
+            <div class="subtitle" th:text="#{inventoryKpi.subtitle}">Accuracy, losses, damage, turnover, delivery accuracy, reconciliations, variances and order-to-delivery, month by month against their targets</div>
+        </div>
+        <div class="btn-group">
+            <a href="/reports" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/reports/kpis/export(month=${monthValue})})}"></th:block>
+            <button type="button" class="btn btn-primary" data-modal-open="review-modal" th:if="${canReview and breach != null and !breach.reviewed}"
+                    th:text="#{kpi.review.record}">Record the formal review</button>
+        </div>
+    </div>
+    <div class="section">
+        <form th:action="@{/reports/kpis}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{inventoryKpi.upTo}">Twelve months up to</span>
+                    <input type="month" name="month" class="toolbar-filter" th:value="${monthValue}" th:attr="max=${maxMonth}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <th:block th:if="${breach != null}">
+        <div class="doc-note is-danger" th:unless="${breach.reviewed}"
+             th:text="#{kpi.review.due(${#temporals.format(breach.month.atDay(1), 'MM/yyyy')}, ${breach.monthsBelow}, ${breach.accuracy != null ? @num.percent(breach.accuracy) : '—'}, ${@num.percent(breach.target)})}">Inventory accuracy has been below 99 % for 2 months up to 09/2026 (98.2 % last month): the Head of Inventory and the Managing Director review it formally.</div>
+        <div class="doc-note" th:if="${breach.reviewed}">
+            <strong th:text="#{kpi.review.doneBy(${breach.review.reviewedBy}, ${#temporals.format(breach.review.reviewedAt, 'dd/MM/yyyy HH:mm')})}">Reviewed by director1 on 02/10/2026 10:00.</strong>
+            <span th:text="${breach.review.note}">Cycle counts doubled on rack R02</span>
+        </div>
+    </th:block>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card" th:each="k : ${featured}">
+            <div class="kpi-icon" th:classappend="${k.state.name() == 'MISSED'} ? 'red' : (${k.state.name() == 'MET'} ? 'green' : 'blue')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{${'inventoryKpi.code.' + k.code}}">Inventory accuracy</div>
+                <div class="kpi-value"><th:block th:replace="~{reports/inventory :: kpiValue(${k})}"></th:block></div>
+                <div class="kpi-trend" th:classappend="${k.state.name() == 'MISSED'} ? 'bad' : (${k.state.name() == 'MET'} ? 'good' : 'flat')">
+                    <span class="vs"><th:block th:replace="~{reports/inventory :: kpiTarget(${k})}"></th:block> · <th:block th:text="${#temporals.format(latest.from, 'MM/yyyy')}">10/2026</th:block></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header"><h2 th:text="#{inventoryKpi.byMonth}">Month by month</h2></div>
+        <div class="table-container kpi-months">
+            <table data-cards="off">
+                <thead>
+                    <tr>
+                        <th th:text="#{inventoryKpi.kpi}">KPI</th>
+                        <th class="num" th:text="#{inventoryKpi.target}">Target</th>
+                        <th class="num" th:each="m : ${monthsNewest}" th:text="${#temporals.format(m.from, 'MM/yy')}">10/26</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="code : ${codes}">
+                        <td class="kpi-name" th:text="#{${'inventoryKpi.code.' + code}}">Inventory accuracy</td>
+                        <td class="num"><th:block th:replace="~{reports/inventory :: kpiTarget(${latest.get(code)})}"></th:block></td>
+                        <td class="num" th:each="m : ${monthsNewest}" th:with="k=${m.get(code)}"
+                            th:classappend="${k.state.name() == 'MISSED'} ? 'kpi-missed' : (${k.state.name() == 'MET'} ? 'kpi-met' : '')">
+                            <th:block th:replace="~{reports/inventory :: kpiValue(${k})}"></th:block>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="form-note" th:text="#{inventoryKpi.note}">Accuracy: units found where expected in the counts closed that month. Loss and damage: their value at cost against the average Inventory account. Turnover: cost of sales against the average stock value, as times a year. Delivery accuracy: signed delivery note copies without a shortage or damage. Reconciliations: daily reports signed off by the next working day and monthly stock reconciliations by the Settings' working day. Variances: resolved by their due day. Order-to-delivery: days from payment to the last hand-over or release. A dash: nothing to measure.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{kpi.review.list}">Formal reviews</span>
+                <span class="section-count" th:text="${reviews.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{inventoryReport.month}">Month</th>
+                        <th class="num" th:text="#{kpi.review.monthsBelow}">Months below</th>
+                        <th class="num" th:text="#{inventoryKpi.code.ACCURACY}">Inventory accuracy</th>
+                        <th th:text="#{kpi.review.by}">Reviewed by</th>
+                        <th th:text="#{stockReview.note}">Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${reviews.content}">
+                        <td th:text="${#temporals.format(r.periodStart, 'MM/yyyy')}">09/2026</td>
+                        <td class="num" th:text="${r.monthsBelow}">2</td>
+                        <td class="num" th:text="${r.accuracy != null} ? ${@num.percent(r.accuracy) + ' %'} : '—'">98.2 %</td>
+                        <td>
+                            <span th:text="${r.reviewedBy}">director1</span>
+                            <div class="cell-sub" th:text="${#temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm')}">02/10/2026 10:00</div>
+                        </td>
+                        <td th:text="${r.note}">Cycle counts doubled on rack R02</td>
+                    </tr>
+                    <tr th:if="${reviews.totalElements == 0}">
+                        <td colspan="5"><div class="empty-state"><p th:text="#{kpi.review.none}">No formal review yet</p></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${reviews}, '/reports/kpis', ${query})}"></th:block>
+    </div>
+
+    <div class="modal-overlay" id="review-modal" th:if="${canReview and breach != null and !breach.reviewed}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="review-title">
+            <div class="modal-header">
+                <h3 id="review-title" th:text="#{kpi.review.title(${#temporals.format(breach.month.atDay(1), 'MM/yyyy')})}">Formal review of 09/2026</h3>
+                <button type="button" class="modal-close" data-modal-close="review-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/reports/kpis/review}" method="post" novalidate>
+                <input type="hidden" name="month" th:value="${breach.month}">
+                <div class="modal-body">
+                    <p class="text-muted" th:text="#{kpi.review.text}">Record what the review found and the actions decided: the causes of the differences, who does what by when.</p>
+                    <div class="form-group">
+                        <label for="review-note" th:text="#{kpi.review.note.label}">Findings and actions</label>
+                        <textarea id="review-note" name="note" rows="4" maxlength="1000" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="review-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{kpi.review.record}">Record the formal review</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

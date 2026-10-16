@@ -100,7 +100,15 @@ class MessageCoverageTest {
             Map.entry("salesReport.by.", com.ntaganira.heritier.iWarehouse.service.SalesAnalysis.GroupBy.class),
             Map.entry("dailyClose.status.", com.ntaganira.heritier.iWarehouse.enums.DailyCloseStatus.class),
             Map.entry("confirmation.status.", com.ntaganira.heritier.iWarehouse.enums.ConfirmationStatus.class),
-            Map.entry("reconciliation.state.", com.ntaganira.heritier.iWarehouse.service.ReconciliationCompliance.State.class));
+            Map.entry("reconciliation.state.", com.ntaganira.heritier.iWarehouse.service.ReconciliationCompliance.State.class),
+            Map.entry("inventoryKpi.code.", com.ntaganira.heritier.iWarehouse.service.InventoryKpis.Code.class),
+            Map.entry("inventoryKpi.state.", com.ntaganira.heritier.iWarehouse.service.InventoryKpis.State.class),
+            Map.entry("inventoryReport.kind.", com.ntaganira.heritier.iWarehouse.service.InventoryPeriods.Kind.class),
+            Map.entry("inventoryReport.kindShort.", com.ntaganira.heritier.iWarehouse.service.InventoryPeriods.Kind.class),
+            Map.entry("discounts.by.", com.ntaganira.heritier.iWarehouse.service.DiscountAnalysis.GroupBy.class),
+            Map.entry("discounts.group.", com.ntaganira.heritier.iWarehouse.service.DiscountAnalysis.GroupBy.class),
+            Map.entry("collections.by.", com.ntaganira.heritier.iWarehouse.service.CollectionAnalysis.GroupBy.class),
+            Map.entry("collections.group.", com.ntaganira.heritier.iWarehouse.service.CollectionAnalysis.GroupBy.class));
 
     @ParameterizedTest
     @ValueSource(strings = {"messages.properties", "messages_fr.properties"})

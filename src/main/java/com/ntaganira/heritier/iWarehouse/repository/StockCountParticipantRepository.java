@@ -22,4 +22,7 @@ public interface StockCountParticipantRepository extends JpaRepository<StockCoun
     List<StockCountParticipant> findByCountIdOrderByCreatedAtAscNameAsc(UUID countId);
 
     Optional<StockCountParticipant> findByCountIdAndUserId(UUID countId, Long userId);
+
+    /** Participants of some counts in one role (external auditors at the annual count, M.04). */
+    List<StockCountParticipant> findByCountIdInAndRole(java.util.Collection<UUID> countIds, com.ntaganira.heritier.iWarehouse.enums.CountRole role);
 }

@@ -44,4 +44,16 @@ public interface SalesInvoiceLineRepository extends JpaRepository<SalesInvoiceLi
             + " join l.invoice i join l.product p left join l.service s"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
+
+    /**
+     * Lines of the invoices issued in a period that kept a list price (charged other than the list), as (invoice id,
+     * number, day, salesperson, customer id, customer name, kind, glass code, processing name, list price, chargeable m²,
+     * pieces, processing quantity, VAT included, VAT rate, amount, reason): the discount analysis (R.06, M.15).
+     */
+    @Query("select i.id, i.number, i.invoiceDate, i.salesperson, c.id, c.name, l.kind, p.code, s.name, l.listPrice, l.chargeableAreaM2,"
+            + " l.quantity, l.serviceQuantity, l.pricesIncludeVat, l.vatRate, l.amount, l.priceReason from SalesInvoiceLine l"
+            + " join l.invoice i left join i.customer c left join l.product p left join l.service s"
+            + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to"
+            + " and l.listPrice is not null")
+    List<Object[]> pricedOffListIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 }

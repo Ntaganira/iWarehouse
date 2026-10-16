@@ -213,6 +213,13 @@
                                 </td>
                                 <td class="num strong" th:text="${@num.money(biz.payable)}">46,180</td>
                             </tr>
+                            <tr th:if="${kpiBreach != null}">
+                                <td>
+                                    <a href="/reports/kpis" th:text="#{dash.biz.kpiReview}">Inventory accuracy: formal review due</a>
+                                    <div class="cell-sub" th:text="#{dash.biz.kpiReviewHint(${kpiBreach.monthsBelow}, ${@num.percent(kpiBreach.target)})}">2 months below 99 %</div>
+                                </td>
+                                <td class="num strong text-danger" th:text="${kpiBreach.accuracy != null} ? ${@num.percent(kpiBreach.accuracy) + ' %'} : '—'">98.2 %</td>
+                            </tr>
                             <tr>
                                 <td>
                                     <a sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')" href="/stock/summary" th:text="#{summary.reorderKpi}">Below reorder level</a>

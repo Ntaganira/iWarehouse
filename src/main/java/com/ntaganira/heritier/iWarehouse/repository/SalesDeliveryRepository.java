@@ -28,4 +28,11 @@ public interface SalesDeliveryRepository extends Repository<SalesDelivery, UUID>
     @Query("select d.invoiceId, count(d) from SalesDelivery d, SalesInvoice i where i.id = d.invoiceId and i.invoiceDate between :from and :to"
             + " group by d.invoiceId")
     List<Object[]> handedOverPerInvoice(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
+
+    /** Invoices with a hand-over since a moment, with when they were paid and their last hand-over (order-to-delivery, Annex D). */
+    @Query("select d.invoiceId, i.postedAt, max(d.deliveredAt) from SalesDelivery d, SalesInvoice i where i.id = d.invoiceId"
+            + " and d.deliveredAt >= :since group by d.invoiceId, i.postedAt")
+    List<Object[]> lastHandOverSince(@Param("since") java.time.LocalDateTime since);
+
+    long countByDeliveredAtBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
 }

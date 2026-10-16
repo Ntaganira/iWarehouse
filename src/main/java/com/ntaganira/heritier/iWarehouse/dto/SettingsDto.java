@@ -375,6 +375,73 @@ public class SettingsDto {
     @Max(value = 60, message = "{settings.countVarianceDays.range}")
     private Integer countVarianceDays;
 
+    // --- Inventory reports and KPIs (Inventory Policy 13, 19; Annex D) ---
+
+    /** Glass held longer than this many days is obsolete (IMP 13). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 30, message = "{settings.stockObsoleteDays.range}")
+    @Max(value = 3650, message = "{settings.stockObsoleteDays.range}")
+    private Integer stockObsoleteDays;
+
+    /** Inventory accuracy kept at or above this % (IMP 19). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal kpiAccuracyTarget;
+
+    /** Consecutive months below the accuracy target that call for a formal review (IMP 19: two). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.kpiAccuracyMonths.range}")
+    @Max(value = 12, message = "{settings.kpiAccuracyMonths.range}")
+    private Integer kpiAccuracyMonths;
+
+    /** Stock lost kept below this % of the inventory value. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal kpiLossMaxPercent;
+
+    /** Damaged stock kept below this % of the inventory value. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal kpiDamageMaxPercent;
+
+    /** Inventory turnover aimed at, times a year; blank = no target (set by management). */
+    @Pattern(regexp = "^$|^\\d{1,3}(\\.\\d{1,2})?$", message = "{settings.kpiTurnoverTarget.pattern}")
+    private String kpiTurnoverTarget;
+
+    /** Deliveries without errors or shortages, % aimed at. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal kpiDeliveryAccuracyTarget;
+
+    /** Reconciliations done on time, % aimed at. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal kpiReconciliationTarget;
+
+    /** Variances resolved in time, % aimed at. */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal kpiVarianceResolutionTarget;
+
+    /** Days from payment to the last hand-over aimed at (Annex D). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.kpiOrderDaysTarget.range}")
+    @DecimalMax(value = "365", message = "{settings.kpiOrderDaysTarget.range}")
+    @Digits(integer = 3, fraction = 1, message = "{settings.kpiOrderDaysTarget.range}")
+    private BigDecimal kpiOrderDaysTarget;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

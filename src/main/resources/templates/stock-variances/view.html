@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(${variance.number}, ~{::content})}">
+<head><title>Stock variance - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="v=${variance}, s=${variance.status.name()},
+        canResolve=${#authorization.expression('hasAuthority(''PERM_RESOLVE_VARIANCE'')')},
+        seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')},
+        base=${'/stock-variances/' + variance.id}">
+    <div class="page-header">
+        <div>
+            <h1 class="mono" th:text="${v.number}">VAR-WH-2026-000001</h1>
+            <div class="subtitle">
+                <a class="mono" th:href="@{/stock-counts/{id}(id=${v.count.id})}" th:text="${v.count.number}">CNT-WH-2026-000003</a>
+                &middot; <span class="mono" th:text="${v.count.location.code}">WH-A</span>
+                &middot; <th:block th:replace="~{stock-variances/list :: varianceClass(${v.classification})}"></th:block>
+                &middot; <th:block th:replace="~{stock-variances/list :: varianceStatus(${v.status})}"></th:block>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="/stock-variances" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a class="btn btn-outline" th:href="@{/stock-variances/{id}/report(id=${v.id})}" th:text="#{variance.report}">Variance report</a>
+            <button type="button" class="btn btn-primary" data-modal-open="resolve-modal" th:if="${!v.resolved and canResolve}" th:text="#{variance.resolve}">Resolve</button>
+        </div>
+    </div>
+
+    <div class="doc-note is-warning" th:if="${s == 'OPEN'}"
+         th:text="${v.aboveTolerance} ? #{variance.openAbove(${#temporals.format(v.dueOn, 'dd/MM/yyyy')})} : #{variance.openWithin(${#temporals.format(v.dueOn, 'dd/MM/yyyy')})}">Above the tolerance: investigate it and record the root cause by 23/10/2026.</div>
+    <div class="doc-note is-danger" th:if="${s == 'ESCALATED'}"
+         th:text="#{variance.escalatedNote(${#temporals.format(v.dueOn, 'dd/MM/yyyy')}, ${#temporals.format(v.escalatedAt, 'dd/MM/yyyy HH:mm')})}">Not resolved by 23/10/2026: escalated on 24/10/2026 08:00.</div>
+    <div class="doc-note is-danger" th:if="${v.material and v.boardNotifiedAt != null}"
+         th:text="#{variance.boardNote(${#temporals.format(v.boardNotifiedAt, 'dd/MM/yyyy HH:mm')})}">Material: reported to the Board on 16/10/2026 09:00.</div>
+    <div class="doc-note" th:if="${v.resolved}">
+        <strong th:text="#{variance.resolvedBy(${v.resolvedBy}, ${#temporals.format(v.resolvedAt, 'dd/MM/yyyy HH:mm')})}">Resolved by supply1 on 18/10/2026 10:00.</strong>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{variance.missing}">Missing</div>
+                <div class="kpi-value" th:text="${v.missingUnits}">2</div>
+                <div class="kpi-trend flat" th:if="${seeCost}"><span class="vs" th:text="#{variance.valueSub(${@num.money(v.missingValue)})}">505,258 RWF at cost</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon green"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{variance.found}">Found</div>
+                <div class="kpi-value" th:text="${v.foundUnits}">0</div>
+                <div class="kpi-trend flat" th:if="${seeCost}"><span class="vs" th:text="#{variance.valueSub(${@num.money(v.foundValue)})}">0 RWF at cost</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{variance.misplaced}">Misplaced</div>
+                <div class="kpi-value" th:text="${v.misplacedUnits}">1</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{variance.unknownSub(${v.unknownUnits})}">0 not expected</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon purple"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{variance.percent}">Of the value counted</div>
+                <div class="kpi-value" th:text="${v.variancePercent != null} ? ${v.variancePercent + ' %'} : '—'">1.20 %</div>
+                <div class="kpi-trend flat" th:if="${seeCost}"><span class="vs" th:text="#{variance.expectedSub(${@num.money(v.expectedValue)})}">of 42,000,000 RWF expected</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" th:if="${v.resolved}">
+        <div class="section-header"><h2 th:text="#{variance.investigation}">Investigation</h2></div>
+        <div class="section-body">
+            <div class="detail-list">
+                <div class="item"><label th:text="#{variance.rootCause}">Root cause</label>
+                    <div class="value" th:text="#{${'variance.cause.' + v.rootCause}}">Misplacement</div></div>
+                <div class="item"><label th:text="#{variance.correctiveAction}">Corrective action</label>
+                    <div class="value" th:text="${v.correctiveAction}">Racks relabelled</div></div>
+                <div class="item"><label th:text="#{variance.responsibleOfficer}">Responsible officer</label>
+                    <div class="value" th:text="${v.responsibleOfficer}">Warehouse Manager</div></div>
+                <div class="item" th:if="${v.resolutionNote != null}"><label th:text="#{variance.note}">Note</label>
+                    <div class="value" th:text="${v.resolutionNote}">—</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="tabs">
+            <button type="button" class="tab" data-tab="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <span th:text="#{variance.differences}">Differences</span>
+                <span class="section-count" th:text="${lines.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
+                    sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
+        </div>
+        <div class="section-body">
+            <div class="tab-content" id="tab-lines" th:classappend="${tab == 'lines'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{count.label}">Label</th>
+                                <th th:text="#{count.glass}">Glass</th>
+                                <th th:text="#{count.found}">Found</th>
+                                <th th:text="#{count.recordedOn}">Recorded on</th>
+                                <th th:text="#{count.foundAt}">Found on</th>
+                                <th class="num" th:if="${seeCost}" th:text="#{variance.value}">Value (RWF)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${lines.content}" th:with="l=${r.line}, u=${r.unit}">
+                                <td>
+                                    <a class="row-link strong mono" th:if="${u != null}" th:href="@{/stock/{id}(id=${u.id})}" th:text="${l.code}">U-WH-000041</a>
+                                    <span class="mono strong" th:unless="${u != null}" th:text="${l.code}">U-XX-1</span>
+                                </td>
+                                <td class="mono" th:text="${u != null} ? ${u.product.code} : '—'">CLR-6</td>
+                                <td><th:block th:replace="~{stock-counts/list :: outcome(${l.outcome})}"></th:block></td>
+                                <td class="mono" th:text="${l.expectedLocationId != null and locations.get(l.expectedLocationId) != null} ? ${locations.get(l.expectedLocationId).code} : '—'">WH-A-R02</td>
+                                <td class="mono" th:text="${l.foundLocationId != null and locations.get(l.foundLocationId) != null} ? ${locations.get(l.foundLocationId).code} : '—'">WH-A-R01</td>
+                                <td class="num" th:if="${seeCost}" th:text="${l.outcome.name() == 'MISSING' or l.outcome.name() == 'FOUND_LOST'} ? ${@num.money(r.value)} : '—'">252,629</td>
+                            </tr>
+                            <tr th:if="${lines.totalElements == 0}">
+                                <td th:attr="colspan=${seeCost} ? 6 : 5"><div class="empty-state slim" th:text="#{count.nothingToCheck}">Every unit was where the records say.</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${lines}, ${base}, 'tab=lines')}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('STOCK_VARIANCE', ${v.id}, ${documents}, '/stock-variances/' + ${v.id})}"></th:block>
+            </div>
+            <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
+                <th:block th:replace="~{audit/history :: timeline(${history})}"></th:block>
+                <th:block th:replace="~{layout/pagination :: pager(${history}, ${base}, 'tab=history')}"></th:block>
+            </div>
+        </div>
+    </div>
+
+    <!-- The investigation (VR-010) -->
+    <div class="modal-overlay" id="resolve-modal" th:if="${!v.resolved and canResolve}">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resolve-title">
+            <div class="modal-header">
+                <h3 id="resolve-title" th:text="#{variance.resolveTitle(${v.number})}">Resolve VAR-WH-2026-000001</h3>
+                <button type="button" class="modal-close" data-modal-close="resolve-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form th:action="@{/stock-variances/{id}/resolve(id=${v.id})}" method="post" novalidate>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="rootCause" th:text="#{variance.rootCause}">Root cause</label>
+                        <select id="rootCause" name="rootCause" required>
+                            <option value="" th:text="#{variance.chooseCause}">Choose the root cause</option>
+                            <option th:each="c : ${causes}" th:value="${c}" th:text="#{${'variance.cause.' + c}}">Misplacement</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="correctiveAction" th:text="#{variance.correctiveAction}">Corrective action</label>
+                        <textarea id="correctiveAction" name="correctiveAction" rows="3" maxlength="500" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="responsibleOfficer" th:text="#{variance.responsibleOfficer}">Responsible officer</label>
+                        <input type="text" id="responsibleOfficer" name="responsibleOfficer" maxlength="100" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="resolve-note" th:text="#{variance.note}">Note</label>
+                        <input type="text" id="resolve-note" name="note" maxlength="500" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="resolve-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{variance.resolve}">Resolve</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

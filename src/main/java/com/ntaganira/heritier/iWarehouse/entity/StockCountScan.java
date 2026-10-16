@@ -48,4 +48,8 @@ public class StockCountScan extends BaseEntity {
 
     @Column(name = "scanned_by", length = 50)
     private String scannedBy;
+
+    /** 1: the first count, 2: the second, independent count, 3: the recount of what the two disagree on (D14). */
+    @Column(nullable = false)
+    private int pass = 1;
 }

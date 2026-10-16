@@ -25,7 +25,7 @@
         </div>
     </div>
 
-    <div class="section" sec:authorize="hasAnyAuthority('PAGE_STOCK_SUMMARY', 'PAGE_CUTTING_YIELD')">
+    <div class="section" sec:authorize="hasAnyAuthority('PAGE_STOCK_SUMMARY', 'PAGE_CUTTING_YIELD', 'PAGE_DAMAGE')">
         <div class="card-head"><div class="card-title"><h2 th:text="#{reports.group.stock}">Stock and production</h2></div></div>
         <div class="quick-grid">
             <th:block sec:authorize="hasAuthority('PAGE_STOCK_SUMMARY')">
@@ -36,6 +36,7 @@
                 <a th:replace="~{reports/index :: tile('/stock/daily-review', 'green', #{stockReview.title}, 'clock')}">Daily review</a>
             </th:block>
             <th:block sec:authorize="hasAuthority('PAGE_CUTTING_YIELD')"><a th:replace="~{reports/index :: tile('/cutting-jobs/yield', 'green', #{cutting.yield.title}, 'cut')}">Cutting yield</a></th:block>
+            <th:block sec:authorize="hasAuthority('PAGE_DAMAGE') and hasAuthority('PERM_VIEW_DAMAGE')"><a th:replace="~{reports/index :: tile('/damage/register', 'orange', #{damage.register.title}, 'clock')}">Damage register</a></th:block>
         </div>
     </div>
 

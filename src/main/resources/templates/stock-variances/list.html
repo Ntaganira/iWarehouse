@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{variance.title}, ~{::content})}">
+<head><title>Stock variances - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{variance.title}">Stock Variances</h1>
+            <div class="subtitle" th:text="#{variance.subtitle}">Differences counts found, their value and class, investigated and resolved within the working days set</div>
+        </div>
+        <a href="/stock-counts" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_STOCK_COUNTS')" th:text="#{count.title}">Stock Counts</a>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{variance.sectionTitle}">Variances</span>
+                <span class="section-count" th:text="${variances.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/stock-variances}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{variance.searchPh}" th:aria-label="#{variance.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="waiting" th:selected="${status == 'waiting'}" th:text="#{variance.waiting}">To resolve</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'variance.status.' + st}}">Open</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{variance.number}">Variance</th>
+                        <th th:text="#{variance.count}">Count</th>
+                        <th class="num" th:text="#{variance.missing}">Missing</th>
+                        <th class="num" th:text="#{variance.found}">Found</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{variance.net}">Net (RWF)</th>
+                        <th th:text="#{variance.class}">Class</th>
+                        <th th:text="#{variance.due}">Due</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="v : ${variances.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/stock-variances/{id}(id=${v.id})}" th:text="${v.number}">VAR-WH-2026-000001</a>
+                            <div class="cell-sub" th:if="${v.variancePercent != null}" th:text="${v.variancePercent + ' %'}">1.20 %</div>
+                        </td>
+                        <td>
+                            <a class="mono" th:href="@{/stock-counts/{id}(id=${v.count.id})}" th:text="${v.count.number}">CNT-WH-2026-000003</a>
+                            <div class="cell-sub mono" th:text="${v.count.location.code}">WH-A</div>
+                        </td>
+                        <td class="num" th:text="${v.missingUnits}">2</td>
+                        <td class="num" th:text="${v.foundUnits}">0</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(v.netValue)}">-505,258</td>
+                        <td><th:block th:replace="~{stock-variances/list :: varianceClass(${v.classification})}"></th:block></td>
+                        <td class="nowrap" th:text="${#temporals.format(v.dueOn, 'dd/MM/yyyy')}">23/10/2026</td>
+                        <td><th:block th:replace="~{stock-variances/list :: varianceStatus(${v.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${variances.totalElements == 0}">
+                        <td th:attr="colspan=${seeCost} ? 8 : 7">
+                            <div class="empty-state">
+                                <h3 th:text="#{variance.empty}">No variances</h3>
+                                <p th:text="#{variance.emptyHint}">A count that closes with differences opens one here</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${variances}, '/stock-variances', ${query})}"></th:block>
+    </div>
+</div>
+
+<th:block th:fragment="varianceStatus(s)" th:switch="${s.name()}">
+    <span th:case="'OPEN'" class="badge badge-warning" th:text="#{variance.status.OPEN}">To resolve</span>
+    <span th:case="'ESCALATED'" class="badge badge-danger" th:text="#{variance.status.ESCALATED}">Escalated</span>
+    <span th:case="*" class="badge badge-success" th:text="#{variance.status.RESOLVED}">Resolved</span>
+</th:block>
+
+<th:block th:fragment="varianceClass(c)" th:switch="${c.name()}">
+    <span th:case="'MATERIAL'" class="badge badge-danger" th:text="#{variance.class.MATERIAL}">Material</span>
+    <span th:case="'MODERATE'" class="badge badge-warning" th:text="#{variance.class.MODERATE}">Moderate</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{variance.class.MINOR}">Minor</span>
+</th:block>
+</body>
+</html>

@@ -327,6 +327,54 @@ public class SettingsDto {
     @NotNull(message = "{settings.value.required}")
     private Boolean mobileFieldCredit;
 
+    // --- Damage, counts and variances (M16)
+
+    /** A damage report is inspected by Dispatch before it is decided (F-07). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean damageInspection;
+
+    /** Damage at or above this value (RWF) is told the same day (F-07, the Board's tolerance). */
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.money.range}")
+    @Digits(integer = 16, fraction = 2, message = "{settings.money.range}")
+    private BigDecimal damageAlertValue;
+
+    /** The first count is blind (CSH-012, D14). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean countBlind;
+
+    /** Count types that always get a second count (D14): comma-separated. */
+    @Pattern(regexp = "^$|^(CYCLE|QUARTERLY|ANNUAL|SURPRISE)(,(CYCLE|QUARTERLY|ANNUAL|SURPRISE))*$", message = "{settings.countSecondTypes.pattern}")
+    private String countSecondTypes;
+
+    /** A second count wherever the first finds differences (D14). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean countSecondOnDifferences;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal countVarianceTolerancePercent;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal countVarianceModeratePercent;
+
+    @NotNull(message = "{settings.value.required}")
+    @DecimalMin(value = "0", message = "{settings.percent.range}")
+    @DecimalMax(value = "100", message = "{settings.percent.range}")
+    @Digits(integer = 3, fraction = 2, message = "{settings.percent.digits}")
+    private BigDecimal countVarianceMaterialPercent;
+
+    /** Working days to resolve a variance before it is escalated (IMP 14.2). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 1, message = "{settings.countVarianceDays.range}")
+    @Max(value = 60, message = "{settings.countVarianceDays.range}")
+    private Integer countVarianceDays;
+
     // --- Currency (ACC-02) ---
 
     @NotNull(message = "{settings.value.required}")

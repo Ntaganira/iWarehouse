@@ -4646,3 +4646,7 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 .print-doc-pair { margin-top: 6mm; }
 .print-doc-pair td:last-child { text-align: right; }
 .print-doc-pair td.num { white-space: nowrap; }
+
+/* M16: the count sheet's blank cells to write the labels found in; the form adding a count's participant */
+.print-doc-table td.print-doc-blank { height: 14mm; min-width: 30mm; }
+.count-participant-form { margin-top: 16px; max-width: none; }

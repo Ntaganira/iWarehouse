@@ -51,7 +51,10 @@
                 </thead>
                 <tbody>
                     <tr th:each="c : ${counts.content}">
-                        <td><a class="row-link strong mono" th:href="@{/stock-counts/{id}(id=${c.id})}" th:text="${c.number}">CNT-WH-2026-000001</a></td>
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/stock-counts/{id}(id=${c.id})}" th:text="${c.number}">CNT-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="#{${'count.type.' + c.countType}}">Monthly cycle count</div>
+                        </td>
                         <td class="mono" th:text="${c.location.code}">WH-A-R01</td>
                         <td>
                             <span class="mono" th:if="${c.product != null}" th:text="${c.product.code}">CLR-6</span>

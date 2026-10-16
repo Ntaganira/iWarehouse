@@ -12,6 +12,18 @@ import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.CountOutcome;
 import com.ntaganira.heritier.iWarehouse.enums.StockCountStatus;
+import com.ntaganira.heritier.iWarehouse.enums.StockCountType;
+import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
+import com.ntaganira.heritier.iWarehouse.enums.CountRole;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
+import com.ntaganira.heritier.iWarehouse.entity.StockCountParticipant;
+import com.ntaganira.heritier.iWarehouse.entity.User;
+import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
+import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
+import com.ntaganira.heritier.iWarehouse.service.CompanyLogoService;
+import com.ntaganira.heritier.iWarehouse.service.SettingService;
+import com.ntaganira.heritier.iWarehouse.service.StockVarianceService;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
@@ -61,9 +73,21 @@ public class StockCountController {
     private final ActivityLogService activityLogService;
     private final SpringValidatorAdapter validator;
     private final Messages messages;
+    private final StockVarianceService varianceService;
+    private final AttachmentService attachmentService;
+    private final UserRepository userRepo;
+    private final CompanyLogoService logoService;
+    private final SettingService settingService;
 
     public StockCountController(StockCountService countService, StockService stockService, DataChangeService dataChangeService,
-                                ActivityLogService activityLogService, Validator validator, Messages messages) {
+                                ActivityLogService activityLogService, Validator validator, Messages messages,
+                                StockVarianceService varianceService, AttachmentService attachmentService, UserRepository userRepo,
+                                CompanyLogoService logoService, SettingService settingService) {
+        this.varianceService = varianceService;
+        this.attachmentService = attachmentService;
+        this.userRepo = userRepo;
+        this.logoService = logoService;
+        this.settingService = settingService;
         this.countService = countService;
         this.stockService = stockService;
         this.dataChangeService = dataChangeService;
@@ -107,7 +131,7 @@ public class StockCountController {
         }
         try {
             StockCount count = countService.start(dto);
-            activityLogService.record(MODULE, "CREATE_STOCK_COUNT", "Started count " + count.getNumber() + " of "
+            activityLogService.record(MODULE, "CREATE_STOCK_COUNT", "Started " + count.getCountType() + " count " + count.getNumber() + " of "
                     + count.getLocation().getCode() + (count.getProduct() == null ? "" : " (" + count.getProduct().getCode() + ")")
                     + ", " + count.getPlaces().size() + " place(s) held", ActivityStatus.SUCCESS);
             redirect.addFlashAttribute("flashSuccess", messages.get("count.startedMsg", count.getNumber(), count.getLocation().getCode()));
@@ -128,6 +152,8 @@ public class StockCountController {
         model.addAttribute("countDto", dto);
         model.addAttribute("places", countService.countablePlaces(stockService.locationsById()));
         model.addAttribute("products", countService.products());
+        model.addAttribute("types", StockCountType.values());
+        model.addAttribute("blind", settingService.getBoolean(SettingKey.COUNT_BLIND));
         return "stock-counts/form";
     }
 
@@ -141,7 +167,7 @@ public class StockCountController {
         model.addAttribute("locations", byId);
         String open;
         if (count.getStatus() == StockCountStatus.CLOSED) {
-            open = tab != null && List.of("issues", "lines", "history").contains(tab) ? tab : "issues";
+            open = tab != null && List.of("issues", "lines", "people", "documents", "history").contains(tab) ? tab : "issues";
             List<StockCountLine> lines = countService.lines(id);
             model.addAttribute("units", countService.unitsById(lines.stream().map(StockCountLine::getStockUnitId)
                     .filter(Objects::nonNull).toList()));
@@ -149,7 +175,7 @@ public class StockCountController {
                     Paging.pageOf("issues", open, page)));
             model.addAttribute("lines", Paging.of(lines, Paging.pageOf("lines", open, page)));
         } else {
-            open = tab != null && List.of("scanned", "todo", "history").contains(tab) ? tab : "scanned";
+            open = tab != null && List.of("scanned", "todo", "people", "documents", "history").contains(tab) ? tab : "scanned";
             Map<String, StockUnit> scanned = countService.scannedUnits(count);
             List<StockUnit> expected = count.isOpen() ? countService.expectedUnits(count) : List.of();
             Map<String, CountOutcome> outcomes = new HashMap<>();
@@ -169,15 +195,31 @@ public class StockCountController {
                         : scanPlaces.size() == 1 ? scanPlaces.get(0).getId() : null;
                 model.addAttribute("at", chosen);
             }
-            List<ScanRow> rows = count.getScans().stream()
+            List<ScanRow> rows = (count.isOpen() ? count.scansOf(count.currentPass()) : List.copyOf(count.getScans())).stream()
                     .sorted(Comparator.comparing(StockCountScan::getScannedAt).reversed().thenComparing(StockCountScan::getCode))
                     .map(s -> new ScanRow(s, scanned.get(s.getCode()), outcomes.get(s.getCode())))
                     .toList();
             model.addAttribute("scans", Paging.of(rows, Paging.pageOf("scanned", open, page)));
             model.addAttribute("todo", Paging.of(todo, Paging.pageOf("todo", open, page)));
         }
+        // M16: blind while open, the passes, the recount's list, who took part and signed, the variance, the signed sheets
+        boolean hideExpected = count.isOpen() && count.isBlind();
+        model.addAttribute("hideExpected", hideExpected);
+        model.addAttribute("differences", count.isOpen() && count.getPhase() == com.ntaganira.heritier.iWarehouse.enums.CountPhase.RECOUNT
+                ? countService.differences(count) : List.of());
+        List<StockCountParticipant> participants = countService.participants(id);
+        Long me = AppUserPrincipal.current().map(AppUserPrincipal::getId).orElse(null);
+        model.addAttribute("participants", participants);
+        model.addAttribute("signedCount", participants.stream().filter(StockCountParticipant::isSigned).count());
+        model.addAttribute("canSignNow", count.getStatus() == StockCountStatus.CLOSED && participants.stream()
+                .anyMatch(x -> me != null && me.equals(x.getUserId()) && !x.isSigned()));
+        model.addAttribute("roles", CountRole.values());
+        model.addAttribute("users", userRepo.findAll(org.springframework.data.domain.Sort.by("fullName")).stream().filter(User::isEnabled)
+                .filter(u -> participants.stream().noneMatch(x -> u.getId().equals(x.getUserId()))).toList());
+        model.addAttribute("variance", varianceService.ofCount(id).orElse(null));
+        model.addAttribute("documents", attachmentService.page(AttachmentOwner.STOCK_COUNT, id, Paging.pageOf("documents", open, page), Paging.SIZE));
         model.addAttribute("history", dataChangeService.historyWithChildren("StockCount", id.toString(),
-                List.of("StockCountScan"), "count", Paging.pageOf("history", open, page), Paging.SIZE));
+                List.of("StockCountScan", "StockCountParticipant"), "count", Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
         return "stock-counts/view";
     }
@@ -202,6 +244,9 @@ public class StockCountController {
                 redirect.addFlashAttribute("flashSuccess", messages.get("count.scan.several", r.scanned(), hereCode));
             } else if (r.again()) {
                 redirect.addFlashAttribute("flashSuccess", messages.get("count.scan.again", r.code(), hereCode));
+            } else if (countService.findDetailed(id).isBlind()) {
+                // Blind (CSH-012): whether the label was expected here is not said until the count closes
+                redirect.addFlashAttribute("flashSuccess", messages.get("count.scan.blind", r.code(), hereCode));
             } else {
                 boolean fine = r.outcome() == CountOutcome.MATCHED || r.outcome() == CountOutcome.MISPLACED;
                 redirect.addFlashAttribute(fine ? "flashSuccess" : "flashWarning", scanMessage(r, hereCode));
@@ -252,6 +297,18 @@ public class StockCountController {
             String reason = messages.get("count.adjustmentReason", number);
             StockCountService.CloseResult r = AuditContext.withReason(reason, () -> countService.close(id, reason));
             StockCount c = r.count();
+            if (r.step() == StockCountService.Step.SECOND_COUNT) {
+                activityLogService.record(MODULE, "UPDATE_STOCK_COUNT", "Finished the first count of " + c.getNumber()
+                        + ": a second, independent count follows", ActivityStatus.SUCCESS);
+                redirect.addFlashAttribute("flashWarning", messages.get("count.secondNeeded", c.getNumber()));
+                return "redirect:/stock-counts/" + id;
+            }
+            if (r.step() == StockCountService.Step.RECOUNT) {
+                activityLogService.record(MODULE, "UPDATE_STOCK_COUNT", "Finished the second count of " + c.getNumber() + ": "
+                        + r.differences() + " labels differ, to recount", ActivityStatus.SUCCESS);
+                redirect.addFlashAttribute("flashWarning", messages.get("count.recountNeeded", c.getNumber(), r.differences()));
+                return "redirect:/stock-counts/" + id;
+            }
             activityLogService.record(MODULE, "CLOSE_STOCK_COUNT", "Closed count " + c.getNumber() + ": " + c.getExpectedUnits()
                     + " expected, " + c.getCountedUnits() + " scanned, " + c.getMatchedUnits() + " matched, " + c.getMissingUnits()
                     + " missing, " + c.getMisplacedUnits() + " misplaced, " + c.getExtraUnits() + " extra"
@@ -262,6 +319,9 @@ public class StockCountController {
                     c.getMisplacedUnits(), c.getExtraUnits()));
             if (!r.racksOverLimit().isEmpty()) {
                 redirect.addFlashAttribute("flashWarning", messages.get("count.racksOverLimit", String.join(", ", r.racksOverLimit())));
+            } else if (r.variance() != null) {
+                redirect.addFlashAttribute("flashWarning", messages.get("count.varianceOpened", r.variance().getNumber(),
+                        messages.get("variance.class." + r.variance().getClassification())));
             }
         } catch (BusinessException e) {
             String error = messages.get(e.getMessageKey(), e.getArgs());
@@ -290,6 +350,91 @@ public class StockCountController {
             redirect.addFlashAttribute("flashError", error);
         }
         return "redirect:/stock-counts/" + id;
+    }
+
+    // ---------------------------------------------------------------- participants and signatures (IMP 15.1, PF-06 step 6)
+
+    @PostMapping("/{id}/participants")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_COUNTS') and hasAuthority('PERM_COUNT_STOCK')")
+    public String addParticipant(@PathVariable UUID id, @RequestParam(required = false) CountRole role,
+                                 @RequestParam(required = false) Long userId, @RequestParam(required = false) String name,
+                                 RedirectAttributes redirect) {
+        try {
+            StockCountParticipant p = countService.addParticipant(id, role, name, userId);
+            activityLogService.record(MODULE, "UPDATE_STOCK_COUNT", "Added " + p.getName() + " (" + p.getRole() + ") to count " + numberOf(id),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("count.participant.added", p.getName()));
+        } catch (BusinessException e) {
+            participantFailed(id, "add a participant to", e, redirect);
+        }
+        return "redirect:/stock-counts/" + id + "?tab=people";
+    }
+
+    @PostMapping("/{id}/participants/{participantId}/remove")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_COUNTS') and hasAuthority('PERM_COUNT_STOCK')")
+    public String removeParticipant(@PathVariable UUID id, @PathVariable UUID participantId, RedirectAttributes redirect) {
+        try {
+            StockCountParticipant p = countService.removeParticipant(id, participantId);
+            activityLogService.record(MODULE, "UPDATE_STOCK_COUNT", "Took " + p.getName() + " off count " + numberOf(id), ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("count.participant.removed", p.getName()));
+        } catch (BusinessException e) {
+            participantFailed(id, "remove a participant from", e, redirect);
+        }
+        return "redirect:/stock-counts/" + id + "?tab=people";
+    }
+
+    @PostMapping("/{id}/sign")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_COUNTS') and hasAuthority('PERM_SIGN_STOCK_COUNT')")
+    public String sign(@PathVariable UUID id, RedirectAttributes redirect) {
+        try {
+            StockCountParticipant p = countService.sign(id);
+            activityLogService.record(MODULE, "APPROVE_STOCK_COUNT", p.getName() + " signed count " + numberOf(id) + " as " + p.getRole(),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("count.signedMsg", numberOf(id)));
+        } catch (BusinessException e) {
+            participantFailed(id, "sign", e, redirect);
+        }
+        return "redirect:/stock-counts/" + id + "?tab=people";
+    }
+
+    @PostMapping("/{id}/participants/{participantId}/paper")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_COUNTS') and hasAuthority('PERM_COUNT_STOCK')")
+    public String signedOnPaper(@PathVariable UUID id, @PathVariable UUID participantId, RedirectAttributes redirect) {
+        try {
+            StockCountParticipant p = countService.signedOnPaper(id, participantId);
+            activityLogService.record(MODULE, "APPROVE_STOCK_COUNT", "Recorded the paper signature of " + p.getName() + " on count " + numberOf(id),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("count.paperSignedMsg", p.getName()));
+        } catch (BusinessException e) {
+            participantFailed(id, "record a paper signature on", e, redirect);
+        }
+        return "redirect:/stock-counts/" + id + "?tab=people";
+    }
+
+    private void participantFailed(UUID id, String what, BusinessException e, RedirectAttributes redirect) {
+        String error = messages.get(e.getMessageKey(), e.getArgs());
+        activityLogService.record(MODULE, "UPDATE_STOCK_COUNT", "Failed to " + what + " count " + numberOf(id) + ": " + error, ActivityStatus.FAILED);
+        redirect.addFlashAttribute("flashError", error);
+    }
+
+    /** The count sheet (IMP 15.2, PF-06): its places with blank rows to write labels on; the book quantity unless blind. */
+    @GetMapping("/{id}/sheet")
+    @PreAuthorize("hasAuthority('PAGE_STOCK_COUNTS') and hasAuthority('PERM_VIEW_STOCK_COUNT')")
+    public String sheet(@PathVariable UUID id, Model model) {
+        StockCount count = countService.findDetailed(id);
+        Map<UUID, Location> byId = stockService.locationsById();
+        List<Location> places = countService.scanPlaces(count, byId);
+        Map<UUID, Long> book = new HashMap<>();
+        if (!count.isBlind()) {
+            countService.expectedUnits(count).forEach(u -> book.merge(u.getLocation().getId(), 1L, Long::sum));
+        }
+        model.addAttribute("count", count);
+        model.addAttribute("places", places);
+        model.addAttribute("book", book);
+        model.addAttribute("participants", countService.participants(id));
+        model.addAttribute("companyLogoUrl", logoService.url());
+        model.addAttribute("companyName", settingService.get(SettingKey.COMPANY_NAME));
+        return "stock-counts/sheet";
     }
 
     private String numberOf(UUID id) {

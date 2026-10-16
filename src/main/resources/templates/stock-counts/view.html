@@ -12,6 +12,7 @@
             <h1 class="mono" th:text="${count.number}">CNT-WH-2026-000001</h1>
             <div class="subtitle">
                 <span class="mono" th:text="${count.location.code}">WH-A-R01</span>
+                &middot; <span th:text="#{${'count.type.' + count.countType}}">Monthly cycle count</span>
                 &middot; <span th:text="${count.product != null} ? ${count.product.code} : #{count.everyGlass}">Every glass</span>
                 &middot; <span th:text="#{count.startedBy(${count.startedBy}, ${#temporals.format(count.startedAt, 'dd/MM/yyyy HH:mm')})}">started by supervisor1 on 08/10/2026 16:20</span>
                 &middot; <th:block th:replace="~{stock-counts/list :: countStatus(${count.status})}"></th:block>
@@ -19,11 +20,19 @@
         </div>
         <div class="btn-group">
             <a href="/stock-counts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <a class="btn btn-outline" th:href="@{/stock-counts/{id}/sheet(id=${count.id})}" th:text="#{count.sheet}">Count sheet</a>
+            <a class="btn btn-outline" th:if="${variance != null}" sec:authorize="hasAuthority('PAGE_STOCK_VARIANCES')"
+               th:href="@{/stock-variances/{id}(id=${variance.id})}" th:text="#{count.variance(${variance.number})}">VAR-WH-2026-000001</a>
+            <form th:if="${canSignNow}" th:action="@{/stock-counts/{id}/sign(id=${count.id})}" method="post" class="row-action-form confirm-submit"
+                  sec:authorize="hasAuthority('PERM_SIGN_STOCK_COUNT')" th:attr="data-confirm=#{count.signConfirm(${count.number})}">
+                <button type="submit" class="btn btn-primary" th:text="#{count.sign}">Sign the count</button>
+            </form>
             <th:block th:if="${s == 'OPEN' and canCount}">
                 <button type="button" class="btn btn-outline" data-modal-open="cancel-modal" th:text="#{count.cancel}">Cancel the count</button>
                 <form th:action="@{/stock-counts/{id}/close(id=${count.id})}" method="post" class="row-action-form confirm-submit"
                       th:attr="data-confirm=#{count.closeConfirm(${count.number}, ${scans.totalElements}, ${todo.totalElements})}">
-                    <button type="submit" class="btn btn-primary" th:text="#{count.close}">Close and record</button>
+                    <button type="submit" class="btn btn-primary"
+                            th:text="${count.phase.name() == 'FIRST'} ? #{count.close} : (${count.phase.name() == 'SECOND'} ? #{count.closeSecond} : #{count.closeRecount})">Close and record</button>
                 </form>
             </th:block>
         </div>
@@ -34,6 +43,11 @@
         <span th:text="#{count.openNote(${count.places.size()})}">Counting: the units on 3 places are held until the count is closed or cancelled.</span>
         <span th:if="${count.note != null}" th:text="${'· ' + count.note}">· Monthly count</span>
     </div>
+    <div class="doc-note" th:if="${s == 'OPEN' and hideExpected}" th:text="#{count.blindOpen}">Blind count: what the records expect here is not shown until the count closes.</div>
+    <div class="doc-note is-warning" th:if="${s == 'OPEN' and count.phase.name() == 'SECOND'}"
+         th:text="#{count.secondOpen(${count.firstDoneBy}, ${#temporals.format(count.firstDoneAt, 'dd/MM/yyyy HH:mm')})}">Second count: another person than who made the first (supervisor1, 16/10/2026 09:00) counts again, independently.</div>
+    <div class="doc-note is-warning" th:if="${s == 'OPEN' and count.phase.name() == 'RECOUNT'}"
+         th:text="#{count.recountOpen(${count.recountCodes})}">The two counts disagree on 3 labels: recount them where they were found, then close.</div>
     <div class="doc-note is-danger" th:if="${s == 'CANCELLED'}">
         <strong th:text="#{count.cancelledBy(${count.closedBy})}">Cancelled by supervisor1:</strong>
         <span th:text="${count.cancelReason}">Wrong rack</span>
@@ -85,7 +99,7 @@
     </div>
 
     <!-- Figures -->
-    <div class="kpi-grid doc-kpis" th:if="${s == 'OPEN'}">
+    <div class="kpi-grid doc-kpis" th:if="${s == 'OPEN' and !hideExpected}">
         <div class="kpi-card">
             <div class="kpi-icon blue"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
             <div class="kpi-body">
@@ -154,6 +168,34 @@
         </div>
     </div>
 
+    <!-- The recount (D14): the labels the two counts disagree on, and where each found them -->
+    <div class="section" th:if="${!differences.isEmpty()}">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{count.recountTitle}">To recount</span>
+                <span class="section-count" th:text="${differences.size()}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{count.label}">Label</th>
+                        <th th:text="#{count.firstFound}">First count</th>
+                        <th th:text="#{count.secondFound}">Second count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${differences}">
+                        <td class="mono strong" th:text="${d.code}">U-WH-000041</td>
+                        <td class="mono" th:text="${d.firstAt != null and locations.get(d.firstAt) != null} ? ${locations.get(d.firstAt).code} : #{count.notFound}">WH-A-R01</td>
+                        <td class="mono" th:text="${d.secondAt != null and locations.get(d.secondAt) != null} ? ${locations.get(d.secondAt).code} : #{count.notFound}">not found</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Open or cancelled: the scans and what is not scanned yet; closed: the result -->
     <div class="section">
         <div class="tabs">
@@ -162,7 +204,7 @@
                     <span th:text="#{count.tab.scanned}">Scanned</span>
                     <span class="section-count" th:text="${scans.totalElements}">0</span>
                 </button>
-                <button type="button" class="tab" data-tab="tab-todo" th:classappend="${tab == 'todo'} ? 'active'" th:if="${s == 'OPEN'}">
+                <button type="button" class="tab" data-tab="tab-todo" th:classappend="${tab == 'todo'} ? 'active'" th:if="${s == 'OPEN' and !hideExpected}">
                     <span th:text="#{count.tab.todo}">Not scanned yet</span>
                     <span class="section-count" th:text="${todo.totalElements}">0</span>
                 </button>
@@ -177,6 +219,14 @@
                     <span class="section-count" th:text="${lines.totalElements}">0</span>
                 </button>
             </th:block>
+            <button type="button" class="tab" data-tab="tab-people" th:classappend="${tab == 'people'} ? 'active'">
+                <span th:text="#{count.tab.people}">Participants</span>
+                <span class="section-count" th:text="${participants.size()}">0</span>
+            </button>
+            <button type="button" class="tab" data-tab="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <span th:text="#{attachment.tab}">Documents</span>
+                <span class="section-count" th:text="${documents.totalElements}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-history" th:classappend="${tab == 'history'} ? 'active'"
                     sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')" th:text="#{user.history}">History</button>
         </div>
@@ -191,7 +241,7 @@
                                 <th th:text="#{count.glass}">Glass</th>
                                 <th th:text="#{count.foundAt}">Found on</th>
                                 <th th:text="#{count.recorded}">Recorded</th>
-                                <th th:if="${s == 'OPEN'}" th:text="#{count.soFar}">So far</th>
+                                <th th:if="${s == 'OPEN' and !hideExpected}" th:text="#{count.soFar}">So far</th>
                                 <th th:text="#{count.scannedBy}">Scanned</th>
                                 <th th:if="${s == 'OPEN' and canCount}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
                             </tr>
@@ -217,7 +267,7 @@
                                     </th:block>
                                     <span class="text-muted" th:unless="${u != null}" th:text="#{count.noSuchUnit}">No such unit</span>
                                 </td>
-                                <td th:if="${s == 'OPEN'}"><th:block th:if="${r.outcome != null}"><th:block th:replace="~{stock-counts/list :: outcome(${r.outcome})}"></th:block></th:block></td>
+                                <td th:if="${s == 'OPEN' and !hideExpected}"><th:block th:if="${r.outcome != null}"><th:block th:replace="~{stock-counts/list :: outcome(${r.outcome})}"></th:block></th:block></td>
                                 <td class="nowrap">
                                     <span th:text="${#temporals.format(r.scan.scannedAt, 'dd/MM/yyyy HH:mm')}">08/10/2026 16:30</span>
                                     <div class="cell-sub" th:text="${r.scan.scannedBy}">supervisor1</div>
@@ -232,7 +282,7 @@
                                 </td>
                             </tr>
                             <tr th:if="${scans.totalElements == 0}">
-                                <td th:attr="colspan=${s == 'OPEN'} ? 7 : 5"><div class="empty-state"><p th:text="#{count.noScans}">Nothing scanned yet.</p></div></td>
+                                <td th:attr="colspan=${s == 'OPEN' and !hideExpected} ? 7 : (${s == 'OPEN'} ? 6 : 5)"><div class="empty-state"><p th:text="#{count.noScans}">Nothing scanned yet.</p></div></td>
                             </tr>
                         </tbody>
                     </table>
@@ -241,7 +291,7 @@
             </div>
 
             <!-- Expected units nobody scanned yet -->
-            <div class="tab-content" id="tab-todo" th:if="${s == 'OPEN'}" th:classappend="${tab == 'todo'} ? 'active'">
+            <div class="tab-content" id="tab-todo" th:if="${s == 'OPEN' and !hideExpected}" th:classappend="${tab == 'todo'} ? 'active'">
                 <div class="table-container">
                     <table>
                         <thead>
@@ -327,6 +377,85 @@
                     <th:block th:replace="~{layout/pagination :: pager(${rows}, ${base}, ${'tab=' + t})}"></th:block>
                 </div>
             </th:block>
+
+            <!-- Who took part and who signed (IMP 15.1, PF-06 step 6) -->
+            <div class="tab-content" id="tab-people" th:classappend="${tab == 'people'} ? 'active'">
+                <div class="tab-toolbar">
+                    <p class="tab-intro" th:text="#{count.peopleIntro(${signedCount}, ${participants.size()})}">Those who counted, attended or checked: each signs the closed count. 1 of 3 signed.</p>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{count.participant}">Participant</th>
+                                <th th:text="#{count.role}">Role</th>
+                                <th th:text="#{count.signed}">Signed</th>
+                                <th th:if="${canCount}"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="p : ${participants}">
+                                <td>
+                                    <span class="strong" th:text="${p.name}">Jean Habimana</span>
+                                    <div class="cell-sub" th:text="${p.userId != null} ? #{count.participant.user} : #{count.participant.paper}">signs in the system</div>
+                                </td>
+                                <td th:text="#{${'count.role.' + p.role}}">Warehouse</td>
+                                <td>
+                                    <th:block th:if="${p.signed}">
+                                        <span class="badge badge-success" th:text="${p.onPaper} ? #{count.signedPaper} : #{count.signedSystem}">Signed</span>
+                                        <div class="cell-sub" th:text="${#temporals.format(p.signedAt, 'dd/MM/yyyy HH:mm') + ' · ' + p.signedBy}">16/10/2026 10:00 · supervisor1</div>
+                                    </th:block>
+                                    <span class="badge badge-warning" th:unless="${p.signed}" th:text="#{count.notSigned}">Not yet</span>
+                                </td>
+                                <td th:if="${canCount}" class="nowrap">
+                                    <form th:if="${s == 'CLOSED' and !p.signed and p.userId == null}" th:action="@{/stock-counts/{id}/participants/{p}/paper(id=${count.id}, p=${p.id})}"
+                                          method="post" class="row-action-form confirm-submit" th:attr="data-confirm=#{count.paperConfirm(${p.name})}">
+                                        <button type="submit" class="btn btn-outline btn-sm" th:text="#{count.paperSigned}">Signed on the sheet</button>
+                                    </form>
+                                    <form th:if="${!p.signed}" th:action="@{/stock-counts/{id}/participants/{p}/remove(id=${count.id}, p=${p.id})}" method="post"
+                                          class="row-action-form confirm-submit danger" th:attr="data-confirm=#{count.removeParticipantConfirm(${p.name})}">
+                                        <button type="submit" class="action-icon delete" th:title="#{count.removeParticipant}" th:aria-label="#{count.removeParticipant}">
+                                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${participants.isEmpty()}">
+                                <td th:attr="colspan=${canCount} ? 4 : 3"><div class="empty-state slim" th:text="#{count.noParticipants}">Nobody listed yet</div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <form th:if="${canCount and s != 'CANCELLED'}" th:action="@{/stock-counts/{id}/participants(id=${count.id})}" method="post"
+                      class="form-container count-participant-form" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="p-role" th:text="#{count.role}">Role</label>
+                            <select id="p-role" name="role" required>
+                                <option th:each="r : ${roles}" th:value="${r}" th:text="#{${'count.role.' + r}}">Warehouse</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="p-user" th:text="#{count.participant.userLabel}">User</label>
+                            <select id="p-user" name="userId" data-searchable>
+                                <option value="" th:text="#{count.participant.noUser}">Not a user (type the name)</option>
+                                <option th:each="u : ${users}" th:value="${u.id}" th:text="${u.fullName + ' (' + u.username + ')'}">Jean (jean)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="p-name" th:text="#{count.participant.name}">Name</label>
+                            <input type="text" id="p-name" name="name" maxlength="100" autocomplete="off" th:placeholder="#{count.participant.namePh}">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-outline" th:text="#{count.participant.add}">Add the participant</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="tab-content" id="tab-documents" th:classappend="${tab == 'documents'} ? 'active'">
+                <th:block th:replace="~{fragments/attachments :: documents('STOCK_COUNT', ${count.id}, ${documents}, '/stock-counts/' + ${count.id})}"></th:block>
+            </div>
 
             <div class="tab-content" id="tab-history" th:classappend="${tab == 'history'} ? 'active'" sec:authorize="hasAuthority('PERM_VIEW_DATA_CHANGES')">
                 <th:block th:replace="~{audit/history :: timeline-records(${history})}"></th:block>

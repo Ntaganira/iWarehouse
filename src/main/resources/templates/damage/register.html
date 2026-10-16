@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{damage.register.title}, ~{::content})}">
+<head><title>Damage register - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="t=${register.total}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{damage.register.title}">Damage register</h1>
+            <div class="subtitle" th:text="#{damage.register.subtitle}">Every damage of the period, wherever it was recorded: damage reports, breakage on trips and at cutting, write-offs and customers' returns to cullet</div>
+        </div>
+        <div class="btn-group">
+            <a href="/damage" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/export :: buttons(@{/damage/register/export(from=${from}, to=${to}, source=${source})})}"></th:block>
+        </div>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/damage/register}" method="get" class="table-toolbar report-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.from}">From</span>
+                    <input type="date" name="from" class="toolbar-filter" th:value="${#temporals.format(from, 'yyyy-MM-dd')}">
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{cutting.yield.to}">To</span>
+                    <input type="date" name="to" class="toolbar-filter" th:value="${#temporals.format(to, 'yyyy-MM-dd')}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <select name="source" class="toolbar-filter" th:aria-label="#{damage.register.source}">
+                    <option value="" th:text="#{damage.register.allSources}">Every source</option>
+                    <option th:each="s : ${sources}" th:value="${s}" th:selected="${s == source}" th:text="#{${'damage.register.source.' + s}}">Damage report</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{cutting.yield.show}">Show</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="kpi-grid doc-kpis">
+        <div class="kpi-card">
+            <div class="kpi-icon red"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{damage.register.value}">Value at cost (RWF)</div>
+                <div class="kpi-value" th:text="${@num.money(t.value)}">1,250,000</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{damage.register.kpiSub(${t.rows}, ${t.units})}">6 records · 8 units</span></div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon orange"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></div>
+            <div class="kpi-body">
+                <div class="kpi-label" th:text="#{damage.register.area}">m²</div>
+                <div class="kpi-value" th:text="${@num.m2(t.areaM2)}">21.6675</div>
+                <div class="kpi-trend flat"><span class="vs" th:text="#{damage.register.period(${#temporals.format(from, 'dd/MM/yyyy')}, ${#temporals.format(to, 'dd/MM/yyyy')})}">01/10/2026 – 16/10/2026</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2 th:text="#{damage.register.bySource}">By source</h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{damage.register.source}">Source</th>
+                        <th class="num" th:text="#{damage.register.records}">Records</th>
+                        <th class="num" th:text="#{damage.register.units}">Units</th>
+                        <th class="num" th:text="#{damage.register.area}">m²</th>
+                        <th class="num" th:text="#{damage.register.value}">Value at cost (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${register.totals}">
+                        <td th:text="#{${'damage.register.source.' + s.source}}">Damage report</td>
+                        <td class="num" th:text="${s.rows}">2</td>
+                        <td class="num" th:text="${s.units}">3</td>
+                        <td class="num" th:text="${@num.m2(s.areaM2)}">7.2225</td>
+                        <td class="num" th:text="${@num.money(s.value)}">252,629</td>
+                    </tr>
+                    <tr th:if="${register.totals.isEmpty()}">
+                        <td colspan="5"><div class="empty-state slim" th:text="#{damage.register.none}">No damage recorded in this period</div></td>
+                    </tr>
+                </tbody>
+                <tfoot th:if="${!register.totals.isEmpty()}">
+                    <tr>
+                        <th th:text="#{damage.register.total}">Total</th>
+                        <th class="num" th:text="${t.rows}">6</th>
+                        <th class="num" th:text="${t.units}">8</th>
+                        <th class="num" th:text="${@num.m2(t.areaM2)}">21.6675</th>
+                        <th class="num" th:text="${@num.money(t.value)}">1,250,000</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{damage.register.rows}">Damage</span>
+                <span class="section-count" th:text="${rows.totalElements}">0</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{damage.register.day}">Day</th>
+                        <th th:text="#{damage.register.document}">Document</th>
+                        <th th:text="#{damage.place}">Place</th>
+                        <th th:text="#{damage.cause}">Cause</th>
+                        <th class="num" th:text="#{damage.register.units}">Units</th>
+                        <th class="num" th:text="#{damage.register.value}">Value at cost (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r : ${rows.content}">
+                        <td class="nowrap" th:text="${#temporals.format(r.day, 'dd/MM/yyyy')}">16/10/2026</td>
+                        <td>
+                            <a class="mono" th:href="${r.link}" th:text="${r.number}">DMG-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="#{${'damage.register.source.' + r.source}}">Damage report</div>
+                        </td>
+                        <td th:text="${r.place ?: '—'}">WH-A-R01</td>
+                        <td>
+                            <span th:if="${r.causeKey != null}" th:text="#{${r.causeKey}}">Handling</span>
+                            <div th:class="${r.causeKey != null} ? 'cell-sub' : ''" th:if="${r.cause != null}" th:text="${r.cause}">Dropped</div>
+                        </td>
+                        <td class="num" th:text="${r.units}">1</td>
+                        <td class="num" th:text="${@num.money(r.value)}">252,629</td>
+                        <td th:text="${r.statusKey != null} ? #{${r.statusKey}} : '—'">Approved</td>
+                    </tr>
+                    <tr th:if="${rows.totalElements == 0}">
+                        <td colspan="7"><div class="empty-state slim" th:text="#{damage.register.none}">No damage recorded in this period</div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${rows}, '/damage/register', ${query})}"></th:block>
+    </div>
+</div>
+</body>
+</html>

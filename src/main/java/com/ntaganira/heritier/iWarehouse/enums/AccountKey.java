@@ -54,5 +54,7 @@ public enum AccountKey {
     VEHICLE_MAINTENANCE,
     VEHICLE_OTHER,
     /** Receivables written off on approval (V43, F-14). */
-    BAD_DEBTS
+    BAD_DEBTS,
+    /** Damage losses charged to a customer, an employee, an insurer, a supplier or a driver (V49, F-07 C). */
+    DAMAGE_RECOVERIES
 }

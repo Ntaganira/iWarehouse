@@ -104,6 +104,8 @@ public class GlobalSearchService {
     private final PriceChangeService priceChangeService;
     private final SiteTransferService siteTransferService;
     private final TicketService ticketService;
+    private final DamageService damageService;
+    private final StockVarianceService varianceService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -119,7 +121,9 @@ public class GlobalSearchService {
                                Messages messages, NumberFormats num, ReceivableWriteOffService writeOffService,
                                CreditApplicationService creditApplicationService, PriceChangeService priceChangeService,
                                SiteTransferService siteTransferService, TicketService ticketService,
-                               DeliveryNoteService deliveryNoteService) {
+                               DeliveryNoteService deliveryNoteService, DamageService damageService, StockVarianceService varianceService) {
+        this.damageService = damageService;
+        this.varianceService = varianceService;
         this.deliveryNoteService = deliveryNoteService;
         this.siteTransferService = siteTransferService;
         this.ticketService = ticketService;
@@ -323,6 +327,12 @@ public class GlobalSearchService {
                 q -> stockCountService.findPage(q, null, 0, PER_GROUP),
                 c -> new Hit(c.getNumber(), c.getLocation() == null ? null : c.getLocation().getCode(),
                         c.getProduct() == null ? null : productName(c.getProduct()), "/stock-counts/" + c.getId())),
+            new Source<>("nav.stockVariances", "/stock-variances", null, List.of("PAGE_STOCK_VARIANCES", "PERM_VIEW_STOCK_VARIANCE"),
+                q -> varianceService.findPage(q, null, 0, PER_GROUP),
+                v -> new Hit(v.getNumber(), v.getCount().getNumber(), v.getResponsibleOfficer(), "/stock-variances/" + v.getId())),
+            new Source<>("nav.damage", "/damage", null, List.of("PAGE_DAMAGE", "PERM_VIEW_DAMAGE"),
+                q -> damageService.findPage(q, null, 0, PER_GROUP),
+                d -> new Hit(d.getNumber(), d.getDescription(), join(d.getLocation().getCode(), date(d.getReportedAt())), "/damage/" + d.getId())),
             new Source<>("nav.fleet", "/trips", null, List.of("PAGE_FLEET"),
                 q -> tripService.findPage(new TripService.Filter(q, null, null, me), 0, PER_GROUP),
                 t -> new Hit(t.getNumber(),

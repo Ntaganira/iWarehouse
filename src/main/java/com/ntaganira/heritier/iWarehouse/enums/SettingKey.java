@@ -143,6 +143,26 @@ public enum SettingKey {
     /** The phone sells on credit to approved customers within their limit (decision D8). */
     MOBILE_FIELD_CREDIT("mobile.field-credit", "mobileFieldCredit", "true"),
 
+    // Damage, counts and variances (M16: IMP 13, 15, 16; F-07, F-08; decisions D5, D14)
+    /** A damage report is inspected by Dispatch before it is decided (F-07). */
+    DAMAGE_INSPECTION("damage.inspection", "damageInspection", "true"),
+    /** Damage worth this much or more (RWF) is told the same day to the Internal Controller and Security (F-07, Board tolerance). */
+    DAMAGE_ALERT_VALUE("damage.alert-value", "damageAlertValue", "500000"),
+    /** The first count is blind: what is expected is not shown until the count closes (CSH-012, D14). */
+    COUNT_BLIND("count.blind", "countBlind", "true"),
+    /** Count types that always get a second, independent count (D14). Comma-separated StockCountType names. */
+    COUNT_SECOND_TYPES("count.second-types", "countSecondTypes", "ANNUAL,SURPRISE"),
+    /** A second count wherever the first finds differences (D14). */
+    COUNT_SECOND_ON_DIFFERENCES("count.second-on-differences", "countSecondOnDifferences", "true"),
+    /** A variance above this % of the count's value is investigated (IMP 14.3, 16.2). */
+    COUNT_VARIANCE_TOLERANCE_PERCENT("count.variance-tolerance-percent", "countVarianceTolerancePercent", "0.5"),
+    /** From this % of the count's value a variance is moderate (VR-010). */
+    COUNT_VARIANCE_MODERATE_PERCENT("count.variance-moderate-percent", "countVarianceModeratePercent", "0.5"),
+    /** From this % a variance is material and told to the Board (VR-010, BP Table 9). */
+    COUNT_VARIANCE_MATERIAL_PERCENT("count.variance-material-percent", "countVarianceMaterialPercent", "2"),
+    /** A variance is resolved within this many working days, then escalated (IMP 14.2). */
+    COUNT_VARIANCE_DAYS("count.variance-days", "countVarianceDays", "5"),
+
     /** Rate source documents use unless they ask for another (ACC-02). A RateSource name. */
     DEFAULT_RATE_SOURCE("currency.default-rate-source", "defaultRateSource", "BNR"),
     /** Documents refuse a rate older than this many days, so a forgotten update is noticed (ACC-02). */

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{variance.reportTitle(${variance.number})} + ' - ' + #{app.name}">Variance report - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page" th:with="v=${variance}, c=${variance.count}">
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{variance.reportTitle(${v.number})}">Variance report VAR-WH-2026-000001</h1>
+            <p class="text-muted" th:text="#{variance.reportHint}">A4: the count's differences with their value, the investigation and the signatures (VR-010).</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/stock-variances/{id}(id=${v.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!--/* The variance report (IMP 16.1, VR-010) */-->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{variance.reportKind}">STOCK VARIANCE REPORT</div>
+                <div class="mono" th:text="${v.number}">VAR-WH-2026-000001</div>
+            </div>
+        </div>
+        <div class="print-doc-parties">
+            <div>
+                <div><span class="print-doc-label" th:text="#{variance.count}">Count</span> <span class="mono" th:text="${c.number}">CNT-WH-2026-000003</span></div>
+                <div><span class="print-doc-label" th:text="#{count.place}">Place</span> <span class="mono" th:text="${c.location.code}">WH-A</span></div>
+                <div><span class="print-doc-label" th:text="#{count.type}">Type</span> <span th:text="#{${'count.type.' + c.countType}}">Annual</span></div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{variance.closed}">Closed</span>
+                    <span th:text="${c.closedAt != null} ? ${#temporals.format(c.closedAt, 'dd/MM/yyyy HH:mm')} : '—'">16/10/2026 09:00</span></div>
+                <div><span class="print-doc-label" th:text="#{variance.class}">Class</span> <strong th:text="#{${'variance.class.' + v.classification}}">Moderate</strong></div>
+                <div><span class="print-doc-label" th:text="#{variance.due}">Due</span> <span th:text="${#temporals.format(v.dueOn, 'dd/MM/yyyy')}">23/10/2026</span></div>
+            </div>
+        </div>
+        <div class="print-doc-scroll">
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th th:text="#{count.label}">Label</th>
+                    <th th:text="#{count.glass}">Glass</th>
+                    <th th:text="#{count.found}">Found</th>
+                    <th th:text="#{count.recordedOn}">Recorded on</th>
+                    <th th:text="#{count.foundAt}">Found on</th>
+                    <th class="num" th:text="#{variance.value}">Value (RWF)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="r : ${lines}" th:with="l=${r.line}, u=${r.unit}">
+                    <td class="mono" th:text="${l.code}">U-WH-000041</td>
+                    <td class="mono" th:text="${u != null} ? ${u.product.code} : '—'">CLR-6</td>
+                    <td th:text="#{${'count.outcome.' + l.outcome}}">Missing</td>
+                    <td class="mono" th:text="${l.expectedLocationId != null and locations.get(l.expectedLocationId) != null} ? ${locations.get(l.expectedLocationId).code} : '—'">WH-A-R02</td>
+                    <td class="mono" th:text="${l.foundLocationId != null and locations.get(l.foundLocationId) != null} ? ${locations.get(l.foundLocationId).code} : '—'">WH-A-R01</td>
+                    <td class="num" th:text="${l.outcome.name() == 'MISSING' or l.outcome.name() == 'FOUND_LOST'} ? ${@num.money(r.value)} : '—'">252,629</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <table class="print-doc-table print-doc-pair">
+            <tbody>
+                <tr><td th:text="#{variance.missingLine(${v.missingUnits})}">Missing: 2 units</td><td class="num" th:text="${@num.money(v.missingValue)}">505,258</td></tr>
+                <tr><td th:text="#{variance.foundLine(${v.foundUnits})}">Found: 0 units</td><td class="num" th:text="${@num.money(v.foundValue)}">0</td></tr>
+                <tr><td th:text="#{variance.expectedLine}">Value counted (expected)</td><td class="num" th:text="${@num.money(v.expectedValue)}">42,000,000</td></tr>
+                <tr><td><strong th:text="#{variance.percent}">Of the value counted</strong></td><td class="num"><strong th:text="${v.variancePercent != null} ? ${v.variancePercent + ' %'} : '—'">1.20 %</strong></td></tr>
+                <tr><td th:text="#{variance.rootCause}">Root cause</td><td th:text="${v.rootCause != null} ? #{${'variance.cause.' + v.rootCause}} : '—'">Misplacement</td></tr>
+                <tr><td th:text="#{variance.correctiveAction}">Corrective action</td><td th:text="${v.correctiveAction ?: '—'}">Racks relabelled</td></tr>
+                <tr><td th:text="#{variance.responsibleOfficer}">Responsible officer</td><td th:text="${v.responsibleOfficer ?: '—'}">Warehouse Manager</td></tr>
+                <tr><td th:text="#{variance.escalation}">Escalation</td><td th:text="${v.escalatedAt != null} ? ${#temporals.format(v.escalatedAt, 'dd/MM/yyyy HH:mm')} : '—'">—</td></tr>
+                <tr><td th:text="#{variance.board}">Reported to the Board</td><td th:text="${v.boardNotifiedAt != null} ? ${#temporals.format(v.boardNotifiedAt, 'dd/MM/yyyy HH:mm')} : '—'">—</td></tr>
+            </tbody>
+        </table>
+        <div class="print-doc-signs">
+            <div th:each="p : ${participants}"><span th:text="#{${'count.role.' + p.role}}">Warehouse</span><span class="print-doc-signline" th:text="${p.name}">Jean</span></div>
+            <div><span th:text="#{variance.signResolved}">Resolved by</span><span class="print-doc-signline" th:text="${v.resolvedBy}">supply1</span></div>
+        </div>
+    </div>
+</body>
+</html>

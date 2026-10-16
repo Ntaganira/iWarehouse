@@ -35,6 +35,15 @@
                     <span class="hint" th:text="#{count.glassHint}">Count one glass only, or everything on the place</span>
                     <span class="field-error" th:if="${#fields.hasErrors('productId')}" th:errors="*{productId}"></span>
                 </div>
+                <div class="form-group">
+                    <label for="countType" th:text="#{count.type}">Type</label>
+                    <select id="countType" th:field="*{countType}" th:classappend="${#fields.hasErrors('countType')} ? 'is-invalid'">
+                        <option value="" th:text="#{count.chooseType}">Choose the kind of count</option>
+                        <option th:each="t : ${types}" th:value="${t}" th:text="#{${'count.type.' + t}}">Monthly cycle count</option>
+                    </select>
+                    <span class="hint" th:text="#{count.typeHint}">Annual and surprise counts always get a second, independent count</span>
+                    <span class="field-error" th:if="${#fields.hasErrors('countType')}" th:errors="*{countType}"></span>
+                </div>
                 <div class="form-group full-width">
                     <label for="note" th:text="#{count.note}">Note</label>
                     <input type="text" id="note" th:field="*{note}" maxlength="255" th:placeholder="#{count.notePh}"
@@ -42,6 +51,7 @@
                     <span class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></span>
                 </div>
             </div>
+            <p class="form-note" th:if="${blind}" th:text="#{count.blindNote}">The count is blind: what the records expect is not shown until it closes.</p>
             <p class="form-note" th:text="#{count.holdNote}">While the count is open, the units on the counted racks are held: nobody can move, cut, reserve or adjust them. Close or cancel it when you are done.</p>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" th:text="#{count.start}">Start the count</button>

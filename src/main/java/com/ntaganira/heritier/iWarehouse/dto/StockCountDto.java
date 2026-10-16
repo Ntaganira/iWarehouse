@@ -27,6 +27,10 @@ public class StockCountDto {
     @NotNull(message = "{count.location.required}")
     private UUID locationId;
 
+    /** Monthly cycle, quarterly, annual or surprise (IMP 15, F-08). */
+    @jakarta.validation.constraints.NotNull(message = "{count.type.required}")
+    private com.ntaganira.heritier.iWarehouse.enums.StockCountType countType;
+
     private UUID productId;
 
     @Size(max = 255, message = "{count.note.size}")

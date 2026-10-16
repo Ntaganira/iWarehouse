@@ -44,7 +44,8 @@ class AttachmentServiceTest {
             mock(DriverRepository.class), mock(TripRepository.class), mock(VehicleCostRepository.class), CLOCK, mock(CreditNoteRequestRepository.class), mock(ReceivableWriteOffRepository.class),
             mock(CustomerRepository.class), mock(SupplierRepository.class), mock(CreditApplicationRepository.class),
             mock(SiteTransferRepository.class), mock(CuttingJobRepository.class), mock(DeliveryNoteRepository.class),
-            mock(CashDepositRepository.class), mock(BalanceConfirmationRepository.class), mock(DailyCloseRepository.class));
+            mock(CashDepositRepository.class), mock(BalanceConfirmationRepository.class), mock(DailyCloseRepository.class),
+            mock(DamageReportRepository.class), mock(StockCountRepository.class), mock(StockVarianceRepository.class));
     private final UUID shipment = UUID.randomUUID();
 
     @AfterEach

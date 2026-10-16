@@ -173,6 +173,39 @@ public class StockAdjustmentService {
     /** Checks the rows; posts within the approval limit, otherwise waits for approval (INV-07). */
     @Transactional
     public StockAdjustment create(StockAdjustmentDto dto) {
+        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
+        StockAdjustment adjustment = build(dto, user.map(AppUserPrincipal::getUsername).orElse("system"), user.map(AppUserPrincipal::getId).orElse(null));
+        // Saved as pending; posting sets POSTED and the time together (chk_stock_adjustments_posted), so a flush
+        // during posting never sees a posted adjustment without its time.
+        adjustment.setStatus(AdjustmentStatus.PENDING_APPROVAL);
+        repo.save(adjustment);
+        if (adjustment.getValueMoved().compareTo(approvalLimit()) <= 0) {
+            post(adjustment);
+        } else {
+            notifier.holders("APPROVE_ADJUSTMENT", adjustment.getRequestedById(), NotificationKind.APPROVAL, "notify.adjustment.waiting",
+                    "notify.adjustment.waitingText", "/stock-adjustments/" + adjustment.getId(), adjustment.getNumber(), adjustment.getRequestedBy(),
+                    adjustment.getReason());
+        }
+        return adjustment;
+    }
+
+    /**
+     * A write-off already approved on another document (a damage report: reported by one person, approved by another
+     * within the Delegation of Authority, IMP 13, F-07): created and posted at once, whoever reported it as the requester
+     * and the approver (the user now) as the decider, so it is not approved twice. Inside that document's transaction.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public StockAdjustment createApproved(StockAdjustmentDto dto, String requestedBy, Long requestedById, String note) {
+        StockAdjustment adjustment = build(dto, requestedBy, requestedById);
+        adjustment.setStatus(AdjustmentStatus.PENDING_APPROVAL);
+        repo.save(adjustment);
+        decide(adjustment, AdjustmentStatus.PENDING_APPROVAL, note);
+        post(adjustment);
+        return adjustment;
+    }
+
+    /** The adjustment and its lines from the rows, checked (not saved). */
+    private StockAdjustment build(StockAdjustmentDto dto, String requestedBy, Long requestedById) {
         if (dto.getLines().isEmpty()) {
             throw BusinessException.of("adjustment.lines.required");
         }
@@ -180,9 +213,8 @@ public class StockAdjustmentService {
         StockAdjustment adjustment = new StockAdjustment();
         adjustment.setNumber(numbers.next(DocumentType.ADJUSTMENT));
         adjustment.setReason(dto.getReason().trim());
-        Optional<AppUserPrincipal> user = AppUserPrincipal.current();
-        adjustment.setRequestedBy(user.map(AppUserPrincipal::getUsername).orElse("system"));
-        adjustment.setRequestedById(user.map(AppUserPrincipal::getId).orElse(null));
+        adjustment.setRequestedBy(requestedBy);
+        adjustment.setRequestedById(requestedById);
         int no = 0;
         for (Prepared p : prepared) {
             StockAdjustmentLine line = new StockAdjustmentLine();
@@ -201,17 +233,6 @@ public class StockAdjustmentService {
             adjustment.getLines().add(line);
         }
         totals(adjustment);
-        // Saved as pending; posting sets POSTED and the time together (chk_stock_adjustments_posted), so a flush
-        // during posting never sees a posted adjustment without its time.
-        adjustment.setStatus(AdjustmentStatus.PENDING_APPROVAL);
-        repo.save(adjustment);
-        if (adjustment.getValueMoved().compareTo(approvalLimit()) <= 0) {
-            post(adjustment);
-        } else {
-            notifier.holders("APPROVE_ADJUSTMENT", adjustment.getRequestedById(), NotificationKind.APPROVAL, "notify.adjustment.waiting",
-                    "notify.adjustment.waitingText", "/stock-adjustments/" + adjustment.getId(), adjustment.getNumber(), adjustment.getRequestedBy(),
-                    adjustment.getReason());
-        }
         return adjustment;
     }
 

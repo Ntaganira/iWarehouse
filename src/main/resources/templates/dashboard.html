@@ -239,6 +239,8 @@
                                         <span sec:authorize="hasAuthority('PAGE_SITE_TRANSFERS')"> · <a href="/site-transfers?status=REQUESTED" th:text="#{dash.biz.siteTransfers(${biz.siteTransfers})}">0 site transfers</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_DELIVERY_NOTES')"> · <a href="/delivery-notes?status=DRAFT" th:text="#{dash.biz.deliveryNotes(${biz.deliveryNotes})}">0 delivery notes</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_FLEET')"> · <a href="/trips?status=PLANNED" th:text="#{dash.biz.loadRequests(${biz.loadRequests})}">0 loads</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_DAMAGE') and hasAuthority('PERM_VIEW_DAMAGE')"> · <a href="/damage?status=waiting" th:text="#{dash.biz.damageReports(${biz.damageReports})}">0 damage reports</a></span>
+                                        <span sec:authorize="hasAuthority('PAGE_STOCK_VARIANCES') and hasAuthority('PERM_VIEW_STOCK_VARIANCE')"> · <a href="/stock-variances?status=waiting" th:text="#{dash.biz.variances(${biz.variances})}">0 variances</a></span>
                                         <span sec:authorize="hasAuthority('PAGE_SUPPLIERS')"> · <a href="/suppliers?status=pending" th:text="#{dash.biz.suppliersWaiting(${biz.suppliers})}">0 suppliers</a></span>
                                     </div>
                                 </td>

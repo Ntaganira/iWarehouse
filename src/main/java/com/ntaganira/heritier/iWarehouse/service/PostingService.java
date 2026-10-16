@@ -585,6 +585,28 @@ public class PostingService {
         return journalService.post(journal);
     }
 
+    /**
+     * A damage loss charged to whoever pays it back (F-07 C), on the day it was approved: Dr the customer's receivable,
+     * Claims (a supplier, named, or an insurer), the driver's shortage (named) or Staff Advances (an employee) / Cr Damage
+     * Recoveries. The write-off itself posts through its adjustment.
+     */
+    public JournalEntry damageRecovery(DamageReport report) {
+        BigDecimal amount = report.getRecoverAmount();
+        String party = report.getRecoverParty();
+        Journal journal = Journal.of(JournalSource.DAMAGE_RECOVERY, report.getId(), report.getNumber(), report.getDecidedAt().toLocalDate(),
+                "Damage " + report.getNumber() + " charged to " + party);
+        switch (report.getRecoverFrom()) {
+            case CUSTOMER -> journal.add(AccountKey.RECEIVABLE, amount, null, null, report.getRecoverCustomerId(), report.getNumber(), null);
+            case SUPPLIER -> journal.add(AccountKey.CLAIMS, amount, null, report.getRecoverSupplierId(), null, report.getNumber(), null);
+            case INSURER -> journal.add(AccountKey.CLAIMS, amount, null, null, null, party, null);
+            case DRIVER -> journal.addForDriver(AccountKey.DRIVER_SHORTAGE, amount, report.getRecoverDriverId(), report.getNumber());
+            case EMPLOYEE -> journal.add(AccountKey.STAFF_ADVANCES, amount, null, null, null, party, null);
+            default -> throw new IllegalStateException("Nothing to recover on " + report.getNumber());
+        }
+        journal.credit(AccountKey.DAMAGE_RECOVERIES, amount);
+        return journalService.post(journal);
+    }
+
     /** Takings banked in full (F-13, SDP 10): Dr Bank / Cr Main Cash Vault, the deposit's amount. */
     public JournalEntry cashDeposit(CashDeposit deposit) {
         Journal journal = Journal.of(JournalSource.CASH_DEPOSIT, deposit.getId(), deposit.getNumber(), deposit.getDepositDate(),

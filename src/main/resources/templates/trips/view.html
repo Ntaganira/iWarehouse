@@ -51,7 +51,7 @@
                 <button type="submit" class="btn btn-outline" th:text="#{trip.load.approve}">Approve the load</button>
             </form>
             <a class="btn btn-outline" th:if="${s == 'DEPARTED' and canCount and !isDriver}" th:href="@{/trips/{id}/count(id=${trip.id})}" th:text="#{tripCount.action}">Count the van</a>
-            <button type="button" class="btn btn-outline" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canDeposit and !floatCleared}"
+            <button type="button" class="btn btn-outline" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canDeposit and !floatCleared and floatLeft != null and floatLeft.signum() > 0}"
                     data-modal-open="deposit-modal" th:text="#{tripDeposit.action}">Record a deposit</button>
             <button type="button" class="btn btn-primary" th:if="${s == 'PLANNED' and canDepart}" data-modal-open="depart-modal"
                     th:text="#{trip.depart}">Confirm departure</button>
@@ -825,7 +825,7 @@
                 @{/trips/{id}/waive-previous(id=${trip.id})}, #{trip.previous.waiveText}, #{trip.previous.waive})}"></div>
     </th:block>
 
-    <div class="modal-overlay" id="deposit-modal" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canDeposit and !floatCleared}">
+    <div class="modal-overlay" id="deposit-modal" th:if="${(s == 'DEPARTED' or s == 'RETURNED') and canDeposit and !floatCleared and floatLeft != null and floatLeft.signum() > 0}">
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deposit-title">
             <div class="modal-header">
                 <h3 id="deposit-title" th:text="#{tripDeposit.title(${trip.number})}">A deposit of TRP-WH-2026-000001</h3>

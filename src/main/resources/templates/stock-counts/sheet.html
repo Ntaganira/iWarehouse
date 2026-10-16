@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{count.sheetTitle(${count.number})} + ' - ' + #{app.name}">Count sheet - iWarehouse</title>
+    <script>
+        (function () {
+            var t = localStorage.getItem('iwarehouse-theme');
+            if (t !== 'dark') t = 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="label-page print-doc-page">
+    <div class="label-toolbar">
+        <div>
+            <h1 th:text="#{count.sheetTitle(${count.number})}">Count sheet CNT-WH-2026-000003</h1>
+            <p class="text-muted" th:text="${count.blind} ? #{count.sheetHintBlind} : #{count.sheetHint}">A4: each place with lines to write the labels found; signed by those who counted.</p>
+        </div>
+        <div class="btn-group">
+            <a th:href="@{/stock-counts/{id}(id=${count.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
+        </div>
+    </div>
+
+    <!--/* The count sheet prepared in advance (IMP 15.2, PF-06): the places, blank lines; the book quantity unless blind */-->
+    <div class="print-doc">
+        <div class="print-doc-head">
+            <div>
+                <img class="print-doc-logo" th:if="${companyLogoUrl != null}" th:src="${companyLogoUrl}" th:alt="${companyName}">
+                <div class="print-doc-company" th:text="${companyName}">iWarehouse</div>
+            </div>
+            <div class="print-doc-title">
+                <div class="print-doc-kind" th:text="#{count.sheetKind}">STOCK COUNT SHEET</div>
+                <div class="mono" th:text="${count.number}">CNT-WH-2026-000003</div>
+            </div>
+        </div>
+        <div class="print-doc-parties">
+            <div>
+                <div><span class="print-doc-label" th:text="#{count.place}">Place</span> <span class="mono" th:text="${count.location.code}">WH-A</span></div>
+                <div><span class="print-doc-label" th:text="#{count.type}">Type</span> <span th:text="#{${'count.type.' + count.countType}}">Annual</span></div>
+                <div><span class="print-doc-label" th:text="#{count.glass}">Glass</span> <span th:text="${count.product != null} ? ${count.product.code} : #{count.everyGlass}">Every glass</span></div>
+            </div>
+            <div class="print-doc-dates">
+                <div><span class="print-doc-label" th:text="#{count.startedOn}">Started</span> <span th:text="${#temporals.format(count.startedAt, 'dd/MM/yyyy HH:mm')}">16/10/2026 08:00</span></div>
+                <div th:if="${count.blind}"><strong th:text="#{count.blindLabel}">Blind count</strong></div>
+            </div>
+        </div>
+        <table class="print-doc-table">
+            <thead>
+                <tr>
+                    <th th:text="#{count.at}">Counting at</th>
+                    <th class="num" th:if="${!count.blind}" th:text="#{count.bookQty}">Book</th>
+                    <th th:text="#{count.labelsFound}">Labels found</th>
+                    <th class="num" th:text="#{count.countedQty}">Counted</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="p : ${places}">
+                    <td class="mono" th:text="${p.code}">WH-A-R01</td>
+                    <td class="num" th:if="${!count.blind}" th:text="${book.get(p.id) ?: 0}">12</td>
+                    <td class="print-doc-blank"></td>
+                    <td class="print-doc-blank"></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="print-doc-signs">
+            <div th:each="pt : ${participants}"><span th:text="#{${'count.role.' + pt.role}}">Warehouse</span><span class="print-doc-signline" th:text="${pt.name}">Jean</span></div>
+            <th:block th:if="${participants.isEmpty()}">
+                <div><span th:text="#{count.role.WAREHOUSE}">Warehouse</span><span class="print-doc-signline"></span></div>
+                <div><span th:text="#{count.role.INTERNAL_CONTROLLER}">Internal Controller</span><span class="print-doc-signline"></span></div>
+                <div><span th:text="#{count.role.FINANCE}">Finance</span><span class="print-doc-signline"></span></div>
+            </th:block>
+        </div>
+    </div>
+</body>
+</html>

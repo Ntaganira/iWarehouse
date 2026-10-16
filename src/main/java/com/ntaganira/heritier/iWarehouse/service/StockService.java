@@ -19,6 +19,7 @@ import com.ntaganira.heritier.iWarehouse.enums.UnitKind;
 import com.ntaganira.heritier.iWarehouse.enums.WriteOffCause;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
+import com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository;
 import com.ntaganira.heritier.iWarehouse.repository.LocationRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockAdjustmentLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCostEntryRepository;
@@ -100,6 +101,7 @@ public class StockService {
     private final StockAdjustmentLineRepository adjustmentLineRepo;
     private final StockCountRepository countRepo;
     private final SalesInvoiceLineRepository saleLineRepo;
+    private final DamageReportRepository damageRepo;
     private final TripRepository tripRepo;
     private final LocationRepository locationRepo;
     private final DocumentNumberService numbers;
@@ -109,6 +111,15 @@ public class StockService {
                         StockCostEntryRepository costEntryRepo, StockAdjustmentLineRepository adjustmentLineRepo,
                         StockCountRepository countRepo, SalesInvoiceLineRepository saleLineRepo, TripRepository tripRepo,
                         LocationRepository locationRepo, DocumentNumberService numbers, Clock clock) {
+        this(unitRepo, movementRepo, costEntryRepo, adjustmentLineRepo, countRepo, saleLineRepo, tripRepo, locationRepo, numbers, clock, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public StockService(StockUnitRepository unitRepo, StockMovementRepository movementRepo,
+                        StockCostEntryRepository costEntryRepo, StockAdjustmentLineRepository adjustmentLineRepo,
+                        StockCountRepository countRepo, SalesInvoiceLineRepository saleLineRepo, TripRepository tripRepo,
+                        LocationRepository locationRepo, DocumentNumberService numbers, Clock clock, DamageReportRepository damageRepo) {
+        this.damageRepo = damageRepo;
         this.unitRepo = unitRepo;
         this.movementRepo = movementRepo;
         this.costEntryRepo = costEntryRepo;
@@ -405,6 +416,12 @@ public class StockService {
         // A planned trip holds the units on its manifest until it departs or is cancelled (FLT-05)
         for (Object[] row : tripRepo.findHolds(unitIds)) {
             holds.putIfAbsent((UUID) row[0], (String) row[1]);
+        }
+        // A damage report holds its units until it is decided (IMP 13.1, PF-07: damaged glass isolated)
+        if (damageRepo != null) {
+            for (Object[] row : damageRepo.findHolds(unitIds)) {
+                holds.putIfAbsent((UUID) row[0], (String) row[1]);
+            }
         }
         return holds;
     }

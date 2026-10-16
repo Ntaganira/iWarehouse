@@ -33,7 +33,7 @@ public class ExceptionsReportService {
 
     /** What an exception is about (its text: exceptions.kind.*). */
     public enum Kind { SALE_PRICE, SALE_BELOW_COST, SALE_CREDIT, SALE_TERMS, ADJUSTMENT, MANUAL_JOURNAL, VEHICLE_COST, CREDIT_NOTE,
-        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER }
+        WRITE_OFF, PURCHASE_ORDER, SUPPLIER_PAYMENT, CREDIT_LIMIT, PRICE_CHANGE, SUPPLIER, SITE_TRANSFER, EBM_OVERRIDE, TRIP_LOAD, TRIP_WAIVER, DAMAGE }
 
     /** How it ended (exceptions.outcome.*). */
     public enum Outcome { APPROVED, REJECTED, ISSUED }
@@ -66,6 +66,8 @@ public class ExceptionsReportService {
     private final SiteTransferRepository siteTransferRepo;
     private final DeliveryNoteRepository deliveryNoteRepo;
     private final TripRepository tripRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo;
+    private final DelegationOfAuthority authority;
 
     public ExceptionsReportService(SaleApprovalRepository saleApprovalRepo, StockAdjustmentRepository adjustmentRepo,
                                    ManualJournalRepository manualJournalRepo, VehicleCostRepository vehicleCostRepo,
@@ -73,7 +75,10 @@ public class ExceptionsReportService {
                                    ReceivableWriteOffRepository writeOffRepo, PurchaseOrderRepository purchaseOrderRepo,
                                    SupplierPaymentRequestRepository paymentRequestRepo, CreditApplicationRepository creditApplicationRepo,
                                    PriceChangeRepository priceChangeRepo, SupplierRepository supplierRepo,
-                                   SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, TripRepository tripRepo) {
+                                   SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, TripRepository tripRepo,
+                                   com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo, DelegationOfAuthority authority) {
+        this.damageRepo = damageRepo;
+        this.authority = authority;
         this.deliveryNoteRepo = deliveryNoteRepo;
         this.tripRepo = tripRepo;
         this.siteTransferRepo = siteTransferRepo;
@@ -226,6 +231,14 @@ public class ExceptionsReportService {
         for (Trip t : tripRepo.findByPreviousOverrideAtBetweenOrderByPreviousOverrideAtAsc(from, to)) {
             rows.add(new Row(Kind.TRIP_WAIVER, t.getNumber(), "/trips/" + t.getId(), t.getPreviousOverrideAt(), tripSubject(t), null, false,
                     AuthorityLevel.COO, t.getCreatedBy(), t.getPreviousOverrideBy(), Outcome.APPROVED, t.getPreviousOverrideReason()));
+        }
+        // Damage decided by Supply Chain (F-07): approved (written off or back) or rejected
+        for (com.ntaganira.heritier.iWarehouse.entity.DamageReport d : damageRepo.findByDecidedAtBetweenAndStatusInOrderByDecidedAtAsc(from, to,
+                List.of(com.ntaganira.heritier.iWarehouse.enums.DamageStatus.APPROVED, com.ntaganira.heritier.iWarehouse.enums.DamageStatus.REJECTED))) {
+            boolean rejected = d.getStatus() == com.ntaganira.heritier.iWarehouse.enums.DamageStatus.REJECTED;
+            rows.add(new Row(Kind.DAMAGE, d.getNumber(), "/damage/" + d.getId(), d.getDecidedAt(), d.getLocation().getCode() + " · " + d.getDescription(),
+                    d.getEstimatedLoss(), false, authority.required(AuthorityDecision.STOCK_ADJUSTMENT, d.getEstimatedLoss()), d.getReportedBy(),
+                    d.getDecidedBy(), rejected ? Outcome.REJECTED : Outcome.APPROVED, d.getDecisionNote()));
         }
         rows.sort(Comparator.comparing(Row::at).thenComparing(Row::number));
         Map<Kind, Long> counts = new EnumMap<>(Kind.class);

@@ -598,6 +598,39 @@ class PostingServiceTest {
     }
 
     @Test
+    void aDamageLossIsChargedToWhoeverPaysItBack() {   // F-07 C, AT-10
+        DamageReport report = new DamageReport();
+        report.setId(UUID.randomUUID());
+        report.setNumber("DMG-WH-2026-000001");
+        report.setDecidedAt(java.time.LocalDateTime.of(2026, 10, 16, 10, 0));
+        UUID customer = UUID.randomUUID();
+        report.setRecoverFrom(RecoveryFrom.CUSTOMER);
+        report.setRecoverCustomerId(customer);
+        report.setRecoverParty("Umucyo Builders Ltd");
+        report.setRecoverAmount(new BigDecimal("30000.00"));
+        postings.damageRecovery(report);
+        Journal charged = last();
+        assertThat(charged.source()).isEqualTo(JournalSource.DAMAGE_RECOVERY);
+        assertThat(line(charged, AccountKey.RECEIVABLE).debit()).isEqualByComparingTo("30000");
+        assertThat(line(charged, AccountKey.RECEIVABLE).customerId()).isEqualTo(customer);
+        assertThat(line(charged, AccountKey.DAMAGE_RECOVERIES).credit()).isEqualByComparingTo("30000");
+
+        // A driver: on their shortage; an insurer: a claim
+        UUID driver = UUID.randomUUID();
+        report.setRecoverFrom(RecoveryFrom.DRIVER);
+        report.setRecoverDriverId(driver);
+        postings.damageRecovery(report);
+        assertThat(line(last(), AccountKey.DRIVER_SHORTAGE).driverId()).isEqualTo(driver);
+        report.setRecoverFrom(RecoveryFrom.INSURER);
+        report.setRecoverParty("Radiant Insurance");
+        postings.damageRecovery(report);
+        assertThat(line(last(), AccountKey.CLAIMS).debit()).isEqualByComparingTo("30000");
+        BigDecimal debits = posted.stream().map(Journal::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal credits = posted.stream().map(Journal::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertThat(debits).isEqualByComparingTo(credits);
+    }
+
+    @Test
     void aCreditNoteReversesTheSaleAndPutsGlassBackAtItsOwnCost() {   // POS-09, AT-10
         held.put(clear6.getId(), new BigDecimal("100.0000"));
         clear6.setMacPerM2(new BigDecimal("5000.0000"));

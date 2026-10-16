@@ -36,5 +36,9 @@ public enum NotificationKind {
     DELIVERY,
     /** The day's close: a variance, a close or banking late, a late reconciliation, a disputed balance, the credit list,
      *  the reporting calendar (F-12, F-13, BP 5.3). */
-    CLOSE
+    CLOSE,
+    /** Damage reported, to inspect or decide, or above the Board's tolerance (F-07, IMP 13). */
+    DAMAGE,
+    /** A count variance above the tolerance, material, or not resolved in time (IMP 16). */
+    VARIANCE
 }

@@ -12,6 +12,10 @@
         </div>
         <div class="btn-group">
             <a href="/credit-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <!--/* A customer's return held for inspection (F-07 C, K.07): a damage report of the units put back on a rack */-->
+            <a class="btn btn-outline" th:if="${units != null and !units.?[outcome.name() == 'RESTOCK'].isEmpty()}"
+               sec:authorize="hasAuthority('PAGE_DAMAGE') and hasAuthority('PERM_REPORT_DAMAGE')"
+               th:href="@{/damage/new(creditNote=${note.id})}" th:text="#{creditNote.holdForInspection}">Hold for inspection</a>
             <a th:href="@{/credit-notes/{id}/receipt(id=${note.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{creditNote.print}">Print the credit note</a>
         </div>
     </div>

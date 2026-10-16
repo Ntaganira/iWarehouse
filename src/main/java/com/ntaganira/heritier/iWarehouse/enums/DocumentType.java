@@ -76,6 +76,10 @@ public enum DocumentType {
     CUSTOMER_REMINDER("REM"),
     /** A balance confirmation sent to a customer (SDP 10). */
     BALANCE_CONFIRMATION("BC"),
+    /** A damage report: units damaged, the cause, the loss (F-07, DMG-009). */
+    DAMAGE_REPORT("DMG"),
+    /** A count variance followed up until resolved (IMP 16, VR-010). */
+    STOCK_VARIANCE("VAR"),
     /** Not documents, but numbered the same way (MD-04, MD-05): CUS-WH-00001, SUP-WH-0001. */
     CUSTOMER("CUS"),
     SUPPLIER("SUP"),

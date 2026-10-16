@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{damage.new}, ~{::content})}">
+<head><title>Report damage - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{damage.new}">Report damage</h1>
+            <div class="subtitle" th:text="#{damage.formSubtitle}">The damaged units by label, where and when, why, who was there: they are held until Supply Chain decides</div>
+        </div>
+        <a href="/damage" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/damage/new}" th:object="${damageDto}" method="post" class="form-container damage-form" novalidate>
+            <div th:replace="~{layout/errors :: error-summary}"></div>
+            <input type="hidden" th:field="*{creditNoteId}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="locationId" th:text="#{damage.place}">Place</label>
+                    <select id="locationId" th:field="*{locationId}" data-searchable th:classappend="${#fields.hasErrors('locationId')} ? 'is-invalid'">
+                        <option value="" th:text="#{damage.choosePlace}">Where it happened</option>
+                        <option th:each="p : ${places}" th:value="${p.id}" th:text="${p.code + ' · ' + p.name}">WH-A-R01 · Rack 1</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('locationId')}" th:errors="*{locationId}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="occurredOn" th:text="#{damage.occurredOn}">Happened on</label>
+                    <input type="date" id="occurredOn" th:field="*{occurredOn}" th:attr="max=${today}" th:classappend="${#fields.hasErrors('occurredOn')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('occurredOn')}" th:errors="*{occurredOn}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="cause" th:text="#{damage.cause}">Cause</label>
+                    <select id="cause" th:field="*{cause}" th:classappend="${#fields.hasErrors('cause')} ? 'is-invalid'">
+                        <option value="" th:text="#{damage.chooseCause}">Choose the cause</option>
+                        <option th:each="c : ${causes}" th:value="${c}" th:text="#{${'damage.cause.' + c}}">Handling</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('cause')}" th:errors="*{cause}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="repairable" th:text="#{damage.repairable}">Can it be repaired?</label>
+                    <select id="repairable" th:field="*{repairable}">
+                        <option value="false" th:text="#{common.no}">No</option>
+                        <option value="true" th:text="#{damage.repairableYes}">Yes: cut down or reworked</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label for="description" th:text="#{damage.description}">What happened</label>
+                    <textarea id="description" th:field="*{description}" rows="3" maxlength="500" th:placeholder="#{damage.descriptionPh}"
+                              th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="peoplePresent" th:text="#{damage.people}">People present</label>
+                    <input type="text" id="peoplePresent" th:field="*{peoplePresent}" maxlength="255" th:placeholder="#{damage.peoplePh}"
+                           th:classappend="${#fields.hasErrors('peoplePresent')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('peoplePresent')}" th:errors="*{peoplePresent}"></span>
+                </div>
+                <div class="form-group full-width">
+                    <label for="codes" th:text="#{damage.codes}">Labels of the damaged units</label>
+                    <textarea id="codes" th:field="*{codes}" rows="4" maxlength="8000" class="input-code" autocomplete="off" autocapitalize="characters"
+                              spellcheck="false" th:placeholder="#{damage.codesPh}" th:classappend="${#fields.hasErrors('codes')} ? 'is-invalid'"></textarea>
+                    <span class="hint" th:text="#{damage.codesHint}">Scan or type each label, one per line: glass on a rack, held by nothing else</span>
+                    <span class="field-error" th:if="${#fields.hasErrors('codes')}" th:errors="*{codes}"></span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{damage.recovery}">Who pays it back</h3>
+                <p class="hint" th:text="#{damage.recoveryHint}">When the loss is recoverable: charged to them when the report is approved</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="recoverFrom" th:text="#{damage.recoverFrom}">Recoverable from</label>
+                    <select id="recoverFrom" th:field="*{recoverFrom}" data-recover-from>
+                        <option th:each="r : ${recoveries}" th:value="${r}" th:text="#{${'damage.recover.' + r}}">Nobody</option>
+                    </select>
+                </div>
+                <div class="form-group" data-recover="CUSTOMER">
+                    <label for="recoverCustomerId" th:text="#{damage.recover.CUSTOMER}">The customer</label>
+                    <select id="recoverCustomerId" th:field="*{recoverCustomerId}" data-searchable th:classappend="${#fields.hasErrors('recoverCustomerId')} ? 'is-invalid'">
+                        <option value="" th:text="#{damage.chooseCustomer}">Choose the customer</option>
+                        <option th:each="c : ${customers}" th:value="${c.id}" th:text="${c.name + ' (' + c.code + ')'}">Umucyo Builders (CUS-WH-00001)</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('recoverCustomerId')}" th:errors="*{recoverCustomerId}"></span>
+                </div>
+                <div class="form-group" data-recover="SUPPLIER">
+                    <label for="recoverSupplierId" th:text="#{damage.recover.SUPPLIER}">The supplier</label>
+                    <select id="recoverSupplierId" th:field="*{recoverSupplierId}" data-searchable th:classappend="${#fields.hasErrors('recoverSupplierId')} ? 'is-invalid'">
+                        <option value="" th:text="#{damage.chooseSupplier}">Choose the supplier</option>
+                        <option th:each="s : ${suppliers}" th:value="${s.id}" th:text="${s.name}">Shandong Glass</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('recoverSupplierId')}" th:errors="*{recoverSupplierId}"></span>
+                </div>
+                <div class="form-group" data-recover="DRIVER">
+                    <label for="recoverDriverId" th:text="#{damage.recover.DRIVER}">The driver</label>
+                    <select id="recoverDriverId" th:field="*{recoverDriverId}" th:classappend="${#fields.hasErrors('recoverDriverId')} ? 'is-invalid'">
+                        <option value="" th:text="#{damage.chooseDriver}">Choose the driver</option>
+                        <option th:each="d : ${drivers}" th:value="${d.id}" th:text="${d.username}">driver-m7</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('recoverDriverId')}" th:errors="*{recoverDriverId}"></span>
+                </div>
+                <div class="form-group" data-recover="EMPLOYEE INSURER">
+                    <label for="recoverParty" th:text="#{damage.recoverParty}">Name</label>
+                    <input type="text" id="recoverParty" th:field="*{recoverParty}" maxlength="150" th:placeholder="#{damage.recoverPartyPh}"
+                           th:classappend="${#fields.hasErrors('recoverParty')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('recoverParty')}" th:errors="*{recoverParty}"></span>
+                </div>
+                <div class="form-group" data-recover="CUSTOMER SUPPLIER DRIVER EMPLOYEE INSURER">
+                    <label for="recoverAmount" th:text="#{damage.recoverAmount}">Amount (RWF)</label>
+                    <input type="number" id="recoverAmount" th:field="*{recoverAmount}" min="0" step="1" inputmode="numeric"
+                           th:classappend="${#fields.hasErrors('recoverAmount')} ? 'is-invalid'">
+                    <span class="hint" th:text="#{damage.recoverAmountHint}">At most the units' cost</span>
+                    <span class="field-error" th:if="${#fields.hasErrors('recoverAmount')}" th:errors="*{recoverAmount}"></span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="/damage" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+                <button type="submit" class="btn btn-primary" th:text="#{damage.save}">Report the damage</button>
+            </div>
+        </form>
+    </div>
+    <script defer src="/js/damage-form.js"></script>
+</div>
+</body>
+</html>

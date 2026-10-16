@@ -7,21 +7,30 @@ import com.ntaganira.heritier.iWarehouse.entity.Product;
 import com.ntaganira.heritier.iWarehouse.entity.StockAdjustment;
 import com.ntaganira.heritier.iWarehouse.entity.StockCount;
 import com.ntaganira.heritier.iWarehouse.entity.StockCountLine;
+import com.ntaganira.heritier.iWarehouse.entity.StockCountParticipant;
 import com.ntaganira.heritier.iWarehouse.entity.StockCountScan;
+import com.ntaganira.heritier.iWarehouse.entity.StockVariance;
+import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.entity.StockUnit;
 import com.ntaganira.heritier.iWarehouse.enums.AdjustmentKind;
 import com.ntaganira.heritier.iWarehouse.enums.CountAction;
 import com.ntaganira.heritier.iWarehouse.enums.CountOutcome;
+import com.ntaganira.heritier.iWarehouse.enums.CountPhase;
+import com.ntaganira.heritier.iWarehouse.enums.CountRole;
 import com.ntaganira.heritier.iWarehouse.enums.DocumentType;
 import com.ntaganira.heritier.iWarehouse.enums.LocationType;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.enums.StockCountStatus;
+import com.ntaganira.heritier.iWarehouse.enums.StockCountType;
 import com.ntaganira.heritier.iWarehouse.enums.WriteOffCause;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCountLineRepository;
+import com.ntaganira.heritier.iWarehouse.repository.StockCountParticipantRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockCountRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
+import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
@@ -65,6 +74,11 @@ import java.util.stream.Collectors;
  *               (StockCounting), moves misplaced units to where they were found (COUNT movements), puts
  *               missing units (written off as LOST) and lost units found on one adjustment, approved as
  *               any other (INV-07), and keeps one result line per unit.
+ *               M16 (IMP 15, CSH-012, PF-06; decision D14): a count has a type; it starts blind (Settings); closing the
+ *               first count asks for a second, independent count for the Settings' types or when the first finds
+ *               differences; closing the second asks for a recount of the labels the two disagree on; the result is
+ *               worked out on what they agree on and the recount (CountPasses). Participants sign the closed count, and a
+ *               count with differences opens a variance (StockVarianceService).
  * </pre>
  */
 @Service
@@ -85,10 +99,19 @@ public class StockCountService {
     private final StockAdjustmentService adjustmentService;
     private final DocumentNumberService numbers;
     private final Clock clock;
+    private final SettingService settings;
+    private final StockVarianceService varianceService;
+    private final StockCountParticipantRepository participantRepo;
+    private final UserRepository userRepo;
 
     public StockCountService(StockCountRepository repo, StockCountLineRepository lineRepo, StockUnitRepository unitRepo,
                              ProductRepository productRepo, StockService stockService, StockAdjustmentService adjustmentService,
-                             DocumentNumberService numbers, Clock clock) {
+                             DocumentNumberService numbers, Clock clock, SettingService settings, StockVarianceService varianceService,
+                             StockCountParticipantRepository participantRepo, UserRepository userRepo) {
+        this.settings = settings;
+        this.varianceService = varianceService;
+        this.participantRepo = participantRepo;
+        this.userRepo = userRepo;
         this.repo = repo;
         this.lineRepo = lineRepo;
         this.unitRepo = unitRepo;
@@ -103,8 +126,21 @@ public class StockCountService {
     public record ScanResult(String code, CountOutcome outcome, StockUnit unit, boolean again, int scanned, Location place) {
     }
 
-    /** A closed count and the racks its moves left over their piece or weight limit. */
-    public record CloseResult(StockCount count, List<String> racksOverLimit) {
+    /**
+     * What closing did: the count closed (its result recorded, the racks its moves left over their limit, the variance
+     * it opened), or the second count or the recount to do next (with how many labels the two counts disagree on).
+     */
+    public record CloseResult(StockCount count, List<String> racksOverLimit, Step step, int differences, StockVariance variance) {
+
+        public CloseResult(StockCount count, List<String> racksOverLimit) {
+            this(count, racksOverLimit, Step.CLOSED, 0, null);
+        }
+    }
+
+    public enum Step { CLOSED, SECOND_COUNT, RECOUNT }
+
+    /** A label the two counts disagree on: where each found it (none when it did not). */
+    public record Difference(String code, UUID firstAt, UUID secondAt) {
     }
 
     // ---------------------------------------------------------------- reading
@@ -185,12 +221,48 @@ public class StockCountService {
                 .collect(Collectors.toMap(StockUnit::getCode, Function.identity()));
     }
 
-    /** The comparison as it stands (an open count's progress, or the result about to be recorded). */
+    /** The comparison as it stands: the current pass of an open count against the records. */
     public List<StockCounting.Line> compare(StockCount count, List<StockUnit> expected, Map<String, StockUnit> scanned) {
-        List<StockCounting.Scan> scans = count.getScans().stream()
-                .map(s -> new StockCounting.Scan(s.getCode(), unit(scanned.get(s.getCode())), s.getLocationId()))
+        return compareFound(found(count, count.currentPass()), expected, scanned);
+    }
+
+    /** What was found against the records. */
+    List<StockCounting.Line> compareFound(List<CountPasses.Found> found, List<StockUnit> expected, Map<String, StockUnit> scanned) {
+        List<StockCounting.Scan> scans = found.stream()
+                .map(f -> new StockCounting.Scan(f.code(), unit(scanned.get(f.code())), f.placeId()))
                 .toList();
         return StockCounting.compare(expected.stream().map(StockCountService::unit).toList(), scans);
+    }
+
+    /** The labels one pass found, and where. */
+    static List<CountPasses.Found> found(StockCount count, int pass) {
+        return count.scansOf(pass).stream().map(s -> new CountPasses.Found(s.getCode(), s.getLocationId())).toList();
+    }
+
+    /** The labels the first and second counts disagree on (the recount's list), with where each found them. */
+    public List<Difference> differences(StockCount count) {
+        Map<String, UUID> first = new HashMap<>();
+        found(count, 1).forEach(f -> first.put(f.code(), f.placeId()));
+        Map<String, UUID> second = new HashMap<>();
+        found(count, 2).forEach(f -> second.put(f.code(), f.placeId()));
+        return CountPasses.differences(found(count, 1), found(count, 2)).stream()
+                .map(code -> new Difference(code, first.get(code), second.get(code))).toList();
+    }
+
+    /** Count types that always get a second count (Settings, D14). */
+    Set<StockCountType> secondTypes() {
+        Set<StockCountType> types = EnumSet.noneOf(StockCountType.class);
+        String value = settings.get(SettingKey.COUNT_SECOND_TYPES);
+        if (value != null) {
+            for (String part : value.split(",")) {
+                try {
+                    types.add(StockCountType.valueOf(part.trim()));
+                } catch (IllegalArgumentException e) {
+                    // not a type: ignored
+                }
+            }
+        }
+        return types;
     }
 
     /** Units by id, with product and location (to show a closed count's lines). */
@@ -233,6 +305,9 @@ public class StockCountService {
         count.setStartedBy(username());
         count.setPlaces(places);
         count.setStatus(StockCountStatus.OPEN);
+        count.setCountType(dto.getCountType() == null ? StockCountType.CYCLE : dto.getCountType());
+        count.setBlind(settings.getBoolean(SettingKey.COUNT_BLIND));
+        count.setPhase(CountPhase.FIRST);
         return repo.save(count);
     }
 
@@ -266,6 +341,13 @@ public class StockCountService {
     @Transactional
     public ScanResult scan(UUID countId, UUID locationId, String codesText) {
         StockCount count = lockOpen(countId);
+        int pass = count.currentPass();
+        if (pass == 2) {
+            String me = username();
+            if (count.scansOf(1).stream().anyMatch(sc -> me.equals(sc.getScannedBy())) || me.equals(count.getFirstDoneBy())) {
+                throw BusinessException.of("count.second.samePerson", count.getNumber());
+            }
+        }
         Map<UUID, Location> byId = stockService.locationsById();
         List<Location> places = scanPlaces(count, byId);
         Location place = locationId == null ? null : places.stream()
@@ -297,7 +379,7 @@ public class StockCountService {
                 throw BusinessException.onField("codes", "count.otherGlass", code, unit.getProduct().getCode(), glass.getCode());
             }
         }
-        Map<String, StockCountScan> existing = count.getScans().stream()
+        Map<String, StockCountScan> existing = count.scansOf(pass).stream()
                 .collect(Collectors.toMap(StockCountScan::getCode, Function.identity()));
         LocalDateTime now = LocalDateTime.now(clock);
         boolean again = false;
@@ -325,6 +407,7 @@ public class StockCountService {
             }
             scan = new StockCountScan();
             scan.setCount(count);
+            scan.setPass(pass);
             scan.setCode(code);
             StockUnit unit = units.get(code);
             scan.setStockUnitId(unit == null ? null : unit.getId());
@@ -346,7 +429,7 @@ public class StockCountService {
     @Transactional
     public StockCountScan removeScan(UUID countId, UUID scanId) {
         StockCount count = lockOpen(countId);
-        StockCountScan scan = count.getScans().stream().filter(s -> s.getId().equals(scanId)).findFirst()
+        StockCountScan scan = count.getScans().stream().filter(s -> s.getId().equals(scanId) && s.getPass() == count.currentPass()).findFirst()
                 .orElseThrow(() -> new NotFoundException("StockCountScan", scanId));
         count.getScans().remove(scan);
         return scan;
@@ -362,13 +445,40 @@ public class StockCountService {
     @Transactional
     public CloseResult close(UUID countId, String adjustmentReason) {
         StockCount count = lockOpen(countId);
-        if (count.getScans().isEmpty()) {
+        int pass = count.currentPass();
+        if (pass == 1 && count.scansOf(1).isEmpty()) {
             throw BusinessException.of("count.close.noScans", count.getNumber());
         }
-        Map<UUID, Location> byId = stockService.locationsById();
+        if (pass == 2 && count.scansOf(2).isEmpty()) {
+            throw BusinessException.of("count.close.noSecondScans", count.getNumber());
+        }
         List<StockUnit> expected = expectedUnits(count);
         Map<String, StockUnit> scanned = scannedUnits(count);
-        List<StockCounting.Line> lines = compare(count, expected, scanned);
+        LocalDateTime stepAt = LocalDateTime.now(clock);
+        if (pass == 1) {
+            // A second, independent count: always for the Settings' types, or when the first finds differences (D14)
+            boolean byType = secondTypes().contains(count.getCountType());
+            boolean differs = !byType && settings.getBoolean(SettingKey.COUNT_SECOND_ON_DIFFERENCES)
+                    && compareFound(found(count, 1), expected, scanned).stream().anyMatch(l -> l.outcome() != CountOutcome.MATCHED);
+            if (byType || differs) {
+                count.setFirstDoneBy(username());
+                count.setFirstDoneAt(stepAt);
+                count.setPhase(CountPhase.SECOND);
+                return new CloseResult(count, List.of(), Step.SECOND_COUNT, 0, null);
+            }
+        } else if (pass == 2) {
+            List<String> differences = CountPasses.differences(found(count, 1), found(count, 2));
+            count.setSecondDoneBy(username());
+            count.setSecondDoneAt(stepAt);
+            if (!differences.isEmpty()) {
+                count.setRecountCodes(differences.size());
+                count.setPhase(CountPhase.RECOUNT);
+                return new CloseResult(count, List.of(), Step.RECOUNT, differences.size(), null);
+            }
+        }
+        List<CountPasses.Found> result = CountPasses.resolve(found(count, 1), found(count, 2), found(count, 3), count.getSecondDoneAt() != null);
+        Map<UUID, Location> byId = stockService.locationsById();
+        List<StockCounting.Line> lines = compareFound(result, expected, scanned);
         Map<UUID, StockUnit> units = new HashMap<>();
         expected.forEach(u -> units.put(u.getId(), u));
         scanned.values().forEach(u -> units.put(u.getId(), u));
@@ -425,7 +535,7 @@ public class StockCountService {
 
         // The result and the closing together (chk_stock_counts_closed), before the adjustment is checked:
         // closed, the count no longer holds its units.
-        StockCounting.Totals totals = StockCounting.totals(expected.size(), count.getScans().size(), lines);
+        StockCounting.Totals totals = StockCounting.totals(expected.size(), result.size(), lines);
         count.setExpectedUnits(totals.expected());
         count.setCountedUnits(totals.counted());
         count.setMatchedUnits(totals.matched());
@@ -458,7 +568,102 @@ public class StockCountService {
             line.setUsername(user);
             lineRepo.save(line);
         }
-        return new CloseResult(count, racksOverLimit(movedTo, byId));
+        // Differences open a variance, followed up until resolved (IMP 16, VR-010)
+        StockVariance variance = varianceService.open(count, lines, units, expected);
+        return new CloseResult(count, racksOverLimit(movedTo, byId), Step.CLOSED, 0, variance);
+    }
+
+    // ---------------------------------------------------------------- participants and signatures (IMP 15.1, PF-06 step 6)
+
+    public List<StockCountParticipant> participants(UUID countId) {
+        return participantRepo.findByCountIdOrderByCreatedAtAscNameAsc(countId);
+    }
+
+    /** Someone who took part: a user (who signs in the system) or a name (signed on the paper sheet). */
+    @Transactional
+    public StockCountParticipant addParticipant(UUID countId, CountRole role, String name, Long userId) {
+        StockCount count = repo.lockById(countId).orElseThrow(() -> new NotFoundException("StockCount", countId));
+        if (count.getStatus() == StockCountStatus.CANCELLED) {
+            throw BusinessException.of("count.notOpen", count.getNumber());
+        }
+        if (role == null) {
+            throw BusinessException.onField("role", "count.participant.role");
+        }
+        StockCountParticipant p = new StockCountParticipant();
+        p.setCountId(countId);
+        p.setRole(role);
+        if (userId != null) {
+            User user = userRepo.findById(userId).filter(User::isEnabled)
+                    .orElseThrow(() -> BusinessException.onField("userId", "count.participant.user"));
+            if (participantRepo.findByCountIdAndUserId(countId, userId).isPresent()) {
+                throw BusinessException.onField("userId", "count.participant.twice", user.getFullName());
+            }
+            p.setUserId(userId);
+            p.setName(user.getFullName());
+        } else {
+            String clean = PartyRules.clean(name);
+            if (clean == null || clean.length() > 100) {
+                throw BusinessException.onField("name", "count.participant.nameRequired");
+            }
+            p.setName(clean);
+        }
+        return participantRepo.save(p);
+    }
+
+    /** A participant who has not signed is taken off. */
+    @Transactional
+    public StockCountParticipant removeParticipant(UUID countId, UUID participantId) {
+        StockCountParticipant p = participant(countId, participantId);
+        if (p.isSigned()) {
+            throw BusinessException.of("count.participant.signed", p.getName());
+        }
+        participantRepo.delete(p);
+        return p;
+    }
+
+    /** The signed-in participant signs the closed count. */
+    @Transactional
+    public StockCountParticipant sign(UUID countId) {
+        StockCount count = requireClosed(countId);
+        AppUserPrincipal me = AppUserPrincipal.current().orElseThrow(() -> BusinessException.of("till.noUser"));
+        StockCountParticipant p = participantRepo.findByCountIdAndUserId(countId, me.getId())
+                .orElseThrow(() -> BusinessException.of("count.sign.notParticipant", count.getNumber()));
+        if (p.isSigned()) {
+            throw BusinessException.of("count.sign.already", count.getNumber());
+        }
+        p.setSignedAt(LocalDateTime.now(clock));
+        p.setSignedBy(me.getUsername());
+        return p;
+    }
+
+    /** A participant without a user (an external auditor) signed the paper sheet: recorded by the user who saw it. */
+    @Transactional
+    public StockCountParticipant signedOnPaper(UUID countId, UUID participantId) {
+        requireClosed(countId);
+        StockCountParticipant p = participant(countId, participantId);
+        if (p.getUserId() != null) {
+            throw BusinessException.of("count.sign.userSigns", p.getName());
+        }
+        if (p.isSigned()) {
+            throw BusinessException.of("count.sign.already", p.getName());
+        }
+        p.setOnPaper(true);
+        p.setSignedAt(LocalDateTime.now(clock));
+        p.setSignedBy(username());
+        return p;
+    }
+
+    private StockCountParticipant participant(UUID countId, UUID participantId) {
+        return participantRepo.findById(participantId).filter(x -> x.getCountId().equals(countId))
+                .orElseThrow(() -> new NotFoundException("StockCountParticipant", participantId));
+    }
+
+    private StockCount requireClosed(UUID countId) {
+        StockCount count = repo.lockById(countId).orElseThrow(() -> new NotFoundException("StockCount", countId));
+        if (count.getStatus() != StockCountStatus.CLOSED) {
+            throw BusinessException.of("count.sign.notClosed", count.getNumber());
+        }
+        return count;
     }
 
     private record Planned(StockCounting.Line line, StockUnit unit, CountAction action, String note) {

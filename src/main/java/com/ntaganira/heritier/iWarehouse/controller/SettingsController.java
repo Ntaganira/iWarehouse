@@ -190,6 +190,7 @@ public class SettingsController {
         model.addAttribute("settingsDto", settingService.load());
         model.addAttribute("rateSources", RateSource.values());
         model.addAttribute("ebmModes", EbmMode.values());
+        model.addAttribute("countTypes", com.ntaganira.heritier.iWarehouse.enums.StockCountType.values());
         return "settings/form";
     }
 
@@ -228,6 +229,7 @@ public class SettingsController {
         model.addAttribute("formErrors", result.getFieldErrors());
         model.addAttribute("rateSources", RateSource.values());
         model.addAttribute("ebmModes", EbmMode.values());
+        model.addAttribute("countTypes", com.ntaganira.heritier.iWarehouse.enums.StockCountType.values());
         return "settings/form";
     }
 }

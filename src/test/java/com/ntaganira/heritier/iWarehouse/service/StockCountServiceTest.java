@@ -51,6 +51,11 @@ class StockCountServiceTest {
     private StockService stockService;
     private int countNo = 1;
 
+    private SettingService countSettings;
+    private StockVarianceService varianceService;
+    private StockCountParticipantRepository participantRepo;
+    private UserRepository userRepo;
+
     @BeforeEach
     void setUp() {
         StockUnitRepository unitRepo = mock(StockUnitRepository.class);
@@ -136,7 +141,12 @@ class StockCountServiceTest {
                 locationRepo, numbers, clock);
         StockAdjustmentService adjustmentService = new StockAdjustmentService(adjustmentRepo, unitRepo, productRepo, stockService,
                 mock(PostingService.class), numbers, settings, mock(Notifier.class), clock, mock(DelegationOfAuthority.class));
-        service = new StockCountService(countRepo, lineRepo, unitRepo, productRepo, stockService, adjustmentService, numbers, clock);
+        countSettings = mock(SettingService.class);
+        varianceService = mock(StockVarianceService.class);
+        participantRepo = mock(StockCountParticipantRepository.class);
+        userRepo = mock(UserRepository.class);
+        service = new StockCountService(countRepo, lineRepo, unitRepo, productRepo, stockService, adjustmentService, numbers, clock,
+                countSettings, varianceService, participantRepo, userRepo);
         signIn(7L, "supervisor1");
     }
 
@@ -409,6 +419,120 @@ class StockCountServiceTest {
                 .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.notOpen");
         assertThatThrownBy(() -> service.cancel(count.getId(), "x"))
                 .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.notOpen");
+    }
+
+    // ---------------------------------------------------------------- M16: types, blind, the second count and the recount (D14)
+
+    @Test
+    void anAnnualCountGetsASecondIndependentCountThenARecountOfTheDifferences() {
+        when(countSettings.get(SettingKey.COUNT_SECOND_TYPES)).thenReturn("ANNUAL,SURPRISE");
+        when(countSettings.getBoolean(SettingKey.COUNT_BLIND)).thenReturn(true);
+        unit("U-1", StockStatus.AVAILABLE, rack1, clear6);
+        unit("U-2", StockStatus.AVAILABLE, rack1, clear6);
+        unit("U-3", StockStatus.AVAILABLE, rack2, clear6);
+        StockCountDto dto = form(zone, null);
+        dto.setCountType(StockCountType.ANNUAL);
+        StockCount count = service.start(dto);
+        assertThat(count.isBlind()).isTrue();
+        assertThat(count.getCountType()).isEqualTo(StockCountType.ANNUAL);
+        service.scan(count.getId(), rack1.getId(), "U-1\nU-2");
+        service.scan(count.getId(), rack2.getId(), "U-3");
+
+        // Everything matches, but an annual count always gets a second count
+        StockCountService.CloseResult first = service.close(count.getId(), "Stock count");
+        assertThat(first.step()).isEqualTo(StockCountService.Step.SECOND_COUNT);
+        assertThat(count.getStatus()).isEqualTo(StockCountStatus.OPEN);
+        assertThat(count.getPhase()).isEqualTo(CountPhase.SECOND);
+        assertThat(count.getFirstDoneBy()).isEqualTo("supervisor1");
+        // Whoever made the first count does not make the second
+        assertThatThrownBy(() -> service.scan(count.getId(), rack1.getId(), "U-1"))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.second.samePerson");
+        signIn(8L, "counter2");
+        assertThatThrownBy(() -> service.close(count.getId(), "Stock count"))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.close.noSecondScans");
+        service.scan(count.getId(), rack1.getId(), "U-1");      // U-2 not found, U-3 found on the other rack
+        service.scan(count.getId(), rack1.getId(), "U-3");
+        StockCountService.CloseResult second = service.close(count.getId(), "Stock count");
+        assertThat(second.step()).isEqualTo(StockCountService.Step.RECOUNT);
+        assertThat(second.differences()).isEqualTo(2);
+        assertThat(service.differences(count)).extracting(StockCountService.Difference::code).containsExactly("U-2", "U-3");
+
+        // The recount finds U-2 on its rack and U-3 on rack 2: the result is what the two agree on plus the recount
+        signIn(9L, "supervisor2");
+        service.scan(count.getId(), rack1.getId(), "U-2");
+        service.scan(count.getId(), rack2.getId(), "U-3");
+        StockCountService.CloseResult done = service.close(count.getId(), "Stock count");
+        assertThat(done.step()).isEqualTo(StockCountService.Step.CLOSED);
+        assertThat(count.getStatus()).isEqualTo(StockCountStatus.CLOSED);
+        assertThat(count.getMatchedUnits()).isEqualTo(3);
+        assertThat(count.getCountedUnits()).isEqualTo(3);
+        assertThat(count.getMissingUnits()).isZero();
+        assertThat(count.getMisplacedUnits()).isZero();
+    }
+
+    @Test
+    void aCycleCountWithDifferencesIsCountedAgainAndOpensItsVariance() {
+        when(countSettings.getBoolean(SettingKey.COUNT_SECOND_ON_DIFFERENCES)).thenReturn(true);
+        unit("U-1", StockStatus.AVAILABLE, rack1, clear6);
+        unit("U-2", StockStatus.AVAILABLE, rack1, clear6);
+        StockCount count = service.start(form(rack1, null));      // a cycle count, the default type
+        assertThat(count.getCountType()).isEqualTo(StockCountType.CYCLE);
+        service.scan(count.getId(), rack1.getId(), "U-1");
+        assertThat(service.close(count.getId(), "Stock count").step()).isEqualTo(StockCountService.Step.SECOND_COUNT);
+        signIn(8L, "counter2");
+        service.scan(count.getId(), rack1.getId(), "U-1");
+        StockCountService.CloseResult r = service.close(count.getId(), "Stock count");   // the two agree: closed
+        assertThat(r.step()).isEqualTo(StockCountService.Step.CLOSED);
+        assertThat(count.getMissingUnits()).isEqualTo(1);
+        verify(varianceService).open(eq(count), argThat(lines -> lines.stream().anyMatch(l -> l.outcome() == CountOutcome.MISSING)),
+                any(), argThat(expected -> expected.size() == 2));
+    }
+
+    @Test
+    void participantsSignTheClosedCount() {
+        unit("U-1", StockStatus.AVAILABLE, rack1, clear6);
+        StockCount count = service.start(form(rack1, null));
+        List<StockCountParticipant> people = new ArrayList<>();
+        when(participantRepo.save(any())).thenAnswer(a -> {
+            StockCountParticipant p = a.getArgument(0);
+            p.setId(UUID.randomUUID());
+            people.add(p);
+            return p;
+        });
+        when(participantRepo.findByCountIdAndUserId(any(), any())).thenAnswer(a -> people.stream()
+                .filter(p -> a.getArgument(1).equals(p.getUserId())).findFirst());
+        when(participantRepo.findById(any())).thenAnswer(a -> people.stream().filter(p -> p.getId().equals(a.getArgument(0))).findFirst());
+        User controller = User.builder().id(12L).username("ic1").fullName("Grace Controller").email("ic@x").password("x").build();
+        when(userRepo.findById(12L)).thenReturn(Optional.of(controller));
+
+        StockCountParticipant ic = service.addParticipant(count.getId(), CountRole.INTERNAL_CONTROLLER, null, 12L);
+        assertThat(ic.getName()).isEqualTo("Grace Controller");
+        assertThatThrownBy(() -> service.addParticipant(count.getId(), CountRole.FINANCE, null, 12L))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.participant.twice");
+        StockCountParticipant auditor = service.addParticipant(count.getId(), CountRole.EXTERNAL_AUDITOR, "  The external auditor ", null);
+        assertThat(auditor.getName()).isEqualTo("The external auditor");
+
+        // Signatures come once the count is closed
+        signIn(12L, "ic1");
+        assertThatThrownBy(() -> service.sign(count.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.sign.notClosed");
+        signIn(7L, "supervisor1");
+        service.scan(count.getId(), rack1.getId(), "U-1");
+        service.close(count.getId(), "Stock count");
+        assertThatThrownBy(() -> service.sign(count.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.sign.notParticipant");
+        service.signedOnPaper(count.getId(), auditor.getId());
+        assertThat(auditor.isOnPaper()).isTrue();
+        assertThat(auditor.getSignedBy()).isEqualTo("supervisor1");
+        assertThatThrownBy(() -> service.signedOnPaper(count.getId(), ic.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.sign.userSigns");
+        signIn(12L, "ic1");
+        service.sign(count.getId());
+        assertThat(ic.isSigned()).isTrue();
+        assertThatThrownBy(() -> service.sign(count.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.sign.already");
+        assertThatThrownBy(() -> service.removeParticipant(count.getId(), ic.getId()))
+                .isInstanceOf(BusinessException.class).hasFieldOrPropertyWithValue("messageKey", "count.participant.signed");
     }
 
     // ---------------------------------------------------------------- helpers

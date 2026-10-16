@@ -54,6 +54,9 @@ public class AttachmentService {
     private final CashDepositRepository cashDepositRepo;
     private final BalanceConfirmationRepository confirmationRepo;
     private final DailyCloseRepository dailyCloseRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.StockCountRepository countRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo;
     private final Clock clock;
 
     public AttachmentService(AttachmentRepository repo, FileStorageService storage, GoodsReceiptRepository receiptRepo,
@@ -64,7 +67,13 @@ public class AttachmentService {
                              CustomerRepository customerRepo, SupplierRepository supplierRepo,
                              CreditApplicationRepository creditApplicationRepo, SiteTransferRepository siteTransferRepo,
                              CuttingJobRepository cuttingJobRepo, DeliveryNoteRepository deliveryNoteRepo, CashDepositRepository cashDepositRepo,
-                             BalanceConfirmationRepository confirmationRepo, DailyCloseRepository dailyCloseRepo) {
+                             BalanceConfirmationRepository confirmationRepo, DailyCloseRepository dailyCloseRepo,
+                             com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo,
+                             com.ntaganira.heritier.iWarehouse.repository.StockCountRepository countRepo,
+                             com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo) {
+        this.damageRepo = damageRepo;
+        this.countRepo = countRepo;
+        this.varianceRepo = varianceRepo;
         this.cashDepositRepo = cashDepositRepo;
         this.confirmationRepo = confirmationRepo;
         this.dailyCloseRepo = dailyCloseRepo;
@@ -168,6 +177,9 @@ public class AttachmentService {
             case CASH_DEPOSIT -> cashDepositRepo.existsById(id);
             case BALANCE_CONFIRMATION -> confirmationRepo.existsById(id);
             case DAILY_CLOSE -> dailyCloseRepo.existsById(id);
+            case DAMAGE_REPORT -> damageRepo.existsById(id);
+            case STOCK_COUNT -> countRepo.existsById(id);
+            case STOCK_VARIANCE -> varianceRepo.existsById(id);
         };
         if (!exists) {
             throw new NotFoundException(owner.name(), id);

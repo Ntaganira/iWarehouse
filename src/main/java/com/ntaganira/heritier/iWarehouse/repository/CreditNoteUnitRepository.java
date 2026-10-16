@@ -26,4 +26,7 @@ public interface CreditNoteUnitRepository extends Repository<CreditNoteUnit, UUI
 
     /** Everything brought back against an invoice: each unit once. */
     List<CreditNoteUnit> findByInvoiceId(UUID invoiceId);
+
+    /** Units some credit notes took back with one outcome (to cullet, for the damage register). */
+    List<CreditNoteUnit> findByCreditNoteIdInAndOutcome(java.util.Collection<UUID> creditNoteIds, com.ntaganira.heritier.iWarehouse.enums.ReturnOutcome outcome);
 }

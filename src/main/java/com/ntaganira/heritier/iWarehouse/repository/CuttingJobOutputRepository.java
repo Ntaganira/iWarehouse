@@ -19,4 +19,8 @@ public interface CuttingJobOutputRepository extends Repository<CuttingJobOutput,
 
     /** The cut a unit came out of. */
     Optional<CuttingJobOutput> findByStockUnitId(UUID stockUnitId);
+
+    /** Outputs of a kind recorded in a period (glass broken while cutting, for the damage register). */
+    List<CuttingJobOutput> findByKindAndCreatedAtBetweenOrderByCreatedAtAsc(com.ntaganira.heritier.iWarehouse.enums.CuttingOutputKind kind,
+                                                                         java.time.LocalDateTime from, java.time.LocalDateTime to);
 }

@@ -51,4 +51,8 @@ public interface TripBreakageRepository extends JpaRepository<TripBreakage, UUID
     /** (driver id, units accepted broken) over trips back in a period, for the fleet reports. */
     @Query("select b.trip.driver.id, count(b) from TripBreakage b where b.status = 'ACCEPTED' and b.trip.id in :tripIds group by b.trip.driver.id")
     List<Object[]> countAcceptedByDriver(@Param("tripIds") Collection<UUID> tripIds);
+
+    /** Breakage that happened in a period (the damage register). */
+    @EntityGraph(attributePaths = {"trip", "trip.vehicle"})
+    List<TripBreakage> findByHappenedAtBetweenOrderByHappenedAtAsc(java.time.LocalDateTime from, java.time.LocalDateTime to);
 }

@@ -2,6 +2,8 @@ package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
 import com.ntaganira.heritier.iWarehouse.enums.StockCountStatus;
+import com.ntaganira.heritier.iWarehouse.enums.StockCountType;
+import com.ntaganira.heritier.iWarehouse.enums.CountPhase;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -69,6 +71,36 @@ public class StockCount extends BaseEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    /** The kind of count (IMP 15, F-08). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "count_type", nullable = false, length = 20, updatable = false)
+    private StockCountType countType = StockCountType.CYCLE;
+
+    /** First, second or recount, while open (decision D14). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CountPhase phase = CountPhase.FIRST;
+
+    /** Started blind: what is expected is hidden until it closes (CSH-012). */
+    @Column(nullable = false, updatable = false)
+    private boolean blind;
+
+    @Column(name = "first_done_by", length = 50)
+    private String firstDoneBy;
+
+    @Column(name = "first_done_at")
+    private LocalDateTime firstDoneAt;
+
+    @Column(name = "second_done_by", length = 50)
+    private String secondDoneBy;
+
+    @Column(name = "second_done_at")
+    private LocalDateTime secondDoneAt;
+
+    /** How many labels the two counts disagreed on (the recount's list). */
+    @Column(name = "recount_codes")
+    private Integer recountCodes;
+
     @Column(name = "expected_units")
     private Integer expectedUnits;
 
@@ -103,6 +135,20 @@ public class StockCount extends BaseEntity {
     @OneToMany(mappedBy = "count", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("scannedAt DESC")
     private Set<StockCountScan> scans = new LinkedHashSet<>();
+
+    /** The pass a scan made now belongs to. */
+    public int currentPass() {
+        return switch (phase) {
+            case FIRST -> 1;
+            case SECOND -> 2;
+            case RECOUNT -> 3;
+        };
+    }
+
+    /** The scans of one pass. */
+    public java.util.List<StockCountScan> scansOf(int pass) {
+        return getScans().stream().filter(s -> s.getPass() == pass).toList();
+    }
 
     public boolean isOpen() {
         return status == StockCountStatus.OPEN;

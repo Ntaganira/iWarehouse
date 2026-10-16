@@ -84,6 +84,8 @@ public class BusinessDashboardService {
     private final SiteTransferRepository siteTransferRepo;
     private final DeliveryNoteRepository deliveryNoteRepo;
     private final SettingService settings;
+    private final com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo;
+    private final com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo;
 
     public BusinessDashboardService(SalesInvoiceRepository invoiceRepo, SalesReportService salesReports, StockSummaryService stockSummary,
                                     JournalService journalService, CustomerAccountService customerAccounts,
@@ -96,7 +98,11 @@ public class BusinessDashboardService {
                                     PurchaseOrderRepository purchaseOrderRepo, SupplierPaymentRequestRepository paymentRequestRepo,
                                     CreditApplicationRepository creditApplicationRepo, PriceChangeRepository priceChangeRepo,
                                     SupplierRepository supplierRepo, TransactionTicketRepository ticketRepo,
-                                    SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, SettingService settings) {
+                                    SiteTransferRepository siteTransferRepo, DeliveryNoteRepository deliveryNoteRepo, SettingService settings,
+                                    com.ntaganira.heritier.iWarehouse.repository.DamageReportRepository damageRepo,
+                                    com.ntaganira.heritier.iWarehouse.repository.StockVarianceRepository varianceRepo) {
+        this.damageRepo = damageRepo;
+        this.varianceRepo = varianceRepo;
         this.deliveryNoteRepo = deliveryNoteRepo;
         this.settings = settings;
         this.ticketRepo = ticketRepo;
@@ -143,7 +149,8 @@ public class BusinessDashboardService {
                        EbmService.Backlog ebm, int fleetPapers, long vehiclesOnTheRoad, long auditCases, long floatsToClear,
                        BigDecimal floatsToClearAmount, long vehicleCosts, int servicesDue, List<String> chartDays, List<BigDecimal> chartNet,
                        long creditNotes, long writeOffs, long purchaseOrders, long supplierPayments, long creditApplications,
-                       long priceChanges, long suppliers, long tickets, long siteTransfers, long deliveryNotes, long loadRequests) {
+                       long priceChanges, long suppliers, long tickets, long siteTransfers, long deliveryNotes, long loadRequests,
+                       long damageReports, long variances) {
 
         public long getInvoicesToday() {
             return channels.stream().mapToLong(Channel::invoices).sum();
@@ -151,7 +158,7 @@ public class BusinessDashboardService {
 
         public long getWaiting() {
             return saleApprovals + adjustments + manualJournals + vehicleCosts + creditNotes + writeOffs + purchaseOrders + supplierPayments
-                    + creditApplications + priceChanges + suppliers + tickets + siteTransfers + deliveryNotes + loadRequests;
+                    + creditApplications + priceChanges + suppliers + tickets + siteTransfers + deliveryNotes + loadRequests + damageReports + variances;
         }
     }
 
@@ -211,7 +218,11 @@ public class BusinessDashboardService {
                 ticketRepo.countByStatusIn(List.of(TicketStatus.RAISED, TicketStatus.VERIFIED, TicketStatus.COUNTERSIGNED)),
                 siteTransferRepo.countByStatusIn(List.of(SiteTransferStatus.REQUESTED)),
                 deliveryNoteRepo.countByStatus(DeliveryNoteStatus.DRAFT),
-                settings.getBoolean(SettingKey.FLEET_LOAD_APPROVAL) ? tripRepo.countByStatusAndLoadApprovedAtIsNull(TripStatus.PLANNED) : 0);
+                settings.getBoolean(SettingKey.FLEET_LOAD_APPROVAL) ? tripRepo.countByStatusAndLoadApprovedAtIsNull(TripStatus.PLANNED) : 0,
+                damageRepo.countByStatusIn(List.of(com.ntaganira.heritier.iWarehouse.enums.DamageStatus.REPORTED,
+                        com.ntaganira.heritier.iWarehouse.enums.DamageStatus.INSPECTED)),
+                varianceRepo.countByStatusIn(List.of(com.ntaganira.heritier.iWarehouse.enums.VarianceStatus.OPEN,
+                        com.ntaganira.heritier.iWarehouse.enums.VarianceStatus.ESCALATED)));
     }
 
     private static long whole(BigDecimal amount) {

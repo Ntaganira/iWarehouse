@@ -590,6 +590,99 @@
                 </div>
             </div>
 
+            <div class="form-divider"><h3 th:text="#{settings.group.stockControl}">Damage, counts and variances</h3>
+                <p class="hint" th:text="#{settings.group.stockControlHint}">hint</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="damageInspection" th:text="#{settings.damageInspection}">damageInspection</label>
+                    <select id="damageInspection" th:field="*{damageInspection}" required th:classappend="${#fields.hasErrors('damageInspection')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onDamageInspection}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('damageInspection')}" th:errors="*{damageInspection}"></span>
+                    <span class="hint" th:text="#{settings.damageInspectionHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="damageAlertValue" th:text="#{settings.damageAlertValue}">damageAlertValue</label>
+                    <div class="input-unit">
+                        <input type="number" id="damageAlertValue" th:field="*{damageAlertValue}" step="1" min="0" required
+                               th:classappend="${#fields.hasErrors('damageAlertValue')} ? 'is-invalid'">
+                        <span>RWF</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('damageAlertValue')}" th:errors="*{damageAlertValue}"></span>
+                    <span class="hint" th:text="#{settings.damageAlertValueHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countBlind" th:text="#{settings.countBlind}">countBlind</label>
+                    <select id="countBlind" th:field="*{countBlind}" required th:classappend="${#fields.hasErrors('countBlind')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onCountBlind}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('countBlind')}" th:errors="*{countBlind}"></span>
+                    <span class="hint" th:text="#{settings.countBlindHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countSecondTypes" th:text="#{settings.countSecondTypes}">countSecondTypes</label>
+                    <select id="countSecondTypes" name="countSecondTypes" multiple data-multiselect th:attr="data-placeholder=#{settings.countSecondTypesPh}"
+                            th:classappend="${#fields.hasErrors('countSecondTypes')} ? 'is-invalid'">
+                        <option th:each="t : ${countTypes}" th:value="${t}"
+                                th:selected="${settingsDto.countSecondTypes != null and #lists.contains(#strings.listSplit(settingsDto.countSecondTypes, ','), t.name())}"
+                                th:text="#{${'count.type.' + t}}">Annual full count</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('countSecondTypes')}" th:errors="*{countSecondTypes}"></span>
+                    <span class="hint" th:text="#{settings.countSecondTypesHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countSecondOnDifferences" th:text="#{settings.countSecondOnDifferences}">countSecondOnDifferences</label>
+                    <select id="countSecondOnDifferences" th:field="*{countSecondOnDifferences}" required th:classappend="${#fields.hasErrors('countSecondOnDifferences')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onCountSecondOnDifferences}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('countSecondOnDifferences')}" th:errors="*{countSecondOnDifferences}"></span>
+                    <span class="hint" th:text="#{settings.countSecondOnDifferencesHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countVarianceTolerancePercent" th:text="#{settings.countVarianceTolerancePercent}">countVarianceTolerancePercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="countVarianceTolerancePercent" th:field="*{countVarianceTolerancePercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('countVarianceTolerancePercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('countVarianceTolerancePercent')}" th:errors="*{countVarianceTolerancePercent}"></span>
+                    <span class="hint" th:text="#{settings.countVarianceTolerancePercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countVarianceModeratePercent" th:text="#{settings.countVarianceModeratePercent}">countVarianceModeratePercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="countVarianceModeratePercent" th:field="*{countVarianceModeratePercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('countVarianceModeratePercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('countVarianceModeratePercent')}" th:errors="*{countVarianceModeratePercent}"></span>
+                    <span class="hint" th:text="#{settings.countVarianceModeratePercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countVarianceMaterialPercent" th:text="#{settings.countVarianceMaterialPercent}">countVarianceMaterialPercent</label>
+                    <div class="input-unit">
+                        <input type="number" id="countVarianceMaterialPercent" th:field="*{countVarianceMaterialPercent}" step="0.01" min="0" max="100" required
+                               th:classappend="${#fields.hasErrors('countVarianceMaterialPercent')} ? 'is-invalid'">
+                        <span>%</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('countVarianceMaterialPercent')}" th:errors="*{countVarianceMaterialPercent}"></span>
+                    <span class="hint" th:text="#{settings.countVarianceMaterialPercentHint}">hint</span>
+                </div>
+                <div class="form-group">
+                    <label for="countVarianceDays" th:text="#{settings.countVarianceDays}">countVarianceDays</label>
+                    <div class="input-unit">
+                        <input type="number" id="countVarianceDays" th:field="*{countVarianceDays}" step="1" min="1" max="60" required
+                               th:classappend="${#fields.hasErrors('countVarianceDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.workingDaysUnit}">working days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('countVarianceDays')}" th:errors="*{countVarianceDays}"></span>
+                    <span class="hint" th:text="#{settings.countVarianceDaysHint}">hint</span>
+                </div>
+            </div>
+
             <div class="form-divider"><h3 th:text="#{settings.group.currency}">Currency</h3>
                 <p class="hint" th:text="#{settings.group.currencyHint}">Exchange rates used by foreign-currency documents (ACC-02)</p></div>
             <div class="form-grid">

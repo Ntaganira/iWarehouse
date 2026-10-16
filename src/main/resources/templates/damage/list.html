@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{damage.title}, ~{::content})}">
+<head><title>Damage - iWarehouse</title></head>
+<body>
+<div th:fragment="content" th:with="seeCost=${#authorization.expression('hasAuthority(''PERM_VIEW_STOCK_COST'')')}">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{damage.title}">Damage</h1>
+            <div class="subtitle" th:text="#{damage.subtitle}">Damaged glass reported, inspected by Dispatch and approved by Supply Chain: held until it is decided</div>
+        </div>
+        <div class="btn-group">
+            <a href="/damage/register" class="btn btn-outline" th:text="#{damage.register.title}">Damage register</a>
+            <a href="/damage/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_REPORT_DAMAGE')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{damage.new}">Report damage</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{damage.sectionTitle}">Damage reports</span>
+                <span class="section-count" th:text="${reports.totalElements}">0</span>
+            </h2>
+            <form th:action="@{/damage}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{damage.searchPh}" th:aria-label="#{damage.searchPh}">
+                </div>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="waiting" th:selected="${status == 'waiting'}" th:text="#{damage.waiting}">Waiting</option>
+                    <option th:each="st : ${statuses}" th:value="${st}" th:selected="${st.name() == status}" th:text="#{${'damage.status.' + st}}">Reported</option>
+                </select>
+            </form>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{damage.number}">Report</th>
+                        <th th:text="#{damage.occurredOn}">Happened on</th>
+                        <th th:text="#{damage.place}">Place</th>
+                        <th th:text="#{damage.cause}">Cause</th>
+                        <th class="num" th:text="#{damage.register.units}">Units</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{damage.loss}">Estimated loss (RWF)</th>
+                        <th th:text="#{common.status}">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${reports.content}">
+                        <td>
+                            <a class="row-link strong mono" th:href="@{/damage/{id}(id=${d.id})}" th:text="${d.number}">DMG-WH-2026-000001</a>
+                            <div class="cell-sub" th:text="${d.reportedBy}">store1</div>
+                        </td>
+                        <td class="nowrap" th:text="${#temporals.format(d.occurredOn, 'dd/MM/yyyy')}">16/10/2026</td>
+                        <td class="mono" th:text="${d.location.code}">WH-A-R01</td>
+                        <td>
+                            <span th:text="#{${'damage.cause.' + d.cause}}">Handling</span>
+                            <div class="cell-sub" th:text="${d.description}">Dropped from the forklift</div>
+                        </td>
+                        <td class="num" th:text="${unitCounts.get(d.id) ?: 0}">2</td>
+                        <td class="num" th:if="${seeCost}" th:text="${@num.money(d.estimatedLoss)}">505,258</td>
+                        <td><th:block th:replace="~{damage/list :: damageStatus(${d.status})}"></th:block></td>
+                    </tr>
+                    <tr th:if="${reports.totalElements == 0}">
+                        <td th:attr="colspan=${seeCost} ? 7 : 6">
+                            <div class="empty-state">
+                                <h3 th:text="#{damage.empty}">No damage reported</h3>
+                                <p th:text="#{damage.emptyHint}">Report damaged glass with its labels: it is held until Supply Chain decides</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${reports}, '/damage', ${query})}"></th:block>
+    </div>
+</div>
+
+<!--/* Status badge of a damage report. */-->
+<th:block th:fragment="damageStatus(s)" th:switch="${s.name()}">
+    <span th:case="'REPORTED'" class="badge badge-warning" th:text="#{damage.status.REPORTED}">Reported</span>
+    <span th:case="'INSPECTED'" class="badge badge-info" th:text="#{damage.status.INSPECTED}">Inspected</span>
+    <span th:case="'APPROVED'" class="badge badge-success" th:text="#{damage.status.APPROVED}">Approved</span>
+    <span th:case="'REJECTED'" class="badge badge-danger" th:text="#{damage.status.REJECTED}">Rejected</span>
+    <span th:case="*" class="badge badge-secondary" th:text="#{${'damage.status.' + s}}">Cancelled</span>
+</th:block>
+</body>
+</html>

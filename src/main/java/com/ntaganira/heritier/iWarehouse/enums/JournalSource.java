@@ -53,7 +53,9 @@ public enum JournalSource {
     /** Takings banked from the vault (F-13): Dr Bank / Cr Cash Vault. */
     CASH_DEPOSIT("/cash-deposits/"),
     /** Collections banked during a trip: Dr Bank or Mobile Money / Cr Driver Float naming the driver. */
-    TRIP_DEPOSIT("/trips/");
+    TRIP_DEPOSIT("/trips/"),
+    /** A damage loss charged to whoever pays it back (F-07 C). */
+    DAMAGE_RECOVERY("/damage/");
 
     private final String path;
 

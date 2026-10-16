@@ -332,6 +332,19 @@ class StockOperationsTest {
     }
 
     @Test
+    void aWriteOffApprovedOnADamageReportPostsAtOnceAboveTheLimit() {   // IMP 13, F-07
+        limit = BigDecimal.ZERO;
+        signIn(9L, "supply1");                                              // the damage report's approver
+        StockAdjustment adj = adjustmentService.createApproved(adjustment("Damage report DMG-WH-2026-000001: dropped",
+                writeOff("U-WH-000036", WriteOffCause.DAMAGED)), "store1", 5L, "Approved on DMG-WH-2026-000001");
+        assertThat(adj.getStatus()).isEqualTo(AdjustmentStatus.POSTED);
+        assertThat(adj.getRequestedBy()).isEqualTo("store1");
+        assertThat(adj.getDecidedBy()).isEqualTo("supply1");
+        assertThat(adj.getDecisionNote()).isEqualTo("Approved on DMG-WH-2026-000001");
+        assertThat(sheet.getStatus()).isEqualTo(StockStatus.BROKEN);
+    }
+
+    @Test
     void onlyOthersRejectAndOnlyTheRequesterWithdraws() {
         limit = BigDecimal.ZERO;
         StockAdjustment adj = adjustmentService.create(adjustment("Broken", writeOff("U-WH-000036", WriteOffCause.DAMAGED)));

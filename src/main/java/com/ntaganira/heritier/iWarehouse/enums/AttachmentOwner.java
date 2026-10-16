@@ -48,7 +48,13 @@ public enum AttachmentOwner {
     /** The customer's signed reply to a balance confirmation (SDP 10). */
     BALANCE_CONFIRMATION("PAGE_BALANCE_CONFIRMATIONS", "/accounting/confirmations/"),
     /** The MoMo merchant statement and the signed end-of-day report (F-12). */
-    DAILY_CLOSE("PAGE_DAILY_CLOSES", "/daily-close/");
+    DAILY_CLOSE("PAGE_DAILY_CLOSES", "/daily-close/"),
+    /** A damage report: photos of the damage, the inspection, the insurer's papers (F-07). */
+    DAMAGE_REPORT("PAGE_DAMAGE", "/damage/"),
+    /** A stock count: the count sheets signed on paper (PF-06, F-08). */
+    STOCK_COUNT("PAGE_STOCK_COUNTS", "/stock-counts/"),
+    /** A count variance: what the investigation found (VR-010). */
+    STOCK_VARIANCE("PAGE_STOCK_VARIANCES", "/stock-variances/");
 
     private final String page;
     private final String path;

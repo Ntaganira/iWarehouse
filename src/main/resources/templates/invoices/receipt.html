@@ -22,6 +22,7 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/invoices/{id}(id=${invoice.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${invoice.status.name() == 'POSTED'}"><th:block th:replace="~{fragments/share :: share('INVOICE', ${invoice.id}, #{share.button.receipt})}"></th:block></th:block>
             <form th:action="@{/invoices/{id}/receipt/print(id=${invoice.id})}" method="post" class="row-action-form">
                 <button type="submit" class="btn btn-primary" th:text="${ebm != null and ebm.signed and ebm.printedAt != null} ? #{posReceipt.printCopy} : #{label.printNow}">Print</button>
             </form>

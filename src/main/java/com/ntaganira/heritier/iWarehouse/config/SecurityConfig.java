@@ -103,7 +103,7 @@ public class SecurityConfig {
                                                    AccessDeniedHandler auditAccessDeniedHandler) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/vendor/**",
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/vendor/**", "/r/**",
                         "/login", "/actuator/health", "/error").permitAll()
                 .anyRequest().authenticated()
             )

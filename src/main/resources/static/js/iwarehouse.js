@@ -573,4 +573,112 @@ document.addEventListener('DOMContentLoaded', function () {
         const el = document.getElementById('page-skeleton');
         if (el) el.hidden = true;
     });
+
+    // Digital receipt sharing: the phone's share sheet, with copying the secure link as the fallback.
+    const legacyCopy = function (text, done) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.top = '-1000px';
+        document.body.appendChild(area);
+        area.select();
+        try {
+            document.execCommand('copy');
+            done();
+        } catch (e) {
+            // No clipboard: leave the link in the field for a manual copy.
+        }
+        document.body.removeChild(area);
+    };
+
+    const copyShareLink = function (button, url) {
+        if (!url) return;
+        const done = function () {
+            if (window.showToast) {
+                window.showToast(button.getAttribute('data-share-copied') || 'Link copied', 'success');
+            }
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(done).catch(function () { legacyCopy(url, done); });
+        } else {
+            legacyCopy(url, done);
+        }
+    };
+
+    // The Share button asks the server for the document's link when it is pressed (POST), so no public
+    // address exists until someone shares it.
+    document.querySelectorAll('.share-trigger').forEach(trigger => {
+        trigger.addEventListener('click', function () {
+            const self = this;
+            if (self.getAttribute('data-share-ready') === '1') {
+                modalOpen('share-modal');
+                return;
+            }
+            const body = new URLSearchParams();
+            body.set('type', self.getAttribute('data-share-type') || '');
+            body.set('id', self.getAttribute('data-share-id') || '');
+            body.set('_csrf', self.getAttribute('data-share-csrf') || '');
+            self.disabled = true;
+            fetch('/share-links', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body: body.toString()
+            }).then(function (response) {
+                if (!response.ok) throw new Error('share refused');
+                return response.json();
+            }).then(function (data) {
+                const modal = document.getElementById('share-modal');
+                if (!modal) return;
+                const intro = modal.querySelector('[data-share-intro]');
+                if (intro) intro.textContent = data.intro;
+                const whatsapp = modal.querySelector('[data-share-whatsapp]');
+                if (whatsapp) whatsapp.setAttribute('href', data.whatsappUrl);
+                const native = modal.querySelector('[data-share-native]');
+                if (native) {
+                    native.setAttribute('data-share-url', data.url);
+                    native.setAttribute('data-share-title', data.title);
+                    native.setAttribute('data-share-text', data.nativeText);
+                }
+                const field = modal.querySelector('input[data-share-url]');
+                if (field) field.value = data.url;
+                modal.querySelectorAll('[data-share-copy]').forEach(function (button) {
+                    button.setAttribute('data-share-url', data.url);
+                });
+                self.setAttribute('data-share-ready', '1');
+                modalOpen('share-modal');
+                const focus = modal.querySelector('[data-share-whatsapp]');
+                if (focus) setTimeout(function () { focus.focus(); }, 50);
+            }).catch(function () {
+                if (window.showToast) {
+                    window.showToast(self.getAttribute('data-share-failed') || 'Could not share this document', 'error');
+                }
+            }).finally(function () {
+                self.disabled = false;
+            });
+        });
+    });
+
+    document.querySelectorAll('[data-share-copy]').forEach(button => {
+        button.addEventListener('click', function () {
+            copyShareLink(this, this.getAttribute('data-share-url') || '');
+        });
+    });
+
+    document.querySelectorAll('[data-share-native]').forEach(button => {
+        button.addEventListener('click', function () {
+            const url = this.getAttribute('data-share-url') || '';
+            const title = this.getAttribute('data-share-title') || document.title;
+            const text = this.getAttribute('data-share-text') || '';
+            if (navigator.share) {
+                navigator.share({ title: title, text: text, url: url }).catch(function (error) {
+                    if (error && error.name === 'AbortError') return;
+                    copyShareLink(button, url);
+                });
+            } else {
+                copyShareLink(this, url);
+            }
+        });
+    });
 });

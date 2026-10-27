@@ -22,6 +22,7 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/credit-notes/{id}(id=${note.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/share :: share('CREDIT_NOTE', ${note.id}, #{share.button.receipt})}"></th:block>
             <form th:action="@{/credit-notes/{id}/receipt/print(id=${note.id})}" method="post" class="row-action-form">
                 <button type="submit" class="btn btn-primary" th:text="${ebm != null and ebm.signed and ebm.printedAt != null} ? #{posReceipt.printCopy} : #{label.printNow}">Print</button>
             </form>

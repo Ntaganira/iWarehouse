@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${doc.title}">Invoice INV-WH-2026-000001</title>
+    <style th:replace="~{reports/pdf-parts :: style(false)}"></style>
+    <style>
+        .doc-head { width: 100%; margin-bottom: 12px; }
+        .doc-head td { border: none; padding: 0; vertical-align: top; }
+        .doc-title { font-size: 16pt; font-weight: bold; margin: 0; }
+        .facts td { border: none; padding: 1px 8px 1px 0; }
+        .facts td.label { color: #6b7280; }
+        .status { font-weight: bold; color: #0b3d61; }
+        .totals { width: 55%; margin-left: 45%; margin-top: 10px; }
+        .totals td { border-bottom: 0.5px solid #e5e7eb; }
+        .totals tr.grand td { font-size: 11pt; font-weight: bold; border-top: 1.5px solid #374151; border-bottom: none; }
+        .note { margin-top: 10px; color: #374151; }
+        .sub { color: #6b7280; font-size: 7.5pt; }
+        .service td:first-child { padding-left: 14px; color: #4b5563; }
+        .payments { width: 60%; margin-left: 40%; margin-top: 8px; }
+        .payments td { border: none; padding: 1px 4px; }
+        .sdc { width: 100%; margin-top: 16px; border: 0.75px solid #9ca3af; }
+        .sdc td { border: none; padding: 2px 8px; vertical-align: top; }
+        .sdc .sdc-title { font-weight: bold; padding-top: 6px; }
+        .sdc .sdc-qr { width: 30mm; padding: 6px; }
+        .sdc .sdc-qr img { width: 28mm; height: 28mm; }
+        .shared { color: #6b7280; font-size: 7.5pt; margin-top: 14px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{reports/pdf-parts :: footer}"></div>
+<div th:replace="~{reports/pdf-parts :: letterhead}"></div>
+
+<table class="doc-head">
+    <tr>
+        <td>
+            <div class="doc-title" th:text="${doc.kind}">INVOICE</div>
+            <div class="mono" th:text="${doc.number}">INV-WH-2026-000001</div>
+            <div class="status" th:text="${doc.status}">Paid</div>
+        </td>
+        <td>
+            <table class="facts">
+                <tr>
+                    <td class="label" th:text="#{public.issuedAt}">Issued</td>
+                    <td th:text="${#temporals.format(doc.issuedAt, 'dd/MM/yyyy HH:mm')}">27/10/2026 10:30</td>
+                </tr>
+                <tr>
+                    <td class="label" th:text="${doc.partyLabel}">Customer</td>
+                    <td th:text="${doc.partyName}">Umucyo Builders Ltd</td>
+                </tr>
+                <tr th:if="${doc.partyTin != null}">
+                    <td class="label" th:text="#{public.tinLabel}">TIN</td>
+                    <td th:text="${doc.partyTin}">100123456</td>
+                </tr>
+                <tr th:if="${doc.reference != null}">
+                    <td class="label" th:text="${doc.referenceLabel}">Invoice</td>
+                    <td class="mono" th:text="${doc.reference}">INV-WH-2026-000001</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<table>
+    <thead>
+    <tr>
+        <th th:text="#{public.description}">Description</th>
+        <th class="num" th:text="#{public.quantity}">Quantity</th>
+        <th class="num" th:if="${doc.showPrices}" th:text="#{public.price}">Price</th>
+        <th class="num" th:if="${doc.showPrices}" th:text="${#messages.msg('public.amount') + ' (' + doc.currency + ')'}">Amount (RWF)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="r : ${doc.rows}" th:classappend="${r.indent} ? 'service'">
+        <td>
+            <div th:text="${r.description}">CLR-6 6 mm - 3210 x 2250 mm</div>
+            <div class="sub" th:if="${r.sub != null and !r.sub.isBlank()}" th:text="${r.sub}">U-WH-000002</div>
+        </td>
+        <td class="num" th:text="${r.quantity}">7.2225 m2</td>
+        <td class="num" th:if="${doc.showPrices}" th:text="${r.price}">27,000</td>
+        <td class="num" th:if="${doc.showPrices}" th:text="${r.amount}">195,008</td>
+    </tr>
+    </tbody>
+</table>
+
+<table class="totals" th:if="${not #lists.isEmpty(doc.totals)}">
+    <tr th:each="t : ${doc.totals}" th:classappend="${t.strong} ? 'grand'">
+        <td th:text="${t.label}">Total</td>
+        <td class="num" th:text="${t.value}">195,008 RWF</td>
+    </tr>
+</table>
+
+<div class="note" th:if="${not #lists.isEmpty(doc.payments)}">
+    <div class="sub" th:text="#{public.payments}">Payments</div>
+    <table class="payments">
+        <tr th:each="p : ${doc.payments}">
+            <td>
+                <span th:text="${p.label}">Cash</span>
+                <span class="sub" th:if="${p.reference != null}" th:text="${p.reference}">REF-1</span>
+            </td>
+            <td class="num" th:text="${p.amount}">195,008</td>
+        </tr>
+    </table>
+</div>
+
+<div class="note" th:each="n : ${doc.notes}" th:text="${n}">Balance due on collection: 97,504 RWF.</div>
+
+<table class="sdc" th:if="${doc.ebmQrDataUri != null}">
+    <tr>
+        <td class="sdc-title" th:text="#{posReceipt.sdcInfo}">SDC INFORMATION</td>
+        <td class="sdc-qr" rowspan="2"><img th:src="${doc.ebmQrDataUri}" alt="QR" /></td>
+    </tr>
+    <tr>
+        <td th:text="${doc.ebmNote}">EBM receipt 27/32 NS</td>
+    </tr>
+</table>
+<div class="note" th:if="${doc.ebmQrDataUri == null and doc.ebmNote != null}" th:text="${doc.ebmNote}">Not yet signed by EBM.</div>
+
+<div class="shared" th:text="#{public.footer(${doc.companyName})}">This document was shared by iWarehouse.</div>
+</body>
+</html>

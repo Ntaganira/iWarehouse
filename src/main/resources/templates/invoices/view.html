@@ -11,6 +11,7 @@
         </div>
         <div class="btn-group">
             <a href="/invoices" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${invoice.status.name() == 'POSTED'}"><th:block th:replace="~{fragments/share :: share('INVOICE', ${invoice.id}, #{share.button.receipt})}"></th:block></th:block>
             <a href="/pos" class="btn btn-outline" sec:authorize="hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')" th:text="#{pos.newSale}">New sale</a>
             <a th:href="@{/credit-notes/new(invoice=${invoice.id})}" class="btn btn-outline" th:if="${canReturn}"
                sec:authorize="hasAuthority('PERM_RETURN_SALE')" th:text="#{creditNote.returnGoods}">Return goods</a>

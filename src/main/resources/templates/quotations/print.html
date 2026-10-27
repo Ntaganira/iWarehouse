@@ -22,6 +22,7 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/quotations/{id}(id=${quotation.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${quotation.status.name() != 'CANCELLED'}"><th:block th:replace="~{fragments/share :: share('QUOTATION', ${quotation.id}, #{share.button.quotation})}"></th:block></th:block>
             <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
         </div>
     </div>

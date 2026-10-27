@@ -16,6 +16,7 @@
         </div>
         <div class="btn-group">
             <a href="/quotations" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${quotation.status.name() != 'CANCELLED'}"><th:block th:replace="~{fragments/share :: share('QUOTATION', ${quotation.id}, #{share.button.quotation})}"></th:block></th:block>
             <a th:href="@{/quotations/{id}/print(id=${quotation.id})}" class="btn btn-outline" target="_blank" rel="noopener" th:text="#{quote.print}">Print</a>
             <a th:href="@{/quotations/new(from=${quotation.id})}" class="btn btn-outline" th:if="${canManage}" th:text="#{quote.copy}">Copy</a>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"

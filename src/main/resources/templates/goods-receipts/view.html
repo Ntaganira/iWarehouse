@@ -20,6 +20,7 @@
         </div>
         <div class="btn-group">
             <a href="/goods-receipts" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'POSTED'}"><th:block th:replace="~{fragments/share :: share('GOODS_RECEIPT', ${receipt.id}, #{share.button.document})}"></th:block></th:block>
             <th:block th:if="${canReceive and s == 'DRAFT'}" th:with="signing=${ticket != null and ticket.open}">
                 <th:block th:unless="${signing}">
                     <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal" th:text="#{receipt.cancel}">Cancel receipt</button>

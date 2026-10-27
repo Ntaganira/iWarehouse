@@ -22,6 +22,7 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/delivery-notes/{id}(id=${note.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${note.status.name() == 'RELEASED'}"><th:block th:replace="~{fragments/share :: share('DELIVERY_NOTE', ${note.id}, #{share.button.delivery})}"></th:block></th:block>
             <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
         </div>
     </div>

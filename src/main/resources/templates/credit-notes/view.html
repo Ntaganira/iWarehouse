@@ -12,6 +12,7 @@
         </div>
         <div class="btn-group">
             <a href="/credit-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/share :: share('CREDIT_NOTE', ${note.id}, #{share.button.receipt})}"></th:block>
             <!--/* A customer's return held for inspection (F-07 C, K.07): a damage report of the units put back on a rack */-->
             <a class="btn btn-outline" th:if="${units != null and !units.?[outcome.name() == 'RESTOCK'].isEmpty()}"
                sec:authorize="hasAuthority('PAGE_DAMAGE') and hasAuthority('PERM_REPORT_DAMAGE')"

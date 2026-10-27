@@ -19,6 +19,7 @@
         </div>
         <div class="btn-group">
             <a href="/delivery-notes" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${s == 'RELEASED'}"><th:block th:replace="~{fragments/share :: share('DELIVERY_NOTE', ${note.id}, #{share.button.delivery})}"></th:block></th:block>
             <a th:href="@{/delivery-notes/{id}/print(id=${note.id})}" class="btn btn-outline" target="_blank" rel="noopener" th:text="#{delivery.print}">Print</a>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
                     th:if="${s == 'DRAFT' and (canPrepare or canRelease)}" th:text="#{delivery.cancel}">Cancel</button>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <title th:text="${doc.title} + ' - ' + #{app.name}">Invoice INV-WH-2026-000001 - iWarehouse</title>
+    <script>
+        (function () {
+            var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        })();
+    </script>
+    <link rel="stylesheet" href="/css/iwarehouse.css">
+</head>
+<body class="public-receipt-page">
+<div class="public-receipt-shell">
+    <div class="public-receipt-topbar">
+        <span class="public-receipt-secure">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span th:text="#{public.secure}">Secure, read-only link</span>
+        </span>
+        <div class="btn-group">
+            <a class="btn btn-outline" th:href="${doc.pdfPath}" download>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span th:text="#{public.download}">Download PDF</span>
+            </a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span th:text="#{public.print}">Print</span>
+            </button>
+        </div>
+    </div>
+
+    <main class="public-receipt">
+        <header class="public-receipt-head">
+            <div class="public-receipt-company">
+                <img class="public-receipt-logo" th:if="${doc.logoDataUri != null}" th:src="${doc.logoDataUri}"
+                     th:alt="${doc.companyName}">
+                <div>
+                    <div class="public-receipt-company-name" th:text="${doc.companyName}">iWarehouse</div>
+                    <div class="public-receipt-company-meta">
+                        <span th:if="${doc.companyAddress != null}" th:text="${doc.companyAddress}">Kigali, Rwanda</span>
+                        <span th:if="${doc.companyPhone != null}" th:text="${doc.companyPhone}">+250 788 000 000</span>
+                        <span th:if="${doc.companyEmail != null}" th:text="${doc.companyEmail}">sales@example.rw</span>
+                        <span th:if="${doc.companyTin != null}" th:text="#{public.tin(${doc.companyTin})}">TIN 100000000</span>
+                    </div>
+                </div>
+            </div>
+            <div class="public-receipt-doc">
+                <div class="public-receipt-kind" th:text="${doc.kind}">Invoice</div>
+                <div class="public-receipt-number mono" th:text="${doc.number}">INV-WH-2026-000001</div>
+                <span class="badge" th:classappend="'badge-' + ${doc.statusTone}" th:text="${doc.status}">Paid</span>
+            </div>
+        </header>
+
+        <section class="public-receipt-meta">
+            <div>
+                <span class="public-receipt-label" th:text="${doc.partyLabel}">Customer</span>
+                <strong th:text="${doc.partyName}">Umucyo Builders Ltd</strong>
+                <div class="mono public-receipt-sub" th:if="${doc.partyTin != null}" th:text="#{public.tin(${doc.partyTin})}">TIN 100123456</div>
+            </div>
+            <div class="public-receipt-dates">
+                <div>
+                    <span class="public-receipt-label" th:text="#{public.issuedAt}">Issued</span>
+                    <span th:text="${#temporals.format(doc.issuedAt, 'dd/MM/yyyy HH:mm')}">27/10/2026 10:30</span>
+                </div>
+                <div th:if="${doc.reference != null}">
+                    <span class="public-receipt-label" th:text="${doc.referenceLabel}">Invoice</span>
+                    <span class="mono" th:text="${doc.reference}">INV-WH-2026-000001</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="public-receipt-table-wrap">
+            <table class="public-receipt-table">
+                <thead>
+                <tr>
+                    <th th:text="#{public.description}">Description</th>
+                    <th class="num" th:text="#{public.quantity}">Quantity</th>
+                    <th class="num" th:if="${doc.showPrices}" th:text="#{public.price}">Price</th>
+                    <th class="num" th:if="${doc.showPrices}">
+                        <span th:text="#{public.amount}">Amount</span>
+                        <span class="public-receipt-currency" th:text="${doc.currency}">RWF</span>
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${doc.rows}" th:classappend="${r.indent} ? 'is-service'">
+                    <td>
+                        <div class="public-receipt-item" th:text="${r.description}">CLR-6 6 mm - 3210 x 2250 mm</div>
+                        <div class="public-receipt-sub" th:if="${r.sub != null and !r.sub.isBlank()}" th:text="${r.sub}">U-WH-000002</div>
+                    </td>
+                    <td class="num" th:attr="data-label=#{public.quantity}" th:text="${r.quantity}">7.2225 m&#178;</td>
+                    <td class="num" th:if="${doc.showPrices}" th:attr="data-label=#{public.price}" th:text="${r.price}">27,000</td>
+                    <td class="num" th:if="${doc.showPrices}" th:attr="data-label=#{public.amount}" th:text="${r.amount}">195,008</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="public-receipt-bottom">
+            <div class="public-receipt-totals" th:if="${not #lists.isEmpty(doc.totals)}">
+                <div class="public-receipt-total" th:each="t : ${doc.totals}" th:classappend="${t.strong} ? 'is-strong'">
+                    <span th:text="${t.label}">Total</span>
+                    <span class="num" th:text="${t.value}">195,008 RWF</span>
+                </div>
+            </div>
+            <div class="public-receipt-payments" th:if="${not #lists.isEmpty(doc.payments)}">
+                <div class="public-receipt-payments-title" th:text="#{public.payments}">Payments</div>
+                <div class="public-receipt-payment" th:each="p : ${doc.payments}">
+                    <span>
+                        <span th:text="${p.label}">Cash</span>
+                        <span class="public-receipt-sub" th:if="${p.reference != null}" th:text="${p.reference}">REF-1</span>
+                    </span>
+                    <span class="num" th:text="${p.amount}">195,008</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="public-receipt-notes" th:if="${not #lists.isEmpty(doc.notes)}">
+            <p th:each="n : ${doc.notes}" th:text="${n}">Balance due on collection: 97,504 RWF.</p>
+        </div>
+
+        <div class="public-receipt-ebm" th:if="${doc.ebmNote != null}">
+            <img th:if="${doc.ebmQrDataUri != null}" th:src="${doc.ebmQrDataUri}" alt="EBM QR">
+            <span th:text="${doc.ebmNote}">EBM receipt 27/32 NS</span>
+        </div>
+
+        <footer class="public-receipt-footer">
+            <span th:text="#{public.footer(${doc.companyName})}">This document was shared by iWarehouse.</span>
+            <span th:text="#{public.generated(${#temporals.format(generatedAt, 'dd/MM/yyyy HH:mm')})}">Viewed 27/10/2026 10:30</span>
+        </footer>
+    </main>
+</div>
+</body>
+</html>

@@ -16,6 +16,7 @@
         </div>
         <div class="btn-group">
             <a href="/sales-orders" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:if="${quotation.status.name() != 'CANCELLED'}"><th:block th:replace="~{fragments/share :: share('SALES_ORDER', ${quotation.id}, #{share.button.order})}"></th:block></th:block>
             <button type="button" class="btn btn-outline btn-danger-outline" data-modal-open="cancel-modal"
                     th:if="${canManage and (s == 'DRAFT' or s == 'SENT') and onTill == null}" th:text="#{order.cancel}">Cancel order</button>
             <a th:href="@{/sales-orders/{id}/edit(id=${quotation.id})}" class="btn btn-outline" th:if="${canManage and s == 'DRAFT'}" th:text="#{common.edit}">Edit</a>

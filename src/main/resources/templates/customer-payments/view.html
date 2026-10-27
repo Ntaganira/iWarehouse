@@ -11,6 +11,7 @@
         </div>
         <div class="btn-group">
             <a href="/customer-payments" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/share :: share('CUSTOMER_PAYMENT', ${payment.id}, #{share.button.receipt})}"></th:block>
             <a th:href="@{/customer-payments/{id}/receipt(id=${payment.id})}" class="btn btn-primary" target="_blank" rel="noopener" th:text="#{invoice.printReceipt}">Print the receipt</a>
         </div>
     </div>

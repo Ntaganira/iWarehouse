@@ -22,6 +22,7 @@
         </div>
         <div class="btn-group">
             <a th:href="@{/customer-payments/{id}(id=${payment.id})}" class="btn btn-outline" th:text="#{common.back}">Back</a>
+            <th:block th:replace="~{fragments/share :: share('CUSTOMER_PAYMENT', ${payment.id}, #{share.button.receipt})}"></th:block>
             <button type="button" class="btn btn-primary" onclick="window.print()" th:text="#{label.printNow}">Print</button>
         </div>
     </div>

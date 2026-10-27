@@ -9,6 +9,7 @@ import com.ntaganira.heritier.iWarehouse.entity.PriceList;
 import com.ntaganira.heritier.iWarehouse.entity.ProcessingService;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
+import com.ntaganira.heritier.iWarehouse.enums.ProcessingServiceKind;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
@@ -45,7 +46,7 @@ import java.util.*;
 public class PriceListController {
 
     static final String MODULE = "Price Lists";
-    private static final Set<String> TABS = Set.of("prices", "processing", "customers", "history");
+    private static final Set<String> TABS = Set.of("prices", "processing", "accessories", "customers", "history");
     private static final String PRODUCT_FIELD = "p_";
     private static final String SERVICE_FIELD = "s_";
 
@@ -86,11 +87,14 @@ public class PriceListController {
         model.addAttribute("waitingChange", priceChangeService.waitingOn(id).orElse(null));
         // The open tab shows the page asked for; the others start at their first page.
         var productRows = priceListService.productRows(list);
-        var serviceRows = priceListService.serviceRows(list);
+        var serviceRows = priceListService.processingRows(list);
+        var accessoryRows = priceListService.accessoryRows(list);
         model.addAttribute("productRows", Paging.of(productRows, Paging.pageOf("prices", open, page)));
         model.addAttribute("serviceRows", Paging.of(serviceRows, Paging.pageOf("processing", open, page)));
+        model.addAttribute("accessoryRows", Paging.of(accessoryRows, Paging.pageOf("accessories", open, page)));
         model.addAttribute("pricedProducts", productRows.stream().filter(r -> r.price() != null).count());
         model.addAttribute("pricedServices", serviceRows.stream().filter(r -> r.price() != null).count());
+        model.addAttribute("pricedAccessories", accessoryRows.stream().filter(r -> r.price() != null).count());
         model.addAttribute("customers", Paging.of(priceListService.customers(id), Paging.pageOf("customers", open, page)));
         if (AppUserPrincipal.currentHas("PERM_VIEW_DATA_CHANGES")) {
             model.addAttribute("history", priceListService.history(list, Paging.pageOf("history", open, page), Paging.SIZE));
@@ -182,7 +186,8 @@ public class PriceListController {
         model.addAttribute("list", list);
         model.addAttribute("defaultList", list.isDefaultList() ? list : priceListService.defaultList());
         model.addAttribute("productRows", priceListService.productRows(list));
-        model.addAttribute("serviceRows", priceListService.serviceRows(list));
+        model.addAttribute("serviceRows", priceListService.processingRows(list));
+        model.addAttribute("accessoryRows", priceListService.accessoryRows(list));
         model.addAttribute("typed", typed);
         model.addAttribute("errors", errors);
         model.addAttribute("askApproval", priceChangeService.approvalRequired());
@@ -361,6 +366,7 @@ public class PriceListController {
         dto.setId(id);
         dto.setCode(service.getCode());
         dto.setName(service.getName());
+        dto.setKind(service.getKind());
         dto.setChargeUnit(service.getChargeUnit());
         return serviceForm(model, dto);
     }
@@ -370,7 +376,9 @@ public class PriceListController {
     public String updateService(@PathVariable UUID id, @Valid @ModelAttribute("serviceDto") ProcessingServiceDto dto,
                                 BindingResult result, Model model, RedirectAttributes redirect) {
         dto.setId(id);
-        dto.setCode(priceListService.findService(id).getCode()); // fixed after creation
+        ProcessingService existing = priceListService.findService(id);
+        dto.setCode(existing.getCode()); // fixed after creation
+        dto.setKind(existing.getKind());
         if (result.hasErrors()) {
             return serviceInvalid(model, dto, result);
         }
@@ -411,6 +419,7 @@ public class PriceListController {
     private String serviceForm(Model model, ProcessingServiceDto dto) {
         model.addAttribute("serviceDto", dto);
         model.addAttribute("units", ChargeUnit.values());
+        model.addAttribute("kinds", ProcessingServiceKind.values());
         model.addAttribute("unitFixed", dto.getId() != null && priceListService.isPriced(priceListService.findService(dto.getId())));
         return "price-lists/service-form";
     }

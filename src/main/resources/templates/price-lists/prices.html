@@ -86,6 +86,39 @@
             </div>
         </div>
 
+        <div class="section">
+            <div class="section-header"><h2 th:text="#{pricelist.accessoriesTab}">Accessories</h2></div>
+            <div class="table-container">
+                <table class="price-table" th:unless="${#lists.isEmpty(accessoryRows)}">
+                    <thead>
+                        <tr>
+                            <th th:text="#{service.name}">Name</th>
+                            <th th:text="#{service.unit}">Charged per</th>
+                            <th class="num" th:unless="${list.defaultList}" th:text="${defaultList.name}">Retail (counter)</th>
+                            <th class="price-col" th:text="#{pricelist.price}">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="r : ${accessoryRows}" th:with="field=${'s_' + r.service.id}">
+                            <td><label th:for="${field}" th:text="${r.service.name}">Tape</label></td>
+                            <td th:text="#{${'service.unit.' + r.service.chargeUnit}}">roll</td>
+                            <td class="num text-muted nowrap" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '�?"'">1,500</td>
+                            <td class="price-col">
+                                <div class="input-unit">
+                                    <input type="text" inputmode="decimal" th:id="${field}" th:name="${field}" autocomplete="off"
+                                           th:value="${typed != null} ? ${typed.get(field)} : ${@num.plain(r.price)}"
+                                           th:classappend="${errors.get(field) != null} ? 'is-invalid'">
+                                    <span>RWF</span>
+                                </div>
+                                <span class="field-error" th:if="${errors.get(field) != null}" th:text="${errors.get(field)}"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="form-note" th:if="${#lists.isEmpty(accessoryRows)}" th:text="#{pricelist.noAccessories}">No accessories yet: add one under Processing.</p>
+            </div>
+        </div>
+
         <div class="section" th:if="${askApproval}">
             <div class="section-body">
                 <div class="form-group">

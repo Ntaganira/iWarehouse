@@ -87,7 +87,9 @@ public final class EbmCodes {
         return switch (unit) {
             case M2 -> GLASS_UNIT;
             case METRE -> "M";
-            case PIECE, HOLE -> "U";
+            case PIECE, HOLE, ROLL, TUBE, SET, BOX, PACK, BAG -> "U";
+            case KG -> "KG";
+            case LITRE -> "L";
         };
     }
 

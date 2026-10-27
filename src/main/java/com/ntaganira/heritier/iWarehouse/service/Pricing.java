@@ -38,8 +38,9 @@ public final class Pricing {
 
     /** The area a piece is charged for: its own area, but never less than the minimum (0.25 m² by default). */
     /**
-     * What a processing service charges on {@code quantity} pieces of {@code widthMm} x {@code heightMm} (MD-06):
-     * m² of glass, metres of edge (the perimeter), pieces, or holes ({@code holes} per piece), 4 decimals.
+     * What a processing service or accessory charges on {@code quantity} pieces of {@code widthMm} x
+     * {@code heightMm} (MD-06): m² of glass, metres of edge (the perimeter), pieces, holes ({@code holes} per
+     * piece), or an accessory's roll, tube, kilogram, litre, set, box, pack or bag, 4 decimals.
      */
     public static BigDecimal serviceQuantity(ChargeUnit unit, int widthMm, int heightMm, int quantity, Integer holes) {
         BigDecimal pieces = BigDecimal.valueOf(quantity);
@@ -47,7 +48,7 @@ public final class Pricing {
             case M2 -> areaM2(widthMm, heightMm).multiply(pieces).setScale(AREA_SCALE, RoundingMode.HALF_UP);
             case METRE -> BigDecimal.valueOf(2L * (widthMm + heightMm)).multiply(pieces)
                     .divide(BigDecimal.valueOf(1000), AREA_SCALE, RoundingMode.HALF_UP);
-            case PIECE -> pieces.setScale(AREA_SCALE);
+            case PIECE, ROLL, TUBE, KG, LITRE, SET, BOX, PACK, BAG -> pieces.setScale(AREA_SCALE);
             case HOLE -> {
                 if (holes == null || holes <= 0) {
                     throw new IllegalArgumentException("Holes per piece are needed for a service charged per hole");

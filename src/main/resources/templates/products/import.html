@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{product.import.title}, ~{::content})}">
+<head><title>Import Products - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{product.import.title}">Import products</h1>
+            <div class="subtitle" th:text="#{product.import.subtitle}">Add glass products and accessories from an Excel workbook</div>
+        </div>
+        <a href="/products" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="import-layout">
+        <div class="section">
+            <form th:action="@{/products/import}" method="post" enctype="multipart/form-data" class="form-container" id="import-form">
+                <div class="error-summary" th:if="${flashError}">
+                    <div class="error-summary-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="error-summary-body">
+                        <div class="error-summary-header">
+                            <h3 class="error-summary-title" th:text="${flashError}">Could not import</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header" th:if="${result != null}">
+                    <h2 th:text="#{product.import.result}">Import result</h2>
+                </div>
+                <div class="form-grid" th:if="${result != null}">
+                    <div class="form-group"><span th:text="#{product.import.glassCreated(${result.glassCreated})}">Glass products added</span></div>
+                    <div class="form-group"><span th:text="#{product.import.glassSkipped(${result.glassSkipped})}">Glass products skipped</span></div>
+                    <div class="form-group"><span th:text="#{product.import.accessoriesCreated(${result.accessoriesCreated})}">Accessories added</span></div>
+                    <div class="form-group"><span th:text="#{product.import.accessoriesSkipped(${result.accessoriesSkipped})}">Accessories skipped</span></div>
+                    <div class="form-group full-width" th:if="${result.mergedGlassRows > 0}">
+                        <span th:text="#{product.import.mergedGlassRows(${result.mergedGlassRows})}">Rows merged</span>
+                    </div>
+                </div>
+
+                <div class="error-summary" th:if="${result != null and result.hasErrors}">
+                    <div class="error-summary-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="error-summary-body">
+                        <div class="error-summary-header">
+                            <h3 class="error-summary-title" th:text="#{product.import.errors(${#lists.size(result.errors)})}">Rows that need attention</h3>
+                        </div>
+                        <ul class="error-summary-list">
+                            <li class="error-summary-item" th:each="e : ${result.errors}">
+                                <span class="error-summary-field" th:text="#{product.import.row} + ' ' + ${e.row}">Row 2</span>
+                                <span class="error-summary-message" th:text="${e.message}">What to fix</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="text-muted" th:if="${result != null and !result.hasErrors}" th:text="#{product.import.noErrors}">Every row was imported.</p>
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="file" th:text="#{product.import.file}">Workbook</label>
+                        <input type="file" id="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                        <span class="hint" th:text="#{product.import.choose}">Choose an Excel workbook</span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:text="#{product.import.submit}">Import the products</button>
+                    <a href="/products/import/template" download class="btn btn-outline" th:text="#{product.import.downloadTemplate}">Download the template</a>
+                    <a href="/products" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <aside class="section import-help">
+            <div class="section-header"><h2 th:text="#{product.import.template}">Template</h2></div>
+            <div class="section-body">
+                <p th:text="#{product.import.intro}">Download the template, fill one row per glass or accessory, then upload it.</p>
+                <ul class="help-list">
+                    <li th:text="#{product.import.template.step1}">Type: GLASS or ACCESSORY.</li>
+                    <li th:text="#{product.import.template.step2}">Fill the sheet size and sheet price for glass.</li>
+                    <li th:text="#{product.import.template.step4}">Fill the name, unit and unit price for an accessory.</li>
+                    <li th:text="#{product.import.template.step5}">Prices are VAT included in RWF.</li>
+                    <li th:text="#{product.import.template.step6}">An existing product is skipped, never changed. No stock is created.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+</div>
+</body>
+</html>

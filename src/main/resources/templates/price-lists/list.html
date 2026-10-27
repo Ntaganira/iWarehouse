@@ -68,7 +68,7 @@
     <div class="section" id="services">
         <div class="section-header">
             <h2>
-                <span th:text="#{service.sectionTitle}">Processing services</span>
+                <span th:text="#{service.sectionTitle}">Processing services and accessories</span>
                 <span class="section-count" th:text="${services.totalElements}">5</span>
             </h2>
             <a href="/price-lists/services/new" class="btn btn-outline btn-sm" sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')" th:text="#{service.add}">Add service</a>
@@ -79,6 +79,7 @@
                     <tr>
                         <th th:text="#{service.code}">Code</th>
                         <th th:text="#{service.name}">Name</th>
+                        <th th:text="#{service.kind}">Kind</th>
                         <th th:text="#{service.unit}">Charged per</th>
                         <th th:text="#{common.status}">Status</th>
                         <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_MANAGE_PRICE_LIST')">Actions</th>
@@ -88,6 +89,8 @@
                     <tr th:each="sv : ${services.content}" th:classappend="${!sv.enabled} ? 'row-inactive'">
                         <td class="mono strong" th:text="${sv.code}">EDGING</td>
                         <td th:text="${sv.name}">Edging</td>
+                        <td><span class="badge" th:classappend="${sv.accessory} ? 'badge-warning' : 'badge-secondary'"
+                                  th:text="#{${'service.kind.' + sv.kind}}">Processing</span></td>
                         <td th:text="#{${'service.unit.' + sv.chargeUnit}}">metre of edge</td>
                         <td>
                             <span class="badge badge-success" th:if="${sv.enabled}" th:text="#{common.active}">Active</span>

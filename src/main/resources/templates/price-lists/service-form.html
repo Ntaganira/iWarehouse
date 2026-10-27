@@ -7,7 +7,7 @@
     <div class="page-header">
         <div>
             <h1 th:text="${serviceDto.id == null} ? #{service.addTitle} : #{service.editTitle}">Add Processing Service</h1>
-            <div class="subtitle" th:text="#{service.formSubtitle}">Work charged on top of the glass, priced on each list (MD-06)</div>
+            <div class="subtitle" th:text="#{service.formSubtitle}">Work charged on top of the glass, or an accessory sold on its own, priced on each list (MD-06)</div>
         </div>
         <a href="/price-lists#services" class="btn btn-outline" th:text="#{common.back}">Back</a>
     </div>
@@ -30,6 +30,19 @@
                     <input type="text" id="name" th:field="*{name}" maxlength="60" required th:placeholder="#{service.namePh}"
                            th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
                     <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="kind" th:text="#{service.kind}">Kind</label>
+                    <select id="kind" th:unless="${serviceDto.id != null}" th:field="*{kind}" required
+                            th:classappend="${#fields.hasErrors('kind')} ? 'is-invalid'">
+                        <option th:each="k : ${kinds}" th:value="${k}" th:text="#{${'service.kind.' + k}}">Processing</option>
+                    </select>
+                    <select th:if="${serviceDto.id != null}" disabled>
+                        <option th:selected="true" th:text="#{${'service.kind.' + serviceDto.kind}}">Processing</option>
+                    </select>
+                    <input th:if="${serviceDto.id != null}" type="hidden" name="kind" th:value="${serviceDto.kind}">
+                    <span class="field-error" th:if="${#fields.hasErrors('kind')}" th:errors="*{kind}"></span>
+                    <span class="hint" th:if="${serviceDto.id != null}" th:text="#{service.kindFixedHint}">Fixed after creation: processing works on a size, an accessory is sold on its own.</span>
                 </div>
                 <div class="form-group">
                     <label for="chargeUnit" th:text="#{service.unit}">Charged per</label>

@@ -54,6 +54,10 @@
                 <span th:text="#{pricelist.processingTab}">Processing</span>
                 <span class="section-count" th:text="${pricedServices}">0</span>
             </button>
+            <button type="button" class="tab" data-tab="tab-accessories" th:classappend="${tab == 'accessories'} ? 'active'">
+                <span th:text="#{pricelist.accessoriesTab}">Accessories</span>
+                <span class="section-count" th:text="${pricedAccessories}">0</span>
+            </button>
             <button type="button" class="tab" data-tab="tab-customers" th:classappend="${tab == 'customers'} ? 'active'" th:unless="${list.defaultList}">
                 <span th:text="#{pricelist.customers}">Customers</span>
                 <span class="section-count" th:text="${customers.totalElements}">0</span>
@@ -123,6 +127,38 @@
                     </table>
                 </div>
                 <th:block th:replace="~{layout/pagination :: pager(${serviceRows}, ${'/price-lists/' + list.id}, 'tab=processing')}"></th:block>
+            </div>
+
+            <!-- Accessories: catalogue only, sold on their own -->
+            <div class="tab-content" id="tab-accessories" th:classappend="${tab == 'accessories'} ? 'active'">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th th:text="#{service.name}">Name</th>
+                                <th th:text="#{service.unit}">Charged per</th>
+                                <th class="num" th:text="#{pricelist.price}">Price</th>
+                                <th class="num" th:unless="${list.defaultList}" th:text="${defaultList.name}">Retail (counter)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${accessoryRows.content}">
+                                <td><span th:text="${r.service.name}">Tape</span> <span class="cell-sub mono" th:text="${r.service.code}">TAPE-48</span></td>
+                                <td th:text="#{${'service.unit.' + r.service.chargeUnit}}">roll</td>
+                                <td class="num nowrap">
+                                    <span class="strong" th:if="${r.price != null}" th:text="${@num.money(r.price)}">3,300</span>
+                                    <span class="badge badge-warning" th:if="${r.price == null and (list.defaultList or r.defaultPrice == null)}" th:text="#{pricelist.notPriced}">Not priced</span>
+                                    <span class="text-muted" th:if="${r.price == null and !list.defaultList and r.defaultPrice != null}" th:text="#{pricelist.usesDefault}">uses default</span>
+                                </td>
+                                <td class="num nowrap text-muted" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">3,300</td>
+                            </tr>
+                            <tr th:if="${accessoryRows.totalElements == 0}">
+                                <td colspan="4"><div class="empty-state"><h3 th:text="#{pricelist.noAccessories}">No accessories yet</h3></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <th:block th:replace="~{layout/pagination :: pager(${accessoryRows}, ${'/price-lists/' + list.id}, 'tab=accessories')}"></th:block>
             </div>
 
             <!-- Customers on this list -->

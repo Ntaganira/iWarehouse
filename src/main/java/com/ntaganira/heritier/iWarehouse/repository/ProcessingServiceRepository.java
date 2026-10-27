@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.repository;
 
 import com.ntaganira.heritier.iWarehouse.entity.ProcessingService;
+import com.ntaganira.heritier.iWarehouse.enums.ProcessingServiceKind;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,5 +13,11 @@ public interface ProcessingServiceRepository extends JpaRepository<ProcessingSer
 
     List<ProcessingService> findByEnabledTrueOrderByCodeAsc();
 
+    List<ProcessingService> findByKindOrderByEnabledDescCodeAsc(ProcessingServiceKind kind);
+
+    List<ProcessingService> findByKindAndEnabledTrueOrderByCodeAsc(ProcessingServiceKind kind);
+
     boolean existsByCode(String code);
+
+    boolean existsByNameIgnoreCase(String name);
 }

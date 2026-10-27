@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ServicePriceRepository extends JpaRepository<ServicePrice, UUID> {
@@ -14,6 +15,9 @@ public interface ServicePriceRepository extends JpaRepository<ServicePrice, UUID
     /** With the service, which the price page and the history show (open-in-view is off). */
     @EntityGraph(attributePaths = "service")
     List<ServicePrice> findByPriceList_Id(UUID priceListId);
+
+    @EntityGraph(attributePaths = "service")
+    Optional<ServicePrice> findByPriceList_IdAndService_Id(UUID priceListId, UUID serviceId);
 
     boolean existsByService_IdAndPriceIsNotNull(UUID serviceId);
 

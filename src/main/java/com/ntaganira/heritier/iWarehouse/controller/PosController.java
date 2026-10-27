@@ -124,8 +124,9 @@ public class PosController {
         model.addAttribute("products", products);
         // Sizes are cut from cuttable glass only (tempered glass is made to size)
         model.addAttribute("cuttable", products.stream().filter(p -> p.getGlassType().isCuttable()).toList());
-        List<ProcessingService> services = priceListService.services().stream().filter(ProcessingService::isEnabled).toList();
+        List<ProcessingService> services = priceListService.processing().stream().filter(ProcessingService::isEnabled).toList();
         model.addAttribute("services", services);
+        model.addAttribute("accessories", priceListService.accessories().stream().filter(ProcessingService::isEnabled).toList());
         model.addAttribute("holeServices", services.stream().anyMatch(sv -> sv.getChargeUnit() == ChargeUnit.HOLE));
         model.addAttribute("results", results);
         model.addAttribute("prices", customer == null ? Map.of() : salesService.prices(customer, results));
@@ -208,9 +209,9 @@ public class PosController {
         try {
             SalesInvoice sale = salesService.addUnit(code, unitId);
             SalesInvoiceLine line = sale.getLines().get(sale.getLines().size() - 1);
-            activityLogService.record(MODULE, "UPDATE_SALE", "Added " + line.getUnitCode() + " ("
+            activityLogService.record(MODULE, "UPDATE_SALE", "Added " + line.getLabel() + " ("
                     + num.money(line.getAmount()) + " RWF) to the sale at till " + sale.getTillSession().getNumber(), ActivityStatus.SUCCESS);
-            redirect.addFlashAttribute("flashSuccess", messages.get("sale.added", line.getUnitCode(), num.money(line.getAmount())));
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.added", line.getLabel(), num.money(line.getAmount())));
         } catch (BusinessException e) {
             fail(redirect, "UPDATE_SALE", "Failed to add " + (code != null ? code.trim() : unitId) + " to a sale", e);
         }
@@ -252,13 +253,33 @@ public class PosController {
         return "redirect:/pos" + query(back);
     }
 
+    /** Adds a catalogue-only accessory (no stock) to the sale. */
+    @PostMapping("/accessory")
+    @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
+    public String accessory(@RequestParam(required = false) UUID accessoryId,
+                            @RequestParam(required = false) Integer accessoryQuantity,
+                            @RequestParam(required = false) String back, RedirectAttributes redirect) {
+        try {
+            SalesInvoice sale = salesService.addAccessory(accessoryId, accessoryQuantity);
+            SalesInvoiceLine line = sale.getLines().get(sale.getLines().size() - 1);
+            activityLogService.record(MODULE, "UPDATE_SALE", "Added " + line.getLabel() + " x " + line.getQuantity()
+                    + " (" + num.money(line.getAmount()) + " RWF) to the sale at till " + sale.getTillSession().getNumber(),
+                    ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.accessoryAdded", line.getLabel(),
+                    line.getQuantity(), num.money(line.getAmount())));
+        } catch (BusinessException e) {
+            fail(redirect, "UPDATE_SALE", "Failed to add an accessory to a sale", e);
+        }
+        return "redirect:/pos" + query(back);
+    }
+
     @PostMapping("/lines/{lineId}/remove")
     @PreAuthorize("hasAuthority('PAGE_POS') and hasAuthority('PERM_SELL')")
     public String remove(@PathVariable UUID lineId, @RequestParam(required = false) String back, RedirectAttributes redirect) {
         try {
             SalesInvoiceLine line = salesService.removeLine(lineId);
-            activityLogService.record(MODULE, "UPDATE_SALE", "Removed " + line.getUnitCode() + " from the sale", ActivityStatus.SUCCESS);
-            redirect.addFlashAttribute("flashSuccess", messages.get("sale.removed", line.getUnitCode()));
+            activityLogService.record(MODULE, "UPDATE_SALE", "Removed " + line.getLabel() + " from the sale", ActivityStatus.SUCCESS);
+            redirect.addFlashAttribute("flashSuccess", messages.get("sale.removed", line.getLabel()));
         } catch (BusinessException e) {
             fail(redirect, "UPDATE_SALE", "Failed to remove a line from a sale", e);
         }

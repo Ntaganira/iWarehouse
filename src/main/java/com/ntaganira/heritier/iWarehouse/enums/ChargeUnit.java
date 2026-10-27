@@ -9,13 +9,23 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - User      : NTAGANIRA Heritier
  * - Email     : ntaganira71@gmail.com
  * - Phone     : +250 788 533 669
- * - Desc      : What one unit of a processing price covers (MD-06): a square metre of glass (tempering),
- *               a metre of edge (edging, polishing, bevelling), a piece, or a hole (drilling).
+ * - Desc      : What one unit of a price covers (MD-06): a square metre of glass (tempering), a metre
+ *               of edge (edging, polishing, bevelling), a piece, a hole (drilling), or an accessory's
+ *               roll, tube, kilogram, litre, set, box, pack or bag. Accessories are catalogue-only:
+ *               their unit is only how the price is counted, never stock.
  * </pre>
  */
 public enum ChargeUnit {
     M2,
     METRE,
     PIECE,
-    HOLE
+    HOLE,
+    ROLL,
+    TUBE,
+    KG,
+    LITRE,
+    SET,
+    BOX,
+    PACK,
+    BAG
 }

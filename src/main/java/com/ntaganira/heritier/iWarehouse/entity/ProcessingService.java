@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
 import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
+import com.ntaganira.heritier.iWarehouse.enums.ProcessingServiceKind;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,8 +17,9 @@ import lombok.Setter;
  * - User      : NTAGANIRA Heritier
  * - Email     : ntaganira71@gmail.com
  * - Phone     : +250 788 533 669
- * - Desc      : Processing charged on top of the glass (MD-06, POS-02): edging, polishing, drilling,
- *               tempering... priced per list in its charge unit. Deactivated, never deleted.
+ * - Desc      : Processing charged on top of the glass (MD-06, POS-02), or a catalogue-only accessory
+ *               sold beside it: edging, polishing, drilling, tempering, tape, silicone... priced per
+ *               list in its charge unit. Deactivated, never deleted.
  * </pre>
  */
 @Entity
@@ -35,9 +37,21 @@ public class ProcessingService extends BaseEntity {
     private String name;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 12)
+    private ProcessingServiceKind kind = ProcessingServiceKind.PROCESSING;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "charge_unit", nullable = false, length = 10)
     private ChargeUnit chargeUnit;
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    public boolean isAccessory() {
+        return kind == ProcessingServiceKind.ACCESSORY;
+    }
+
+    public boolean isProcessing() {
+        return kind == ProcessingServiceKind.PROCESSING;
+    }
 }

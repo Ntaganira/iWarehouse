@@ -43,7 +43,7 @@ public interface SalesInvoiceLineRepository extends JpaRepository<SalesInvoiceLi
      * pieces, width, height, amount), for the sales reports (RPT-05).
      */
     @Query("select i.id, l.id, l.kind, p.id, p.code, s.id, s.name, l.quantity, l.widthMm, l.heightMm, l.amount from SalesInvoiceLine l"
-            + " join l.invoice i join l.product p left join l.service s"
+            + " join l.invoice i left join l.product p left join l.service s"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 

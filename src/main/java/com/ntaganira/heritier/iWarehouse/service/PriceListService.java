@@ -3,6 +3,7 @@ package com.ntaganira.heritier.iWarehouse.service;
 import com.ntaganira.heritier.iWarehouse.dto.PriceListDto;
 import com.ntaganira.heritier.iWarehouse.dto.ProcessingServiceDto;
 import com.ntaganira.heritier.iWarehouse.entity.*;
+import com.ntaganira.heritier.iWarehouse.enums.ProcessingServiceKind;
 import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
@@ -137,10 +138,28 @@ public class PriceListService {
                 .toList();
     }
 
+    /** Processing (work on a size) on the list and on the default list. */
+    public List<ServicePriceRow> processingRows(PriceList list) {
+        return serviceRows(list, ProcessingServiceKind.PROCESSING);
+    }
+
+    /** Catalogue-only accessories on the list and on the default list. */
+    public List<ServicePriceRow> accessoryRows(PriceList list) {
+        return serviceRows(list, ProcessingServiceKind.ACCESSORY);
+    }
+
+    /** Every processing and accessory row, for the history and totals. */
     public List<ServicePriceRow> serviceRows(PriceList list) {
+        return serviceRows(list, null);
+    }
+
+    private List<ServicePriceRow> serviceRows(PriceList list, ProcessingServiceKind kind) {
         Map<UUID, BigDecimal> own = servicePrices(list.getId());
         Map<UUID, BigDecimal> fallback = list.isDefaultList() ? Map.of() : servicePrices(defaultList().getId());
-        return serviceRepo.findByEnabledTrueOrderByCodeAsc().stream()
+        List<ProcessingService> services = kind == null
+                ? serviceRepo.findByEnabledTrueOrderByCodeAsc()
+                : serviceRepo.findByKindAndEnabledTrueOrderByCodeAsc(kind);
+        return services.stream()
                 .map(s -> new ServicePriceRow(s, own.get(s.getId()), fallback.get(s.getId())))
                 .toList();
     }
@@ -353,6 +372,16 @@ public class PriceListService {
         return serviceRepo.findAllByOrderByEnabledDescCodeAsc();
     }
 
+    /** Processing only: the cut, quotation and processing pickers never offer an accessory. */
+    public List<ProcessingService> processing() {
+        return serviceRepo.findByKindOrderByEnabledDescCodeAsc(ProcessingServiceKind.PROCESSING);
+    }
+
+    /** Catalogue-only accessories: sold on their own at the counter. */
+    public List<ProcessingService> accessories() {
+        return serviceRepo.findByKindOrderByEnabledDescCodeAsc(ProcessingServiceKind.ACCESSORY);
+    }
+
     public ProcessingService findService(UUID id) {
         return serviceRepo.findById(id).orElseThrow(() -> new NotFoundException("ProcessingService", id));
     }
@@ -365,6 +394,7 @@ public class PriceListService {
         ProcessingService service = new ProcessingService();
         service.setCode(dto.getCode());
         service.setName(dto.getName().trim());
+        service.setKind(dto.getKind());
         service.setChargeUnit(dto.getChargeUnit());
         return serviceRepo.save(service);
     }
@@ -373,6 +403,9 @@ public class PriceListService {
     @Transactional
     public ProcessingService updateService(UUID id, ProcessingServiceDto dto) {
         ProcessingService service = findService(id);
+        if (service.getKind() != dto.getKind()) {
+            throw BusinessException.onField("kind", "service.kind.fixed");
+        }
         if (service.getChargeUnit() != dto.getChargeUnit() && isPriced(service)) {
             throw BusinessException.onField("chargeUnit", "service.unit.priced", service.getName());
         }

@@ -163,7 +163,8 @@ public class QuotationService {
     }
 
     public List<ProcessingService> services() {
-        return serviceRepo.findAll(Sort.by("code")).stream().filter(ProcessingService::isEnabled).toList();
+        return serviceRepo.findAll(Sort.by("code")).stream()
+                .filter(ProcessingService::isProcessing).filter(ProcessingService::isEnabled).toList();
     }
 
     /** A new quotation: the walk-in customer, valid for the Settings number of days, one empty row. */
@@ -463,7 +464,8 @@ public class QuotationService {
                 throw BusinessException.onField(f + "productId", "sale.custom.notCuttable", product.getCode());
             }
             List<UUID> ids = row.getServiceIds() == null ? List.of() : row.getServiceIds().stream().filter(Objects::nonNull).distinct().toList();
-            List<ProcessingService> processing = ids.stream().map(services::get).filter(s -> s != null && s.isEnabled())
+            List<ProcessingService> processing = ids.stream().map(services::get)
+                    .filter(s -> s != null && s.isEnabled() && s.isProcessing())
                     .sorted(Comparator.comparing(ProcessingService::getCode)).toList();
             if (processing.size() != ids.size()) {
                 throw BusinessException.onField(f + "serviceIds", "sale.custom.service");

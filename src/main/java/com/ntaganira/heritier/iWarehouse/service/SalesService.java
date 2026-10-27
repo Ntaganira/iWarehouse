@@ -314,6 +314,39 @@ public class SalesService {
         return sale;
     }
 
+    /**
+     * Adds a catalogue-only accessory to the till's sale: a service line with no glass and no parent size, priced per its
+     * charge unit from the customer's list. It never moves stock.
+     */
+    @Transactional
+    public SalesInvoice addAccessory(UUID accessoryId, Integer quantity) {
+        requireNoOrderDesk("accessoryId");
+        TillSession session = tillService.lockCurrent();
+        SalesInvoice sale = cartOrNew(session);
+        ProcessingService accessory = accessoryId == null ? null : serviceRepo.findById(accessoryId)
+                .filter(ProcessingService::isEnabled).filter(ProcessingService::isAccessory).orElse(null);
+        if (accessory == null) {
+            throw BusinessException.onField("accessoryId", "sale.accessory.unknown");
+        }
+        if (quantity == null || quantity < 1 || quantity > 999) {
+            throw BusinessException.onField("accessoryQuantity", "sale.accessory.quantity");
+        }
+        if (accessory.getChargeUnit() == ChargeUnit.HOLE) {
+            throw BusinessException.onField("accessoryId", "sale.accessory.unit", accessory.getName());
+        }
+        SalesInvoiceLine line = new SalesInvoiceLine();
+        line.setInvoice(sale);
+        line.setKind(SaleLineKind.SERVICE);
+        line.setService(accessory);
+        line.setWidthMm(1);
+        line.setHeightMm(1);
+        line.setQuantity(quantity);
+        priceService(line, sale.getCustomer());
+        sale.getLines().add(line);
+        renumber(sale);
+        return sale;
+    }
+
     /** Takes a line off the till's sale; the others keep their order. */
     @Transactional
     public SalesInvoiceLine removeLine(UUID lineId) {
@@ -1061,6 +1094,7 @@ public class SalesService {
         }
         List<UUID> ids = c.serviceIds() == null ? List.of() : c.serviceIds().stream().filter(Objects::nonNull).distinct().toList();
         List<ProcessingService> services = serviceRepo.findAllById(ids).stream().filter(ProcessingService::isEnabled)
+                .filter(ProcessingService::isProcessing)
                 .sorted(Comparator.comparing(ProcessingService::getCode)).toList();
         if (services.size() != ids.size()) {
             throw BusinessException.onField("serviceIds", "sale.custom.service");
@@ -1369,7 +1403,9 @@ public class SalesService {
     private void priceService(SalesInvoiceLine line, Customer customer) {
         ProcessingService service = line.getService();
         LinePricing.Service s = pricing.service(customer, service, line.getWidthMm(), line.getHeightMm(), line.getQuantity(), line.getHoles())
-                .orElseThrow(() -> BusinessException.onField("serviceIds", "sale.custom.noServicePrice", service.getName()));
+                .orElseThrow(() -> service.isAccessory()
+                        ? BusinessException.onField("accessoryId", "sale.accessory.noPrice", service.getName())
+                        : BusinessException.onField("serviceIds", "sale.custom.noServicePrice", service.getName()));
         line.setServiceQuantity(s.quantity());
         line.setServiceUnitPrice(s.unitPrice());
         line.setPriceList(s.list());

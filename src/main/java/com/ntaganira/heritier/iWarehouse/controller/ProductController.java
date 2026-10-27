@@ -10,15 +10,22 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
+import com.ntaganira.heritier.iWarehouse.service.Excel;
 import com.ntaganira.heritier.iWarehouse.service.GlassProducts;
+import com.ntaganira.heritier.iWarehouse.service.ProductImportService;
 import com.ntaganira.heritier.iWarehouse.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
@@ -47,13 +54,16 @@ public class ProductController {
     static final String MODULE = "Products";
 
     private final ProductService productService;
+    private final ProductImportService productImportService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
 
-    public ProductController(ProductService productService, DataChangeService dataChangeService,
-                             ActivityLogService activityLogService, Messages messages) {
+    public ProductController(ProductService productService, ProductImportService productImportService,
+                             DataChangeService dataChangeService, ActivityLogService activityLogService,
+                             Messages messages) {
         this.productService = productService;
+        this.productImportService = productImportService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.messages = messages;
@@ -82,6 +92,45 @@ public class ProductController {
         model.addAttribute("paginationQuery", QueryString.of("search", search, "type", type,
                 "thickness", thickness == null ? null : thickness.toPlainString(), "status", status));
         return "products/list";
+    }
+
+    @GetMapping("/import")
+    @PreAuthorize("hasAuthority('PAGE_PRODUCTS') and hasAuthority('PERM_MANAGE_PRODUCT') and hasAuthority('PERM_MANAGE_PRICE_LIST')")
+    public String importForm() {
+        return "products/import";
+    }
+
+    @GetMapping("/import/template")
+    @PreAuthorize("hasAuthority('PAGE_PRODUCTS') and hasAuthority('PERM_MANAGE_PRODUCT') and hasAuthority('PERM_MANAGE_PRICE_LIST')")
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] bytes = productImportService.template();
+        activityLogService.record(MODULE, "EXPORT_PRODUCT_IMPORT_TEMPLATE",
+                "Downloaded the product import template", ActivityStatus.SUCCESS);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename("iwarehouse-product-import.xlsx").build().toString())
+                .contentType(MediaType.parseMediaType(Excel.CONTENT_TYPE))
+                .body(bytes);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasAuthority('PAGE_PRODUCTS') and hasAuthority('PERM_MANAGE_PRODUCT') and hasAuthority('PERM_MANAGE_PRICE_LIST')")
+    public String importProducts(@RequestParam(value = "file", required = false) MultipartFile file,
+                                 Model model) {
+        try {
+            ProductImportService.Result result = productImportService.importFile(file);
+            activityLogService.record(MODULE, "IMPORT_PRODUCTS",
+                    messages.get("product.import.activity", result.created(), result.skipped(), result.errors().size()),
+                    ActivityStatus.SUCCESS);
+            model.addAttribute("result", result);
+            return "products/import";
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(MODULE, "IMPORT_PRODUCTS", "Failed to import products: " + error,
+                    ActivityStatus.FAILED);
+            model.addAttribute("flashError", error);
+            return "products/import";
+        }
     }
 
     @GetMapping("/{id}")

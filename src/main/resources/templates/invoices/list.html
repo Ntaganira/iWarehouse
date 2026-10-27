@@ -47,7 +47,9 @@
     </th:block>
     <th:block th:if="${l.serviceLine}">
         <span class="strong" th:text="${l.service.name}">Edging</span>
-        <div class="cell-sub" th:text="${l.holes != null} ? #{sale.line.serviceHoles(${l.parentLine.lineNo}, ${l.holes})} : #{sale.line.serviceFor(${l.parentLine.lineNo})}">on line 2</div>
+        <div class="cell-sub" th:if="${l.parentLine == null}" th:text="#{sale.line.accessory}">Accessory</div>
+        <div class="cell-sub" th:if="${l.parentLine != null}"
+             th:text="${l.holes != null} ? #{sale.line.serviceHoles(${l.parentLine.lineNo}, ${l.holes})} : #{sale.line.serviceFor(${l.parentLine.lineNo})}">on line 2</div>
     </th:block>
 </th:block>
 

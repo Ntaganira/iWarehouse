@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * <pre>
@@ -96,6 +97,33 @@ public final class Excel {
             }
             wb.write(out);
             return out.toByteArray();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Reads the first sheet of an .xlsx or .xls workbook as text: each row's cells, blanks as "". The importer finds
+     * the header row itself, so a sheet with a title above it is read too.
+     */
+    public static List<List<String>> read(java.io.InputStream in) {
+        try (Workbook wb = WorkbookFactory.create(in)) {
+            if (wb.getNumberOfSheets() == 0) {
+                return List.of();
+            }
+            org.apache.poi.ss.usermodel.Sheet sheet = wb.getSheetAt(0);
+            DataFormatter format = new DataFormatter(Locale.ROOT);
+            FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+            List<List<String>> rows = new ArrayList<>();
+            for (org.apache.poi.ss.usermodel.Row row : sheet) {
+                List<String> cells = new ArrayList<>();
+                for (int c = 0; c < row.getLastCellNum(); c++) {
+                    Cell cell = row.getCell(c, org.apache.poi.ss.usermodel.Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                    cells.add(cell == null ? "" : format.formatCellValue(cell, evaluator).trim());
+                }
+                rows.add(cells);
+            }
+            return rows;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

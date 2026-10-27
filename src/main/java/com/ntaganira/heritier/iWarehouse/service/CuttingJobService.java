@@ -321,14 +321,14 @@ public class CuttingJobService {
     /** Processing that can be asked for: enabled services, and any a job already uses. */
     public List<ProcessingService> processing(CuttingJobDto dto) {
         Set<String> used = dto.getLines().stream().flatMap(l -> l.getProcessing().stream()).collect(Collectors.toSet());
-        return serviceRepo.findAllByOrderByEnabledDescCodeAsc().stream()
+        return serviceRepo.findAllByOrderByEnabledDescCodeAsc().stream().filter(ProcessingService::isProcessing)
                 .filter(s -> s.isEnabled() || used.contains(s.getCode()))
                 .toList();
     }
 
     /** Processing service names by code, for showing a job. */
     public Map<String, String> processingNames() {
-        return serviceRepo.findAllByOrderByEnabledDescCodeAsc().stream()
+        return serviceRepo.findAllByOrderByEnabledDescCodeAsc().stream().filter(ProcessingService::isProcessing)
                 .collect(Collectors.toMap(ProcessingService::getCode, ProcessingService::getName, (a, b) -> a, LinkedHashMap::new));
     }
 
@@ -476,7 +476,7 @@ public class CuttingJobService {
         if (dto.getLines().isEmpty()) {
             throw BusinessException.of("cutting.lines.required");
         }
-        Set<String> known = serviceRepo.findAllByOrderByEnabledDescCodeAsc().stream()
+        Set<String> known = serviceRepo.findAllByOrderByEnabledDescCodeAsc().stream().filter(ProcessingService::isProcessing)
                 .map(ProcessingService::getCode).collect(Collectors.toSet());
         for (int i = 0; i < dto.getLines().size(); i++) {
             for (String code : dto.getLines().get(i).getProcessing()) {

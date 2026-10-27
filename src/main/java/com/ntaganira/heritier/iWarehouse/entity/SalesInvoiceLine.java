@@ -52,8 +52,9 @@ public class SalesInvoiceLine extends BaseEntity {
     @Column(name = "unit_code", length = 30)
     private String unitCode;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false)
+    /** Null on a standalone accessory: it is not glass and never moves stock. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
     private Product product;
 
     @Column(name = "width_mm", nullable = false)
@@ -65,10 +66,10 @@ public class SalesInvoiceLine extends BaseEntity {
     @Column(nullable = false)
     private int quantity = 1;
 
-    @Column(name = "chargeable_area_m2", nullable = false, precision = 10, scale = 4)
+    @Column(name = "chargeable_area_m2", precision = 10, scale = 4)
     private BigDecimal chargeableAreaM2;
 
-    @Column(name = "price_per_m2", nullable = false, precision = 18, scale = 2)
+    @Column(name = "price_per_m2", precision = 18, scale = 2)
     private BigDecimal pricePerM2;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -154,7 +155,10 @@ public class SalesInvoiceLine extends BaseEntity {
         if (isStockUnit()) {
             return unitCode + " · " + product.getCode() + " " + widthMm + " x " + heightMm;
         }
-        String size = product.getCode() + " " + widthMm + " x " + heightMm + " x " + quantity;
-        return isServiceLine() ? service.getName() + " · " + size : size;
+        if (isServiceLine()) {
+            return parentLine == null || product == null ? service.getName()
+                    : service.getName() + " · " + product.getCode() + " " + widthMm + " x " + heightMm + " x " + quantity;
+        }
+        return product.getCode() + " " + widthMm + " x " + heightMm + " x " + quantity;
     }
 }

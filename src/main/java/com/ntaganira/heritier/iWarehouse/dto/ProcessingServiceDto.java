@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
 import com.ntaganira.heritier.iWarehouse.enums.ChargeUnit;
+import com.ntaganira.heritier.iWarehouse.enums.ProcessingServiceKind;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -21,7 +22,7 @@ import java.util.UUID;
  * - User      : NTAGANIRA Heritier
  * - Email     : ntaganira71@gmail.com
  * - Phone     : +250 788 533 669
- * - Desc      : Add/edit processing service form (MD-06). The code is fixed after creation.
+ * - Desc      : Add/edit processing service or accessory form (MD-06). The code and kind are fixed after creation.
  * </pre>
  */
 @Getter
@@ -38,6 +39,9 @@ public class ProcessingServiceDto {
     @NotBlank(message = "{service.name.required}")
     @Size(max = 60, message = "{service.name.size}")
     private String name;
+
+    @NotNull(message = "{service.kind.required}")
+    private ProcessingServiceKind kind = ProcessingServiceKind.PROCESSING;
 
     @NotNull(message = "{service.unit.required}")
     private ChargeUnit chargeUnit;

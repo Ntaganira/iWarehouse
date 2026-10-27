@@ -196,6 +196,32 @@
                         <button type="submit" class="btn btn-primary" th:text="#{pos.addCustom}">Add the size</button>
                     </div>
                 </form>
+
+                <!-- Catalogue-only accessories: sold on their own, never from stock -->
+                <form th:action="@{/pos/accessory}" method="post" class="pos-accessory" novalidate
+                      th:unless="${#lists.isEmpty(accessories)}">
+                    <input type="hidden" name="back" th:value="${searchQuery}">
+                    <h3 class="detail-heading" th:text="#{pos.accessory}">Accessory</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="accessory-id" th:text="#{pos.accessoryName}">Accessory</label>
+                            <select id="accessory-id" name="accessoryId" data-searchable>
+                                <option value="" th:text="#{pos.chooseAccessory}">Choose an accessory</option>
+                                <option th:each="a : ${accessories}" th:value="${a.id}"
+                                        th:text="${a.name + ' (' + #messages.msg('service.unit.' + a.chargeUnit) + ')'}">Tape (roll)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="accessory-quantity" th:text="#{pos.accessoryQuantity}">Quantity</label>
+                            <input type="number" id="accessory-quantity" name="accessoryQuantity" min="1" max="999" step="1"
+                                   inputmode="numeric" value="1">
+                        </div>
+                    </div>
+                    <p class="form-note" th:text="#{pos.accessoryNote}">Accessories are sold from the catalogue: they never move stock.</p>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" th:text="#{pos.addAccessory}">Add the accessory</button>
+                    </div>
+                </form>
             </div>
         </div>
 

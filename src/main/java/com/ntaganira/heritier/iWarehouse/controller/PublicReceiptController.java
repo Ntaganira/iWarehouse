@@ -67,7 +67,8 @@ public class PublicReceiptController {
                 .header("Cache-Control", "no-store, no-cache, must-revalidate")
                 .header("X-Robots-Tag", "noindex, nofollow")
                 .header("Referrer-Policy", "no-referrer")
-                .header("Content-Disposition", "attachment; filename=\"" + document.number() + ".pdf\"")
+                .header("Content-Disposition", "attachment; filename=\""
+                        + DocumentShareService.pdfFileName(document.number()) + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(body);
     }

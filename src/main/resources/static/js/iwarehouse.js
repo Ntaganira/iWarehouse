@@ -574,7 +574,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (el) el.hidden = true;
     });
 
-    // Digital receipt sharing: the phone's share sheet, with copying the secure link as the fallback.
+    // Digital receipt sharing: the PDF goes through the phone's share sheet. Where that cannot carry a file,
+    // it is downloaded and the operator attaches it to WhatsApp or another message. Copy Link stays the secure,
+    // read-only link.
     const legacyCopy = function (text, done) {
         const area = document.createElement('textarea');
         area.value = text;
@@ -606,6 +608,121 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
+    const sharePdfCache = new Map();
+    const safeShareFileName = function (name) {
+        name = (name || '').replace(/[\\/:*?"<>|]+/g, '-').trim();
+        if (!name) name = 'document.pdf';
+        if (!/\.pdf$/i.test(name)) name += '.pdf';
+        return name;
+    };
+
+    const sharePdfFile = function (pdfUrl, fileName) {
+        if (!pdfUrl) return Promise.reject(new Error('missing pdf'));
+        const cached = sharePdfCache.get(pdfUrl);
+        if (cached) return Promise.resolve(cached);
+        const request = fetch(pdfUrl, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/pdf' }
+        }).then(function (response) {
+            if (!response.ok) throw new Error('pdf refused');
+            return response.blob();
+        }).then(function (blob) {
+            if (!blob || !blob.size) throw new Error('empty pdf');
+            if (blob.type && blob.type.indexOf('pdf') === -1) throw new Error('not a pdf');
+            return new File([blob], fileName, { type: 'application/pdf' });
+        });
+        sharePdfCache.set(pdfUrl, request);
+        request.catch(function () {
+            if (sharePdfCache.get(pdfUrl) === request) sharePdfCache.delete(pdfUrl);
+        });
+        return request;
+    };
+
+    const canSharePdf = function (fileName) {
+        try {
+            if (!navigator.share || !navigator.canShare) return false;
+            return navigator.canShare({ files: [new File([''], fileName, { type: 'application/pdf' })] });
+        } catch (e) {
+            return false;
+        }
+    };
+
+    const setShareBusy = function (button, busy) {
+        if (!button) return;
+        button.disabled = busy;
+        button.classList.toggle('is-loading', busy);
+        button.setAttribute('aria-busy', busy ? 'true' : 'false');
+    };
+
+    const downloadSharePdf = function (pdfUrl, fileName) {
+        if (!pdfUrl) return;
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = fileName;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    };
+
+    const openShareWhatsApp = function (url) {
+        if (!url) return;
+        const opened = window.open(url, '_blank');
+        if (opened) {
+            try { opened.opener = null; } catch (e) { }
+        }
+    };
+
+    const shareToast = function (modal, name, fallback, type) {
+        const text = (modal && modal.getAttribute(name)) || fallback;
+        if (window.showToast) window.showToast(text, type || 'info');
+    };
+
+    const prefetchSharePdf = function (modal) {
+        const pdfUrl = modal.getAttribute('data-share-pdf-url') || '';
+        const fileName = safeShareFileName(modal.getAttribute('data-share-pdf-name'));
+        if (pdfUrl && canSharePdf(fileName)) {
+            sharePdfFile(pdfUrl, fileName).catch(function () { });
+        }
+    };
+
+    const downloadFallback = function (modal, whatsapp) {
+        if (whatsapp) openShareWhatsApp(modal.getAttribute('data-share-fallback-url') || '');
+        downloadSharePdf(modal.getAttribute('data-share-pdf-url') || '',
+            safeShareFileName(modal.getAttribute('data-share-pdf-name')));
+        shareToast(modal, 'data-share-attach',
+            'PDF downloaded. Attach it to the message before sending.', 'info');
+    };
+
+    const sharePdfFromModal = function (modal, button, whatsapp) {
+        if (!modal || !button || button.classList.contains('is-loading')) return;
+        const pdfUrl = modal.getAttribute('data-share-pdf-url') || '';
+        const fileName = safeShareFileName(modal.getAttribute('data-share-pdf-name'));
+        const title = modal.getAttribute('data-share-title') || document.title;
+        const text = modal.getAttribute('data-share-fallback-text') || '';
+        if (!pdfUrl) {
+            shareToast(modal, 'data-share-pdf-failed', 'Could not prepare the PDF. Try again.', 'error');
+            return;
+        }
+        if (!canSharePdf(fileName)) {
+            downloadFallback(modal, whatsapp);
+            return;
+        }
+        setShareBusy(button, true);
+        sharePdfFile(pdfUrl, fileName).then(function (file) {
+            setShareBusy(button, false);
+            return navigator.share({ files: [file], title: title, text: text }).catch(function (error) {
+                if (error && error.name === 'AbortError') return;
+                downloadFallback(modal, whatsapp);
+            });
+        }).catch(function (error) {
+            setShareBusy(button, false);
+            if (error && error.name === 'AbortError') return;
+            shareToast(modal, 'data-share-pdf-failed', 'Could not prepare the PDF. Try again.', 'error');
+        });
+    };
+
     // The Share button asks the server for the document's link when it is pressed (POST), so no public
     // address exists until someone shares it.
     document.querySelectorAll('.share-trigger').forEach(trigger => {
@@ -633,14 +750,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!modal) return;
                 const intro = modal.querySelector('[data-share-intro]');
                 if (intro) intro.textContent = data.intro;
-                const whatsapp = modal.querySelector('[data-share-whatsapp]');
-                if (whatsapp) whatsapp.setAttribute('href', data.whatsappUrl);
-                const native = modal.querySelector('[data-share-native]');
-                if (native) {
-                    native.setAttribute('data-share-url', data.url);
-                    native.setAttribute('data-share-title', data.title);
-                    native.setAttribute('data-share-text', data.nativeText);
-                }
+                modal.setAttribute('data-share-pdf-url', data.pdfUrl || '');
+                modal.setAttribute('data-share-pdf-name', data.pdfFileName || '');
+                modal.setAttribute('data-share-fallback-url', data.fallbackWhatsAppUrl || '');
+                modal.setAttribute('data-share-fallback-text', data.fallbackText || '');
+                modal.setAttribute('data-share-title', data.title || document.title);
                 const field = modal.querySelector('input[data-share-url]');
                 if (field) field.value = data.url;
                 modal.querySelectorAll('[data-share-copy]').forEach(function (button) {
@@ -648,6 +762,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 self.setAttribute('data-share-ready', '1');
                 modalOpen('share-modal');
+                prefetchSharePdf(modal);
                 const focus = modal.querySelector('[data-share-whatsapp]');
                 if (focus) setTimeout(function () { focus.focus(); }, 50);
             }).catch(function () {
@@ -666,19 +781,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    document.querySelectorAll('[data-share-whatsapp]').forEach(button => {
+        button.addEventListener('click', function () {
+            sharePdfFromModal(document.getElementById('share-modal'), this, true);
+        });
+    });
+
     document.querySelectorAll('[data-share-native]').forEach(button => {
         button.addEventListener('click', function () {
-            const url = this.getAttribute('data-share-url') || '';
-            const title = this.getAttribute('data-share-title') || document.title;
-            const text = this.getAttribute('data-share-text') || '';
-            if (navigator.share) {
-                navigator.share({ title: title, text: text, url: url }).catch(function (error) {
-                    if (error && error.name === 'AbortError') return;
-                    copyShareLink(button, url);
-                });
-            } else {
-                copyShareLink(this, url);
-            }
+            sharePdfFromModal(document.getElementById('share-modal'), this, false);
         });
     });
 });

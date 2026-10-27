@@ -91,9 +91,9 @@ public class DocumentShareService {
         this.appUrl = appUrl.endsWith("/") ? appUrl.substring(0, appUrl.length() - 1) : appUrl;
     }
 
-    /** What a page needs to offer a document: its link, the WhatsApp text and the button's label. */
-    public record Share(String url, String whatsappUrl, String title, String message, String nativeText,
-                        String intro, String label, String number, String buttonLabel) {
+    /** What a page needs to offer a document: its link, the PDF file and the fallback text. */
+    public record Share(String url, String title, String intro, String label, String number, String buttonLabel,
+                        String pdfUrl, String pdfFileName, String fallbackWhatsAppUrl, String fallbackText) {
     }
 
     /** The read-only document a public reader sees. */
@@ -148,14 +148,22 @@ public class DocumentShareService {
         String label = messages.get(documentType.labelKey());
         String company = settings.get(SettingKey.COMPANY_NAME);
         String url = appUrl + "/r/" + saved.getToken();
+        String fileName = pdfFileName(documentNumber);
         String title = label + " " + documentNumber;
-        String message = messages.get("share.message", label, documentNumber, company, url);
-        String nativeText = messages.get("share.nativeText", label, documentNumber, company);
+        String fallbackText = messages.get("share.fileText", label, documentNumber, company);
         String whatsapp = "https://api.whatsapp.com/send?text="
-                + URLEncoder.encode(message, StandardCharsets.UTF_8).replace("+", "%20");
-        return new Share(url, whatsapp, title, message, nativeText,
-                messages.get("share.intro", label, documentNumber), label, documentNumber,
-                messages.get(documentType.buttonKey()));
+                + URLEncoder.encode(fallbackText, StandardCharsets.UTF_8).replace("+", "%20");
+        return new Share(url, title, messages.get("share.intro", label, documentNumber), label, documentNumber,
+                messages.get(documentType.buttonKey()), url + "/pdf", fileName, whatsapp, fallbackText);
+    }
+
+    /** The same safe file name the public PDF response sends, so every share names the file alike. */
+    public static String pdfFileName(String documentNumber) {
+        String safe = documentNumber == null ? "" : documentNumber.replaceAll("[^A-Za-z0-9._-]+", "-");
+        if (safe.isBlank()) {
+            safe = "document";
+        }
+        return safe + ".pdf";
     }
 
     private boolean isShareable(ShareableDocument type, UUID id) {

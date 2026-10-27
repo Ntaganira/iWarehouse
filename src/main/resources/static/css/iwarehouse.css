@@ -4668,6 +4668,7 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 .share-modal { width: 100%; max-width: 520px; }
 .share-channels { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 .share-channel {
+  position: relative;
   display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px;
   border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
   color: var(--dark); text-align: left; text-decoration: none; cursor: pointer;
@@ -4685,6 +4686,17 @@ table .timeline-ref { overflow-wrap: anywhere; white-space: normal; }
 .share-channel-text strong { font-size: 14px; font-weight: 600; color: var(--dark); }
 .share-channel-text small { font-size: 12px; color: var(--gray-500); }
 .share-channel-arrow { width: 18px; height: 18px; color: var(--gray-400); flex: 0 0 auto; }
+.share-channel:disabled { cursor: progress; }
+.share-channel-loading {
+  position: absolute; inset: 0; z-index: 1; display: none; align-items: center; justify-content: center;
+  background: var(--surface); border-radius: inherit; opacity: .88;
+}
+.share-channel.is-loading .share-channel-loading { display: flex; }
+.share-channel-loading .spinner {
+  width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%; animation: share-spin .8s linear infinite;
+}
+@keyframes share-spin { to { transform: rotate(360deg); } }
 .share-link label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--gray-600); }
 .share-link-row { display: flex; gap: 8px; }
 .share-link-row input {

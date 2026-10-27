@@ -24,7 +24,7 @@ import java.util.UUID;
  * - Email     : ntaganira71@gmail.com
  * - Phone     : +250 788 533 669
  * - Desc      : My profile: the signed-in user's own details, photo and password. Always the caller's own account
- *               (the id comes from the session); the user is audited like any change made by an administrator.
+ *               (the id comes from the session); the user is audited like any change made by an administrator (ICT).
  * </pre>
  */
 @Service

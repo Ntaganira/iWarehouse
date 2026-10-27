@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StaffAdvanceService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Staff advances (CMP 08; ADV-WH-2026-000001): asked for an employee (PERM_REQUEST_ADVANCE), a journey worked
  *               out from its per diem (PerDiemService; a foreign rate converted at ExchangeRateService.rateFor, kept on it)
  *               plus any fares, or another amount; no new advance while the employee has one open (the Settings). Approved

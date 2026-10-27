@@ -34,7 +34,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripServiceTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Trips (FLT-04..07) with the real stock service: AT-03 (40 units on a 35-unit vehicle: departure refused with
  *               a clear message, nothing moves), a departure within limits (units ON_VEHICLE at the vehicle, LOAD movements,
  *               the driver told), every planned unit scanned first, a label not on the manifest refused, expired papers

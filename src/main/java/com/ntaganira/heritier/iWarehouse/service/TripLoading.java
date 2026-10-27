@@ -10,7 +10,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripLoading.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Loading a vehicle (FLT-06): what a scanned label does to a trip's manifest (loads a planned unit; a unit
  *               not on the manifest is refused) and whether a load is within the vehicle's limits, pieces and kg. A load
  *               over either limit refuses the departure (AT-03: 40 units on a 35-unit vehicle). Pure, tested.

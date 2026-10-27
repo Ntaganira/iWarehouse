@@ -10,7 +10,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DocumentNumbers.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure numbering rules (MD-07): the number format, the period a counter belongs to, and
  *               which value the next document gets. No database, so they are unit-tested directly.
  * </pre>

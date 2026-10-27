@@ -13,7 +13,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : FxRevaluationLineRepository.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a revaluation revalued (ACC-08). Append-only: save and finders only.
  * </pre>
  */

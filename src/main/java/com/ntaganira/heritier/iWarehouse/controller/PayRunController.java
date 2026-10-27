@@ -37,7 +37,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PayRunController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pay runs (/payroll/runs): a month's run made, its lines changed while a draft, submitted, approved (posted)
  *               or sent back by another person, cancelled, its salaries paid; the payslips (A4 PDF, one employee a page)
  *               and the exports: the run's summary, the PAYE declaration (RRA) and the RSSB declaration, Excel or PDF.

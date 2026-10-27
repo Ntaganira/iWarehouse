@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : AccessReview.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A quarterly review of who holds which rights (Board Paper Table 8 and Table 9): who reviewed, when, how
  *               many users and enabled users there were, and what was checked and changed. Recorded once, never changed.
  * </pre>

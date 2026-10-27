@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SettingsController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Settings screen (ADM-03): general settings, tax categories (TAX-01) and document
  *               numbering (MD-07) on tabs, plus their History. PAGE_SETTINGS + PERM_VIEW_SETTINGS
  *               open it; PERM_EDIT_SETTINGS changes anything on it.

@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : PaymentMethod.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : How a sale is paid (POS-04), split over several if needed, and the account each one debits
  *               (SRS 4.9.1). Mobile money, card and bank transfer carry their reference; customer credit is
  *               a receivable within the customer's limit (POS-05).

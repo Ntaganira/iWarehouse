@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockCountLine.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One line of a closed stock count (INV-08): a unit expected or scanned, what the count
  *               found and what closing did about it. Written when the count closes and never changed
  *               (trg_stock_count_lines_append_only): each row is its own record, so it is not audited.

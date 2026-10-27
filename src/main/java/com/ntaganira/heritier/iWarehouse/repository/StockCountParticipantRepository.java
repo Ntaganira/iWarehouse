@@ -13,7 +13,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : StockCountParticipantRepository.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Who took part in a count and who signed it (IMP 15.1, PF-06 step 6).
  * </pre>
  */

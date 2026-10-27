@@ -30,7 +30,9 @@ import java.util.function.Supplier;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StaffAdvanceController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Staff advances (CMP 08): the list (waiting, overdue), the form of a draft (a journey worked out from its per
  *               diem, or another amount), the advance with its receipts, journals and history, its steps: submit, approve
  *               (within the Delegation of Authority), reject, cancel, pay (PERM_PAY_ADVANCE) and retire with what it paid for

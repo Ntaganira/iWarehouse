@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PettyCashCount.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A count of a petty cash fund (CMP 07): the custodian's daily count or Finance's surprise count, what the
  *               ledger expected, the cash counted and the difference, which needs a note and posts at once to Cash Over
  *               and Short (its journal). Never changed (append-only, trigger).

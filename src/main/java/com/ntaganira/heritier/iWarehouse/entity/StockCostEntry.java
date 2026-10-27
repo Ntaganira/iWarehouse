@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockCostEntry.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One change of a stock unit's cost: the receipt cost, then each landed cost a shipment
  *               posting added (PRC-05), with the cost after it and the document that caused it. A ledger
  *               written by StockService only, never changed (@Immutable here,

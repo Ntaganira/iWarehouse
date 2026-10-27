@@ -35,7 +35,9 @@ import java.util.function.Function;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ExpenseBillController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Expense bills (CMP 01, 05, 07): the list (waiting, to ratify), the form of a draft (lines by category, cost
  *               centre and location), the bill with its documents, journal and history, and its steps: submit, recommend,
  *               review, approve (within the expenditure matrix), reject, cancel, ratify (the Board) and reverse. Each needs

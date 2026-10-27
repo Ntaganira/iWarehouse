@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ReceivableWriteOff.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A customer's debt written off (F-14): prepared by Credit Control with the reason and the recovery tried,
  *               reviewed by Finance (when Settings ask for it), approved by another person within the Delegation of
  *               Authority, which posts bad debts against the customer's receivable. Never more than they owe.

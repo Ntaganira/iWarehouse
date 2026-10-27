@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CustomerPayment.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A payment on a customer's account (ACC-09): what they owed on credit sales, the balance of an order or
  *               anything else on the receivable account, paid in cash into the cashier's till (with what was handed
  *               over), by mobile money, card or bank transfer (with a reference). Posted when saved (Dr that account /

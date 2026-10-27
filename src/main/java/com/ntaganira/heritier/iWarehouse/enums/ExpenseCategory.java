@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : ExpenseCategory.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What an expense bill line is for (CMP 01): each category posts to its account. Recurring bills
  *               (utilities, rent, telephone, bank charges, insurance, taxes, travel) need no requisition; purchases do (CMP 06).
  * </pre>

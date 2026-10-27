@@ -16,7 +16,9 @@ import java.time.YearMonth;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ManagementPackService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The monthly management accounts pack (BP 13.1, Table 6; T.10) in one piece: the income statement of the
  *               month and of the year to its end, the balance sheet at its end, the Inventory account against the stock
  *               valuation, the receivables and payables ageing and the stock position as they stand today, the month's

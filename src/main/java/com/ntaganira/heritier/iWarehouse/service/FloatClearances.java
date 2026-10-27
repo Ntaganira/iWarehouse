@@ -8,7 +8,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FloatClearances.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A driver's float counted (ACC-06, ACC-07), pure: less cash than the trip's cash sales is a shortage on
  *               the driver's receivable, more is an overage to Cash Over/Short; what was counted plus the shortage always
  *               equals what was expected plus the overage, so the clearance's journal balances.

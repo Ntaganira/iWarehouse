@@ -10,7 +10,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Periods.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Order of the monthly close (ACC-10). Months close one after the other from the ledger's first month,
  *               each once it has ended; so the closed months are always the first ones, and one day (the last day of
  *               the latest closed month) says what is closed. Pure, unit-tested.

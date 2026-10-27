@@ -30,7 +30,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : JournalRegisterService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The register of journal numbers (F-16, U.07): a month's journals by number with their total and any
  *               gap in the numbering (JournalRegister); once the month is closed the Director of Finance certifies it,
  *               once, and the Internal Controller records the sample checked (another person).

@@ -26,7 +26,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : BreakageService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Breakage on the road (FLT-08, MPOS-06): a unit on the vehicle of a trip on the road, reported with a photo
  *               (kept among the trip's documents), the reason and the place, by the driver on the phone (a report sent
  *               again with the same id is kept once) or at the warehouse; the supervisors are told. Before the trip is

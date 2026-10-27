@@ -28,7 +28,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripDepositService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Collections banked or sent by mobile money during a trip, not on its return (BP 7.3 rule 4, F-10 C,
  *               SDP 10; N.07): recorded from the driver's phone (its clientId: sent twice, taken once) or at the office,
  *               on a trip on the road or back and not cleared, with the slip's or the transfer's reference, dated from the

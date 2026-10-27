@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : EbmDevice.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The EBM device as the VSDC initialised it (/initializer/selectInitInfo) for a TIN, branch and device
  *               serial: the taxpayer and branch names, device, SDC ID and MRC, and the last numbers RRA had (our
  *               EBM invoice numbers go on from them). A device installed before (VSDC answer 902) is recorded without

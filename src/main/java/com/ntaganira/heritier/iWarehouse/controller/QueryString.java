@@ -9,7 +9,9 @@ import java.nio.charset.StandardCharsets;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : QueryString.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Builds the filter query that list pages hand to layout/pagination (no leading "?")
  * </pre>
  */

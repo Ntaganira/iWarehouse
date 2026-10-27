@@ -41,7 +41,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StockAdjustmentController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Adjustment screens (INV-07): list, adjustment page with its lines, approval and History,
  *               the form (also opened from a unit's page: write off, correct size, found again), approve,
  *               reject with a reason, withdraw with a reason. PAGE_STOCK_ADJUSTMENTS +

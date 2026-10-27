@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  * - Package   : com.ntaganira.heritier.iWarehouse.exception
  * - File      : NotFoundException.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The requested record does not exist; answered with the 404 page
  * </pre>
  */

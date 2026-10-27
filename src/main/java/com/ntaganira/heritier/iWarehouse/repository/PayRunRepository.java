@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : PayRunRepository.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pay runs (payroll). Changing one locks it first, so two people never post or pay it twice.
  * </pre>
  */

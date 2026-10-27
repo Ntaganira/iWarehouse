@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : DeliveryNote.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The delivery note and goods release authority of a paid invoice (F-04, DN-005, IMP 8 and 9): prepared
  *               by Dispatch with what leaves (the invoice's sheets and cut pieces), the vehicle and driver or the customer
  *               collecting, released by another person once the EBM receipt is signed (or with a logged override); the

@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : GlassType.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Glass types a product is made of (MD-01). The prefix starts suggested product codes
  *               (CLR-6, LAM-6.38). Tempered glass shatters if cut: it is made to size, so cutting jobs
  *               must refuse it as a source (PRD-02).

@@ -19,7 +19,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DamageRegisterService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The damage register (IMP 13.2, DMG-009): every damage of a period in one list, wherever it was recorded:
  *               damage reports (what an approval wrote off; those waiting listed with their estimate, rejected ones left
  *               out), breakage reported on trips (accepted; waiting listed), glass broken while cutting, damage written off

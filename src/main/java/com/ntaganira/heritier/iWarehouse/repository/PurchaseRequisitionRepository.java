@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : PurchaseRequisitionRepository.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Purchase requisitions (CMP 06): pages with their department, one with its lines and quotes, the approved ones an
  *               order or a bill may use.
  * </pre>

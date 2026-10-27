@@ -14,7 +14,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Setting.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One configurable setting (ADM-03), stored as text and typed by SettingKey.
  *               Audited: each change keeps the old and new value under the setting's key.
  * </pre>

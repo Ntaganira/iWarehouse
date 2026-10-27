@@ -67,7 +67,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockCountService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock counts by scanning (INV-08). A count covers a place and every place under it,
  *               optionally one glass; while open, the units there are held (INV-05, StockService.holds).
  *               Labels are scanned where they are found. Closing compares the scans with the records

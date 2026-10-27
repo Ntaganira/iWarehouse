@@ -14,7 +14,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : StockCountDto.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Starting a stock count (INV-08): the place counted (with every place under it), the glass
  *               if only one is counted, and a note.
  * </pre>

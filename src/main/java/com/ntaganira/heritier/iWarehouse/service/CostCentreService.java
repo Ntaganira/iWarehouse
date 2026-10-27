@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CostCentreService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Cost centres (F-15 A, T.05): a code in capitals, unique, a name and a manager (an active user, whose name
  *               is kept), added, renamed and deactivated by Finance (PERM_MANAGE_COST_CENTRES); never deleted, since
  *               journal lines name them.

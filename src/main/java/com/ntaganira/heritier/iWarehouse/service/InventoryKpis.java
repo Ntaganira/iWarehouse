@@ -13,7 +13,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : InventoryKpis.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The inventory KPIs of a period against their targets (Inventory Policy 19, Annex D):
  *               - inventory accuracy: units found where expected as a % of those expected, at or above target;
  *               - stock loss and damaged stock: their value as a % of the average inventory value, below target;

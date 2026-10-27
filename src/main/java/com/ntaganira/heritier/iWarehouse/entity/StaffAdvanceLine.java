@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StaffAdvanceLine.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a staff advance paid for, from its receipts (CMP 08): the category, what, the cost centre, the amount
  *               and the receipt's number. Written once, when the advance is retired (append-only, trigger).
  * </pre>

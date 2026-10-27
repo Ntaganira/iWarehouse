@@ -24,7 +24,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ReportFiles.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Report downloads (RPT-07, ACC-11): a report builds its Excel sheets once and is downloaded as Excel or
  *               as PDF (the same sheets printed by reports/pdf.html: the company, each sheet's title, what it covers,
  *               the table, who printed it and when, page numbers; landscape when a sheet has more than 6 columns).

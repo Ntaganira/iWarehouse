@@ -30,7 +30,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PeriodController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Monthly period close (ACC-10): what the books are closed through, the month to close next with what it
  *               waits for, closing it, the closed months, and a month with its History and, the latest one, reopening.
  *               PAGE_PERIODS + PERM_VIEW_ACCOUNTING; closing PERM_CLOSE_PERIOD, reopening PERM_REOPEN_PERIOD.

@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripCloseService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The end of a trip (MPOS-07, FLT-10, SRS 5.1). The driver declares the cash they hold, on the phone or at
  *               the warehouse (once, on the road or back). Stock and cash are settled separately: the trip closes once it is
  *               reconciled, its audit case (if any) resolved or escalated, its cash declared and, when its sales took cash,

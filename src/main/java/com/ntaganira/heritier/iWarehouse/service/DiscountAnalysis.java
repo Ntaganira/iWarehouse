@@ -12,7 +12,9 @@ import java.util.function.Function;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DiscountAnalysis.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The discount analysis of a period (SDP 15-16, R.06, M.15): the lines of issued invoices charged below
  *               their list price, each with what it would have charged at the list price and what it did, grouped by
  *               seller, customer, glass or processing, or invoice, largest discount first, with the discount as a % of

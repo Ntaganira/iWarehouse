@@ -15,7 +15,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : MasterDataReview.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month's master data changes reviewed (Board Paper 11 and Table 9): customers, suppliers, glass and prices
  *               changed in it, how many, who reviewed them, when, and the note (duplicates or unsupported accounts found,
  *               or none). One a month.

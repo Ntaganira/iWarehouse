@@ -27,7 +27,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockReviewService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Reviews of the stock movements. Daily (IMP 12): the day's movements by type and one by one, signed off once.
  *               Monthly (BP 7.4, Table 9, Annex I step 5): the month's movements by type; units loaded on vehicles against
  *               those sold, back, broken, missing or still on board; units sent to other sites against those arrived or in

@@ -31,7 +31,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CreditNoteRequestController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Credit notes asked for (F-14): the list, a request with what it asks (units back or pieces given up,
  *               the refund, the totals), Finance's review, the approval within the Delegation of Authority, rejection,
  *               withdrawal by whoever asked (reasons kept), issuing the approved credit note, its documents and History.

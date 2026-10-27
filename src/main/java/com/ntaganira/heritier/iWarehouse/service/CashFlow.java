@@ -14,7 +14,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CashFlow.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rolling cash-flow forecast (P.11), pure and tested: weeks of seven days from a day, each with the money
  *               expected in and out by kind (receivables and payables by their due dates, the payroll, planned items), what
  *               the week opens and closes with, a week closing below zero flagged. Anything due before the first day (overdue)

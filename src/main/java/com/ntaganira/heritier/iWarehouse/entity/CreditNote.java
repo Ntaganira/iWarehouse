@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CreditNote.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A credit note against an issued invoice (POS-09): the glass the customer brought back (its units,
  *               CreditNoteUnit), what each invoice line is credited (CreditNoteLine), its totals with VAT, the part
  *               that reduced the invoice's balance due and how the rest was refunded (cash from a till, mobile

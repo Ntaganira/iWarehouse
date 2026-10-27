@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : AuthorityDecision.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What the Delegation of Authority sets limits for (Board Paper Annex E, Cost Management Policy 05): each
  *               decision that waits for another person's approval. Its amount is RWF, but for a discount, which is the
  *               percentage off the list price. A new kind of approval = a constant here, its rows in authority_limits and

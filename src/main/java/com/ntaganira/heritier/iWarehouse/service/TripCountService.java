@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripCountService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Counting the glass on a vehicle on the road (SDP 6, BP 7.3 rule 10, F-08; N.12, L.02): the driver's
  *               daily count from the phone (DAILY, sent twice, taken once) or a supervisor's unannounced one (SPOT, never
  *               the trip's driver): the labels scanned against the units on board (ON_VEHICLE at the vehicle, VanCounts),

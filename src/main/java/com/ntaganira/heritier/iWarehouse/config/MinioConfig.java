@@ -11,7 +11,9 @@ import org.springframework.context.annotation.Configuration;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : MinioConfig.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The MinIO client (as iVura's), from minio.url, minio.access-key and minio.secret-key (MINIO_URL,
  *               MINIO_ACCESS_KEY, MINIO_SECRET_KEY). Building it does not connect: the app starts while MinIO is down.
  * </pre>

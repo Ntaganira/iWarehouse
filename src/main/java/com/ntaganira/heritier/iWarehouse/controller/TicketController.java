@@ -24,7 +24,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TicketController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Transaction Tickets (BP 7.4, F-05, Annex I, decision D6): the list (tickets due are raised as it opens), a
  *               ticket with the units it covers and its History; Supply Chain verifies it, Commercial countersigns it,
  *               Finance posts it (a goods receipt waiting for its ticket posts then), and any of them may reject it with a

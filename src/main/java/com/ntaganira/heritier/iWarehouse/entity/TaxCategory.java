@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TaxCategory.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : VAT category set per product (TAX-01): standard 18%, zero-rated, exempt. ebmCode is the
  *               RRA EBM tax type sent for each invoice line (TAX-02). Deactivated, never deleted. The
  *               default category is used for new products and stays active.

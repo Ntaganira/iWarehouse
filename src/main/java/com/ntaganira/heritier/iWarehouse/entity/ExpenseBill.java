@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ExpenseBill.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : An expense bill (CMP 01, 05; EXP-WH-2026-000001): a supplier’s invoice for utilities, services, fees,
  *               repairs, transport or a capital item, its lines by category, cost centre and location, its VAT, whether it
  *               is operating or capital, budgeted or not, an emergency; the requisition it uses. Recommended by the head of

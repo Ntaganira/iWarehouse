@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SupplierPaymentRequest.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A supplier payment prepared (CMP 07; Board Paper Table 6: Treasury prepares, the Director of Finance and the
  *               COO authorise): the supplier, currency, amount, how it is paid and its reference, worked out in RWF at the
  *               day's rate. Authorised by another person, by two above the Settings amount (at least one of them holding

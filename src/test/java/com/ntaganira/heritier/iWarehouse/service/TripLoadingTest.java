@@ -15,7 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripLoadingTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Loading a vehicle (FLT-06): a load over the pieces or kg limit is not within it (AT-03: 40 units on a 35-unit
  *               vehicle, 5 too many), and a scanned label loads a planned unit once while one not on the manifest is refused.
  * </pre>

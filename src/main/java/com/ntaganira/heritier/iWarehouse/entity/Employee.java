@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Employee.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Someone the business pays (payroll): their monthly salary and allowances, how PAYE is withheld (first or
  *               second employer), how they are paid. Linked to the user they sign in with, they find their payslips on My
  *               profile; a driver's shortage is recovered from their pay. The national ID and account number are personal

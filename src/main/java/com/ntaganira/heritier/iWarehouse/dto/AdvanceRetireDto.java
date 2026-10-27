@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : AdvanceRetireDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Retiring a staff advance (CMP 08): the day, what it paid for by category and cost centre with each receipt's
  *               number, and how the rest is settled (returned by the employee, or paid back to them).
  * </pre>

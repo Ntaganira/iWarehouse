@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : AccountDto.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit account form (ACC-03). The system key is not on the form: it comes with the
  *               accounts V16 seeds and never changes.
  * </pre>

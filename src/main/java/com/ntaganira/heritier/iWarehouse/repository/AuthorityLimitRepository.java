@@ -13,7 +13,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : AuthorityLimitRepository.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The Delegation of Authority's cells: a decision's (one per office), or all of them.
  * </pre>
  */

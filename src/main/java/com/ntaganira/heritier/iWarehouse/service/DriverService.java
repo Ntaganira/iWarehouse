@@ -36,7 +36,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DriverService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Drivers (FLT-03): an enabled user registered once, with a national ID and a licence nobody else has, and
  *               the vehicle they usually drive (active). The user cannot change afterwards. A driver is deactivated only
  *               with no trip planned or on the road. Their licence is VALID, SOON or EXPIRED against the Settings' alert

@@ -8,7 +8,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : RackLoad.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pieces and kg on a rack, its slots included, checked against the rack's limits (MD-03)
  *               before more glass is put on it. A missing limit means no limit.
  * </pre>

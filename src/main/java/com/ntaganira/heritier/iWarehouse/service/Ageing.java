@@ -11,7 +11,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Ageing.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The ageing of an account (ACC-09). Its entries are taken in date order: each charge (debit) is due its
  *               date plus the payment terms; each credit (a payment, a credit note) settles the oldest charges first,
  *               and a credit with nothing to settle waits for the next charges. What is left of each charge falls in

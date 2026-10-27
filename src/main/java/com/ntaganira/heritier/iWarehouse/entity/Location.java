@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Location.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A place stock can be (MD-02): site, zone, rack, slot, or a vehicle's virtual location.
  *               Racks carry the MD-03 limits (kg, pieces, orientation) and may be reserved for off-cuts.
  *               Type and parent are fixed after creation. The parent is kept as an id: the whole tree

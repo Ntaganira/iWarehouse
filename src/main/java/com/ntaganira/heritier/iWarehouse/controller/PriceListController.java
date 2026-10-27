@@ -32,7 +32,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PriceListController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Price Lists screens (MD-06): lists and processing services, a list's prices, customers
  *               and price history, editing all prices of a list on one page, add/edit lists and services,
  *               default list. PAGE_PRICE_LISTS + PERM_VIEW_PRICE_LIST; changes PERM_MANAGE_PRICE_LIST.

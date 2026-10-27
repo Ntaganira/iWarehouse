@@ -33,7 +33,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PettyCashVoucherService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Petty cash vouchers (CMP 05, 07, F-13 D, F-16; PCV-WH-2026-000001): recorded by the fund's custodian
  *               (PERM_RECORD_PETTY_CASH) with the payee, purpose, category (no capital item) and cost centre, at most the
  *               Settings' payment, dated up to today in an open month; submitted with the original receipt attached (when the

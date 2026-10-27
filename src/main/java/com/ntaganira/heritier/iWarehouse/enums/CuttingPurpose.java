@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : CuttingPurpose.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Who a cutting job's pieces are for (PRD-01): stock (they become available) or a customer
  *               (they are reserved for that customer, INV-05).
  * </pre>

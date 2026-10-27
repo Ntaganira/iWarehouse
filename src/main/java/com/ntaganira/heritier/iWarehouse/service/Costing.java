@@ -9,7 +9,9 @@ import java.math.RoundingMode;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Costing.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure stock costing rules (PRC-05, INV-01): cost per m² in RWF from a foreign price,
  *               the cost of one unit, and the moving average cost per m² after stock comes in.
  *               No Spring here, so they are unit-tested directly.

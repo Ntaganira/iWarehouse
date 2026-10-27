@@ -27,7 +27,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : BudgetReportController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The budget against actual (CMP 04, 10; Annex D): a month of the approved budget's year, its lines and what
  *               no line covers, the COO's and supply chain's indicators, its sign-off (PERM_REVIEW_BUDGET), exported to
  *               Excel or PDF. Needs PAGE_BUDGET_REPORT.

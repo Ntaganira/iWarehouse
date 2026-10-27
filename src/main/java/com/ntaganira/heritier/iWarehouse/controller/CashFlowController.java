@@ -33,7 +33,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CashFlowController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The cash-flow forecast and the weekly cash report (P.11): the rolling forecast week by week, the actual cash of a
  *               week by kind of document with the weeks before it, and the planned items (added and cancelled with
  *               PERM_MANAGE_CASH_FORECAST); exported to Excel or PDF. PAGE_CASH_FLOW.

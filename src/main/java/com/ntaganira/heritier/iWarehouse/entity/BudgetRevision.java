@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BudgetRevision.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A revision of a line of an approved budget (CMP 04, T.02; BRV-WH-2026-000001): its new months, the totals before
  *               and after, the share it changes and the reason. Approved within the Delegation of Authority by that share
  *               (the MD up to 15 %, the Board above), which writes the line; rejected or cancelled with a reason.

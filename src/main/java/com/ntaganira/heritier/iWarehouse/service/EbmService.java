@@ -42,7 +42,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : EBM fiscal signing (TAX-02, TAX-03, POS-07, AT-09).
  *               - Issuing an invoice or a credit note queues its receipt in the same transaction (queueSale, queueRefund:
  *                 MANDATORY), with the next EBM invoice number; it is signed right after the commit (EbmWorker), so a sale

@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CuttingJobService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Cutting jobs (PRD-01..09). A job lists the pieces wanted, for stock or a customer
  *               (PRD-01). The operator takes a source unit that fits them (PRD-02); recording the cut
  *               consumes it and creates a unit per cut piece and per usable off-cut, on their racks

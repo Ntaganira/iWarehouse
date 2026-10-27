@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : CreditNoteDto.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The return form (POS-09): the invoice, each unit the customer took (ticked if it comes back, and where
  *               it goes), the rack for glass back in stock, the reason and how the refund goes. The cancel form uses
  *               its sizes instead: the pieces of each size of an order given up. Checked by CreditNoteService.

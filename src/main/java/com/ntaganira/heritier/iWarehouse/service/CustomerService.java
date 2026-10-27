@@ -34,7 +34,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CustomerService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Customers (MD-04). One customer per TIN. Credit limit, payment terms and price list
  *               change only for users allowed to set terms (PERM_MANAGE_CUSTOMER_TERMS); others create
  *               cash customers on the default list and cannot take credit away by turning an account

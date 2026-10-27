@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CreditNoteUnit.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A unit brought back on a credit note (POS-09): the invoice line it was sold on, where it went (back on a
  *               rack, or cullet) and the cost that came back from cost of goods sold. A unit comes back once per invoice
  *               (uk_credit_note_units_unit). Append-only (trg_credit_note_units_append_only), so it is not audited.

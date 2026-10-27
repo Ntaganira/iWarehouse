@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PaymentConfirmation.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Finance's confirmation that a bank transfer paid on an invoice has arrived (SDP 14): goods paid that way
  *               leave once every transfer of their invoice is confirmed. Once per payment, append-only
  *               (trg_payment_confirmations_append_only).

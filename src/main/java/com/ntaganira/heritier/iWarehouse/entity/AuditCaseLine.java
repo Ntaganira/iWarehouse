@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : AuditCaseLine.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One unit of an audit case (FLT-10): missing (expected back, not scanned; its own cost when the case
  *               opened) or unexpected (scanned, not expected). Settled once: a missing unit found, sold, written off or
  *               charged to the driver (FLT-11); an unexpected one explained.

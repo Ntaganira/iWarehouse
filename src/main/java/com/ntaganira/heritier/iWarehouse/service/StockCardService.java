@@ -24,7 +24,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockCardService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The stock card of a glass (IMP 7.1, STC-003), for the whole business or one site, over a period: the
  *               opening balance, every movement in or out with its date, document and officer, the running balance, in
  *               sheets and m², and the closing balance. Built from the movements: a unit counts while it is on hand (and,

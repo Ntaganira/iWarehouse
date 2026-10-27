@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : SalesInvoiceRepository.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Counter sales: the sale a till is ringing up, and issued invoices (POS-01, POS-04).
  * </pre>
  */

@@ -14,7 +14,9 @@ import java.util.Locale;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : NumberFormats.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Number formats Thymeleaf's #numbers can't express, used in templates as ${@num.rate(x)}.
  *               Same separators as the other screens (1,450.25), whatever the language.
  * </pre>

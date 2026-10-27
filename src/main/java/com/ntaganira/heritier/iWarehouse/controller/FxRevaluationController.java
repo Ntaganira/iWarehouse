@@ -26,7 +26,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : FxRevaluationController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Month-end revaluation of open foreign balances (ACC-08, unrealised FX): the months revalued, what
  *               revaluing an ended month would post (open balances at its last day's rate), posting it, and a
  *               revaluation with its lines, journal, reversal and History.

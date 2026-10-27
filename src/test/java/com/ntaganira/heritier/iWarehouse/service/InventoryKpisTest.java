@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : InventoryKpisTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The inventory KPIs against the policy's targets (Inventory Policy 19, Annex D) and the report periods
  *               (Policy 18), on worked examples.
  * </pre>

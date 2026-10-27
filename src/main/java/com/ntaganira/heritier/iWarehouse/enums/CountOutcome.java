@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : CountOutcome.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a stock count found for one unit (INV-08): matched, misplaced, missing, or extra
  *               (a lost unit found, a unit the records place elsewhere or show as gone, an unknown label).
  * </pre>

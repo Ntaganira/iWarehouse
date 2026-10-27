@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileAuthController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Signing a phone in and out of the mobile POS (NFR-10): the username and password give the phone a token of
  *               its own (PERM_USE_MOBILE_POS needed); signing out revokes it. Logged, failures too.
  * </pre>

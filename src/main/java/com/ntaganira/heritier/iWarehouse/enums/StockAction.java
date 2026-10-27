@@ -9,7 +9,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : StockAction.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What can be done with a stock unit, and in which states (INV-05). A unit that is
  *               reserved, being cut, on a vehicle or gone cannot be sold, loaded or cut; a reserved unit
  *               can still be moved to another rack or written off. Units on a pending adjustment are

@@ -17,7 +17,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : NotificationController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The signed-in user's notifications (RPT-06), as iVura's: all or unread, opening one (marked read, then
  *               its page), marking all read. The header bell shows the latest. PAGE_NOTIFICATIONS + PERM_VIEW_NOTIFICATIONS.
  * </pre>

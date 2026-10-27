@@ -19,7 +19,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockVariance.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A count variance followed up (IMP 16, VR-010): opened when a count closes with differences, with the units and value missing and found against the value counted, its class and whether it is above the tolerance; resolved with the root cause, the corrective action and the officer responsible within the Settings’ working days, escalated when late; material ones are told to the Board.
  * </pre>
  */

@@ -15,7 +15,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : QuotationLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One line of a quotation (POS-03): whole sheets, a size to cut, or processing on a size (under
  *               it, parent_line_id). Priced like a sale line (LinePricing): the list price per m² (or per unit
  *               of the processing), the discount given, the price, the list and its VAT flag, the tax letter and

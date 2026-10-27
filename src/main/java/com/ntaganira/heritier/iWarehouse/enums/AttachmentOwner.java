@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : AttachmentOwner.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The records documents are kept on (SRS 3.1 file storage): goods receipts (delivery notes, photos of
  *               breakage on arrival), shipments (customs and freight documents), supplier invoices (the supplier's
  *               invoice) and stock adjustments (photos of broken glass). Each names the page whose authority opens its

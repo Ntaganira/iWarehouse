@@ -31,7 +31,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DeviceServiceTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Per-device, revocable tokens of the mobile POS (NFR-10): a driver signs in with their password and the
  *               mobile permission, the phone gets a token kept only as its SHA-256, signing in again on the phone replaces
  *               it, and a token is refused once revoked, presented by another phone or when its user is disabled.

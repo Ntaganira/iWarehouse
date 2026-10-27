@@ -18,7 +18,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : FxRevaluation.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month's open foreign balances revalued at its last day's rate (ACC-08, unrealised FX): its
  *               journal is dated that day and reversed the next. One per month (uk_fx_revaluations_period).
  *               Posted when saved, never changed; its lines are FxRevaluationLine.

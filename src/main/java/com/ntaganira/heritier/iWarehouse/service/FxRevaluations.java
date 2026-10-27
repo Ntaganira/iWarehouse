@@ -16,7 +16,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FxRevaluations.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Month-end revaluation of open foreign balances (ACC-08, unrealised FX). What is owed in a currency
  *               is worth that amount at the month's last rate, rounded to the cent: what it was booked at less that
  *               is the gain (positive) or loss. A month can be revalued once it has ended, from the ledger's first

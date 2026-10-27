@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockUnit.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One physical piece of glass (INV-01) with its label code (INV-03). Size, area and weight
  *               never change: a cut consumes the unit and creates new ones (SRS 6.2). Status, location
  *               and cost change only through StockService, which writes a stock movement for each move

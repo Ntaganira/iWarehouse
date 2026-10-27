@@ -26,7 +26,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : BudgetReportService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The budget against actual (CMP 04, 10; Annex D; T.03, T.11, T.13, C.12): for a month of the approved budget's
  *               year, each line's budget and actual (the journals: revenue credits less debits, expenses debits less
  *               credits, by account and cost centre) for the month and the year to date, the variance and its share,

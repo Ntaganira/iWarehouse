@@ -10,7 +10,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Cutting.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Rules of a cut, without the database: does a piece fit the source (PRD-02), is a leftover
  *               an off-cut (PRD-04), do the areas balance within 1% (PRD-06), what is the cullet and the
  *               yield (PRD-05, PRD-09), and how the source cost is shared by area (PRD-07).

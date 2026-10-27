@@ -39,7 +39,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : LocationController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Locations screens (MD-02, MD-03): the Site &gt; Zone &gt; Rack &gt; Slot tree, a detail page
  *               with sub-locations and History, add (under a parent), edit, activate and deactivate, and
  *               rack and slot labels (QR of the code; the first print fixes the code).

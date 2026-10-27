@@ -19,7 +19,9 @@ import java.io.IOException;
  * - Package   : com.ntaganira.heritier.iWarehouse.security
  * - File      : ApiTokenFilter.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Authenticates a mobile POS request by its token ("Authorization: Bearer ...") and the phone's id (X-Device-Id)
  *               (NFR-10). Only in the /api/** security chain, never a servlet filter of its own (not a @Component). A
  *               request without a valid token stays anonymous, and the chain answers 401. The phone's id is kept as a

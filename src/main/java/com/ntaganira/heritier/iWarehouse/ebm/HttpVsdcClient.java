@@ -20,7 +20,9 @@ import java.time.Duration;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : HttpVsdcClient.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The business's VSDC (RRA's WAR on its own server) over HTTP: JSON POSTs in UTF-8 to its base URL
  *               (Settings, ebm.vsdc-url), no headers (the VSDC adds RRA's keys itself). A refused connection, a
  *               timeout, an HTTP error or an answer that is not a VSDC envelope is VsdcUnavailableException.

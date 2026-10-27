@@ -16,7 +16,9 @@ import java.util.Locale;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PrintTable.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A report sheet ready to print (RPT-07): the same sheet as the Excel export, each cell as the text the
  *               PDF shows. Amounts show the most decimals of their column (money 2, m² 4: Excel.scales) with a comma
  *               between thousands, counts are whole, dates dd/MM/yyyy; a column holding numbers is aligned right, header

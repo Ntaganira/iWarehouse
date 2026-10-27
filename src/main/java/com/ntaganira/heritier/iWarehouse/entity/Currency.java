@@ -14,7 +14,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Currency.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A currency documents may use (ACC-02), by ISO 4217 code. RWF is the base currency:
  *               ledgers are always in RWF and it can't be deactivated. Others are activated when the
  *               business starts buying in them. Deactivated, never deleted.

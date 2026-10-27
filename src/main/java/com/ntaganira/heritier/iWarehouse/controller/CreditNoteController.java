@@ -38,7 +38,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CreditNoteController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Returns and credit notes (POS-09): the return form of an invoice (what comes back, where it goes, the
  *               reason and the refund), the cancel form of an order (pieces of its sizes given up before they were
  *               handed over), the list, a credit note with its lines, units, refund, journal and History, and its 80 mm

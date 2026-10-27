@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PurchaseOrderLine.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sheets of one product and size on a purchase order (PRC-01), priced per m² in the
  *               order's currency. receivedQty counts the sheets delivered by posted receipts, broken
  *               ones included (the supplier shipped them).

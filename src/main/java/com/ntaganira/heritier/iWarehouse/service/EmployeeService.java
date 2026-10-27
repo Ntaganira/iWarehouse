@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EmployeeService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Employees (payroll): their code (EMP-WH-0001), salary, allowances, how PAYE is withheld and how they are
  *               paid. One national ID, one user each; a bank or mobile-money payment needs the account. An employee who
  *               left keeps their record (never deleted) and leaves the runs of later months.

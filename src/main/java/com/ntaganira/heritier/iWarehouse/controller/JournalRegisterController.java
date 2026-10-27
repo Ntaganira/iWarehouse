@@ -28,7 +28,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : JournalRegisterController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The register of journal numbers (F-16): a month's journals by number, their total and any gap, its
  *               certification by the Director of Finance and the Internal Controller's sample, the months certified; in
  *               Excel or PDF. PAGE_JOURNAL_REGISTER + PERM_VIEW_ACCOUNTING; certifying PERM_CERTIFY_JOURNAL_REGISTER,

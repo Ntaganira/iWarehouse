@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : ReturnOutcome.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Where glass brought back goes (POS-09): back in stock, available on a rack at its own cost, or to
  *               cullet (broken or unsellable: BROKEN, its cost moves from cost of goods sold to spoilage). A piece cut
  *               for an order and given up before it was handed over is released to stock where it lies (RELEASE).

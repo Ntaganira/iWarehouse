@@ -12,7 +12,9 @@ import java.time.temporal.ChronoUnit;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FixedAssets.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The fixed-asset rules (C.08, U.12), pure and tested. Straight line over the useful life, which starts the month
  *               after the asset was acquired: each month takes what is left to depreciate (cost less residual value less the
  *               depreciation to date) over the months left of its life, rounded to the franc cent, so a month run late or an

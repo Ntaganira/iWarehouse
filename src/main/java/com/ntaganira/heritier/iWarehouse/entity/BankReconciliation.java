@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BankReconciliation.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A statement of the Bank or Mobile Money account reconciled with the ledger (ACC-12): its date and closing
  *               balance; the previous statement's balance plus the lines ticked (BankReconciliationLine) give it. The
  *               account's balance at that date and what was outstanding (deposits and payments not on the statement)

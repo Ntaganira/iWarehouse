@@ -33,7 +33,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StockReviewController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The stock card of a glass for the business or one site (IMP 7.1, STC-003), the daily review of the stock
  *               movements (IMP 12) and the monthly stock reconciliation (BP 7.4, Table 9, Annex I step 5), each exported to
  *               Excel or PDF. Card and day: PAGE_STOCK_SUMMARY + PERM_VIEW_STOCK, signing a day off PERM_REVIEW_DAILY_STOCK;

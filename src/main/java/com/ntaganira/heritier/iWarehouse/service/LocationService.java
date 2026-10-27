@@ -24,7 +24,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : LocationService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Location tree (MD-02) and rack limits (MD-03). A location without parent is a site;
  *               under a site go zones, under a zone racks, under a rack slots. Vehicle locations come
  *               with their vehicle (FLT-01) and are not added or changed here. A location is only

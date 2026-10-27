@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockCountScan.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A label scanned during a stock count and the place it was found (INV-08). One per code;
  *               scanning it again elsewhere moves the scan. Removable while the count is open.
  * </pre>

@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AttachmentService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Documents kept on records (SRS 3.1): a PDF or a photo (Documents) is stored in MinIO under
  *               "&lt;owner&gt;/&lt;record id&gt;/&lt;uuid&gt;.&lt;ext&gt;", then its row is saved (audited). Removing one marks it with who,
  *               when and why (the caller gives the reason to AuditContext); the file stays. Who may see a document is

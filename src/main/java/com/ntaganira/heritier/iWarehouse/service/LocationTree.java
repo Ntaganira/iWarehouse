@@ -11,7 +11,9 @@ import java.util.function.Function;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : LocationTree.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure helpers for the location tree (MD-02): flattening it into display order with
  *               depths, and suggesting the next free code for a new location (WH-A-R03). No Spring
  *               here, so they are unit-tested.

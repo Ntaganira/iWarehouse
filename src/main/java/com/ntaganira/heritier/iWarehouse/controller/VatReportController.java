@@ -28,7 +28,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : VatReportController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The monthly VAT report for filing (TAX-05): output VAT per tax letter (sales less credit notes), input VAT
  *               from the ledger, VAT payable, checked against the VAT Output account; on a page, in Excel and in PDF.
  *               PAGE_VAT_REPORT + PERM_VIEW_ACCOUNTING. This month by default.

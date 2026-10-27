@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockControlRulesTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The pure rules of M16: the passes of a count (D14: what the first and second counts agree on, the recount for the rest) and a variance’s size, class, tolerance and due day (IMP 14, 16, 19; VR-010).
  * </pre>
  */

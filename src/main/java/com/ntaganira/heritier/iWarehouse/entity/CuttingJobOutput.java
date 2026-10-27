@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CuttingJobOutput.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One thing a cut produced (PRD-03..08): a cut piece or off-cut (with its new stock unit),
  *               a leftover below the off-cut threshold or the trim (cullet), or glass broken while
  *               cutting (with its reason), each with its part of the source cost (PRD-07). The parts of

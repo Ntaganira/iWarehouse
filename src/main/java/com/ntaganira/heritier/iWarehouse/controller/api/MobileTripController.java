@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileTripController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The trip download (SYNC-01): the driver's trip on the road with the units on the vehicle, the customers, the
  *               trip's frozen prices and the phone's invoice numbers. Downloaded again whenever the phone is online, it
  *               tops the numbers up; the prices stay as first taken.

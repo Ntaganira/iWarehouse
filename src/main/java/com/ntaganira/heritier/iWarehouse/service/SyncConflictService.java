@@ -38,7 +38,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SyncConflictService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Mobile sales the server could not take as they were made (SYNC-05). The supervisor sees why and the sale
  *               as the phone sent it, settles it with the documents that fit (a counter sale, a credit note, an adjustment,
  *               the end of day) and records what was done: the conflict is REVIEWED, never deleted.

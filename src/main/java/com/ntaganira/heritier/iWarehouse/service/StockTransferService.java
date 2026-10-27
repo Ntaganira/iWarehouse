@@ -35,7 +35,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockTransferService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Transfers between racks and slots (INV-07). The units, scanned or typed, must be movable
  *               (INV-05: in stock, not being cut or on a vehicle, not held by a pending adjustment) and
  *               the destination must take them within its rack limits (MD-03); full sheets never go to an

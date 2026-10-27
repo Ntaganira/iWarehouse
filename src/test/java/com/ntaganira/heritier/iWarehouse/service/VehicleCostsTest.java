@@ -15,7 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VehicleCostsTest.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The sums of vehicle costs and service plans: the approval limit, the VAT an amount can hold, what is left of
  *               a trip's cash, the cost per km, when a service falls due (by km, by date, whichever first), and the costs per
  *               vehicle of the fleet report.

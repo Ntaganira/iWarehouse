@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : EbmReceiptRepository.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : EBM receipts (TAX-02, TAX-03): the queue's due receipts, a document's receipt, the backlog.
  *               lockForSigning skips a receipt another thread is signing (SKIP LOCKED), so the worker and the
  *               attempt after a sale never send it twice at once.

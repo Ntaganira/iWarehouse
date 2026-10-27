@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : AttachmentController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Documents on records (SRS 3.1): keeping one (PERM_ATTACH_DOCUMENT), opening one in the browser, removing
  *               one with a reason (PERM_ATTACH_DOCUMENT). Each also needs the page authority of the record it is on
  *               (AttachmentOwner.page): who cannot open a shipment cannot open its customs papers. Back to the record's

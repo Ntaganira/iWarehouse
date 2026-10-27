@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ExpenseBillLine.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A line of an expense bill: its category (the account), what it is, the cost centre and location it is for,
  *               its amount before VAT and its VAT (F-15 A, T.05, T.06).
  * </pre>

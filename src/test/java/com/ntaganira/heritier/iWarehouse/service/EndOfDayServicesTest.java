@@ -27,7 +27,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EndOfDayServicesTest.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The end of the day of a trip (FLT-08..FLT-11, MPOS-07, SRS 5.1). AT-06: back with a unit missing and no
  *               breakage report, an audit case opens, the owner is told and the trip cannot close. Units scanned back go on
  *               the rack they left from; an accepted breakage leaves stock to spoilage; undecided breakage stops the

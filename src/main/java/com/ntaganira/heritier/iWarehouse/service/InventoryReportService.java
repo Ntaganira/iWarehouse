@@ -21,7 +21,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : InventoryReportService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The inventory reports of the Inventory Policy (sections 14 and 18; DIR-011, PF-05; M.01, M.02, M.04-M.06):
  *               - the daily inventory report: the Inventory account at the day's start and end, the movements by type,
  *                 each site's units and m² at the end with what came in and went out, the deliveries made (delivery notes

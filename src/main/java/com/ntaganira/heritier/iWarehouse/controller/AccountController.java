@@ -31,7 +31,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : AccountController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Chart of accounts screens (ACC-03): the list with balances, an account's ledger and History,
  *               add, edit, activate and deactivate. PAGE_ACCOUNTS + PERM_VIEW_ACCOUNTING; changes
  *               PERM_MANAGE_ACCOUNTS.

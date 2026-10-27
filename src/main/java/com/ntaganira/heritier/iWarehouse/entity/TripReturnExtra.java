@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripReturnExtra.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A label scanned off a returning vehicle that is no unit expected back (FLT-10): a unit of another trip
  *               or place, a unit sold from the vehicle yet on board, or a label that is no unit's. Kept so the
  *               reconciliation puts it on the trip's audit case as unexpected; taken off if it was scanned by mistake.

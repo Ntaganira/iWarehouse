@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : ReconciliationStatus.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A bank or mobile-money reconciliation (ACC-12): RECONCILED when saved (its lines are cleared); CANCELLED,
  *               the latest of an account undone with a reason, its lines cleared no more.
  * </pre>

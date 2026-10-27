@@ -11,7 +11,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AuthorityTiers.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rules of the Delegation of Authority (Board Paper Annex E), pure and tested. A request needs the
  *               lowest office that may approve its decision and whose limit covers its amount (a limit includes its
  *               amount; none means no limit); the Board when no office below it may. A user holds the highest office

@@ -38,7 +38,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CustomerController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Customers screens (MD-04): list with filters, detail with History, add, edit, activate and
  *               deactivate. PAGE_CUSTOMERS + PERM_VIEW_CUSTOMER; changes PERM_MANAGE_CUSTOMER; credit limit,
  *               payment terms and price list also need PERM_MANAGE_CUSTOMER_TERMS, and every change to

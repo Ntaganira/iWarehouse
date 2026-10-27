@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : MobileSalesTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rules of a sale from a vehicle (MPOS-04, MPOS-05): the customer's frozen list then the default list,
  *               line amounts exactly as the counter's (chargeable area, VAT added when the list excludes it, whole RWF),
  *               the driver's discount limit, cash and mobile money adding up to the total. The PWA does the same sums;

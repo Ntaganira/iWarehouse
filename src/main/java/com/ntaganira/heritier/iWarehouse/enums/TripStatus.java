@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : TripStatus.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Where a trip stands (FLT-05..10). Planned: its manifest can change and holds its units, each confirmed
  *               by a scan. Departed: the units are on the vehicle, in the driver's charge. Returned: scanned back and
  *               reconciled (each unit sold, back on its rack, broken or missing). Closed: its stock and cash settled (no

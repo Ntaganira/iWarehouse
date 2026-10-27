@@ -12,7 +12,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PurchaseOrders.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure purchase order rules (PRC-01): line amounts and order totals in the order's
  *               currency (lines unrounded, the total rounded once to the currency's decimals), and the
  *               status an order takes after a receipt.

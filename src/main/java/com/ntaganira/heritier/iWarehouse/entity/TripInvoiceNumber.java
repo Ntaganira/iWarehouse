@@ -14,7 +14,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripInvoiceNumber.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : An invoice number (MINV) handed to a phone for a trip (SYNC-01), so a sale made offline prints its number at
  *               once. Used by one invoice; a number never used stays on the trip as unused. Not a business record of its
  *               own (the invoice is): not audited.

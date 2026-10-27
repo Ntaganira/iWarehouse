@@ -16,7 +16,9 @@ import java.util.TreeMap;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CashCount.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A till's cash counted note by note (F-13): the denominations of the Settings, how many of each, the
  *               total, and the count kept on the till as "5000:12,1000:3" (largest first, none left out but zeros).
  *               Pure and tested.

@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : FixedAsset.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A fixed asset (C.08; FA-WH-00001): what it is, its category, cost centre and place, cost, residual value and useful
  *               life, depreciated straight line from a month (FixedAssets.monthly); from a capital item of an approved expense
  *               bill (its line), or registered at its value to date with the depreciation before the register. What it has

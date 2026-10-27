@@ -20,7 +20,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : GoodsReceipt.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Goods received note against a purchase order (PRC-02): one crate batch per crate.
  *               Posting fixes the exchange rate of the receipt date (currency, rate, rate date, source,
  *               ACC-02) and creates the stock units; a posted receipt is never edited.

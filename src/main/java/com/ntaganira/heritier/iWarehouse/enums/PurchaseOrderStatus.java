@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : PurchaseOrderStatus.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Life of a purchase order (PRC-01). A draft can be edited; once placed with the supplier
  *               it is fixed and receipts are recorded against it until every sheet has arrived, or it is
  *               closed short. An order nothing was received on can be cancelled.

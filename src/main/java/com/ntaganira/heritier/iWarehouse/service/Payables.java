@@ -11,7 +11,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Payables.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What is owed to a supplier, per currency (ACC-08, ACC-09). Each payable line has its amount in its
  *               currency and in RWF as booked: owed (an invoice, a bill) or settled (a payment, a credit note). Per
  *               currency, settlements take the oldest items first, and the RWF of what they take goes with it (all of

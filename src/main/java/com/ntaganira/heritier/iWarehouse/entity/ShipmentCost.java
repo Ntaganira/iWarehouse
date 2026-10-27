@@ -20,7 +20,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ShipmentCost.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One import cost of a shipment (PRC-03): a bill for freight, insurance, duty, clearing,
  *               port or transport, in its own currency. Posting fixes the rate of the bill's date
  *               (customs rate for duty, PRC-05) and allocates it; a posted line is never changed, a

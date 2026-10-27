@@ -31,7 +31,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PriceChangeController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Price changes (SDP 5): the list, a change with each price from and to, approval within the Delegation of
  *               Authority (the prices apply), rejection and withdrawal with a reason, its History. PAGE_PRICE_LISTS +
  *               PERM_VIEW_PRICE_LIST; approve and reject PERM_APPROVE_PRICE_CHANGE; withdraw PERM_MANAGE_PRICE_LIST.

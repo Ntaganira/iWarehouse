@@ -14,7 +14,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReconciliationCompliance.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Whether an account was reconciled on time each month (BP Table 9, Annex D, IMP 19): a month is reconciled
  *               by the first reconciliation in force whose statement reaches its last day; on time when that was done
  *               by the Settings' working day of the next month. Compliance = months on time out of the months due.

@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PriceListService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Price lists and processing services (MD-06). One list is the default: it prices customers
  *               without a list and fills what a customer's list leaves unpriced (priceFor). The default
  *               list stays active, and a list with active customers cannot be deactivated. Prices are

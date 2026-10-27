@@ -28,7 +28,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SyncConflictController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Mobile sales in conflict (SYNC-05): list, the sale as the phone sent it, and the supervisor's review with a
  *               note of what was done. PAGE_SYNC_CONFLICTS + PERM_VIEW_SYNC_CONFLICTS; reviewing needs
  *               PERM_REVIEW_SYNC_CONFLICT.

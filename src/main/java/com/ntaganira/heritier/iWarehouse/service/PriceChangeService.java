@@ -31,7 +31,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PriceChangeService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Prices approved before they apply (SDP 5): with Settings asking for it, the prices typed on a price list
  *               become a price change (PCH, its lines each price from and to, append-only) that another person approves
  *               within the Delegation of Authority (the Managing Director by default), which writes them on the list, or

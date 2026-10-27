@@ -23,7 +23,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PermissionController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Permission catalogue (ADM-01): list, relabel, activate/deactivate. Permissions are
  *               created by module migrations, never from the UI, because code checks them by code.
  * </pre>

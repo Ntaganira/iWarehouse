@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : AdjustmentKind.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One line of a stock adjustment (INV-07): write a unit off (broken or missing), find a
  *               lost unit again, add a piece nobody recorded (valued at MAC), or correct a unit's size
  *               (the unit is replaced by one of the right size, at the same cost per m²).

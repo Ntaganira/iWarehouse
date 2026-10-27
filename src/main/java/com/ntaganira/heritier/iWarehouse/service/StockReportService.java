@@ -27,7 +27,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockReportService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The stock reports beside the summary (RPT-02): off-cut ageing (the off-cuts held, by age band and
  *               oldest first) and slow-moving stock (glass held longer than the Settings' days, with what it sold in
  *               them). Reads the units held in one projection query; the rules are StockAgeing's.

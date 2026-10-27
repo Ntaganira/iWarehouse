@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ShipmentAllocation.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What one posting of a shipment's costs gave one crate (PRC-04): the crate's basis (m²,
  *               value or kg), the RWF amount, and how it split between units in stock, units already
  *               gone (expensed) and sheets broken on arrival. A ledger: inserted by ShipmentService only,

@@ -19,7 +19,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockAlertService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The low stock alert (RPT-06, INV-10): every half hour (app.alerts.low-stock-every; first a minute after
  *               start), the glass whose available m² is below its reorder level. A glass that falls below raises its alert
  *               once (LOW_STOCK:&lt;product id&gt;) and tells the holders of PERM_ALERT_LOW_STOCK; it is cleared when the

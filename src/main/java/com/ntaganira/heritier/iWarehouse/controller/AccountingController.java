@@ -39,7 +39,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : AccountingController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Journals (ACC-04): the list and a journal with its lines; the trial balance as at a day (ACC-11)
  *               with the inventory account checked against the stock valuation (AT-10); starting the ledger
  *               with the opening stock journal. Journals are posted by the business events, never here.

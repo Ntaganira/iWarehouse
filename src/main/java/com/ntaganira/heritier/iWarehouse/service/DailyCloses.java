@@ -14,7 +14,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DailyCloses.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The sums of the end-of-day sales report (F-12): each channel's sales split into cash, MoMo, card and
  *               transfer, and credit (on account, and a deposit's balance left to pay), the invoices it took; the
  *               totals. Pure and tested.

@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalesReportService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The sales reports (RPT-05): the invoices issued in a period, less their credit notes, grouped by customer,
  *               glass or processing, salesperson (who took the payment), day, month or invoice, with the gross margin
  *               at MAC from the Cost of Goods Sold the sale, hand-over and credit note journals posted. Reads projections

@@ -42,7 +42,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PurchaseOrderController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Purchase order screens (PRC-01): list, detail with lines, receipts and History, add and
  *               edit drafts, place, cancel and close short (with a reason). PAGE_PROCUREMENT +
  *               PERM_VIEW_PURCHASE_ORDER; changes PERM_MANAGE_PURCHASE_ORDER.

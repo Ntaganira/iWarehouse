@@ -15,7 +15,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockDayReview.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A day's stock movements reviewed (IMP 12): how many there were, who reviewed them, when, and the note.
  *               One a day. The Internal Controller countersigns the day's inventory report (IMP 14.1, M.01).
  * </pre>

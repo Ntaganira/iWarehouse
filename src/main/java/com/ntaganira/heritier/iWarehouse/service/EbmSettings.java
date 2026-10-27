@@ -19,7 +19,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmSettings.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The EBM settings (TAX-02) read together, what is still missing before receipts can be signed, and the
  *               VSDC to send them to: the simulator, or the business's VSDC at its URL with short timeouts
  *               (app.ebm.connect-timeout 3 s, app.ebm.read-timeout 15 s), so a sale is never held long by EBM.

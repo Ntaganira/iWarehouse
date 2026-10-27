@@ -30,7 +30,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DamageServiceTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Damage reports (IMP 13, F-07; decision D5): glass on a rack, held by nothing, reported with its cost as the
  *               estimated loss, the Internal Controller told above the tolerance; inspected by another person, approved by a
  *               third within the Delegation of Authority: units written off on one adjustment already approved or put back,

@@ -14,7 +14,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ServicePrice.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Price of one processing service on one price list, per the service's charge unit
  *               (MD-06). Like product prices, a cleared price stays as a row with no price.
  * </pre>

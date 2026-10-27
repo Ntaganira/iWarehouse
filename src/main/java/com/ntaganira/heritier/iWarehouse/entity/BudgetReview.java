@@ -15,7 +15,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BudgetReview.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month's budget against actual signed off (CMP 04, T.03: by the 10th), with how many lines were beyond the
  *               tolerance and the note that explains them. Never changed (append-only, trigger).
  * </pre>

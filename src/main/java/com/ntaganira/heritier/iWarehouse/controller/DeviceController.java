@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : DeviceController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Phones signed in to the mobile POS (NFR-10): who, which phone, when it was last seen; revoking one (a lost
  *               phone, a driver who left) refuses its token at once, with a reason. PAGE_DEVICES + PERM_VIEW_DEVICES;
  *               revoking needs PERM_REVOKE_DEVICE.

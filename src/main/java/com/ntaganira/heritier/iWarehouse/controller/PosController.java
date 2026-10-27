@@ -26,7 +26,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PosController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The counter POS (POS-01, POS-04, POS-10): open the till with a float; ring up a sale by scanning
  *               labels or from the smallest-fit search; choose the customer and the buyer's name and TIN; take a
  *               split payment, which issues the invoice; close the till with the cash counted. Change a line's

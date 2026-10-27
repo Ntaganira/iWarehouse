@@ -32,7 +32,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmServiceTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Issuing queues the receipt with the next EBM number (TAX-02); a credit note names its sale's number,
  *               and none is queued for an invoice EBM never had; the first print is the original, later ones copies;
  *               the backlog alert is raised once and cleared (TAX-03).

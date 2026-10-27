@@ -9,7 +9,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : StockStatus.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The states of a stock unit (SRS 6.2), plus LOST (V13). A unit has one state and one
  *               location at a time. Posted receipts create units as AVAILABLE on their rack; RECEIVED is
  *               kept for a later put-away scan. Consumed, sold, broken and lost units have left stock;

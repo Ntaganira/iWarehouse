@@ -14,7 +14,9 @@ import java.util.TreeSet;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VanCounts.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A count of the glass on a vehicle on the road (SDP 6, BP 7.3 rule 10): the labels scanned against those
  *               expected on board: found, missing, and labels not expected (each once, upper case, blanks skipped).
  *               Pure and tested.

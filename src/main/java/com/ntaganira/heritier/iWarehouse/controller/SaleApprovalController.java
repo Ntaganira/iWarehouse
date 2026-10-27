@@ -28,7 +28,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SaleApprovalController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Approval requests from the counter (POS-05, POS-06): the list, a request with its before and
  *               after values and History; approve, or reject with a reason, never your own. PAGE_SALE_APPROVALS +
  *               PERM_VIEW_INVOICE; deciding PERM_APPROVE_SALE.

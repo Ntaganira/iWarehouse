@@ -15,7 +15,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : RequisitionQuote.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A supplier’s quote for a requisition (CMP 06): who, their reference and day, the amount; a supplier on the
  *               register when the buyer is one, otherwise by name (an RFQ answered by someone not yet registered).
  * </pre>

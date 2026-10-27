@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : SiteTransferDto.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The transfer request form (IMP 11.1, TRF-007): from and to which site, why, the day it should leave and the
  *               glass asked (rows; empty rows are dropped). The service checks everything.
  * </pre>

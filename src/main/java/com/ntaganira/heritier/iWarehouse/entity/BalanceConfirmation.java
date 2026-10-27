@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BalanceConfirmation.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A customer asked to confirm their balance on a day (SDP 10-11, BP Table 9 and 11): sent by someone
  *               independent of the receivables ledger (the Internal Controller), the letter with its reply slip printed
  *               from it; the reply recorded once: agreed, or disputed with the balance the customer states and their

@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SiteTransferUnit.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A unit sent on a transfer between sites: the rack it left from and when, and (once its label is scanned at
  *               the other site) when it arrived, who received it and the rack it was put on.
  * </pre>

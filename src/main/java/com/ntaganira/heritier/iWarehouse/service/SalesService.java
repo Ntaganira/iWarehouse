@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalesService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Counter sales (POS-01, POS-04, TAX-01, TAX-04). The sale being rung up is a draft of the
  *               cashier's open till: units from stock are added by scanning or from the search, priced from
  *               the customer's price list over their chargeable area (MD-06), and held meanwhile. Paying splits

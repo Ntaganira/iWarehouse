@@ -11,7 +11,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TrialBalance.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Trial balance (ACC-11, AT-10): each account with lines, its balance on the debit or the
  *               credit side, and the two totals, equal when the books balance. Pure, unit-tested.
  * </pre>

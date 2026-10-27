@@ -12,7 +12,9 @@ import java.util.Collection;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Advances.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The staff advance rules of the policy (CMP 08, 10), pure and tested: a journey's per diem (days of meals and
  *               incidentals, nights of accommodation), the day it is retired by (the Settings' working days after it is paid
  *               or the journey ends), the rest when it is retired (returned or paid back), what a pay line recovers (never

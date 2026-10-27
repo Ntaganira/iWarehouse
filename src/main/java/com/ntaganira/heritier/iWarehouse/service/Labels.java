@@ -22,7 +22,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Labels.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock unit labels (INV-03) and rack and slot labels (MD-02): a QR code of the code as
  *               inline SVG for the printable label page, and ZPL for Zebra-type label printers
  *               (50 x 30 mm, 203 dpi). Pure functions, unit-tested.

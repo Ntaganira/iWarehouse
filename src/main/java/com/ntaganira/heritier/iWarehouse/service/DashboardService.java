@@ -21,7 +21,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DashboardService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Dashboard figures (RPT-01): today's counts against the same hours yesterday,
  *               a 30-day activity chart and the latest actions and record changes
  * </pre>

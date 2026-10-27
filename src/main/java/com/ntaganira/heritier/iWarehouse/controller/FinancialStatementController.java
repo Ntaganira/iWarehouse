@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : FinancialStatementController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The financial statements (ACC-11): the income statement of a period, the balance sheet at a day and
  *               the general ledger of a period (every account, or one account's lines), each on a page and exported to
  *               Excel or PDF (ReportFiles). PAGE_FINANCIAL_STATEMENTS + PERM_VIEW_ACCOUNTING. Periods default to this month up to today.

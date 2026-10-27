@@ -31,7 +31,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : InventoryReportController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The inventory report by week, month, quarter or year (Inventory Policy 18; M.04-M.06), and the inventory
  *               KPIs month by month against their targets (Policy 19, Annex D; M.07, K.17, L.14, T.12) with the formal
  *               review when accuracy stays below target. Both exported to Excel or PDF. The report: PAGE_INVENTORY_REPORT;

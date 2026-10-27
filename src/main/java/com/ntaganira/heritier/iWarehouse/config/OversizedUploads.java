@@ -9,7 +9,9 @@ import java.util.Locale;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : OversizedUploads.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A file over the upload limit (spring.servlet.multipart.max-file-size) is cut off by the server before the
  *               form is read, so its CSRF token is never seen and Spring Security refuses the request as forged. Tells
  *               that case apart from a real CSRF refusal and where to send the user back to. Pure.

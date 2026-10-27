@@ -11,7 +11,9 @@ import java.util.TimeZone;
  * - Package   : com.ntaganira.heritier.iWarehouse
  * - File      : IWarehouseApplication.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Application entry point
  * </pre>
  */

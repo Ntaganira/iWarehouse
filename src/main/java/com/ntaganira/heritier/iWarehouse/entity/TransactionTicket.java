@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TransactionTicket.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The Transaction Ticket of a stock movement (BP 7.4, F-05, Annex I): the document it covers (the supporting
  *               document, with its own documents), how many units, m² and their cost; raised with the movement, verified
  *               by Supply Chain against the glass, countersigned by Commercial (the movement answers to an order, a

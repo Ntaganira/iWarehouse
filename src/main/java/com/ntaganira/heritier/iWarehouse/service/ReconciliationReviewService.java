@@ -30,7 +30,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReconciliationReviewService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Bank and MoMo reconciliations signed by a preparer and a reviewer (BP Table 9, P.09): another person
  *               reviews a reconciliation in force, once. Each account's compliance (Annex D, IMP 19, M.16): the months of
  *               the last year reconciled by the Settings' working day of the next month; a month not reconciled by then

@@ -16,7 +16,9 @@ import java.util.Locale;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : SettingsDto.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Settings form (ADM-03). One property per SettingKey, matched by name; the limits here
  *               are the only validation the values get, so keep them in step with the SRS.
  * </pre>

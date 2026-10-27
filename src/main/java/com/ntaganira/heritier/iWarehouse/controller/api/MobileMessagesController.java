@@ -21,7 +21,9 @@ import java.util.concurrent.TimeUnit;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileMessagesController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The mobile POS's texts in a language (en, fr, rw): every mobile.* key of the message bundles, so the PWA's
  *               words live in messages*.properties like every other screen's. Open (the sign-in screen needs them) and kept
  *               by the service worker for offline use.

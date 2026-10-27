@@ -28,7 +28,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CustomerPaymentController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Payments on customer accounts (ACC-09): taking one from the customer's page, the list, a payment with
  *               its journal and History, and its 80 mm receipt to print.
  * </pre>

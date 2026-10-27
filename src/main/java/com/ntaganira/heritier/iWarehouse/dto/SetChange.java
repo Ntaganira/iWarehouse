@@ -10,7 +10,9 @@ import java.util.TreeSet;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : SetChange.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What was added to and removed from a set of codes (a user's roles, a role's
  *               permissions or pages). Collection changes are not captured by the data change log,
  *               so services write this to the activity log instead (CLAUDE.md audit rule 3, AUD-03).

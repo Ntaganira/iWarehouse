@@ -9,7 +9,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FieldCredit.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Credit on the road (BP 7.3 rule 8, F-10, F-11; decision D8): only to an approved customer (one whose
  *               type allows credit, with a limit), within the limit less what they owe, never while an invoice of theirs
  *               is overdue past the grace (when the Settings block it). What the phone may grant is frozen at the trip's

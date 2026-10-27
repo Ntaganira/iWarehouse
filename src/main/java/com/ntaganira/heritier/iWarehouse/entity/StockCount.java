@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockCount.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A stock count by scanning (INV-08): a place and every place under it (fixed when it
  *               starts), optionally one glass. Open while labels are scanned; the units on its places are
  *               held meanwhile (INV-05). Closing records the result (StockCountLine) and the totals below;

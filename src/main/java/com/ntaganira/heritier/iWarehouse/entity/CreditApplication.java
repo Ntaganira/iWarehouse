@@ -18,7 +18,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CreditApplication.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Credit terms asked for a customer (F-02 C-D): the limit, payment terms and price list wanted beside the ones
  *               in force, why, and what the customer owed when asked. Credit Control assesses it, the Director of Finance
  *               reviews it (when Settings ask), another person approves it within the Delegation of Authority, which sets

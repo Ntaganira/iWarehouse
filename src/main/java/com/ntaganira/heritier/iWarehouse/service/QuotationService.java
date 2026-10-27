@@ -32,7 +32,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : QuotationService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Quotations (POS-03) and sales orders (F-01, Annex G, decision D4: a quotation of kind SALES_ORDER
  *               raised by the Order Desk with its channel, market, territory, agent and site, checked against stock,
  *               the price list and the customer's credit, sent to the cashier, who takes payment against it; it lapses

@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PriceList.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A set of selling prices in RWF (MD-06): price per m² for each product and a price per
  *               unit for each processing service. Exactly one list is the default: it prices customers
  *               without a list, and whatever another list leaves unpriced. Deactivated, never deleted.

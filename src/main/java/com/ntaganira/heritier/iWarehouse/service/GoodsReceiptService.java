@@ -44,7 +44,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : GoodsReceiptService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Goods receipts against placed purchase orders (PRC-02, PRC-06). A draft lists the
  *               crates; it can't bring more sheets than an order line still waits for, and its racks
  *               must hold the extra pieces and weight (MD-03). Posting fixes the exchange rate of the

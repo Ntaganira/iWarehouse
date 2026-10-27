@@ -12,7 +12,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : VehicleServicePlanRepository.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Service plans: a vehicle's (active first, by name), every active one (the reminders), and whether a
  *               vehicle already has a plan of that name.
  * </pre>

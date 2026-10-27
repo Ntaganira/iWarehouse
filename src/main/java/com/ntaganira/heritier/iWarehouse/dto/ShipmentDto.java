@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : ShipmentDto.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit shipment form (PRC-03, PRC-04): reference, arrival date, allocation method, the
  *               posted receipts that came in it and the import costs not posted yet. Posted cost lines
  *               are not on the form: they never change.

@@ -9,7 +9,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VatReport.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Output VAT of a month (TAX-05): each invoice's and credit note's VAT per tax letter, worked out on the
  *               document as it was issued (Vat.totals: rounded per letter on the document), then added up per letter
  *               over the month: sales less credit notes, VAT included, the VAT in them and the rest. Pure,

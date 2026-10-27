@@ -31,7 +31,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SupplierPaymentController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Payments to suppliers (ACC-08, ACC-09): paying from the supplier's page, the list, and a payment with what
  *               it settled, the realised FX gain or loss, its journal and History. With authorisation on (CMP 07) the
  *               supplier's page prepares a payment request, paid once another person (two above the Settings amount)

@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : EbmReceipt.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : An invoice (sale, S) or credit note (refund, R) sent to EBM under its own invoice number (invcNo,
  *               TAX-02, TAX-03): queued when the document is issued, then signed by the VSDC (its receipt numbers,
  *               internal data, signature, SDC ID and MRC are kept and never change: trg_ebm_receipts_signed) or refused.

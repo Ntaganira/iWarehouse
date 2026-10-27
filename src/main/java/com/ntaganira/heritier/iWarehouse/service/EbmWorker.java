@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmWorker.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sends EBM receipts (TAX-02, TAX-03, AT-09). A receipt is tried once right after the transaction that
  *               queued it commits (the sale is already complete; the VSDC's short timeouts bound the wait), then every
  *               30 s (app.ebm.retry-every) the due receipts are tried, oldest number first, at most 50 a run; a run stops

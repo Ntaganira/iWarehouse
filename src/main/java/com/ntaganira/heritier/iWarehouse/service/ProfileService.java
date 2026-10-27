@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ProfileService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : My profile: the signed-in user's own details, photo and password. Always the caller's own account
  *               (the id comes from the session); the user is audited like any change made by an administrator.
  * </pre>

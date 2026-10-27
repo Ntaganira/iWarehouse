@@ -8,7 +8,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : JournalSource.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The business event a journal was posted for (ACC-04), with the page of its document.
  *               A new event = a constant here + chk_journal_entries_source in its module's migration.
  * </pre>

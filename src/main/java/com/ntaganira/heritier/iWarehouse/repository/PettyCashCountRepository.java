@@ -24,7 +24,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : PettyCashCountRepository.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Counts of petty cash funds (append-only: save and finders only): a fund's counts, its latest of a kind, the days counted.
  * </pre>
  */

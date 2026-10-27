@@ -22,7 +22,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockSummaryService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock summary valued at MAC (INV-09) and reorder alerts (INV-10), from one grouped query
  *               of the units held.
  * </pre>

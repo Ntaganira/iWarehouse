@@ -14,7 +14,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PriceListItem.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Price per m² of one product on one price list (MD-06). A cleared price stays as a row
  *               with no price, so the list's price history keeps every change.
  * </pre>

@@ -34,7 +34,9 @@ import java.util.function.Supplier;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : RequisitionController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Purchase requisitions (CMP 06): the list, the form of a draft (items, quotes, the one chosen), the
  *               requisition with its quote documents and history, and its steps: submit, approve, reject, cancel.
  *               PAGE_REQUISITIONS with PERM_VIEW_ / CREATE_ / APPROVE_REQUISITION.

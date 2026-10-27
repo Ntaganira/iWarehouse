@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : StockAdjustmentDto.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Adjustment form (INV-07): the reason, and one row per change. Which fields a row needs
  *               depends on its kind: a unit code to write off, find or resize; a cause for a write-off;
  *               product, kind, size and place for a new unit; a new size for a resize; a place for a

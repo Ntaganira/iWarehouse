@@ -35,7 +35,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : BalanceConfirmationService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Independent confirmation of customer balances (SDP 10-11, BP Table 9 and 11; Q.07, and what completes
  *               Q.09 and Q.11: a credit sale for goods paid in cash, or one customer's money put on another's invoice,
  *               shows as a balance the customer disputes). The Internal Controller sends a confirmation of the balance

@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : LocationType.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Levels of the location tree (MD-02): Site &gt; Zone &gt; Rack &gt; Slot. A vehicle is a
  *               virtual location of its own, created with the vehicle by the Fleet module (FLT-01),
  *               never by hand.

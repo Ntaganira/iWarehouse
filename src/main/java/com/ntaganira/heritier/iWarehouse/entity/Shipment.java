@@ -23,7 +23,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Shipment.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One import shipment (SRS 6.1 Shipment): the goods receipts that came in it, its import
  *               costs in their own currencies (PRC-03) and how they are shared between the crates
  *               (PRC-04). Costs are posted as the bills arrive; each posting adds landed cost to the

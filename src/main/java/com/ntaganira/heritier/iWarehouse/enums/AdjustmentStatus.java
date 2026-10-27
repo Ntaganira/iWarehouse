@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : AdjustmentStatus.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Life of a stock adjustment (INV-07). Within the approval limit it posts when saved;
  *               above it, it waits for a second person, who approves (it posts) or rejects it with a
  *               reason; the requester can withdraw it (cancelled, with a reason). Posted adjustments

@@ -26,7 +26,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TaxReturnController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The month's tax returns (U.14): VAT, PAYE and RSSB, the withholding tax return by supplier and the corporate income
  *               tax estimate, due on the 15th of the next month; exported to Excel or PDF. PAGE_TAX_RETURNS; last month by default.
  * </pre>

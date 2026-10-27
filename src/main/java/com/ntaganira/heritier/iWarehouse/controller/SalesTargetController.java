@@ -33,7 +33,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SalesTargetController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sales targets (SDP 15, 16; Annex D): the grid of a year and scope (PERM_MANAGE_SALES_TARGETS to change it,
  *               PAGE_SALES_TARGETS), the sales against target of a week or a month (PAGE_SALES_TARGET_REPORT) and the
  *               weekly report (PAGE_WEEKLY_REPORT), each exported to Excel or PDF.

@@ -34,7 +34,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : NotificationService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : In-app notifications (RPT-06), ported from iVura. Delivers each Notifier.Alert after its transaction
  *               commits, in a transaction of its own: one notification per recipient (the enabled holders of its
  *               permission but the person who caused it, or one user), and an email to those with an address when the

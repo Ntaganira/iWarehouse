@@ -29,7 +29,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalesTargetService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sales targets (SDP 15, BP 4.1, Annex D; T.07, T.09): month by month for the business, each territory (by its
  *               code), salesperson (by username) and market (domestic, export), set on a grid per year and scope
  *               (PERM_MANAGE_SALES_TARGETS, in the change log). The sales against target of a week or a month: the period's

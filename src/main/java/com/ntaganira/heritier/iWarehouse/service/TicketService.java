@@ -32,7 +32,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TicketService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Transaction Tickets (BP 7.4, F-05, Annex I; decision D6). Every stock movement document but sales gets one:
  *               raised from its movements (receipts, transfers, site dispatches and arrivals, loads, returns from the road,
  *               adjustments and losses, customer returns) by whoever moved the glass, on a schedule and when the tickets

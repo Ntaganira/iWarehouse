@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : VehicleCostController.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Vehicle costs: the list, recording one (from a vehicle's or a trip's page, or empty), a cost with its
  *               journal, receipt and History; approving or rejecting it (another person), withdrawing it (who recorded
  *               it), reversing it once posted. PAGE_VEHICLE_COSTS + PERM_VIEW_VEHICLE_COST; recording

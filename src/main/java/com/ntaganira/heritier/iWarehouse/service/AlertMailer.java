@@ -19,7 +19,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AlertMailer.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Alerts by email (RPT-06): only when the Settings turn email alerts on and a mail account is configured
  *               (MAIL_USERNAME, MAIL_PASSWORD; MAIL_HOST, MAIL_PORT). Sent off the request thread (@Async), one message per
  *               address with the title, the text and the link to the page; a failure is logged, never shown to the user.

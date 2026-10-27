@@ -15,7 +15,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalePayments.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Splitting a sale's total over the ways it is paid (POS-04). Mobile money, card, bank transfer
  *               and customer credit settle what they say (with a reference where one is needed) and never more
  *               than the total; cash settles the rest: what the customer hands over must cover it, and the

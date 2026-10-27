@@ -11,7 +11,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AlertOnce.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A watched condition told once (RPT-06): raised in alert_states under its key unless it is raised
  *               already, cleared when it ends so it can be told again if it comes back.
  * </pre>

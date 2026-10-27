@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : ExpenseBillDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The expense bill form (CMP 01, 05): the supplier and their invoice, its day and due day, whether it is budgeted
  *               or an emergency, the requisition it uses, its lines by category, cost centre and location.
  * </pre>

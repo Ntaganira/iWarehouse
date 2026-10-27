@@ -11,7 +11,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Reconciliations.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Reconciling a statement with the ledger (ACC-12). The lines ticked (debits less credits) must take the
  *               previous statement's balance to the new one; the lines not ticked are outstanding: deposits (debits)
  *               and payments (credits) the bank has not shown yet. So the account's balance less the outstanding

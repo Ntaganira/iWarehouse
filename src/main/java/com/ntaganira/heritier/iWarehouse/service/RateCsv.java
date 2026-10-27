@@ -15,7 +15,9 @@ import java.util.regex.Pattern;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : RateCsv.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Reads an exchange rate file (ACC-02): one "date,currency,rate" line per rate, as typed
  *               or exported from Excel. Accepts comma, semicolon or tab separators, an optional header,
  *               dates as 2026-10-07 or 07/10/2026, and 1450.25, 1,450.25 or 1 450,25 as the rate.

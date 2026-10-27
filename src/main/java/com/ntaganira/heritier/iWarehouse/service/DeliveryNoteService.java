@@ -31,7 +31,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DeliveryNoteService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The delivery note and goods release authority (F-04, DN-005, IMP 8 and 9; decisions D3, D4). Dispatch
  *               prepares the release of a paid invoice with nothing left to pay: its whole sheets (sold at payment, still in
  *               the warehouse) and its cut pieces ready (verified when Settings ask), the vehicle and driver or the customer

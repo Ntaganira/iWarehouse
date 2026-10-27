@@ -27,7 +27,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripReturnService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A trip back at the warehouse (FLT-09, FLT-10). Its units are scanned off the vehicle (a label that is no
  *               unit expected back is kept as unexpected), then the supervisor reconciles it once every breakage reported
  *               on the road is decided: expected back = loaded - sold - breakage accepted, compared with the scans

@@ -50,7 +50,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ProfileController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : My profile (/profile, the header's menu): every signed-in user keeps their own details, photo and
  *               password, like signing out it needs no page or permission. Always the caller's own account. The session's
  *               user is refreshed after a change, so the header shows the new name and photo at once. An employee linked to

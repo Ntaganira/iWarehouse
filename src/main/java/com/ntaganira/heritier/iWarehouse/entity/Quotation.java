@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Quotation.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A quotation (POS-03): a customer, the name and TIN to print, a validity date, and lines priced
  *               from the customer's list with their totals (VAT per tax letter). Edited while a draft; sent, it is
  *               fixed; rung up at a till it becomes the sale, converted once that sale is paid (its invoice kept);

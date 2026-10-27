@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StaffAdvance.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A staff advance (CMP 08; ADV-WH-2026-000001): an employee, what it is for (a journey with its per diem, or
  *               anything else), its cost centre and amount in RWF (a foreign per diem converted at the rate kept here).
  *               Approved by the Managing Director, paid (vault, bank, mobile money or a petty cash fund), then retired by

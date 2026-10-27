@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SaleApproval.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A request for a manager's approval at the counter, with the before and after values (AUD):
  *               a line's price cut beyond the cashier's discount limit (list price, price asked, discount,
  *               the line's amount before and after, POS-06) or customer credit beyond what the customer has

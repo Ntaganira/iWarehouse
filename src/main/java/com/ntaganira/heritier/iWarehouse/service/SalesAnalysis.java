@@ -12,7 +12,9 @@ import java.util.function.Function;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalesAnalysis.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sales by customer, glass or processing, salesperson, day, month or invoice, with the gross margin at MAC
  *               (RPT-05). It covers the invoices issued in a period, each less its credit notes (whenever issued), so
  *               an invoice's margin is final once its pieces are handed over:

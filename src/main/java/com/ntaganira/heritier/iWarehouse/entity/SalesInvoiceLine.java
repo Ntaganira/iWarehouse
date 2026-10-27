@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SalesInvoiceLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One line of a sale: a unit from stock or a size to cut (POS-02), priced per m² from the
  *               customer's price list over its chargeable area (MD-06), or processing on a size, priced per
  *               m², metre of edge, piece or hole. The list, its VAT flag and the tax letter and rate are kept

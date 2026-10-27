@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReceivableMovement.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The movement of receivables over a period (BP Table 9): per customer the opening balance, the new
  *               credit (credit sales and deposit balances), the collections (balances and account payments), the credit
  *               notes, the write-offs, anything else, and the closing balance, all from the receivable account's lines.

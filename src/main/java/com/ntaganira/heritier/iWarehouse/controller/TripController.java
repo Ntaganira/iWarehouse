@@ -64,7 +64,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TripController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Moving-shop trips (FLT-04..07, FLT-12): list, plan and edit (PERM_PLAN_TRIP), build the manifest by scanning
  *               or typing labels (a rack label adds its available units), scan-load (PERM_LOAD_TRIP), confirm the departure
  *               (PERM_DEPART_TRIP: AT-03, a load over the vehicle's limits is refused), cancel with a reason, record the

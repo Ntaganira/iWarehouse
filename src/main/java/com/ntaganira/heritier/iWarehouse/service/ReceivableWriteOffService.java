@@ -33,7 +33,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReceivableWriteOffService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Receivable write-offs (F-14; Board Paper Table 6, 11.2): Credit Control prepares one for a customer, at most
  *               what they owe, with the reason and the recovery tried; Finance reviews it when Settings ask for it; another
  *               person approves it within the Delegation of Authority (the Board above the COO's limit, with its resolution),

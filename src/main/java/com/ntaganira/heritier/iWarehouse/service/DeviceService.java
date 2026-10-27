@@ -39,7 +39,9 @@ import java.util.regex.Pattern;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DeviceService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Phones of the mobile POS (NFR-10). Signing in on a phone checks the password like the web login, needs
  *               PERM_USE_MOBILE_POS and gives the phone a token of its own (32 random bytes; only its SHA-256 is kept);
  *               signing in again on the same phone replaces it. Every API request presents the token with the phone's id

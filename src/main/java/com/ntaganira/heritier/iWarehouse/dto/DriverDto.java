@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : DriverDto.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Register/edit driver form (FLT-03). The user is chosen once. The national ID keeps its 16 digits (spaces
  *               dropped); the licence number and category are kept upper case.
  * </pre>

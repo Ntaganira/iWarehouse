@@ -27,7 +27,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : InventoryKpiService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The inventory KPIs (Inventory Policy 19, Annex D; M.07, K.17, L.14, T.12) of any period, measured from
  *               what the system holds: the counts closed (units matched against expected), the units lost at cost, the
  *               damage register's value, the Inventory account at the start and the end (average value), the Cost of

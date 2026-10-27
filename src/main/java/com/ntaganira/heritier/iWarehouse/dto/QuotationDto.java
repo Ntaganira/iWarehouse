@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : QuotationDto.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit draft quotation form (POS-03): customer, name and TIN to print, validity date, notes,
  *               and its rows: whole sheets or a size to cut (with processing, holes and the customer's mark), a
  *               quantity and an optional discount. Prices come from the customer's list when it is saved.

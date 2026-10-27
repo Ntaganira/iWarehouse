@@ -29,7 +29,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SiteTransferService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Transfers between sites (IMP 11, TRF-007, TCN-008, PF-04): the receiving site asks for glass (so many
  *               sheets of a glass, of a size if it matters) with the reason and the day it should leave; another person
  *               approves it when Settings ask; the sending site dispatches it by scanning the labels (available units of

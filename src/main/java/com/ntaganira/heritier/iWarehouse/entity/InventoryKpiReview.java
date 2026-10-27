@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : InventoryKpiReview.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The formal review of inventory accuracy (IMP 19): made by the Head of Inventory or the Managing
  *               Director once accuracy has stayed below target for the Settings' months, keyed by the last of those
  *               months, with the figures it was made on and its note. Never changed once made.

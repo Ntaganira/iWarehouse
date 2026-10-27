@@ -13,7 +13,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ProcessingService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Processing charged on top of the glass (MD-06, POS-02): edging, polishing, drilling,
  *               tempering... priced per list in its charge unit. Deactivated, never deleted.
  * </pre>

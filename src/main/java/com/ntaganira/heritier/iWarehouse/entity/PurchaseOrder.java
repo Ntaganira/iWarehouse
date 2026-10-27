@@ -22,7 +22,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PurchaseOrder.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A purchase order in the supplier's currency (PRC-01): sheets by product, size and
  *               quantity, priced per m². The currency is the supplier's when the order is created and
  *               stays on the order. The lines are audited as their own records.

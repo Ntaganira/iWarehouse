@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : VehicleCostCategory.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a vehicle cost was for, and the expense account it goes to: fuel; services and oil changes, repairs,
  *               spare parts (bought when needed) and tyres; washing, parking and tolls, and the rest.
  * </pre>

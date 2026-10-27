@@ -8,7 +8,9 @@ import java.util.Locale;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PartyRules.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure rules shared by customers and suppliers (MD-04, MD-05): tidying typed text and
  *               checking a Rwandan TIN (9 digits, as RRA EBM expects on invoices, TAX-04).
  * </pre>

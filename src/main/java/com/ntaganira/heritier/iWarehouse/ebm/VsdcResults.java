@@ -9,7 +9,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : VsdcResults.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a VSDC result code means for a queued receipt (TAX-03, spec 4.14), and how long to wait before
  *               the next attempt. 000 is signed. Codes about the device, the connection to RRA or RRA's server
  *               (89x, 900-906, 922, 990-996, 999) are retried: they clear without changing the receipt. 924 and 994

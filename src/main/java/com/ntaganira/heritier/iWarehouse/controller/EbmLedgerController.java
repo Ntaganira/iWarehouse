@@ -24,7 +24,9 @@ import java.time.format.DateTimeParseException;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : EbmLedgerController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : EBM output against the sales ledger, monthly (U.13): the documents of the month and their receipts, what
  *               is signed, waiting or without a receipt, against the ledger's Sales, Sales Returns and VAT Output; in Excel
  *               or PDF. PAGE_EBM_LEDGER_REPORT + PERM_VIEW_ACCOUNTING.

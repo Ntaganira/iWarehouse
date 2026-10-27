@@ -37,7 +37,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PayRunService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pay runs (payroll). A run (PAY-WH-2026-000001) is made for a month with a line per employee working in it,
  *               from their salary and the rates in force on the month's last day; while a draft the month's overtime,
  *               bonus and deductions change and every line is worked out again (Payroll). Submitted, another person

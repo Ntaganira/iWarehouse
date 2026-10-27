@@ -32,7 +32,9 @@ import java.util.function.Supplier;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : BudgetController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Budgets (CMP 04): the years' budgets, a budget with its lines, departments, revisions and history; its
  *               header; a department's (or the company's) lines; the steps: a department submitted or sent back, the budget
  *               submitted to the Board, approved with the resolution, sent back, cancelled; a line's revision asked, and a

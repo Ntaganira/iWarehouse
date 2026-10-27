@@ -40,7 +40,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VehicleService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Vehicles (FLT-01, FLT-02). Adding a vehicle makes its VEHICLE location (no parent, code VEH-plate, its
  *               model as name); a new plate or model renames it, deactivating the vehicle deactivates it. A vehicle is
  *               deactivated only with no trip planned or on the road and nothing on board. Its papers are VALID, SOON or

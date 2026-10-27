@@ -29,7 +29,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PayrollRateController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Payroll rates (/payroll/rates): the PAYE bands and rates and the RSSB and CBHI rates in force from each date.
  *               Anyone with the page reads them; PERM_MANAGE_PAYROLL_RATES records a new set or corrects one no submitted,
  *               posted or paid run uses.

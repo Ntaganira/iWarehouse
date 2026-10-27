@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : MobileSales.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rules a sale from a vehicle is checked with (MPOS-04, MPOS-05), the same on the phone and the server.
  *               Prices come from the trip's frozen lists: the customer's list, then the default list (as
  *               PriceListService.priceFor); a line is the price per m² x the piece's chargeable area, VAT added when the

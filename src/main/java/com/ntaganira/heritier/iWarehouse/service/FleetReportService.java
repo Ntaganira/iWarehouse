@@ -32,7 +32,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetReportService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The fleet reports (RPT-04) from the documents: the trips back in a period (by the day they came back), their
  *               sales payments, float clearances and audit cases, worked into FleetAnalysis; the floats outstanding are
  *               those not cleared today, whatever the period. Filtered by driver and vehicle.

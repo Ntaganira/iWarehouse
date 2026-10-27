@@ -16,7 +16,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StatementSheets.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The income statement and the balance sheet as export sheets (ACC-11), shared by their own exports and
  *               the monthly management pack (T.10), so both always show the same figures the same way.
  * </pre>

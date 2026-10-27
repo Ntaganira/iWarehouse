@@ -14,7 +14,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockSummary.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock in pieces, m² and value at MAC, by product, location or status (INV-09), and the
  *               products below their reorder level (INV-10), without the database. By glass and place (RPT-02): each
  *               glass on each place. The value of a row is

@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PermissionService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Permission catalogue (ADM-01). Permissions come from module migrations because code
  *               checks them by code; here they are only relabelled or switched off. Switching off the
  *               ones needed to sign in and manage access is refused, so nobody can lock the system.

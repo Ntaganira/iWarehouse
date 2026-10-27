@@ -26,7 +26,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FieldCycleServicesTest.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : On the road (M15): collections banked or sent by mobile money during a trip (BP 7.3 rule 4: within the cash
  *               the driver holds, from the departure until the float is cleared, posted once, taken once per phone id) and
  *               the counts of what is on board (SDP 6: the driver's daily count from the phone, a spot check by someone

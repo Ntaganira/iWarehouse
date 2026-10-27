@@ -32,7 +32,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CreditNoteService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Returns and credit notes (POS-09). The customer brings back units taken on an issued invoice: sheets sold
  *               from stock and pieces handed over, each once. Each goes back on a rack (available, at its own cost: the
  *               MAC moves) or to cullet (BROKEN). An order's pieces not handed over yet can be given up instead (CANCEL):

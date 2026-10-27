@@ -27,7 +27,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : VehicleCostRepository.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Vehicle costs: the list (with their vehicle, trip and garage), one with everything its page shows, the
  *               costs of a trip or a vehicle, what drivers paid from a trip's cash (its float), the costs per vehicle
  *               and category of a period (the fleet report), and the highest odometer a vehicle's costs recorded.

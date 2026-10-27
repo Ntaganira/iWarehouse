@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileEndOfDayController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The end of the day on the phone. POST /api/v1/breakages reports a unit broken on the road with its photo
  *               (MPOS-06; idempotent on the phone's id, so the offline queue may send it again); GET /api/v1/breakages/{id}
  *               says whether the supervisor accepted it; POST /api/v1/trip/declaration declares the cash the driver holds

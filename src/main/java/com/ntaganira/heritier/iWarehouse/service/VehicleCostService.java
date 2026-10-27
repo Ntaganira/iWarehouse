@@ -31,7 +31,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VehicleCostService.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Vehicle costs (owner, 2026-10-12): fuel, services, repairs, spare parts, tyres, washing, parking. Recorded
  *               for an active vehicle (and a trip of it), dated up to today in an open month (VC-WH-2026-000001). Within
  *               the VEHICLE_COST_APPROVAL_LIMIT setting it posts at once (PostingService.vehicleCost), above it another

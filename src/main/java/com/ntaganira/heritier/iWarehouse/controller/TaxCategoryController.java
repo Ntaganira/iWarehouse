@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TaxCategoryController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Tax categories on the Settings screen (TAX-01, ADM-03): add, edit, activate and
  *               deactivate (no delete). Listed on /settings?tab=tax. PAGE_SETTINGS + PERM_EDIT_SETTINGS.
  * </pre>

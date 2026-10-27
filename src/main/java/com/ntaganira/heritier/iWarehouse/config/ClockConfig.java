@@ -13,7 +13,9 @@ import java.time.ZoneId;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : ClockConfig.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Business clock in Africa/Kigali. Services that depend on the date (numbering periods,
  *               expiry checks) take this Clock so tests can fix the date.
  * </pre>

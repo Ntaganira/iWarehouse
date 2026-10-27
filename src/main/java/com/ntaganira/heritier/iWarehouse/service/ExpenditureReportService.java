@@ -21,7 +21,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ExpenditureReportService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The expenditure report of a period (CMP 10, F-15 A; T.05, T.06, T.14, C.04): operating spending from the
  *               journals (expense accounts other than the cost of stock, FX and bad debts) by cost centre, location and
  *               account, capital spending (Fixed Assets), what no cost centre names, what was spent by manual journal

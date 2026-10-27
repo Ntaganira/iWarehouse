@@ -26,7 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileRoadController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The driver's phone on the road (M15): collections banked or sent by mobile money during the trip
  *               (BP 7.3 rule 4: POST /api/v1/deposits) and the daily count of what is on board (SDP 6: POST /api/v1/counts).
  *               Both carry the phone's own id: sent twice, taken once. PERM_USE_MOBILE_POS, the trip the driver's own.

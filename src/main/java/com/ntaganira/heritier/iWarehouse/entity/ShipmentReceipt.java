@@ -12,7 +12,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ShipmentReceipt.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A posted goods receipt that came in a shipment: its crates share the shipment's import
  *               costs. A receipt belongs to one shipment (uk_shipment_receipts_receipt). The receipt
  *               number is copied so the change log shows which receipt was added or removed.

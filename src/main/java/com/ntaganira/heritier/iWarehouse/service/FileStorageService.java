@@ -16,7 +16,9 @@ import java.io.InputStream;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FileStorageService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : File storage in MinIO (SRS 3.1), ported from iVura: puts and reads objects in the minio.bucket bucket,
  *               created the first time it is needed (not at start, so the app runs while MinIO is down). Files are read
  *               back through the app, which checks who may see them, never through links to MinIO: the warehouse LAN

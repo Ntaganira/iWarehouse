@@ -33,7 +33,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PeriodService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Monthly period close (ACC-10). Months close in order (Periods.nextToClose), each once it has ended and
  *               its books are complete: no manual journal dated in it or before waits for approval, and its foreign
  *               balances are revalued when anything would move (FxRevaluationService.state). Closing locks the

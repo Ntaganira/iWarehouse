@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : MobileTripService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a driver's phone downloads at trip start (SYNC-01): their trip on the road, the units on the vehicle
  *               (MPOS-02), the active customers, the prices frozen for the trip and a block of invoice numbers for the
  *               phone. The prices are taken once, at the trip's first download, for the default list and every list a

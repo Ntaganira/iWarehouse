@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PayRun.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month's pay run (payroll, PAY-WH-2026-000001): a line per employee, the rates in force, the totals.
  *               Prepared and submitted, approved by another person (its journal posts on the month's last day), then paid
  *               (the payment journal). Posted, it never changes: a correction goes into the next run. One run a month;

@@ -14,7 +14,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ManualJournals.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Rules of manual journals (ACC-05). A control account's balance is carried by documents or a
  *               subledger (the stock valuation, customers, suppliers, receipts not invoiced, tills, driver floats,
  *               claims): only those documents post to it, never a manual journal, or the two would drift apart.

@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : AuthorityLimit.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One cell of the Delegation of Authority (Board Paper Annex E): whether an office may approve a decision
  *               and up to what amount (RWF, or % for a discount; no amount: no limit). Every decision has a row per office;
  *               the Board's always allows, without limit. Changed only on the Settings page, each change in its History.

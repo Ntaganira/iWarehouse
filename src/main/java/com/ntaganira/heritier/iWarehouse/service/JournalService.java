@@ -41,7 +41,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : JournalService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Saves the journals the posting rules build (ACC-04), inside the event's transaction, numbered
  *               JV-WH-2026-000001; and reads them back: the journal list, a journal with its lines, an
  *               account's ledger, the trial balance (ACC-11) and the inventory account against the stock

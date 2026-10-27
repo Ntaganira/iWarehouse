@@ -15,7 +15,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CrateBatch.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One crate on a goods receipt (SRS 6.1 CrateBatch): sheets of one purchase order line,
  *               all the same size, put on one rack. Each good sheet becomes a stock unit when the
  *               receipt is posted; broken ones are only counted, for the supplier claim (PRC-06).

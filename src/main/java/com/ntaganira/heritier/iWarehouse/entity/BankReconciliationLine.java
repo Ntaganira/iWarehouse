@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BankReconciliationLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A ledger line a reconciliation cleared (ACC-12), with its debit and credit. A line is cleared by one
  *               reconciliation in force. Append-only (trg_bank_reconciliation_lines_append_only): the reconciliation
  *               records it, so it is not audited.

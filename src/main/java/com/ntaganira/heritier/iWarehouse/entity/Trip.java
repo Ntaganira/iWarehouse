@@ -19,7 +19,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Trip.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A moving-shop trip (FLT-05): a vehicle, its driver, a date and the area it covers, with its loading
  *               manifest (the units planned, each confirmed by a scan); its fuel and other costs are vehicle costs naming it. Departing moves the
  *               units loaded to the vehicle, in the driver's charge (FLT-07), and keeps what left (pieces and kg) and

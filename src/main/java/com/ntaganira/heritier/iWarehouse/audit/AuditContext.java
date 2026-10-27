@@ -12,7 +12,9 @@ import java.util.function.Supplier;
  * - Package   : com.ntaganira.heritier.iWarehouse.audit
  * - File      : AuditContext.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Per-request audit data (request id, IP, user agent, device, client time, reason).
  *               Filled by AuditContextFilter, read by the activity log and the change listener.
  * </pre>

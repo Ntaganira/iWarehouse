@@ -35,7 +35,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FxRevaluationService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Month-end revaluation of open foreign balances (ACC-08, unrealised FX). What is owed in a foreign
  *               currency on Accounts Payable (per supplier), Goods Received Not Invoiced (per supplier) and Accrued
  *               Import Charges at a month's last day, from the journal lines up to that day, is revalued at that

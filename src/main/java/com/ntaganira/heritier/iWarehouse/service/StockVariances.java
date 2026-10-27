@@ -12,7 +12,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockVariances.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rules of a count variance (IMP 14, 16, 19; VR-010): its size as a % of the value counted (what was
  *               missing and what was found, both counting), its class against the Settings' moderate and material %,
  *               whether it is above the tolerance, and the day it is due (so many working days after the count

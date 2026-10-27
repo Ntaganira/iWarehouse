@@ -12,7 +12,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetPapers.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The papers a trip needs (FLT-04): the driver's licence, the vehicle's insurance and inspection. A paper
  *               covers a day up to and including its expiry date. An expired one refuses a trip on that day; within the
  *               Settings' days before it expires the fleet is told (once per paper, expiry date and stage). Pure, tested.

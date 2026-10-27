@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TillSession.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A cashier's till session (POS-10): opened with a float, closed with the cash counted. The
  *               cash expected is the float plus the cash kept from sales; the difference (negative when
  *               short) is recorded with a note. One open session per cashier.

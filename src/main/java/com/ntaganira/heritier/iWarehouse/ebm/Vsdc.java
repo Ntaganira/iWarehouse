@@ -11,7 +11,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : Vsdc.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The messages of RRA's VSDC API (RRA_VSDC_DOC v1.0.5), field for field as the VSDC reads them:
  *               device initialisation (/initializer/selectInitInfo), item registration (/items/saveItems) and a
  *               sale or refund with its receipt (/trnsSales/saveSales). Every call is a JSON POST answered by an

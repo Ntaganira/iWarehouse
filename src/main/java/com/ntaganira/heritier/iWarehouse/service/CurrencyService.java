@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CurrencyService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Currencies (ACC-02). RWF is the base currency, set by migration: it stays active and
  *               keeps 0 decimals. Other currencies are added or activated when the business starts
  *               buying in them, and deactivated rather than deleted, once no active supplier invoices

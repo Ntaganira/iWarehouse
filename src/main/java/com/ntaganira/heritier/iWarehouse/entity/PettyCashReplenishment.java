@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PettyCashReplenishment.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Money into a petty cash fund from the vault or the bank (a top-up, CMP 07: below 25 % of its float), or
  *               its cash returned when it closes (PCR-WH-2026-000001), with what it held before. Posted when saved and never
  *               changed (append-only, trigger).

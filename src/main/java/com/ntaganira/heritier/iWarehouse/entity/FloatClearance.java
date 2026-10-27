@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : FloatClearance.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The accountant's count of a trip's cash (ACC-06, ACC-07): what the trip's cash sales put on the driver's
  *               float, what the driver declared and what was counted, paid into the vault or the bank. Less than expected
  *               is a shortage on the driver's receivable, more an overage to Cash Over/Short. FC-WH-2026-000001, one per

@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : EmployeeDto.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The employee form (payroll): who they are, their monthly salary and allowances in whole RWF, how PAYE is
  *               withheld and how they are paid. Spaces are dropped from the national ID and account number.
  * </pre>

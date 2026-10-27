@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : FxRevaluationLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One open foreign balance a revaluation revalued (ACC-08): the account, the supplier (none on
  *               Accrued Import Charges), what was owed in the currency and in RWF as booked, the rate applied
  *               (rate, date, source) and the RWF at it; booked less revalued is the gain (positive) or loss.

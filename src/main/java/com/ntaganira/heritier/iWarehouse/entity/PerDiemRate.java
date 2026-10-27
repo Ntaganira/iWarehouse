@@ -15,7 +15,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PerDiemRate.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The per diem of a travel category (CMP 08): in its currency, the meals and incidentals of a day and the
  *               accommodation of a night. A travel advance is worked out from it.
  * </pre>

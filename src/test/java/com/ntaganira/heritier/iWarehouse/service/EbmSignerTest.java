@@ -28,7 +28,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmSignerTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : AT-09: EBM down during a sale, the sale is complete and its receipt queued, retried with backoff and
  *               signed automatically when EBM is back (TAX-03). Missing settings and a refund before its sale wait;
  *               a refusal fails the receipt and tells the alert's holders.

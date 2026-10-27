@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PettyCashFund.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A petty cash fund (CMP 07, BP 5.1: the cashier keeps the imprest): one per site in use, its custodian and
  *               its float (the imprest, at most the Settings' maximum). What it holds is never kept here: it is the site's
  *               lines on the Petty Cash account (JournalService.locationBalances). Closed with a reason, its cash returned.

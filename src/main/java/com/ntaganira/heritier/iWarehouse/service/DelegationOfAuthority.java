@@ -22,7 +22,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DelegationOfAuthority.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The Delegation of Authority (Board Paper 13.1, Res. 16, Annex E). Every approval of a decision it covers
  *               calls {@link #require} after its own checks (the right to approve, never the requester): the approver's
  *               office must reach the one the amount needs (AuthorityTiers), and a decision only the Board may take is

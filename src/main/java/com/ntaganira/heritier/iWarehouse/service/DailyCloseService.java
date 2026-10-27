@@ -66,7 +66,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DailyCloseService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The daily close (F-12; BP 7.1 rule 5, 7.5; SDP 15-16): the end-of-day sales report of any day, read
  *               from the documents (EBM receipts issued and their first and last numbers, sales by channel split into
  *               cash, MoMo, card and transfer, and credit, by salesperson and customer, collections, refunds, the credit

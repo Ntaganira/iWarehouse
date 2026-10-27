@@ -15,7 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : BudgetsTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The budget rules on worked examples (CMP 04, 10; Annex D; T.02, T.03, T.07, T.11): the months of a year, a
  *               variance and its tolerance, the share a revision changes, the Settings' days, a week's target, the margin.
  * </pre>

@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : PeriodStatus.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A closed month (ACC-10): CLOSED, nothing can be posted on it; REOPENED, it was reopened with a reason
  *               and takes postings again until it is closed again. A month never closed has no row.
  * </pre>

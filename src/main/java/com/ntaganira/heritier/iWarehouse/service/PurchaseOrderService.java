@@ -47,7 +47,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PurchaseOrderService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Purchase orders (PRC-01). A draft takes the supplier's currency and can be edited;
  *               placing it fixes it. An order nothing was received on can be cancelled, one partly
  *               received can be closed short; both need a reason and no draft receipt waiting.

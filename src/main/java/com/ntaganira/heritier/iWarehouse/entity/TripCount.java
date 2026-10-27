@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripCount.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A count of the glass on a vehicle on the road (SDP 6, BP 7.3 rule 10, F-08): the driver's daily count from the phone or a supervisor's unannounced one; what was expected on board, found, missing and not expected. Append-only (trg_trip_counts_append_only), its units in trip_count_lines.
  * </pre>
  */

@@ -39,7 +39,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : BusinessDashboardService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The owner's dashboard (RPT-01): today's sales by channel and salesperson against the same time yesterday,
  *               the gross margin, the stock value at MAC, the cash position (tills, vault, bank, mobile money, driver
  *               floats from the ledger), receivables and payables, glass to reorder, requests waiting for approval, invoices not signed by EBM (TAX-03) and

@@ -15,7 +15,9 @@ import java.util.function.Function;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CuttingYield.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Yield report sums, without the database (PRD-09, SRS 4.11 production reports): the m²
  *               consumed, stocked as pieces and off-cuts, lost as cullet and broken, and the yield %, for
  *               all the cuts of a period and per operator or product; breakage per reason (PRD-08).

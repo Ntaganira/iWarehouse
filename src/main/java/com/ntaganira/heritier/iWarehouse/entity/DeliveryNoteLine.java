@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : DeliveryNoteLine.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One unit a delivery note releases: a whole sheet of the invoice or a cut piece. Append-only
  *               (trg_delivery_note_lines_append_only): the note's status says whether it left.
  * </pre>

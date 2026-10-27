@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ManualJournalLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A line of a manual journal (ACC-05): an account, a debit or a credit (RWF), a memo. Fixed when the
  *               journal is asked for. Append-only (trg_manual_journal_lines_append_only): the journal records it,
  *               so it is not audited.

@@ -20,7 +20,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : RoleDto.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit role form. The Spring authority is ROLE_ + code; the code is fixed after
  *               creation because migrations grant pages and permissions by role code.
  * </pre>

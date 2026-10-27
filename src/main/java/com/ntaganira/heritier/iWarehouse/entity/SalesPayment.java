@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SalesPayment.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One part of a sale's payment (POS-04): the method, the amount it settles (for cash, what was
  *               kept: tendered less change, with what was handed over) and its reference, in the till that took
  *               it. Written when the invoice is paid, or its balance (POS-08), and never changed

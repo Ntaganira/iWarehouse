@@ -24,7 +24,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CostCentreController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Cost centres (F-15 A, T.05): the list, the form (code, name, manager) and deactivation. PAGE_COST_CENTRES;
  *               changes need PERM_MANAGE_COST_CENTRES.
  * </pre>

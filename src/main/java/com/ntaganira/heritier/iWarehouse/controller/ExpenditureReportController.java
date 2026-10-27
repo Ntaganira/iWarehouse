@@ -27,7 +27,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ExpenditureReportController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The expenditure report (CMP 10, F-15 A; T.05, T.06, T.14, C.04): spending by cost centre, location and
  *               account, the indicators and split purchases for a period, exported to Excel or PDF. PAGE_EXPENDITURE_REPORT.
  * </pre>

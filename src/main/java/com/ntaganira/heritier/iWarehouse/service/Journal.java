@@ -14,7 +14,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Journal.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A journal being built by a posting rule (ACC-04), before JournalService saves it. Amounts are
  *               RWF with 2 decimals (ACC-01); a positive amount debits, a negative one credits. Stock lines
  *               are the change of each glass's stock value, so the inventory account follows the stock

@@ -30,7 +30,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TransferConfirmationService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Bank transfers paid on invoices, confirmed by Finance once the money is on the bank statement (SDP 14,
  *               P.05): with the Settings' release.transfer-confirmed, goods paid that way leave only then
  *               (SalesService.requireTransfersConfirmed). Confirmed once, never by who took the payment; Dispatch is

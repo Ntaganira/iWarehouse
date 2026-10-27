@@ -21,7 +21,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ManagementPackController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The monthly management accounts pack (BP 13.1, Table 6; T.10): its key figures on a page and the whole pack
  *               as one PDF or Excel workbook (the income statement of the month and the year to date, the balance sheet,
  *               the receivables and payables ageing, the stock position, sales by territory and by channel, collections

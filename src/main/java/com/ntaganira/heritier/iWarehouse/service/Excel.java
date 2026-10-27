@@ -18,7 +18,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Excel.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Excel export of reports (ACC-11, TAX-05): one sheet per table, a title, a line saying what it covers,
  *               the column headers and the rows. Amounts are numbers so the accountant can add them up, each column
  *               shown with the most decimals of its amounts (money 2, m² 4: #,##0.00, #,##0.0000); dates are dates (dd/mm/yyyy); total and

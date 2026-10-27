@@ -13,7 +13,9 @@ import java.util.regex.Pattern;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Pricing.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure price rules (MD-06): area and chargeable area of a piece, which list a price comes
  *               from, and reading a typed price. No Spring here, so they are unit-tested; quotations
  *               and the counter POS (POS-02) price with these.

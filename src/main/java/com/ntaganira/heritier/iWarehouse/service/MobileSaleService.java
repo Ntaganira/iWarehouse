@@ -28,7 +28,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : MobileSaleService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Takes the sales a driver's phone made, online or offline (SYNC-02..06, MPOS-02..05, ACC-06). A sale carries
  *               the phone's UUID: sent again, it is found and answered as before, never taken twice (SYNC-03, AT-05). It is
  *               checked against the trip as it stands: the driver's trip on the road, each unit still on its vehicle, an

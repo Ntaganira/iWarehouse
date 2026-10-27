@@ -40,7 +40,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TillService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Till sessions (POS-10). A cashier opens one with a float (it leaves the main cash vault) and
  *               sells in it; closing compares the cash counted with the cash expected (float + cash kept from
  *               sales). A difference needs a note and goes to Cash Over/Short; the cash goes back to the vault.

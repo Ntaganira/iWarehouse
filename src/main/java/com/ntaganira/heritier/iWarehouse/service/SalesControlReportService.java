@@ -24,7 +24,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalesControlReportService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Two monthly sales controls:
  *               - the discount analysis (SDP 15-16, R.06, M.15): the lines of issued invoices charged below the list
  *                 price they kept, what each would have charged at that price (the line's own pricing: glass by its

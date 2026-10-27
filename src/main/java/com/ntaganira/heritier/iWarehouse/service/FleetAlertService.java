@@ -28,7 +28,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetAlertService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Watches the papers trips need (FLT-04): an active driver's licence, an active vehicle's insurance and
  *               inspection. Within the Settings' days before expiry the ALERT_FLEET holders are told once, and again the
  *               day it expires (a licence tells its driver too). A renewal changes the date, so the alert clears

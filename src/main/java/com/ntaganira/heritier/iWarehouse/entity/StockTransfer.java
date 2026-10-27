@@ -16,7 +16,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockTransfer.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Units moved to another rack or slot (INV-07). Posted when saved: each unit gets a
  *               TRANSFER movement; never changed afterwards.
  * </pre>

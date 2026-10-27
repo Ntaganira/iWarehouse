@@ -18,7 +18,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockAdjustment.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A stock adjustment with its reason (INV-07): units written off, found, added or resized.
  *               Posted at once when the value moved is within the approval limit, otherwise pending
  *               until another person approves or rejects it. Its units are held while it is pending.

@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FieldCreditService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What customers may take on credit on the road (decision D8, FieldCredit): their limit less what they owe
  *               on the receivable account, nothing while an invoice is overdue past the grace when the Settings block it.
  *               Frozen into the trip's download for the phone, worked out again at sync.

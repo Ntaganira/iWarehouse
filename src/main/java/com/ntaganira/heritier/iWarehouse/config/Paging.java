@@ -12,7 +12,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : Paging.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One page size for every table, and paging of lists already in memory (a unit's movements,
  *               a price list's rows, a report's groups) so every table shows the same page numbers.
  *               A detail page with tabs pages the open tab with ?tab=x&page=n; the other tabs start at 0.

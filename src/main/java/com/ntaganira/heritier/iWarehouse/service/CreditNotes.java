@@ -9,7 +9,9 @@ import java.math.RoundingMode;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CreditNotes.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a return credits (POS-09). An invoice line is credited for the pieces brought back as the
  *               difference of its amount's running share (whole RWF, half up), so the parts of a line returned on
  *               several credit notes always add up to the line, never more. The credit first reduces the invoice's

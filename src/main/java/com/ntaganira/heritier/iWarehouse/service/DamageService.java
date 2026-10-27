@@ -36,7 +36,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DamageService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Damage reports (IMP 13, F-07, DMG-009, PF-07; decision D5). Reported by the warehouse or sales
  *               (PERM_REPORT_DAMAGE) with the units by label: glass on a rack, held by nothing; the report holds them
  *               until it is decided (damaged glass isolated: nothing sells, loads, cuts or moves it). Inspected by

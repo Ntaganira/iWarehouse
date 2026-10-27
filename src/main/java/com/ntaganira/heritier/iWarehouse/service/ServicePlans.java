@@ -10,7 +10,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ServicePlans.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : When a vehicle's service falls due, pure: so many km after it was last done (when the km are known) or so
  *               many months after, whichever comes first. Due on the day or at the km; due soon within the Settings' km
  *               or days before. The alert key names the plan, when it was last done and the stage, so doing the work

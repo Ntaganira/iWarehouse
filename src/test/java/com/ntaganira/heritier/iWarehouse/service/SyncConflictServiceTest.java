@@ -30,7 +30,9 @@ import static org.mockito.Mockito.when;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SyncConflictServiceTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A sale kept for the supervisor read back from what the phone sent (SYNC-05): each unit as it is now (or
  *               unknown), the customer by name, the payments; nothing when what came cannot be read as a sale.
  * </pre>

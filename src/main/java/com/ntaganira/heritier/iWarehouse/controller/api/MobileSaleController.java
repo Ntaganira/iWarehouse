@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileSaleController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Syncing the phone's sales (SYNC-02..06): a sale sent with its UUID is taken, found again when sent twice, or
  *               kept as a conflict for the supervisor; the answer is 200 in each case, so the phone moves to its next
  *               pending sale. Each sync is logged with the phone, the driver, the phone's time and the server's (AUD-07).

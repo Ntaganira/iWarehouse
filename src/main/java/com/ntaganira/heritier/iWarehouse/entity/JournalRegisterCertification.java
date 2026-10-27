@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : JournalRegisterCertification.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A closed month's register of journal numbers certified by the Director of Finance (F-16): how many
  *               journals, the first and last numbers, any gap, the total; then sampled by the Internal Controller with a
  *               note of what was checked. One per month.

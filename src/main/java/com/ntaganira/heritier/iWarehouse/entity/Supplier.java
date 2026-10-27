@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Supplier.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A supplier of glass or services (MD-05): country, invoicing currency (purchase orders
  *               are raised in it, PRC-01) and default incoterm. The code comes from DocumentNumberService
  *               and never changes. Deactivated, never deleted.

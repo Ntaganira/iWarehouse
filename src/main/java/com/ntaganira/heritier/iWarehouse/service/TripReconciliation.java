@@ -11,7 +11,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripReconciliation.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The end of day of a trip (FLT-09, FLT-10), pure: expected closing stock = loaded - sold - breakage
  *               accepted, compared with the units scanned back. Each unit loaded is sold (sold from the vehicle), broken
  *               (its breakage accepted), returned (scanned back) or missing; a unit sold and scanned back anyway, and every

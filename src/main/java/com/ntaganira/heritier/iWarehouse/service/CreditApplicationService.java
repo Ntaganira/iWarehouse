@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CreditApplicationService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Credit applications (F-02 C-D): a customer's credit limit, payment terms and price list asked for, with the
  *               reason, what they owe and how late; Credit Control assesses it (with its note), the Director of Finance
  *               reviews it when Settings ask, and another person approves it within the Delegation of Authority (by the

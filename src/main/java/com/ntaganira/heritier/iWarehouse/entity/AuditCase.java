@@ -18,7 +18,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : AuditCase.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The units of a trip missing or unexpected at the end of the day (FLT-10): opened when the trip is
  *               reconciled (AC-WH-2026-000001, one per trip), assigned to the warehouse supervisor, the owner told. Each
  *               unit is settled on its line; the case is resolved once every line is. Escalated to the owner with a note,

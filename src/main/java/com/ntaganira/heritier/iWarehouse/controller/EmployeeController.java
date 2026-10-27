@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : EmployeeController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Employees (/payroll/employees): the list, an employee's page (details, payslips, history) and the form.
  *               The national ID and account number show in full only with PERM_VIEW_EMPLOYEE_DATA (NFR-12), which the
  *               form needs too; others see the last four characters.

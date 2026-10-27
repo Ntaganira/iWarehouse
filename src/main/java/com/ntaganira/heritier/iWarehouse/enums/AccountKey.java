@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : AccountKey.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The accounts the posting rules use (SRS 4.9.1), by role rather than by code: the
  *               accountant may rename or renumber the account behind each key (V16 seeds them). An
  *               account with a key stays active. A new posting rule needing a new account = a constant

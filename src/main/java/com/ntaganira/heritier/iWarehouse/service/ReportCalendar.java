@@ -13,7 +13,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReportCalendar.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The reporting calendar (BP 5.3): the daily cash report by the Settings' time the next day, the weekly
  *               receivables and stock on Mondays, the month's accounts by the Settings' working day, the quarterly Board
  *               pack once a quarter has ended. Says what is due at a moment; the service tells people once. Pure and

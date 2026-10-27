@@ -15,7 +15,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Vehicle.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A delivery vehicle that is a moving shop (FLT-01): plate, model, how its racks are set up, the most
  *               kg and pieces it carries (checked when a trip departs, FLT-06) and when its insurance and inspection
  *               expire (FLT-04). It is a stock location of its own (FLT-02): made with it, its code VEH-plate, never

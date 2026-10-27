@@ -16,7 +16,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Product.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A glass product (MD-01): glass type + optional colour/finish + thickness, stocked and
  *               sold by the m². Type, colour/finish and thickness say what the glass is, so they are
  *               fixed after creation; a wrong product is deactivated and a new one added. Deactivated,

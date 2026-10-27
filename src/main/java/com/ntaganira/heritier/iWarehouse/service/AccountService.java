@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AccountService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The chart of accounts (ACC-03): list, add, rename or renumber, activate and deactivate. Codes
  *               are unique; the type is fixed once the account has lines, and on the accounts the posting
  *               rules use (system key), which also stay active.

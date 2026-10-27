@@ -33,7 +33,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ProductService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Glass products (MD-01). One product per glass type, colour/finish and thickness. Type,
  *               colour/finish and thickness are fixed after creation; code, VAT category, reorder level
  *               and notes can change. A new product needs an active VAT category (TAX-01).

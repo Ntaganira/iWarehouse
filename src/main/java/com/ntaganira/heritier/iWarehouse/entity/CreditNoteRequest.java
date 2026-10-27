@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CreditNoteRequest.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A credit note asked for (F-14): the return (units back to a rack or to cullet) or the pieces given up,
  *               the refund wanted, the reason and the totals worked out when asked. Reviewed by Finance (when Settings ask
  *               for it), approved by another person within the Delegation of Authority, then issued through the usual

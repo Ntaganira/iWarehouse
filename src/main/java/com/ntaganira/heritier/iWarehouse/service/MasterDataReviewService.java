@@ -26,7 +26,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : MasterDataReviewService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The monthly review of master data (Board Paper 11 and Table 9): every change made in a month to customers,
  *               suppliers, glass, price lists, prices, credit applications and price changes (from the change log), the
  *               accounts that look duplicated (customers sharing a phone, suppliers sharing a bank account) and the credit

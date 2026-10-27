@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : ExpenseBillStatus.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : An expense bill: entered, submitted, recommended by the head of department, reviewed by Finance,
  *               approved (posted) or rejected; cancelled by who entered it; reversed once posted.
  * </pre>

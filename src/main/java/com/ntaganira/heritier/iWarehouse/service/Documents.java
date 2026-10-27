@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.service;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Documents.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a document may be (SRS 3.1 file storage): a PDF or a photo (JPEG, PNG, WebP), told by its first bytes
  *               (never by the name or the type the browser sends), at most 5 MB; its name is kept without any path and
  *               without control characters, at most 200 long. Pure, unit-tested.

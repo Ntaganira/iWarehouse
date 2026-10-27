@@ -20,7 +20,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PdfService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Renders a Thymeleaf template to PDF with OpenHTMLToPDF (pure Java, as iVura) for report exports and
  *               document copies (RPT-07). The template is well-formed XHTML (self-closed void tags, &amp;#160; not
  *               &amp;nbsp;), sets its page in CSS (@page size, margins, running footer) and may use the messages of the

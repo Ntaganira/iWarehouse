@@ -27,7 +27,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AccessReviewService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The quarterly access review (Board Paper Table 8, Table 9): every user with their active roles, how many
  *               rights those give and when they last signed in, so whoever reviews (PERM_REVIEW_ACCESS) can check that
  *               rights match the segregation matrix and that nobody who left still has access; the review itself is then

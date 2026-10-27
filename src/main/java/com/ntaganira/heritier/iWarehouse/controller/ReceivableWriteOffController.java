@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ReceivableWriteOffController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Receivable write-offs (F-14): the list, the form (opened from a customer's account), a write-off with its
  *               review, approval within the Delegation of Authority (posting bad debts), rejection and withdrawal (reasons
  *               kept), its journal, documents and History. PAGE_RECEIVABLE_WRITE_OFFS + PERM_VIEW_WRITE_OFF; prepare

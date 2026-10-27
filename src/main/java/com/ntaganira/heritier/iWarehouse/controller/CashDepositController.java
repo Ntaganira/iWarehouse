@@ -29,7 +29,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CashDepositController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Takings banked (F-13, SDP 10): the deposits, the tills waiting to be banked, banking them with the slip,
  *               a deposit with its tills, journal, documents (the stamped slip) and History. PAGE_CASH_DEPOSITS +
  *               PERM_VIEW_CASH_DEPOSIT; banking PERM_BANK_CASH.

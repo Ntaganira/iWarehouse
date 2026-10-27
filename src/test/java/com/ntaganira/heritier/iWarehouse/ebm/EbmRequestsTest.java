@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : EbmRequestsTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The VSDC sale and refund requests say exactly what the document does (TAX-02): amounts VAT included,
  *               VAT per letter as on the invoice, split over the lines to the cent; and the simulator accepts them.
  * </pre>

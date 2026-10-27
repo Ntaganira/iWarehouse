@@ -16,7 +16,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : DataChangeLog.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Data change log (SRS 4.13, layer 2): the record BEFORE and AFTER a change.
  *               READ-ONLY in JPA. Rows are inserted only by DataChangeEventListener
  *               (plain JDBC inside the business transaction). Never save this entity.

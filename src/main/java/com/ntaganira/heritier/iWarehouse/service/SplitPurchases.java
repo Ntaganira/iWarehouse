@@ -10,7 +10,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SplitPurchases.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Splitting purchases to stay under a threshold (CMP 06, 09: prohibited): per supplier, two or more orders
  *               or bills within the Settings' days, each under a threshold, whose sum reaches it. The highest threshold
  *               crossed is reported first, and a purchase is reported once. Pure and tested.

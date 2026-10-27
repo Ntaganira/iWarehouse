@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockMovement.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One change of a stock unit's location or status (INV-04): from/to, user, time, reason
  *               and the document that caused it. A ledger: inserted by StockService only, never
  *               updated or deleted (@Immutable here, trg_stock_movements_append_only in the database).

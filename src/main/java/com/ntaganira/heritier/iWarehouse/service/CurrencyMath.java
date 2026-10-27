@@ -9,7 +9,9 @@ import java.math.RoundingMode;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CurrencyMath.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pure currency arithmetic (ACC-02). Rates are RWF for 1 unit of a currency.
  *               Conversions are not rounded: documents round once, at the total (CLAUDE.md).
  * </pre>

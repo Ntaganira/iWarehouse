@@ -31,7 +31,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StockTransferController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Transfer screens (INV-07): list, transfer page with its units and History, and the
  *               form (scan or type the codes, choose where they go). PAGE_STOCK_TRANSFERS +
  *               PERM_VIEW_STOCK_TRANSFER; moving units PERM_TRANSFER_STOCK.

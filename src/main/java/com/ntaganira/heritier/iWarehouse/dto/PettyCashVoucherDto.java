@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : PettyCashVoucherDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The petty cash voucher form (CMP 07, F-13 D): the fund, the day, who was paid and for what, the category, the
  *               cost centre, the amount and the receipt's number.
  * </pre>

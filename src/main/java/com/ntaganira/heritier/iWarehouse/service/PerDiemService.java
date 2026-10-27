@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PerDiemService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Per diem rates (CMP 08): one per travel category (local, upcountry, regional, international) in its
  *               currency, the meals and incidentals of a day and the accommodation of a night, changed on screen
  *               (PERM_MANAGE_PER_DIEM, in the change log). A travel advance is worked out from them.

@@ -31,7 +31,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockVarianceServiceTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Count variances (IMP 16, VR-010): opened with their value and class when a count closes with differences, the Board told of material ones; resolved with the root cause, the corrective action and the officer responsible; escalated once when not resolved in time.
  * </pre>
  */

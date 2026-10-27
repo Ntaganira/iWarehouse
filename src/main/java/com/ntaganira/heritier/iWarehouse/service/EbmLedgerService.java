@@ -30,7 +30,9 @@ import java.util.stream.Stream;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmLedgerService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : EBM output against the sales ledger, monthly (BP Table 8, Table 9, Annex D; U.13): the invoices and
  *               credit notes of a month with their EBM receipts (signed, waiting, or none: issued before the EBM
  *               connection), their totals and what is signed, against what the ledger carries for the month (Sales

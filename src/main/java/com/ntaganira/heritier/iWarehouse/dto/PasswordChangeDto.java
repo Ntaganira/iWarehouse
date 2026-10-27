@@ -11,7 +11,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : PasswordChangeDto.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Changing one's own password: the current one, then the new one twice. The rules (length, different,
  *               confirmed) are ProfileService's, so each refusal is shown under its own field.
  * </pre>

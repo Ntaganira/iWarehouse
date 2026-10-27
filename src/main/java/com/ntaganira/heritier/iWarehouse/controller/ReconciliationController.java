@@ -30,7 +30,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ReconciliationController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Bank and mobile-money reconciliation (ACC-12): the reconciliations, reconciling a statement (the account,
  *               its date and closing balance, then the lines it shows, ticked), a reconciliation with the lines it
  *               cleared and what was outstanding, and cancelling the latest one of an account.

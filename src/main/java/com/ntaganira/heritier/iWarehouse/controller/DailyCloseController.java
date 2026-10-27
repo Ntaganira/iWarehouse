@@ -34,7 +34,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : DailyCloseController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The daily close (F-12): the closes with the days still to close, the end-of-day sales report of a day
  *               (by channel and method, salesperson, customer, collections, the credit list, the tills and banking, the
  *               EBM receipts, the glass on vehicles) with its close: prepare it, sign it (another person), test it (the

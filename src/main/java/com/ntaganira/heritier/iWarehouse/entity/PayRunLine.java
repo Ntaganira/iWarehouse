@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PayRunLine.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One employee's pay in a run: what they earned (from their salary, changed for the month while the run is a
  *               draft), what was kept (Payroll) and their net pay. Their name, IDs and account are copied when the line is
  *               made, so payslips and declarations never change. A posted run's lines never change (trg_pay_run_lines_posted).

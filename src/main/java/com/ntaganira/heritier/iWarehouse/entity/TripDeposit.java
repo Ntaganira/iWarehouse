@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripDeposit.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Collections a driver banked or sent by mobile money during a trip (BP 7.3 rule 4, F-10 C, SDP 10): from the phone (its clientId: sent twice, taken once) or the office, with the slip's or the transfer's reference. Posted when recorded (Dr Bank or Mobile Money / Cr Driver Float naming the driver): it is no longer on the float. Append-only (trg_trip_deposits_append_only).
  * </pre>
  */

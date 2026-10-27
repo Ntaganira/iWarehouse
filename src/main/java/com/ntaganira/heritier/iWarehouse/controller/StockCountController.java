@@ -53,7 +53,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StockCountController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock counts by scanning (INV-08): list, start a count of a place (and optionally one
  *               glass), scan labels where they are found (one per scan or several pasted), remove a scan,
  *               close (the result is recorded; missing and lost units go on an adjustment) or cancel with a

@@ -42,7 +42,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : FixedAssetController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The fixed-asset register (C.08, U.12): the assets with their cost, depreciation and book value, an asset's page
  *               (its depreciation, documents of origin, history), registering an asset at its value to date and changing one
  *               (PERM_MANAGE_FIXED_ASSETS), disposing of one (PERM_DISPOSE_ASSET), and the monthly depreciation runs: the next

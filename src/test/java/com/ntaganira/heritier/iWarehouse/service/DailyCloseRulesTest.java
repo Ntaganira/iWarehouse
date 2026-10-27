@@ -23,7 +23,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DailyCloseRulesTest.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The pure rules of the daily close and the month's follow-up (M14): the cash count by denomination, working
  *               days, the end-of-day split by channel and method, reconciliation compliance, the movement of receivables
  *               and the days sales outstanding, gaps in the journal register, the reporting calendar.

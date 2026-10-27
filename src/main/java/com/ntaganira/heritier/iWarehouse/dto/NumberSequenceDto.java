@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : NumberSequenceDto.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit numbering sequence form (MD-07). Document type and branch are fixed after
  *               creation; the next number can only go up, so no number is ever issued twice.
  * </pre>

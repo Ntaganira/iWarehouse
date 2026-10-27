@@ -25,7 +25,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : AgeingSheets.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The aged receivables and payables as export sheets (ACC-09, RPT-07): one row per party, one column per
  *               ageing bucket and the total; collection performance by territory, salesperson or customer (Q.05). Shared
  *               by their own exports and the monthly management pack (T.10).

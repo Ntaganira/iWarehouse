@@ -31,7 +31,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ExchangeRateController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Exchange rates (ACC-02): record a rate, correct one with a reason (kept in the change
  *               log), import a CSV file. PAGE_CURRENCIES + PERM_MANAGE_EXCHANGE_RATE. Rates are never
  *               deleted. Listed on /currencies.

@@ -32,7 +32,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : RequisitionService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Purchase requisitions (CMP 06, PRF-WH-2026-000001): a department asks for what it needs with its estimated
  *               cost and budget code (PERM_CREATE_REQUISITION). Submitting checks the quotes its value calls for
  *               (Expenditure.sourcing: one, three written, an RFQ or a tender with its reference), each kept as a document

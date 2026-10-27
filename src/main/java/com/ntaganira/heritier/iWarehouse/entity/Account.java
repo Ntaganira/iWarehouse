@@ -14,7 +14,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Account.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : An account of the chart of accounts (ACC-03). The posting rules find theirs by system key
  *               (fixed, seeded by V16), so code and name may change; an account with a key stays active.
  *               The type is fixed once the account has lines. Deactivated, never deleted.

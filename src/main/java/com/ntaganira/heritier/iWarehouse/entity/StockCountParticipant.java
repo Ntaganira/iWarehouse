@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockCountParticipant.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Someone who took part in a count (IMP 15.1, F-08, BP 11.2): the warehouse team, the Internal Controller, Finance, the external auditors; a user signs the closed count in the system, anyone else on the paper sheet (recorded by a user, the signed sheet kept as a document).
  * </pre>
  */

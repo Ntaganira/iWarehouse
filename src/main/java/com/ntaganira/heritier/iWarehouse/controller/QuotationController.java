@@ -33,7 +33,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : QuotationController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Quotations (POS-03): the list (expired ones shown), the form (whole sheets and sizes to cut with
  *               processing, discount per row), a quotation with its lines, VAT and History, its print page (A4),
  *               send, cancel with a reason, copy into a new one, and ring it up at the cashier's till.

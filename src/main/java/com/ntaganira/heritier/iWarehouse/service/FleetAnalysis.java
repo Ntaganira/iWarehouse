@@ -12,7 +12,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetAnalysis.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The fleet reports (RPT-04), pure: the trips back in a period with what became of their units, their sales
  *               (cash and mobile money) and their float count; the same per driver with the breakage rate (units broken on
  *               the road over units loaded); the end-of-day discrepancies (audit case units); the floats outstanding per

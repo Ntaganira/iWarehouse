@@ -34,7 +34,9 @@ import java.util.stream.Stream;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : GlobalSearchService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The header's search: a scanned or typed code opens its record (a unit, a rack or slot, any document
  *               number, a customer, supplier or glass code); anything else lists the first matches of each kind, each
  *               found by its own list's search, so "See all" opens that list filtered the same way. A kind shows only to

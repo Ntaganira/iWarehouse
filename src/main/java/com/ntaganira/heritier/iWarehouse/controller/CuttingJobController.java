@@ -48,7 +48,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CuttingJobController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Cutting job screens (PRD-01..09): list, job page (pieces, the cut, History), add and edit
  *               drafts, take a sheet or off-cut (suggested or scanned), put it back, record the cut,
  *               cancel with a reason, cut the rest, and the yield report. PAGE_PRODUCTION +

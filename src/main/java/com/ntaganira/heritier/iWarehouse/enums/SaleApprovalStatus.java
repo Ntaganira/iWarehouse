@@ -8,7 +8,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : SaleApprovalStatus.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Life of an approval request at the counter (POS-05, POS-06): pending until another person
  *               approves or rejects it (with a reason); when Settings ask for it, recommended first (F-03: the
  *               Director of Commercial recommends, the COO decides). It is withdrawn, with a note, when the cashier takes it

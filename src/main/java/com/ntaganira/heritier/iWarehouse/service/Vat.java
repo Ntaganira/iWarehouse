@@ -10,7 +10,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Vat.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : VAT on sales (TAX-01). A line is charged in whole RWF with VAT included: price per m² x
  *               chargeable area x quantity, plus VAT when the price list's prices exclude it, rounded once.
  *               VAT is then worked out per tax letter on the invoice's totals, as EBM reports it (A exempt,

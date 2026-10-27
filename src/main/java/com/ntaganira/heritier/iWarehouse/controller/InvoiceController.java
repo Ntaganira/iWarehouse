@@ -39,7 +39,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : InvoiceController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Issued sales invoices (POS-01, POS-04, TAX-01, TAX-04): the list, an invoice with its lines, VAT
  *               per tax letter, payments, journal and History, and its receipt to print (80 mm); handing over
  *               the pieces of its custom sizes (POS-02, PERM_DELIVER_SALE). PAGE_INVOICES + PERM_VIEW_INVOICE.

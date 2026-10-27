@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SupplierPayment.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A payment to a supplier (ACC-08, ACC-09): in a currency at that day's rate (kept: currency,
  *               rate, date, source), by bank transfer, cash from the vault or mobile money. It settles the oldest
  *               open items in that currency: what they were booked at in RWF (settled base) less the RWF paid is

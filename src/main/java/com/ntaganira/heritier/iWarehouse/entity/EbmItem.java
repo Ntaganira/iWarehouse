@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : EbmItem.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A glass or processing service registered with the VSDC (/items/saveItems) before it is first sold:
  *               its EBM item code (fixed once made, it is on receipts) and the classification, tax letter and unit it
  *               was registered with; registered again when one of them changes. The simulator's registrations are

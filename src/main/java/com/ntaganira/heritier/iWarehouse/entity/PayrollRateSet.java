@@ -16,7 +16,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PayrollRateSet.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The PAYE bands and rates and the RSSB and CBHI rates in force from a date (payroll). A run takes the set in
  *               force on its month's last day and keeps it; a set a posted run used is never changed: a change in the law
  *               is a new set from its date.

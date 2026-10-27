@@ -15,7 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SalesControlAnalysisTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The discount analysis (SDP 15-16, R.06) and collection performance (BP 5.1, Q.05) on worked examples:
  *               discounts grouped and totalled, credits settling the oldest charges first, collections credited to the
  *               salesperson of the invoice they paid, on time or late, and unapplied credit.

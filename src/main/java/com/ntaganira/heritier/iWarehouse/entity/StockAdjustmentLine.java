@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockAdjustmentLine.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One change of an adjustment (INV-07): a unit written off (cause), a lost unit found (where),
  *               a new unit (product, kind, size, where) or a unit resized (new size). Its value is
  *               worked out again when the adjustment posts; a new unit or resize records the unit it made.

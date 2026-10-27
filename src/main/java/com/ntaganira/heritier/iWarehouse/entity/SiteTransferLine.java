@@ -14,7 +14,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SiteTransferLine.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a transfer between sites asks for: so many sheets of a glass, of a size when it matters. Written with
  *               the request and never changed.
  * </pre>

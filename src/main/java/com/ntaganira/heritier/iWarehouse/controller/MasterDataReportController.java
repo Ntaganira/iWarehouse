@@ -26,7 +26,9 @@ import java.time.format.DateTimeFormatter;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : MasterDataReportController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Master data changes (Board Paper 11 and Table 9): a month's changes to customers, suppliers, glass and
  *               prices, the accounts that look duplicated, the credit customers without their papers, the monthly review
  *               signed off and its export. PAGE_MASTER_DATA_REPORT + PERM_VIEW_MASTER_DATA_REPORT; review

@@ -28,7 +28,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetAlertServiceTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Papers about to expire (FLT-04): told once within the alert days, again when expired, the driver about
  *               their own licence; a renewal clears the alert; papers far off are not told.
  * </pre>

@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : DamageReport.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A damage report (F-07, DMG-009, IMP 13.3): where and when, the cause, what happened, who was there, whether it can be repaired, the units and their cost (the estimated loss). Reported, inspected by Dispatch, approved or rejected by the Director of Supply Chain (decision D5); while reported or inspected it holds its units. Approving writes units off on one adjustment or puts them back, and posts what someone pays back.
  * </pre>
  */

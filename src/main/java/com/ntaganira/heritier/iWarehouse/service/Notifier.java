@@ -12,7 +12,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Notifier.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : How a service tells people something (RPT-06, SRS 3.2: side effects by Spring events): it publishes an
  *               Alert, which NotificationService delivers once the service's transaction commits (nothing on a
  *               rollback) as in-app notifications and, when Settings say so, emails. An alert goes to the users holding

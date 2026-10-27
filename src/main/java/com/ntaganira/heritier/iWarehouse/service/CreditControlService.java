@@ -41,7 +41,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CreditControlService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Following up receivables (BP 5.1, Table 9; Annex D; F-02): the monthly movement of each customer's
  *               account (opening, new credit, collections, credit notes, write-offs, closing), the days sales
  *               outstanding and the share more than 90 days overdue against the Settings' ceiling, customer statements

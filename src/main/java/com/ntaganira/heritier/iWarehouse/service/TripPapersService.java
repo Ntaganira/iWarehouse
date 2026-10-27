@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripPapersService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A trip's papers (F-09, F-10, F-11; N.08, N.12, N.20): the stock issue note (the manifest at cost with
  *               the load request), the daily return of a day on the road (its sales with their customers, pieces and how
  *               they were paid, the cash, MoMo and credit, what was banked, the costs paid from the float, the cash still

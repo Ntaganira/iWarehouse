@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : AlertState.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A condition the alerts watch (RPT-06), by key ("LOW_STOCK:&lt;product id&gt;"): raised once when it starts,
  *               cleared when it ends, so people are told once, and again only if it comes back. System state, not audited.
  * </pre>

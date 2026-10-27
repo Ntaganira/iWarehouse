@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CompanyLogoService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The company's logo (Settings, General), printed on invoices, receipts, quotations and report PDFs. An
  *               upload is redrawn as a PNG (Logos) and kept in MinIO under a new key, stored in the company.logo setting
  *               (audited like any setting); the previous file stays in storage. Pages show it through /settings/logo,

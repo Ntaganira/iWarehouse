@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : PayRunLinesDto.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A draft run's lines as the month changes them: earnings and deductions per employee, whole RWF. PAYE, RSSB,
  *               CBHI and the net pay are worked out by the server, never typed.
  * </pre>

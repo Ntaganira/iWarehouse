@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockLeaving.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Units leaving stock at their own cost (broken on the road, lost from a vehicle), as a write-off does
  *               (StockAdjustmentService): the m² and value each glass loses, their cost for the journal, then each glass's
  *               MAC moves with Costing.afterStockChange. The caller locked the products and took the m² held before.

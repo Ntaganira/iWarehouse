@@ -11,7 +11,9 @@ import java.util.Objects;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Discounts.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Discount rules at the counter (POS-06), pure and tested. A price change is a discount on the
  *               list price, in percent to 2 decimals (negative when the price is raised). A user's limit is
  *               the largest of their roles' limits, a role without its own taking the Settings value; a

@@ -22,7 +22,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : SimulatedVsdc.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A VSDC for development and tests (Settings, ebm.mode = SIMULATOR). It checks a request as RRA's server
  *               does (formats, item count, at most 2 decimals, an item class on every item, the letters' amounts adding
  *               up, a refund naming its sale and a reason) and answers 910 with the field when it is wrong. A good sale

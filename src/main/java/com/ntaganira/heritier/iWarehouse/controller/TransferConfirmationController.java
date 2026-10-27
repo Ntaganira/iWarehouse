@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TransferConfirmationController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Bank transfers to confirm (SDP 14): the transfers paid on invoices in the last 90 days, waiting first;
  *               Finance confirms one with the bank's reference, and its goods may then leave. PAGE_TRANSFER_CONFIRMATIONS
  *               + PERM_CONFIRM_TRANSFER or PERM_VIEW_INVOICE; confirming PERM_CONFIRM_TRANSFER.

@@ -38,7 +38,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CashDepositService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Takings banked (F-13, SDP 10, P.04): closed tills whose count Treasury verified (when the Settings ask
  *               it) are banked with the deposit slip's number, each till once, the amount exactly their cash less their
  *               floats: banked in full, never netted. Posted when saved (Dr Bank / Cr Main Cash Vault). A till closed

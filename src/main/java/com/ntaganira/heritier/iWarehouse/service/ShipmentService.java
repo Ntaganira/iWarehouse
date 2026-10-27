@@ -33,7 +33,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ShipmentService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Shipments and their import costs (PRC-03..06). A shipment links the posted receipts that
  *               came in it and lists its bills (freight, insurance, duty, clearing, port, transport), each
  *               in its own currency. Posting converts the draft bills at the rate of each bill's date

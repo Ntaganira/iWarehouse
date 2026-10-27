@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BaseEntity.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Base class for every BUSINESS entity (stock, sales, fleet, accounting).
  *               UUID ids so the offline PWA can create records (SRS 6.3);
  *               @Version for optimistic locking (NFR-06); created/updated by/at.

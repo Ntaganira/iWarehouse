@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
  * - Package   : com.ntaganira.heritier.iWarehouse.security
  * - File      : UserSessions.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Ends a user's open sessions, so a disabled account, a reset password or new roles
  *               take effect at once instead of at the next sign-in. The user lands on /login?expired.
  * </pre>

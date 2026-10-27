@@ -15,7 +15,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FinancialStatements.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The financial statements (ACC-11) from the accounts' debits and credits. The income statement of a
  *               period: revenue (credits less debits), cost of goods sold (the COGS account), the other expenses,
  *               gross and net profit. The balance sheet at a day: assets, liabilities and equity at their balances;

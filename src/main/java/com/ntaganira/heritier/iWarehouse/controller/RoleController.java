@@ -26,7 +26,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : RoleController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Roles screens (ADM-01), ported from iVura: list, detail with History, add/edit with
  *               page and permission grants, activate/deactivate (no delete). PAGE_ROLES + PERM_x_ROLE.
  * </pre>

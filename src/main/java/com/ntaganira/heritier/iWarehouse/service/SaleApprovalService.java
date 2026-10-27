@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SaleApprovalService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Deciding the counter's approval requests (POS-05, POS-06, F-03). Another person than the requester
  *               approves (a price change then applies to its line, with the list price and the reason kept; a
  *               credit lets the sale be paid on credit up to the amount; longer terms go on the invoice) or rejects with

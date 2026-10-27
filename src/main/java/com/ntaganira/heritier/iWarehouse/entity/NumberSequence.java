@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : NumberSequence.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Numbering sequence for one document type and branch (MD-07), e.g. INV-WH-2026-000123.
  *               The format (prefix, reset policy, padding) is audited. The counter (nextValue,
  *               periodKey) moves with every document issued, and the document's own audit row

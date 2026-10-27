@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripCountLine.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A unit of a van count: found on the vehicle, missing from it, or a label not expected (no unit, or not on this vehicle). Append-only (trg_trip_count_lines_append_only).
  * </pre>
  */

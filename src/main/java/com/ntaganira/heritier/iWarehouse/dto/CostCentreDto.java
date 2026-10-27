@@ -13,7 +13,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : CostCentreDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The cost centre form (F-15 A): its code, name and manager.
  * </pre>
  */

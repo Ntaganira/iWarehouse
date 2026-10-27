@@ -10,7 +10,9 @@ import java.time.YearMonth;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : WorkingDays.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Working days (Monday to Friday) for the deadlines of the client's calendar: reconciliations by the fifth
  *               working day, the month's accounts by the tenth (BP 5.3, Table 9). Pure and tested.
  * </pre>

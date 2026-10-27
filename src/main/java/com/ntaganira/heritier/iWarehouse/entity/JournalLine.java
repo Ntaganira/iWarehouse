@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : JournalLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One line of a journal: an account debited or credited in RWF (ACC-01). A line from a foreign
  *               document keeps its currency, amount and rate; a stock line its glass (AT-10 per glass); a
  *               payable line its supplier, a receivable line its customer. Append-only (trg_journal_lines_append_only).

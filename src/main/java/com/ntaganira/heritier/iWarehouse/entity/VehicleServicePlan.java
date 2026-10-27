@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : VehicleServicePlan.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Work a vehicle needs regularly: an oil change every 5,000 km or 3 months, whichever comes first. When it
  *               was last done (and at how many km) moves forward when a posted vehicle cost does it; before it falls due
  *               the fleet is told (ServicePlans, ServicePlanService). Deactivated, never deleted.

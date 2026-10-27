@@ -19,7 +19,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : EbmCodesTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : RRA's codes and formats as the receipts print them, and what a VSDC answer means for the queue.
  * </pre>
  */

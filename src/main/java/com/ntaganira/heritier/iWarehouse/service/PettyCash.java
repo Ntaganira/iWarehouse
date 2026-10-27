@@ -15,7 +15,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PettyCash.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The petty cash rules of the Cost Management &amp; Expenditure Control Policy (CMP 07), pure and tested: a fund
  *               below the Settings' share of its float is topped up, and a top-up brings it back to its float; a payment is
  *               at most the Settings' amount and what the fund holds; the custodian counts it every working day; Finance

@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SalesOrderController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sales orders raised by the Frontline Order Desk (BP 7.1, Annex G, F-01; decision D4): the list, the form
  *               (customer, channel, market, territory, agent, site, rows priced like a quotation), an order with the Order
  *               Desk's check of stock, prices and credit and its History, send it to the cashier, cancel it with a reason,

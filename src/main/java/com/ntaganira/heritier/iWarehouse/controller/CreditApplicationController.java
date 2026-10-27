@@ -29,7 +29,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CreditApplicationController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Credit applications (F-02 C-D): the list with the customers due for a credit review, the form (from the
  *               customer's page), an application with its assessment, review and approval within the Delegation of
  *               Authority, rejection and withdrawal (reasons kept), its documents and History. PAGE_CREDIT_APPLICATIONS;

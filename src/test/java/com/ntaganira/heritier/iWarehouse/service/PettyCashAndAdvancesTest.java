@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PettyCashAndAdvancesTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The policy's petty cash and staff advance rules on worked examples (CMP 07, 08, 10): the top-up trigger and
  *               amount, a payment's limits, days not counted, the surprise count due; a journey's per diem, the day an
  *               advance is retired by, the rest when retired, what salary recovers, the retirement indicators; and who

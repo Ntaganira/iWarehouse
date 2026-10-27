@@ -19,7 +19,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ExceptionsReportService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The month's exceptions for the Management Committee (F-03, F-14, Board Paper Table 9): every counter
  *               exception decided (price, below cost, credit, longer terms), every stock adjustment, manual journal and
  *               vehicle cost another person decided, every credit note asked and decided (or issued at once), every

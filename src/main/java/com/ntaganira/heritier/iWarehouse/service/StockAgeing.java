@@ -17,7 +17,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockAgeing.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : How long glass has been held (RPT-02). A unit's age is the days since it was created: received for a
  *               sheet, cut for a piece or an off-cut. Off-cut ageing puts the off-cuts held in four bands (0-30, 31-90,
  *               91-180, over 180 days) per glass. Slow-moving stock is, per glass, what has been held longer than a

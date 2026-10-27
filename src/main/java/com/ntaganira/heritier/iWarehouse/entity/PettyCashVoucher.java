@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PettyCashVoucher.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A petty cash voucher (CMP 07, F-13 D; PCV-WH-2026-000001): a payment from a fund to a payee, its purpose,
  *               category and cost centre, at most the Settings' amount, recorded by the custodian with the original receipt
  *               and approved by another person (the head of department): approving posts it (Dr the category / Cr Petty

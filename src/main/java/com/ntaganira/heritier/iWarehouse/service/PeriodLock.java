@@ -13,7 +13,9 @@ import java.time.format.DateTimeFormatter;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PeriodLock.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Refuses what would post on a closed month (ACC-10). JournalService asks it before saving any journal;
  *               documents dated by the user (a manual journal, a supplier invoice) ask it first so the refusal shows
  *               next to the date. It only reads the closed months, so any service may use it (PeriodService, which

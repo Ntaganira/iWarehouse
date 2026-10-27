@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : ExchangeRateDto.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Record or correct an exchange rate (ACC-02). Currency, date and source are fixed once
  *               recorded; a correction changes the rate or note and needs a reason. "confirmed" lets a
  *               rate more than 10% away from the previous one through, after the user checked it.

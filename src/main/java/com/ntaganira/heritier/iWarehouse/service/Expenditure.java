@@ -18,7 +18,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Expenditure.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rules of the Cost Management & Expenditure Control Policy that need no database:
  *               - how a purchase is sourced by its value (CMP 06): one quote, three written quotes, a formal RFQ, a tender;
  *               - which row of the expenditure matrix approves a bill (CMP 05): an emergency, else unbudgeted, else capital,

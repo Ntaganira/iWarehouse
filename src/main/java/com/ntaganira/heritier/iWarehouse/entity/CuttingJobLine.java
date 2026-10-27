@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CuttingJobLine.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Pieces wanted on a cutting job (PRD-01): size, quantity, processing (codes of processing
  *               services, e.g. EDGING,DRILLING) and the customer's mark. Fixed once a source is taken;
  *               the quantity actually cut is set when the cut is recorded.

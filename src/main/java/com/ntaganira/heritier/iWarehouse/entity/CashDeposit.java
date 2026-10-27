@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CashDeposit.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Takings banked (F-13, SDP 10): the closed tills it took (till_sessions.deposit_id), the bank account,
  *               the deposit slip's number, the amount, exactly their cash less their floats (banked in full, never
  *               netted). Posted when saved: Dr Bank / Cr Cash Vault. Never changed.

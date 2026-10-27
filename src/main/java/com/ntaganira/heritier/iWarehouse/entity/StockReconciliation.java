@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : StockReconciliation.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month's stock reconciliation signed off (BP 7.4, Table 9, Annex I step 5): units loaded on vehicles
  *               against those sold, back, broken, lost or still on board; units sent to other sites against those arrived
  *               or in transit; tickets not posted; stock lost or found at cost against the stock value and whether it

@@ -15,7 +15,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : ProfileDto.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : My profile: what a user keeps up to date themselves. The username, roles and status stay with the
  *               administrators (UserDto); the rules on name, email and phone are the same as theirs.
  * </pre>

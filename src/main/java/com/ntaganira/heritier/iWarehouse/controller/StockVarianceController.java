@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StockVarianceController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Count variances (IMP 16, VR-010): the list (waiting first), a variance's page (the count's differences with
  *               their value, the class, the due day; resolve it with the root cause, corrective action and responsible
  *               officer; its documents and History) and the printed variance report.

@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : StaffAdvanceDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The staff advance form (CMP 08): the employee, a journey (its per diem category, destination and days, plus
  *               any fares) or another purpose with its amount, and the cost centre.
  * </pre>

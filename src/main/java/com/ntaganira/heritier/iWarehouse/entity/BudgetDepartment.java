@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BudgetDepartment.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A department's part of a budget (CMP 04, T.01): open while its head enters its lines, submitted by them (by the
  *               Settings' day, 30 November), sent back by Finance with a note.
  * </pre>

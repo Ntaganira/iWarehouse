@@ -36,7 +36,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DailyCloseServicesTest.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rules of M14's services: the till counted note by note and verified by another person (F-13), the
  *               takings banked in full (SDP 10), the daily close prepared, signed by another person once its figures
  *               still hold (F-12), transfers confirmed by another person (SDP 14), balance confirmations (SDP 10) and the

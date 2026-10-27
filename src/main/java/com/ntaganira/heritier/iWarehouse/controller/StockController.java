@@ -53,7 +53,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : StockController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Inventory screens (INV-01..04, INV-06): stock units with filters and the "smallest piece
  *               that fits" search, a unit's detail with its movements, the cut it came from or went
  *               to, and History, and labels (INV-03) of a receipt, crate, cutting job or unit, as a

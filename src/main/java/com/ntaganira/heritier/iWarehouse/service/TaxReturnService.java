@@ -26,7 +26,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TaxReturnService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The month's tax returns at a glance (U.14), each due to RRA or RSSB on the 15th of the next month: VAT (the VAT
  *               report), PAYE and RSSB (the month's pay run), the withholding tax return (each expense bill that withheld tax in
  *               the month by supplier and TIN, less the bills reversed in it; what the account still owes to RRA), and the

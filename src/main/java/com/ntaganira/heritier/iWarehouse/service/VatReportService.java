@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VatReportService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The monthly VAT report for filing (TAX-05). Output VAT per tax letter from the invoices issued and the
  *               credit notes dated in the month (VatReport); input VAT from the VAT Input account's lines of the month
  *               (VAT recovered on purchases, booked by manual journal until purchases carry VAT); VAT payable is

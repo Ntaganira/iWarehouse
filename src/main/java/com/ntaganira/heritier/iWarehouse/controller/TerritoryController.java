@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TerritoryController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sales territories and their Regional Sales Managers (BP 6, Res. 7): the list, add, change, deactivate
  *               and activate again. PAGE_TERRITORIES; changes PERM_MANAGE_TERRITORIES.
  * </pre>

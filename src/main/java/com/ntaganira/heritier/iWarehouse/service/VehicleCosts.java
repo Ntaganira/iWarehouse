@@ -9,7 +9,9 @@ import java.math.RoundingMode;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : VehicleCosts.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The sums of vehicle costs, pure: whether a cost waits for approval (above the limit), the most VAT an amount
  *               can include (18 %, rounded to the RWF), what a driver may still pay from a trip's cash (its cash sales less
  *               what was paid from it already, waiting or posted) and the cost per km.

@@ -26,7 +26,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ServicePlanController.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A vehicle's service plans: adding one, changing it, deactivating or activating it; back to the vehicle's
  *               Service tab. PAGE_VEHICLES + PERM_MANAGE_SERVICE_PLANS.
  * </pre>

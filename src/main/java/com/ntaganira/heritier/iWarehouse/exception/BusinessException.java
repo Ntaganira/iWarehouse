@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.exception;
  * - Package   : com.ntaganira.heritier.iWarehouse.exception
  * - File      : BusinessException.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A business rule refused the request. Carries a message key (shown in the user's
  *               language by the controller) and, when the problem belongs to one form field, that field.
  * </pre>

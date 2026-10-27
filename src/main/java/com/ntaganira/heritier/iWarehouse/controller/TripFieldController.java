@@ -29,7 +29,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TripFieldController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The field cycle on a trip (M15): the load request approved (PERM_APPROVE_LOAD_REQUEST) and the previous
  *               trip waived by the COO (PERM_WAIVE_PREVIOUS_TRIP), collections banked during the trip recorded at the
  *               office (PERM_RECORD_TRIP_DEPOSIT), an unannounced count of the van (PERM_COUNT_VAN), the clearance

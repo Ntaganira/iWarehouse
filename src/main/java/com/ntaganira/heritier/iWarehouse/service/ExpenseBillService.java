@@ -32,7 +32,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ExpenseBillService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Expense bills (CMP 01, 05, 07; EXP-WH-2026-000001): a supplier's invoice for utilities, rent, services, fees,
  *               repairs, transport or a capital item, entered by Finance (PERM_CREATE_EXPENSE) from an approved RWF
  *               supplier, once per supplier invoice, dated up to today in an open month, its lines by category, cost centre

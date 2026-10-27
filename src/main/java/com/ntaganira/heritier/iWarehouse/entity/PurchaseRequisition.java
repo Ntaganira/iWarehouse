@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PurchaseRequisition.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A purchase requisition (CMP 06, PRF-WH-2026-000001): what a department needs, its estimated cost, its
  *               budget code, the quotes its value calls for and the one chosen; approved by the head of department before
  *               any order or purchase bill commits the money. An order or a bill uses it once.

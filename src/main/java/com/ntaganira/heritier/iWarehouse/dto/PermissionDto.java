@@ -12,7 +12,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : PermissionDto.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Edit permission form: only the label and description. Code, module and action are
  *               referenced by @PreAuthorize and seeded by migrations, so they are read-only.
  * </pre>

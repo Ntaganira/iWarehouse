@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : DeliveryNoteRepository.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Delivery notes (F-04): the list, one with its invoice and customer, those of an invoice,
  *               those waiting for release or for their signed copy, those released in a period.
  * </pre>

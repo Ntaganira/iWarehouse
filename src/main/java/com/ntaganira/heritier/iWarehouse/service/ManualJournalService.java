@@ -42,7 +42,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ManualJournalService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Manual journals (ACC-05). Asked for by account (MJ-WH-2026-000001): a date up to today, a
  *               description, at least two lines, each a debit or a credit on an active account that is not a
  *               control account (ManualJournals.CONTROLLED), balanced. It waits for another person: approving

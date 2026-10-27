@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SiteTransfer.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Glass sent from one site to another (IMP 11, TRF-007, TCN-008, PF-04): asked by the receiving site with the
  *               reason and the expected dispatch day, approved by another person, dispatched with its vehicle, driver and
  *               expected arrival (the units go in transit), received label by label at the other site; labels that did

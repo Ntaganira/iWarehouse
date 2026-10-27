@@ -15,7 +15,9 @@ import java.io.IOException;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Logos.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The company's logo: a JPEG or PNG becomes a PNG, its shape and transparency kept, at most MAX_WIDTH wide
  *               (enough for an A4 letterhead at 300 dpi). It is drawn again, so nothing of the file as sent is kept. Pure.
  * </pre>

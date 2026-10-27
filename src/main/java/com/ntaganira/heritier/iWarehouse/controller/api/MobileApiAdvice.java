@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileApiAdvice.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Errors of the mobile POS API as JSON, in the phone's language: a business refusal is 422 with its message
  *               key and text, a missing record 404, a missing right 403, an unreadable body 400, a record changed at the
  *               same time 409. Anything else is logged and answered 500 with a plain text, never the exception's own.

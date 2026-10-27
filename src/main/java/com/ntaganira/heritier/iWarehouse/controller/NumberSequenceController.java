@@ -30,7 +30,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : NumberSequenceController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Document numbering on the Settings screen (MD-07): add a sequence for a document type
  *               and branch, edit its format and next number. Listed on /settings?tab=numbering.
  *               PAGE_SETTINGS + PERM_EDIT_SETTINGS. Sequences are never deleted.

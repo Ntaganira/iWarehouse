@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CustomerReminder.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A payment reminder issued to a customer (BP 5.1, dunning): its level (1 a reminder, 2 a second
  *               reminder, 3 a final notice, by how long the oldest charge is overdue), the balance and the overdue amount
  *               on the day, the letter printed from it. Append-only (trg_customer_reminders_append_only).

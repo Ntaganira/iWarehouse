@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetAnalysisTest.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The fleet reports (RPT-04): trips per driver with the breakage rate (broken over loaded), the totals, and
  *               the floats outstanding per driver, the largest first, since the oldest trip back.
  * </pre>

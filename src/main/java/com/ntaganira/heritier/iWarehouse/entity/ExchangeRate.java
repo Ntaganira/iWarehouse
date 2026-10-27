@@ -16,7 +16,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ExchangeRate.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : RWF for 1 unit of a currency on a date, from a source (ACC-02). One rate per currency,
  *               date and source. Documents copy the rate they use, so a correction (made with a
  *               reason) never changes a posted document. Rates are never deleted.

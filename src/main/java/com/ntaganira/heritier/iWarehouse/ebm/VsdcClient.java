@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : VsdcClient.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What iWarehouse asks of a VSDC (TAX-02): the business's real one over HTTP (HttpVsdcClient) or the
  *               simulator for development and tests (SimulatedVsdc). A VSDC that cannot be reached throws
  *               VsdcUnavailableException; any answer, even a refusal, comes back as a Reply with its result code.

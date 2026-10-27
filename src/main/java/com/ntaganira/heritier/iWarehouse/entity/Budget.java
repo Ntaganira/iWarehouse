@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Budget.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A year's budget (CMP 04; BUD-WH-2026-000001): its lines by department and account (BudgetLine), the departments'
  *               submissions (BudgetDepartment), the year's landed cost and the demurrage ceiling per consignment.
  *               Prepared and consolidated by Finance, approved by the Board with its resolution, revised line by line

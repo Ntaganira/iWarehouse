@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SupplierInvoiceLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A goods receipt a supplier invoice bills (ACC-09): its value in the invoice's currency, its rate
  *               and the RWF it was booked at. A receipt is billed once (uk_supplier_invoice_lines_receipt).
  *               Append-only (trg_supplier_invoice_lines_append_only): the invoice records it, so it is not audited.

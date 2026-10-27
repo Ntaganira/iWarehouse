@@ -18,7 +18,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Budgets.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The budget rules of the policy (CMP 04, 10; Annex D), pure and tested: an annual amount spread over the
  *               months (whole RWF, adding up exactly), year to date, a variance and its share of the budget (flagged
  *               beyond the Settings' tolerance), the share a revision changes a line (the Delegation of Authority decides

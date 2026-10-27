@@ -12,7 +12,9 @@ import java.time.temporal.TemporalAdjusters;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : InventoryPeriods.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The periods of the inventory reports (Inventory Policy 18): the week (Monday to Sunday), the month, the
  *               quarter and the year a day falls in, the one before it, and how far it has run by a day. Pure and tested.
  * </pre>

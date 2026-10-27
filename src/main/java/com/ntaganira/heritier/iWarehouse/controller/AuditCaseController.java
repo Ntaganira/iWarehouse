@@ -29,7 +29,9 @@ import java.util.function.Supplier;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : AuditCaseController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : /audit-cases (FLT-10, FLT-11): the units of trips back with differences. The supervisor settles each unit
  *               (found on a rack, written off, an unexpected one explained) and may escalate the case to the owner, who alone
  *               charges a missing unit to the driver (CHARGE_DRIVER). PAGE_AUDIT_CASES + VIEW_AUDIT_CASES to open; settling

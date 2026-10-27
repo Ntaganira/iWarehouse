@@ -9,7 +9,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AfterCommit.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Runs work only once the current transaction has committed (activity entries that
  *               describe a change, ending sessions), so nothing is logged or done for a rolled-back change.
  * </pre>

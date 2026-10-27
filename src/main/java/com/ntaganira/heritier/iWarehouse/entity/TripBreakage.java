@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripBreakage.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A unit broken on the road (FLT-08, MPOS-06): reported by the driver on the phone (offline too, with the
  *               phone's own id so a report sent twice is kept once) or at the warehouse, with a photo (one of the trip's
  *               documents), the reason and the place. The supervisor accepts it (the unit is broken: spoilage when the trip

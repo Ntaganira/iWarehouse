@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripReconciliationTest.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The end of day of a trip (FLT-09, FLT-10): expected back = loaded - sold - breakage accepted, compared with
  *               the scans; missing and unexpected units are the differences an audit case opens on; a float counted short
  *               or over splits so the clearance balances (ACC-07).

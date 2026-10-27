@@ -15,7 +15,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : EbmRequests.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Builds the VSDC requests of an invoice or credit note (TAX-02) so the receipt says exactly what the
  *               document does. One item per document line: its amount, VAT included, is the supply and taxable amount
  *               (no discount field: the line's price is what was agreed), the quantity is the m² charged (glass) or the

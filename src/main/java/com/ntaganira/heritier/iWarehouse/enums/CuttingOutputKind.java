@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : CuttingOutputKind.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What came out of a cut (PRD-03..08): a cut piece or an off-cut (each a new stock unit),
  *               cullet (leftovers below the off-cut threshold and the trim) or glass broken while cutting.
  *               Cullet and breakage are expensed to spoilage.

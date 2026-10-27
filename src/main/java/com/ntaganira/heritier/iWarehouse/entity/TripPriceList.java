@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripPriceList.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A price list as it stood when a trip's prices were first downloaded (MPOS-04): whether its prices include
  *               VAT and the smallest area a piece is charged. With {@link TripPrice}, what the phones and the server price a
  *               mobile sale with all day. Append-only (trg_trip_price_lists_append_only).

@@ -27,7 +27,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PeriodSignOffService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The month's accounts signed off before the MD and the Board (BP 4.2, Annex C; U.15): a closed month is
  *               signed off by the COO, then by the MD, two people, each by their office under the Delegation of
  *               Authority (a higher office may sign for a lower one). A sign-off counts for the month as it was closed:

@@ -36,7 +36,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ManualJournalController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Manual journals (ACC-05): the list, asking for one (or a copy of another), a manual journal with its
  *               lines, journals and History; approving or rejecting it (another person), withdrawing it (the
  *               requester), reversing it once posted. PAGE_MANUAL_JOURNALS + PERM_VIEW_ACCOUNTING; asking

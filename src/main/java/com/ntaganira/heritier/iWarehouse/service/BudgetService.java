@@ -32,7 +32,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : BudgetService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The annual budget (CMP 04, BP 5.3; T.01, T.02, T.04): Finance starts a year's budget (PERM_PREPARE_BUDGET)
  *               with a part for each department in use; each department's head (PERM_SUBMIT_BUDGET: the cost centre's
  *               manager when named, else any holder) enters its lines by account month by month and submits them by the

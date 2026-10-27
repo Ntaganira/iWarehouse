@@ -12,7 +12,9 @@ import java.util.function.Function;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CollectionAnalysis.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Collection performance over a period (BP 5.1, Annex D, Q.05), from a customer's receivable lines: each
  *               credit settles the oldest charges first (as Ageing does), a credit that finds nothing open waits for the
  *               next charge, and a charge is settled on the later of its day and the credit's. So every charge knows who

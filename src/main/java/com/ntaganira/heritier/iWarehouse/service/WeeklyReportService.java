@@ -20,7 +20,9 @@ import java.util.Map;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : WeeklyReportService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The weekly report (SDP 15, 16; M.14): a week's sales against target (the business, by territory and market),
  *               the count variances raised and what they were worth, the sales given up before they were issued (voids)
  *               and the credit notes, and the receivables by age today. Reads documents and journals only.

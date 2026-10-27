@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : GoodsReceiptDto.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit draft goods receipt form (PRC-02): receipt date, delivery reference and one
  *               row per crate (order line, crate marking, sheet size, good and broken sheets, rack).
  * </pre>

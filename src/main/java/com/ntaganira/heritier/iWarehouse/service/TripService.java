@@ -51,7 +51,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TripService.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Moving-shop trips (FLT-04..07, FLT-12). Planning a trip takes an active vehicle and driver whose papers
  *               cover its day (FLT-04). Its manifest takes available units nothing else holds, scanned or typed, or every
  *               available unit of a rack or slot whose label is scanned; it holds them while the trip is planned (INV-05).

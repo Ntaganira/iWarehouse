@@ -11,7 +11,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : PaginationHelper.java
  * - Date      : 2026. 07. 31.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Computes a window of page numbers for pagination controls
  * </pre>
  */

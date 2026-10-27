@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : DocumentNumberService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Document numbering per type and branch (MD-07), e.g. INV-WH-2026-000123.
  *               next() locks the sequence row and must run inside the transaction that saves the
  *               document: a rollback gives the number back, so numbers have no gaps and never repeat.

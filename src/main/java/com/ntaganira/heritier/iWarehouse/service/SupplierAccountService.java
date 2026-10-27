@@ -39,7 +39,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SupplierAccountService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Supplier accounts (ACC-08, ACC-09). What is owed to a supplier is the payable account's lines that name
  *               them: supplier invoices and shipment bills owed, payments and credit notes settling them; per currency
  *               (Payables: the oldest items settled first, each keeping the RWF it was booked at), with the RWF ageing

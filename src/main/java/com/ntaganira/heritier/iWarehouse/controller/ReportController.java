@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : ReportController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The reports page (every report the user may open, PAGE_REPORTS) and the sales reports (RPT-05): the
  *               invoices issued in a period less their credit notes, by customer, glass or processing, salesperson, day,
  *               month or invoice, with the gross margin at MAC; on a page and in Excel or PDF (RPT-07).

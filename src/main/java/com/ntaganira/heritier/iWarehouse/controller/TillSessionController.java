@@ -31,7 +31,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : TillSessionController.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Till sessions (POS-10): the list with their differences, a session with what it took per
  *               payment method, its invoices, journals and History. PAGE_TILL_SESSIONS + PERM_VIEW_TILL_SESSION.
  * </pre>

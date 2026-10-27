@@ -34,7 +34,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReconciliationService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Bank and mobile-money reconciliation (ACC-12). A statement of the Bank or Mobile Money account (its date,
  *               after the previous statement's and up to today, and its closing balance) is reconciled by ticking the
  *               account's lines up to that date not cleared yet: the previous statement's balance plus the lines

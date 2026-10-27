@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller.api
  * - File      : MobileApi.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What the mobile POS API (/api/v1) sends and receives, as JSON records: never entities. Versioned by its
  *               path: a change a phone cannot read goes under /api/v2.
  * </pre>

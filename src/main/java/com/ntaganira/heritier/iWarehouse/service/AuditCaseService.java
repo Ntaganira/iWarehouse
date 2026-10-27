@@ -31,7 +31,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : AuditCaseService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Audit cases (FLT-10, FLT-11): opened when a trip is reconciled with units missing or unexpected (the owner
  *               and the supervisor told), then each unit settled on its line. A missing unit is found (back on a rack), sold
  *               (its sale synced late from the phone), written off (LOST, Dr Stock Adjustment) or charged to the driver (LOST,

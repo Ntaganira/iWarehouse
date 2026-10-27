@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Attachment.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A document kept on a record (a PDF or a photo), stored in MinIO under object_key: its name, type, size
  *               and a note. Removed by marking it (who, when, why), never deleted: the file stays in storage and the
  *               History shows it.

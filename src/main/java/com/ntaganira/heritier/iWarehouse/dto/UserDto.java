@@ -17,7 +17,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : UserDto.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Add/edit user form. Username is fixed after creation; the password is set here only
  *               when creating (later through Reset password); status has its own Disable/Enable action.
  * </pre>

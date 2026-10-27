@@ -25,7 +25,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PayrollRateService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The payroll rates in force from each date (PAYE bands and rates, RSSB, CBHI). A run takes the set in force on
  *               its month's last day; a set a submitted, posted or paid run uses is never changed: a new set from a later
  *               date takes over instead.

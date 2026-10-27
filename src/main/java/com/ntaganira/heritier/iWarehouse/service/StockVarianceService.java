@@ -43,7 +43,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockVarianceService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Count variances (IMP 14, 16; VR-010; BP Table 9): opened when a count closes with differences (units
  *               missing, found, misplaced, not expected), their value at cost against the value counted, the class
  *               (StockVariances) and whether they are above the tolerance; ALERT_VARIANCE holders told of those above it,

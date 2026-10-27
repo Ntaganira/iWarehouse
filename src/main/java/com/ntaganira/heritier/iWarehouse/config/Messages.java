@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : Messages.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Message bundle lookup in the current request's language (flash toasts, form errors)
  * </pre>
  */

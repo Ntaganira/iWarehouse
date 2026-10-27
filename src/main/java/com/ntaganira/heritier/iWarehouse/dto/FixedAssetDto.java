@@ -17,7 +17,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : FixedAssetDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The fixed asset form (C.08): what it is, its category, cost centre and place, serial number, the day it was
  *               acquired, its cost and residual value, useful life, the month it is depreciated from and, for an asset registered
  *               at its value to date, the depreciation before that month. An asset from an expense bill keeps the bill's cost.

@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CustomerAccountService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Customer accounts (ACC-09). What a customer owes is the receivable account's lines that name them:
  *               their statement, with the balance after each line, and its ageing (Ageing: payments settle the
  *               oldest charges, each due its date plus the customer's payment terms). The aged receivables list every

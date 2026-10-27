@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : ManualJournalDto.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The manual journal form (ACC-05): its date, description and lines (an account, a debit or a
  *               credit in RWF, a memo). Empty rows are dropped before validation; the service checks the
  *               accounts and that the lines balance.

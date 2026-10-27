@@ -16,7 +16,9 @@ import java.util.TreeMap;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : JournalRegister.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The register of journal numbers (F-16): the numbers missing between a month's first and last journal of
  *               each series (JV-WH-2026-), which no journal of any month holds. Journals are numbered in the order they
  *               are posted, so a journal dated in another month may sit between two of this month's: it is not a gap.

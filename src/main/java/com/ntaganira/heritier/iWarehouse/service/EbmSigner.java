@@ -27,7 +27,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : EbmSigner.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : One attempt to sign a queued EBM receipt (TAX-02, TAX-03, AT-09), in its own transaction, the receipt
  *               locked (a receipt being signed elsewhere is skipped). The request is built from the issued document,
  *               which never changes, so every attempt sends the same receipt under the same invoice number. A refund

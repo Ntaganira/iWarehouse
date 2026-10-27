@@ -17,7 +17,9 @@ import java.net.URI;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : StaleDataAdvice.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Two people changed the same record at once (NFR-06): @Version refused the second save.
  *               Instead of the error page, send the user back to the page they came from with a clear
  *               message to reload and try again. Only a path of this site is followed back.

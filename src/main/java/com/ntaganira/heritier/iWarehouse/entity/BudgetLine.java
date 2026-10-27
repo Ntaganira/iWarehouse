@@ -15,7 +15,9 @@ import java.util.Arrays;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : BudgetLine.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A line of a budget (CMP 04): a department (none for the company's lines, such as revenue) and an account, month by
  *               month (RWF). Changed while the budget is prepared; once approved, only by an approved revision.
  * </pre>

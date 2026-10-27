@@ -13,7 +13,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FleetPapersTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The papers a trip needs (FLT-04): a paper covers its expiry day, is told within the alert days and refuses a
  *               trip once it no longer covers the day; the licence is named first.
  * </pre>

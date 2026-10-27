@@ -55,7 +55,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock units (INV-01..04, INV-06). The only place that creates units or changes their
  *               status, location or cost: it writes a stock movement for every move (INV-04) and a cost
  *               entry for every cost change (receipt cost, landed costs, PRC-05, part of a cut sheet,

@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : PaymentRequestStatus.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Life of a supplier payment prepared (CMP 07): authorised once, or twice above the Settings amount
  *               (AUTHORISED: the first of two), then paid; or rejected by an authoriser, or cancelled by whoever prepared it.
  * </pre>

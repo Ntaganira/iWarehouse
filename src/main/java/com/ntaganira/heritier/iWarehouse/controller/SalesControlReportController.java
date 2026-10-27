@@ -21,7 +21,9 @@ import java.time.format.DateTimeFormatter;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SalesControlReportController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The discount analysis (SDP 15-16; R.06, M.15: lines charged below their list price, by seller, customer,
  *               glass or invoice) and collection performance (BP 5.1, Annex D; Q.05: by territory, salesperson or
  *               customer), each for a period and exported to Excel or PDF. PAGE_DISCOUNTS_REPORT, PAGE_COLLECTIONS_REPORT.

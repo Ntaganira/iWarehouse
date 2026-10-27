@@ -35,7 +35,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : BalanceConfirmationController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Balance confirmations (SDP 10-11): the list by status, sending one to a customer with a balance or to all
  *               of them, a confirmation with its letter and reply slip (A4 PDF), the reply (agreed or disputed), its
  *               documents (the signed reply) and History. PAGE_BALANCE_CONFIRMATIONS + PERM_VIEW_BALANCE_CONFIRMATION;

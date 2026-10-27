@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : DailyClose.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The close of a business day (F-12, BP 7.1 rule 5, 7.5): the end-of-day report's figures as they stood
  *               when it was prepared (sales by method, collections, refunds, the tills' cash expected and counted, MoMo
  *               received against the merchant statement, credit granted, the EBM receipts and their first and last

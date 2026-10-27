@@ -24,7 +24,9 @@ import java.util.Iterator;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : Avatars.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Profile photos: a JPEG or PNG becomes a square JPEG of SIZE pixels cut from its centre. The picture is
  *               drawn again, so nothing of the file as sent is kept (no EXIF, no position, no hidden content); its size
  *               is checked before it is decoded. Pure, no Spring.

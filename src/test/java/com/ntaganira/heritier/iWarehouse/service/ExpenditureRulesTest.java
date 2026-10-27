@@ -18,7 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ExpenditureRulesTest.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The Cost Management &amp; Expenditure Control Policy's rules on worked examples: sourcing by value (CMP 06),
  *               the matrix row that approves a bill (CMP 05), the VAT ceiling, the requisition's tolerance and split
  *               purchases (CMP 06, 09).

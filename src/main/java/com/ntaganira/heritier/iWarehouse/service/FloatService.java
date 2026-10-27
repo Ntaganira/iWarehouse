@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FloatService.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Driver floats (ACC-06, ACC-07). A trip's cash sales sit on its driver's float until the accountant counts
  *               the cash the driver hands over, once the trip is back and its cash declared (MPOS-07): paid into the vault or
  *               the bank, a shortage on the driver's receivable, an overage to Cash Over/Short (FloatClearances,

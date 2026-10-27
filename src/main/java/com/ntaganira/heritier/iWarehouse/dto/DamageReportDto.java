@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : DamageReportDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The damage report form (F-07, DMG-009): where and when, the cause, what happened, who was there, whether it
  *               can be repaired, the labels of the units damaged, and who may pay the loss back.
  * </pre>

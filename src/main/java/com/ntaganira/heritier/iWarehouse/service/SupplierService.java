@@ -35,7 +35,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : SupplierService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Suppliers (MD-05). Names are unique (ignoring case). A new supplier, or a change of
  *               currency, needs an active currency; a Rwandan supplier's TIN has 9 digits. Codes come
  *               from DocumentNumberService (SUP-WH-0001).

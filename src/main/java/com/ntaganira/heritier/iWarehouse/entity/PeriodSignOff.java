@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PeriodSignOff.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A closed month's accounts signed off (BP 4.2, Annex C): by the COO, then by the MD (their offices under
  *               the Delegation of Authority), before the Board. A sign-off counts for the month as closed when it was
  *               given: reopening the month leaves it on record but it no longer counts. Append-only

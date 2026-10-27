@@ -30,7 +30,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PettyCashService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Petty cash funds (CMP 07, BP 5.1, F-13 D): one per site, opened by Finance (PERM_MANAGE_PETTY_CASH) with its
  *               custodian and float (at most the Settings' maximum). What a fund holds is its site's lines on the Petty Cash
  *               account, never a second balance. Treasury tops it up from the vault or the bank (PERM_REPLENISH_PETTY_CASH,

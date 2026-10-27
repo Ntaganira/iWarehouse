@@ -28,7 +28,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : DeliveryNoteController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Delivery notes and the release of goods (F-04, DN-005, IMP 8 and 9; decision D3): the list with delivery
  *               accuracy, preparing the release of a paid invoice, a note with what it releases, its EBM receipt, its
  *               documents (the signed copy) and History; release it (another person; an override reason when the EBM

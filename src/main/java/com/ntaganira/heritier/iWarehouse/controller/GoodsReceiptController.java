@@ -44,7 +44,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : GoodsReceiptController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Goods receipt screens (PRC-02, PRC-06): list, detail with crates, units and History,
  *               record crates against a placed order (draft), edit, post into stock, cancel a draft
  *               with a reason. PAGE_RECEIVING + PERM_VIEW_GOODS_RECEIPT; changes PERM_RECEIVE_GOODS.

@@ -15,7 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FieldCycleRulesTest.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The field cycle's pure rules (M15): a van count against what should be on board (SDP 6), the credit a customer
  *               may take on the road (decision D8), the phone's payments with credit, and the fleet KPIs of Annex D (loads
  *               after the last trip was cleared, van shortages against the tolerance).

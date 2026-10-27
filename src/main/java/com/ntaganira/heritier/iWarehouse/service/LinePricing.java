@@ -19,7 +19,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : LinePricing.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : How a sale or quotation line is priced (MD-06, TAX-01), in one place: glass from the customer's
  *               list (or the default one) per m² over the chargeable area, with the glass's tax letter and rate;
  *               processing per its unit (m², metre of edge, piece, hole) at the standard rate; the amount whole

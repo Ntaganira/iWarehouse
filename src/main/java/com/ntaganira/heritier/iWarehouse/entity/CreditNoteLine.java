@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CreditNoteLine.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What a credit note credits one invoice line (POS-09): the pieces back and their share of the line's
  *               amount, VAT included in whole RWF, with the line's tax letter and rate (TAX-01). Append-only
  *               (trg_credit_note_lines_append_only): the credit note records the change, so it is not audited.

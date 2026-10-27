@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : SiteTransferStatus.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Life of a transfer between sites (IMP 11): requested, approved (or rejected), dispatched (in transit),
  *               received in full or short; cancelled with a reason before it leaves.
  * </pre>

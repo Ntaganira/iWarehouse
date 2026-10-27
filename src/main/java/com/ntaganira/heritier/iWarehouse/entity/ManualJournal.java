@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : ManualJournal.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A journal asked for by account (ACC-05): its date, description and balanced lines
  *               (ManualJournalLine, fixed when asked for). Another person approves it (the journal posts) or
  *               rejects it; the requester can withdraw it. Once posted it is reversed, never deleted: the

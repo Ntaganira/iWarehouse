@@ -29,7 +29,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ServicePlanService.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A vehicle's service plans (MANAGE_SERVICE_PLANS): a name unique on the vehicle, every so many km and/or
  *               months, when it was last done (up to today) and at how many km (the vehicle's latest reading when left
  *               empty). Where each stands (ServicePlans) from the vehicle's latest odometer: its trips' or a higher one

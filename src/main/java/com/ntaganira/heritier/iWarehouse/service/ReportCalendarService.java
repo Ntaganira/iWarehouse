@@ -20,7 +20,9 @@ import java.util.Optional;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ReportCalendarService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The reporting calendar's reminders (BP 5.3, M.11), told once each to ALERT_REPORT_CALENDAR holders: the
  *               weekly receivables and stock on Mondays (with the receivables' total, the share more than 90 days
  *               overdue and the days sales outstanding), the month's accounts not closed by the Settings' working day,

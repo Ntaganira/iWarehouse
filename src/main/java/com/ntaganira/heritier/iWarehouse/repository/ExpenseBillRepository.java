@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : ExpenseBillRepository.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Expense bills (CMP 01, 05): pages with their supplier, one with its lines, those waiting, those decided in a
  *               period, emergencies the Board has not ratified.
  * </pre>

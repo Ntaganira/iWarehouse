@@ -15,7 +15,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SalesDelivery.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A piece of a custom size handed over to the customer (SRS 5.3 step 5): the invoice and line it
  *               fulfils and the unit sold. A unit is handed over once (uk_sales_deliveries_unit). Append-only
  *               (trg_sales_deliveries_append_only): each row is its own record, so it is not audited.

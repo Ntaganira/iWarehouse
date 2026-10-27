@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : PriceChange.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Prices of a price list changed, waiting for approval (SDP 5): its lines say each price from and to; another
  *               person approves it within the Delegation of Authority (the Managing Director by default), which applies
  *               them, or rejects it; whoever asked may withdraw it. A reason is kept.

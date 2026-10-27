@@ -19,7 +19,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TerritoryService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Sales territories and their Regional Sales Managers (BP 6, Res. 7; the number of territories is the
  *               client's to set, so they are records, not code): a code in capitals, unique, a name, a manager who is a
  *               user (their name copied). Deactivated, never deleted.

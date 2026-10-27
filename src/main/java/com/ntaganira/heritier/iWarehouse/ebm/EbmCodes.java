@@ -16,7 +16,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.ebm
  * - File      : EbmCodes.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : RRA's EBM codes and formats (VSDC spec section 4) as iWarehouse uses them: payment types (4.10),
  *               quantity units (4.6: glass by the m², processing by its unit), item types and item codes (4.17:
  *               origin + type + packaging + quantity unit + serial, 2-letter units padded with X as RRA's client

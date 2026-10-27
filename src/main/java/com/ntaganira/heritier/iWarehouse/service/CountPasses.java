@@ -8,7 +8,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CountPasses.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A count's passes (IMP 15.2, CSH-012, PF-06; decision D14): the first, blind count; a second, independent
  *               count; the recount of the labels the two disagree on (found by one and not the other, or found on two
  *               places). The count's result is what both counts agree on, and the recount for the rest: a label the

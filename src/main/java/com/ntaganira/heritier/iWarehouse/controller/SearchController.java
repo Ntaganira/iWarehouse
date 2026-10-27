@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SearchController.java
  * - Date      : 2026. 10. 11.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The header's search (/search?q=): a code opens its record at once, other text lists the matches by kind.
  *               Every signed-in user has it, like My profile; each kind shows only to who may open its list.
  * </pre>

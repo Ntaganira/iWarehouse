@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SupplierInvoice.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A supplier's invoice (ACC-09) matched to the supplier's posted goods receipts it bills, each once
  *               (SupplierInvoiceLine): their reference, dates (due = invoice date + the supplier's terms), the
  *               currency and the total in it, and the RWF the receipts were booked at. Posting moves each receipt

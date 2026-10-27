@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : FinancialStatementService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Reads the journals for the financial statements (ACC-11): the income statement of a period, the
  *               balance sheet at a day, the general ledger of a period (every account, or one account's lines with
  *               the balance after each). The figures come from FinancialStatements (pure).

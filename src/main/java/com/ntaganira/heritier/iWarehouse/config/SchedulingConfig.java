@@ -10,7 +10,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : SchedulingConfig.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Background work (RPT-06): scheduled checks (StockAlertService) and emails sent off the request thread
  *               (AlertMailer), on Spring Boot's default scheduler and task executor.
  * </pre>

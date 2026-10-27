@@ -37,7 +37,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : DriverController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Drivers (FLT-03, FLT-04): list, register a user as a driver, edit their licence, deactivate; each page shows
  *               the licence expiry, the trip they are on, their trips and History. Their national ID, licence number and
  *               licence copies are personal data (NFR-12): in full only with PERM_VIEW_DRIVER_DATA, which the forms need

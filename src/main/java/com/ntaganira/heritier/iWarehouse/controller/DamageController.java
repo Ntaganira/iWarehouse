@@ -39,7 +39,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : DamageController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Damage (IMP 13, F-07, DMG-009): the damage reports, the form (also from a credit note's returned units,
  *               held for inspection), a report's page (its units, documents and History; inspect, approve unit by unit,
  *               reject, cancel) and the damage register of every damage of a period, exported.

@@ -32,7 +32,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : CurrencyController.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Currencies &amp; Rates screen (ACC-02): latest rate per currency, the rate list with
  *               filters, the currency list and History on tabs; add, edit, activate and deactivate
  *               currencies. PAGE_CURRENCIES + PERM_VIEW_CURRENCY; currency changes PERM_MANAGE_CURRENCY.

@@ -12,7 +12,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CostCentre.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A cost centre (F-15 A: Commercial, Supply Chain, Finance, Head Office): every expense names one, so spending
  *               is reported by department (T.05). Its manager recommends its bills and approves its requisitions.
  * </pre>

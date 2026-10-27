@@ -17,7 +17,9 @@ import java.time.LocalDate;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CashForecastItem.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A planned item of the cash-flow forecast (P.11): money expected in or out that no document carries yet (a loan
  *               repayment, rent, a capital purchase), once or repeating weekly or monthly until a day. Cancelled, never deleted.
  * </pre>

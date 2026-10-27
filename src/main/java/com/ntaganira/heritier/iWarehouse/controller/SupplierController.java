@@ -37,7 +37,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SupplierController.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Suppliers screens (MD-05): list with filters, detail with History, add, edit, activate
  *               and deactivate. PAGE_SUPPLIERS + PERM_VIEW_SUPPLIER; changes PERM_MANAGE_SUPPLIER.
  * </pre>

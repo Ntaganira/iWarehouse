@@ -16,7 +16,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripLine.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A unit on a trip's loading manifest (FLT-05): who planned it and when it was scanned onto the vehicle
  *               (FLT-06). While the trip is planned the line holds the unit and can be taken off; at departure it keeps
  *               the rack the unit left from. At the end of the day it is scanned back (FLT-09) and keeps what became of

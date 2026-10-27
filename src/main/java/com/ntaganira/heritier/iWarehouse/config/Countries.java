@@ -12,7 +12,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.config
  * - File      : Countries.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : ISO 3166-1 countries with names in the reader's language, from the JDK's own data
  *               (no list to maintain). Templates use it as ${@countries.name(code)}.
  * </pre>

@@ -15,7 +15,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SalesTarget.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month's sales target (SDP 15, Annex D; T.07, T.09): for the business, a territory (its code), a salesperson (their
  *               username) or a market (DOMESTIC, EXPORT), net of VAT as the sales report reads sales.
  * </pre>

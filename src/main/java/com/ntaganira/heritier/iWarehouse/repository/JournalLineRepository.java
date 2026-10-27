@@ -21,7 +21,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : JournalLineRepository.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Journal lines (ACC-01): a journal's lines, an account's ledger, balances for the trial balance
  *               (ACC-11) and the inventory account per glass (AT-10). Append-only: save and finders only.
  * </pre>

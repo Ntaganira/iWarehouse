@@ -16,7 +16,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : BudgetRevisionDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A budget revision asked (CMP 04, T.02): the line's new twelve months and the reason.
  * </pre>
  */

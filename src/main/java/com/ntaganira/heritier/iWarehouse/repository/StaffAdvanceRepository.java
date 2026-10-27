@@ -24,7 +24,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.repository
  * - File      : StaffAdvanceRepository.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Staff advances (CMP 08): pages with their employee, one with its retirement lines, an employee's open ones, those
  *               overdue, those due or decided in a period.
  * </pre>

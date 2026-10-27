@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : JournalEntry.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A posted journal (ACC-04): the event and document it records, its date and total. Written
  *               in the event's transaction and never changed (trg_journal_entries_append_only); a mistake
  *               is corrected by a new journal. Its lines balance (trg_journal_*_balanced, at commit).

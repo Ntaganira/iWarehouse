@@ -36,7 +36,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PettyCashController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Petty cash (CMP 07): the funds with what each holds and the vouchers (waiting, all), a fund's page with its
  *               vouchers, top-ups, counts and history, and its actions: open (PERM_MANAGE_PETTY_CASH), change, top up
  *               (PERM_REPLENISH_PETTY_CASH), count (the custodian, PERM_RECORD_PETTY_CASH, or Finance by surprise,

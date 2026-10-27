@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : AccountingPeriod.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A month closed (ACC-10), by its last day: who closed it and when; reopened, who, when and why. Months
  *               close in order and only the latest closed one reopens, so the closed months are always the first ones.
  * </pre>

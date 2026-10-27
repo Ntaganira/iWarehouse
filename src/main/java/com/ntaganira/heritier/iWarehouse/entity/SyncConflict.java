@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : SyncConflict.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A mobile sale the server could not take as it was made (SYNC-05): why, the sale as the phone sent it, who
  *               and when. Kept for the supervisor, never dropped: they record what was done (a counter sale, a credit note,
  *               an adjustment or nothing) and it is REVIEWED. The phone sent it once: its client UUID is unique, so a

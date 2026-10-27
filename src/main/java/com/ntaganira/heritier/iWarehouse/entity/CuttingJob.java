@@ -22,7 +22,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : CuttingJob.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A cutting job (SRS 6.1 CuttingJob, PRD-01..09): the pieces wanted, for stock or for a
  *               customer; the source unit the operator took (PRD-02); and, once cut, the areas of pieces,
  *               off-cuts, cullet and breakage, the cullet kg, the spoilage cost and the yield. What the

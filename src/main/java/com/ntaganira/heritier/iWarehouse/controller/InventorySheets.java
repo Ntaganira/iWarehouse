@@ -17,7 +17,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : InventorySheets.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The stock position by site as an export sheet (IMP 14.1, 18): each site's units and m² at the end, what
  *               came in and went out (cost with PERM_VIEW_STOCK_COST), glass in transit and on vehicles apart; shared by
  *               the daily inventory report and the weekly to annual reports. The inventory KPIs as rows, one column per

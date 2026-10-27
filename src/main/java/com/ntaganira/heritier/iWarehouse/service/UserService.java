@@ -32,7 +32,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : UserService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Users (ADM-01), ported from iVura. Users are disabled, never deleted. Guards against
  *               locking the system out: nobody disables themselves or edits their own roles, and the
  *               last enabled administrator stays. Role changes go to the activity log (AUD-03).

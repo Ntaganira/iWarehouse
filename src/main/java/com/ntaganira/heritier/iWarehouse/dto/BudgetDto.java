@@ -13,7 +13,9 @@ import java.math.BigDecimal;
  * - Package   : com.ntaganira.heritier.iWarehouse.dto
  * - File      : BudgetDto.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A budget's header (CMP 04): its year (fixed once started), title, the year's landed cost and the demurrage
  *               ceiling per consignment.
  * </pre>

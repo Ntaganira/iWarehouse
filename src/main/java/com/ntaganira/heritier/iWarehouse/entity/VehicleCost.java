@@ -20,7 +20,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : VehicleCost.java
  * - Date      : 2026. 10. 12.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A vehicle's running cost (VC-WH-2026-000001): fuel, a service, a repair, spare parts, tyres, washing,
  *               parking or tolls, on a day and, when known, at an odometer reading. Its amount is RWF with VAT; the VAT
  *               of a registered garage's EBM receipt is claimed back. Paid from the vault, the bank or mobile money, owed

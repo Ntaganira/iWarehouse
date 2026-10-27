@@ -28,7 +28,9 @@ import static org.mockito.Mockito.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : MobileSaleServiceTest.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Syncing sales made on a driver's phone, with the real stock service. AT-04: three sales made offline reach
  *               the server once each, the units leave the vehicle, cash goes to the driver's float and each receipt is
  *               queued for EBM. AT-05: the same sale sent twice is stored once. A sale the server cannot take as it was

@@ -23,7 +23,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : EbmController.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : EBM signing (TAX-02, TAX-03): who signs (simulator or VSDC), the device, the settings still missing,
  *               the receipts waiting and how old the oldest is, every receipt with its attempts, request and answer.
  *               PAGE_EBM; initialising the device, retrying, correcting a purchase code and the simulator's outage

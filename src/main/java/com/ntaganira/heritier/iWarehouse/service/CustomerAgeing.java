@@ -18,7 +18,9 @@ import java.util.*;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CustomerAgeing.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : What customers owe, by age (ACC-09): their lines on the receivable account settled oldest first (Ageing),
  *               each charge due its date plus the customer's terms, plus the days an invoice was approved with extended
  *               terms (F-03). The counter asks it whether a customer has invoices overdue (SDP 11: overdue invoices block

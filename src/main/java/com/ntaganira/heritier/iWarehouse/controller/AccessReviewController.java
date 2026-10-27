@@ -25,7 +25,9 @@ import java.util.List;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : AccessReviewController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The quarterly access review (Board Paper Table 8): every user, their roles, their rights and last
  *               sign-in, the past reviews, an export for the file, and recording a review (PERM_REVIEW_ACCESS).
  * </pre>

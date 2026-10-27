@@ -33,7 +33,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : StockAdjustmentService.java
  * - Date      : 2026. 10. 08.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Stock adjustments with a reason and approval (INV-07). Lines write units off (damaged:
  *               BROKEN, missing: LOST), find lost units again, add pieces nobody recorded (at MAC) or
  *               correct a unit's size (replaced at the same cost per m²). The value moved is compared with

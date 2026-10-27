@@ -6,7 +6,9 @@ package com.ntaganira.heritier.iWarehouse.enums;
  * - Package   : com.ntaganira.heritier.iWarehouse.enums
  * - File      : SettingKey.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Every configurable setting (ADM-03): its row key in the settings table, the matching
  *               SettingsDto property and the fallback used if the row is missing. A new setting is a
  *               new constant here, a field on SettingsDto and a seed row in its module's migration.

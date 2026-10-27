@@ -30,7 +30,9 @@ import java.util.Set;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : ActivityLogService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Activity log (SRS 4.13, layer 1). Ported from iVura with two changes:
  *               1) each entry is saved in its OWN transaction (REQUIRES_NEW), so a FAILED
  *                  action is still logged when the business transaction rolls back (AUD-01);

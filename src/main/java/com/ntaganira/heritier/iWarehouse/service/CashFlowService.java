@@ -30,7 +30,9 @@ import java.util.stream.Collectors;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : CashFlowService.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The rolling cash-flow forecast and the weekly cash report (P.11). The forecast opens with the cash the ledger holds
  *               today (the vault, the bank, mobile money, petty cash, the tills and the drivers' floats) and looks the Settings'
  *               weeks ahead: what customers owe by due date (Ageing.open at their terms, extended terms included), what is owed

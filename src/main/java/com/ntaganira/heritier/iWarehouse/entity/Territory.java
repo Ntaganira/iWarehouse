@@ -12,7 +12,9 @@ import lombok.Setter;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : Territory.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A sales territory and its Regional Sales Manager (BP 6, Res. 7): customers and orders belong to one, so
  *               sales are reported by territory. Deactivated, never deleted.
  * </pre>

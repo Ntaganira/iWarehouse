@@ -32,7 +32,9 @@ import java.util.stream.Stream;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : PostingService.java
  * - Date      : 2026. 10. 09.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : The posting matrix (SRS 4.9.1, ACC-04): one rule per business event, called inside the event's
  *               transaction once its stock and costs have changed. Stock lines are the change of each glass's
  *               value (m² held x MAC, rounded per glass, as the stock valuation computes it), so the inventory

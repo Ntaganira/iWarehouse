@@ -36,7 +36,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : SiteTransferController.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Transfers between sites (IMP 11, TRF-007, TCN-008, PF-04): the list, the request form, a transfer with what
  *               was asked, the units sent and received, its tickets, documents and History; approve, reject, cancel,
  *               dispatch (labels, vehicle, driver, expected arrival), receive label by label, finish short with a note, and

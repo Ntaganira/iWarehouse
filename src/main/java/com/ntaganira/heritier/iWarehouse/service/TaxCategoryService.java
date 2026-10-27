@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TaxCategoryService.java
  * - Date      : 2026. 10. 07.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : VAT categories (TAX-01, ADM-03). Exactly one active category is the default for new
  *               products. Categories are deactivated, never deleted. A rate change applies to new
  *               documents only: invoices keep the rate they were issued with.

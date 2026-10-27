@@ -24,7 +24,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.service
  * - File      : TicketPostingService.java
  * - Date      : 2026. 10. 15.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Finance posts a countersigned Transaction Ticket (Annex I step 4), not one of its signers. A goods receipt
  *               waiting for its ticket posts now (the stock ledger moves only on its ticket); a movement already made is
  *               confirmed posted. The ticket first, then the receipt's own locks.

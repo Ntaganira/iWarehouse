@@ -34,7 +34,9 @@ import java.util.function.Supplier;
  * - Package   : com.ntaganira.heritier.iWarehouse.controller
  * - File      : PettyCashVoucherController.java
  * - Date      : 2026. 10. 16.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : Petty cash vouchers (CMP 07, F-13 D): the form of a draft (the custodian), the voucher with its receipt,
  *               journal and history, and its steps: submit, approve (PERM_APPROVE_PETTY_CASH), reject, cancel, reverse
  *               (PERM_REVERSE_PETTY_CASH). Each needs PAGE_PETTY_CASH.

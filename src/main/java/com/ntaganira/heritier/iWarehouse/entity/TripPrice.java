@@ -18,7 +18,9 @@ import java.util.UUID;
  * - Package   : com.ntaganira.heritier.iWarehouse.entity
  * - File      : TripPrice.java
  * - Date      : 2026. 10. 10.
- * - User      : Hntaganira
+ * - User      : NTAGANIRA Heritier
+ * - Email     : ntaganira71@gmail.com
+ * - Phone     : +250 788 533 669
  * - Desc      : A glass's price per m² on a list, as it stood when the trip's prices were first downloaded (MPOS-04).
  *               Only the glass on board is kept. Append-only (trg_trip_prices_append_only).
  * </pre>

@@ -72,7 +72,16 @@ public class EmployeeService {
     }
 
     public Page<Employee> findPage(String search, String status, int page, int size) {
-        Specification<Employee> spec = (root, query, cb) -> {
+        return repo.findAll(spec(search, status), PageRequest.of(page, size, Sort.by("code")));
+    }
+
+    /** Every employee matching the list's filters, for its Excel export. */
+    public List<Employee> findForExport(String search, String status) {
+        return repo.findAll(spec(search, status), Sort.by("code"));
+    }
+
+    private static Specification<Employee> spec(String search, String status) {
+        return (root, query, cb) -> {
             Predicate p = cb.conjunction();
             if (StringUtils.hasText(search)) {
                 String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
@@ -86,7 +95,6 @@ public class EmployeeService {
             }
             return p;
         };
-        return repo.findAll(spec, PageRequest.of(page, size, Sort.by("code")));
     }
 
     public Employee findDetailed(UUID id) {

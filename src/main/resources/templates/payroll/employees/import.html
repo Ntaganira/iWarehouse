@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{employee.import.title}, ~{::content})}">
+<head><title>Import Employees - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{employee.import.title}">Import employees</h1>
+            <div class="subtitle" th:text="#{employee.import.subtitle}">Add employees from an Excel workbook</div>
+        </div>
+        <a href="/payroll/employees" class="btn btn-outline" th:text="#{common.back}">Back</a>
+    </div>
+
+    <div class="import-layout">
+        <div class="section">
+            <form th:action="@{/payroll/employees/import}" method="post" enctype="multipart/form-data" class="form-container" id="import-form">
+                <div class="error-summary" th:if="${flashError}">
+                    <div class="error-summary-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="error-summary-body">
+                        <div class="error-summary-header">
+                            <h3 class="error-summary-title" th:text="${flashError}">Could not import</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header" th:if="${result != null}">
+                    <h2 th:text="#{employee.import.result}">Import result</h2>
+                </div>
+                <div class="form-grid" th:if="${result != null}">
+                    <div class="form-group"><span th:text="#{employee.import.created(${result.created})}">Employees added: 0</span></div>
+                    <div class="form-group"><span th:text="#{employee.import.skipped(${result.skipped})}">Employees skipped (already there): 0</span></div>
+                </div>
+
+                <div class="error-summary" th:if="${result != null and result.hasErrors}">
+                    <div class="error-summary-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                    <div class="error-summary-body">
+                        <div class="error-summary-header">
+                            <h3 class="error-summary-title" th:text="#{employee.import.errors(${#lists.size(result.errors)})}">Rows that need attention</h3>
+                        </div>
+                        <ul class="error-summary-list">
+                            <li class="error-summary-item" th:each="e : ${result.errors}">
+                                <span class="error-summary-field" th:text="#{employee.import.row} + ' ' + ${e.row}">Row 2</span>
+                                <span class="error-summary-message" th:text="${e.message}">What to fix</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <p class="text-muted" th:if="${result != null and !result.hasErrors}" th:text="#{employee.import.noErrors}">Every row was imported.</p>
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="file" th:text="#{employee.import.file}">Workbook</label>
+                        <input type="file" id="file" name="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                        <span class="hint" th:text="#{employee.import.choose}">Choose an Excel workbook</span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" th:text="#{employee.import.submit}">Import the employees</button>
+                    <a href="/payroll/employees/import/template" download class="btn btn-outline" th:text="#{employee.import.downloadTemplate}">Download the template</a>
+                    <a href="/payroll/employees" class="btn btn-outline" th:text="#{common.cancel}">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <aside class="section import-help">
+            <div class="section-header"><h2 th:text="#{employee.import.template}">Template</h2></div>
+            <div class="section-body">
+                <p th:text="#{employee.import.intro}">Download the template, fill one row per employee, then upload it.</p>
+                <ul class="help-list">
+                    <li th:text="#{employee.import.template.step1}">Full name and National ID are required.</li>
+                    <li th:text="#{employee.import.template.step2}">Hired on is required; use yyyy-MM-dd.</li>
+                    <li th:text="#{employee.import.template.step3}">Employment: PRIMARY or SECONDARY.</li>
+                    <li th:text="#{employee.import.template.step4}">Amounts are whole RWF.</li>
+                    <li th:text="#{employee.import.template.step5}">Pay method: BANK, MOBILE_MONEY or CASH.</li>
+                    <li th:text="#{employee.import.template.step6}">Cost centre code is optional.</li>
+                    <li th:text="#{employee.import.template.step7}">An employee with the same national ID is skipped, never changed.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+</div>
+</body>
+</html>

@@ -14,13 +14,18 @@ import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
+import com.ntaganira.heritier.iWarehouse.service.EmployeeExcelService;
 import com.ntaganira.heritier.iWarehouse.service.EmployeeService;
+import com.ntaganira.heritier.iWarehouse.service.Excel;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -45,14 +50,17 @@ import java.util.UUID;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final EmployeeExcelService employeeExcelService;
     private final DataChangeService dataChangeService;
     private final ActivityLogService activityLogService;
     private final Messages messages;
     private final NumberFormats num;
 
-    public EmployeeController(EmployeeService employeeService, DataChangeService dataChangeService, ActivityLogService activityLogService,
+    public EmployeeController(EmployeeService employeeService, EmployeeExcelService employeeExcelService,
+                              DataChangeService dataChangeService, ActivityLogService activityLogService,
                               Messages messages, NumberFormats num) {
         this.employeeService = employeeService;
+        this.employeeExcelService = employeeExcelService;
         this.dataChangeService = dataChangeService;
         this.activityLogService = activityLogService;
         this.messages = messages;
@@ -69,6 +77,52 @@ public class EmployeeController {
         model.addAttribute("activeCount", employeeService.activeCount());
         model.addAttribute("paginationQuery", QueryString.of("search", search, "status", status));
         return "payroll/employees/list";
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasAuthority('PAGE_EMPLOYEES') and hasAuthority('PERM_VIEW_EMPLOYEE')")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) String search,
+                                         @RequestParam(required = false) String status) {
+        boolean personal = AppUserPrincipal.currentHas("PERM_VIEW_EMPLOYEE_DATA");
+        byte[] body = employeeExcelService.export(search, status, personal);
+        activityLogService.record(PayrollRateController.MODULE, "EXPORT_EMPLOYEES",
+                messages.get("employee.export.activity") + (personal ? "" : " (" + messages.get("employee.export.masked") + ")"),
+                ActivityStatus.SUCCESS);
+        return ReportFiles.file("iwarehouse-employees.xlsx", MediaType.parseMediaType(Excel.CONTENT_TYPE), body);
+    }
+
+    @GetMapping("/import")
+    @PreAuthorize("hasAuthority('PAGE_EMPLOYEES') and hasAuthority('PERM_MANAGE_EMPLOYEE') and hasAuthority('PERM_VIEW_EMPLOYEE_DATA')")
+    public String importForm() {
+        return "payroll/employees/import";
+    }
+
+    @GetMapping("/import/template")
+    @PreAuthorize("hasAuthority('PAGE_EMPLOYEES') and hasAuthority('PERM_MANAGE_EMPLOYEE') and hasAuthority('PERM_VIEW_EMPLOYEE_DATA')")
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] body = employeeExcelService.template();
+        activityLogService.record(PayrollRateController.MODULE, "EXPORT_EMPLOYEE_IMPORT_TEMPLATE",
+                "Downloaded the employee import template", ActivityStatus.SUCCESS);
+        return ReportFiles.file("iwarehouse-employee-import.xlsx", MediaType.parseMediaType(Excel.CONTENT_TYPE), body);
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasAuthority('PAGE_EMPLOYEES') and hasAuthority('PERM_MANAGE_EMPLOYEE') and hasAuthority('PERM_VIEW_EMPLOYEE_DATA')")
+    public String importEmployees(@RequestParam(value = "file", required = false) MultipartFile file, Model model) {
+        try {
+            EmployeeExcelService.Result result = employeeExcelService.importFile(file);
+            activityLogService.record(PayrollRateController.MODULE, "IMPORT_EMPLOYEES",
+                    messages.get("employee.import.activity", result.created(), result.skipped(), result.errors().size()),
+                    ActivityStatus.SUCCESS);
+            model.addAttribute("result", result);
+            return "payroll/employees/import";
+        } catch (BusinessException e) {
+            String error = messages.get(e.getMessageKey(), e.getArgs());
+            activityLogService.record(PayrollRateController.MODULE, "IMPORT_EMPLOYEES",
+                    "Failed to import employees: " + error, ActivityStatus.FAILED);
+            model.addAttribute("flashError", error);
+            return "payroll/employees/import";
+        }
     }
 
     @GetMapping("/{id}")

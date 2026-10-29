@@ -42,7 +42,7 @@ import java.util.*;
  * - Phone     : +250 788 533 669
  * - Desc      : Pay runs (/payroll/runs): a month's run made, its lines changed while a draft, submitted, approved (posted)
  *               or sent back by another person, cancelled, its salaries paid; the payslips (A4 PDF, one employee a page)
- *               and the exports: the run's summary, the PAYE declaration (RRA) and the RSSB declaration, Excel or PDF.
+ *               and the exports: the list of runs, the run's summary, the PAYE declaration (RRA) and the RSSB declaration, Excel or PDF.
  *               National IDs print in full only for those with PERM_VIEW_EMPLOYEE_DATA.
  * </pre>
  */
@@ -318,6 +318,31 @@ public class PayRunController {
         return ReportFiles.file("payslip-" + line.getEmployeeCode() + "-" + run.getPeriod().format(FILE_MONTH) + ".pdf", MediaType.APPLICATION_PDF, body);
     }
 
+    /** Every pay run the list shows, with the same filters, as Excel. */
+    @GetMapping("/export")
+    @PreAuthorize("hasAuthority('PAGE_PAY_RUNS') and hasAuthority('PERM_VIEW_PAY_RUN')")
+    public ResponseEntity<byte[]> exportList(@RequestParam(required = false) String search,
+                                             @RequestParam(required = false) String status) {
+        List<PayRun> runs = runService.findForExport(search, status);
+        Excel.Builder s = Excel.sheet(m("payRun.sectionTitle"), m("payRun.sectionTitle"), m("payRun.exportListSubtitle", runs.size()),
+                m("payRun.number"), m("payRun.month"), m("payRun.employees"), m("payRun.gross"), m("payRun.paye"),
+                m("payRun.col.rssb"), m("payRun.otherDeductions"), m("payRun.net"), m("payRun.employerContributions"),
+                m("payRun.cost"), m("common.status"), m("payRun.preparedBy"), m("payRun.col.preparedOn"),
+                m("payRun.col.approvedBy"), m("payRun.paidOn"));
+        for (PayRun r : runs) {
+            s.row(r.getNumber(), r.getPeriod().format(MONTH), r.getEmployees(), rwf(r.getTotalGross()), rwf(r.getTotalPaye()),
+                    rwf(r.getTotalRssb()), rwf(r.getTotalOther()), rwf(r.getTotalNet()), rwf(r.getTotalEmployer()),
+                    rwf(r.getTotalCost()), m("payRun.status." + r.getStatus()), r.getPreparedBy(),
+                    r.getPreparedAt() == null ? null : r.getPreparedAt().toLocalDate(), r.getApprovedBy(), r.getPaidOn());
+        }
+        int employees = runs.stream().mapToInt(PayRun::getEmployees).sum();
+        s.bold(m("payRun.total"), null, employees, rwf(sumRuns(runs, PayRun::getTotalGross)), rwf(sumRuns(runs, PayRun::getTotalPaye)),
+                rwf(sumRuns(runs, PayRun::getTotalRssb)), rwf(sumRuns(runs, PayRun::getTotalOther)), rwf(sumRuns(runs, PayRun::getTotalNet)),
+                rwf(sumRuns(runs, PayRun::getTotalEmployer)), rwf(sumRuns(runs, PayRun::getTotalCost)), null, null, null, null, null);
+        activityLogService.record(MODULE, "EXPORT_PAY_RUNS", "Exported " + runs.size() + " pay runs to Excel", ActivityStatus.SUCCESS);
+        return reportFiles.download(ReportFiles.Format.XLSX, "pay-runs", s.build());
+    }
+
     /** The run's summary, the PAYE declaration or the RSSB declaration, as Excel or PDF. */
     @GetMapping("/{id}/export")
     @PreAuthorize("hasAuthority('PAGE_PAY_RUNS') and hasAuthority('PERM_VIEW_PAY_RUN')")
@@ -427,6 +452,10 @@ public class PayRunController {
 
     private static BigDecimal sum(List<PayRunLine> lines, java.util.function.Function<PayRunLine, BigDecimal> amount) {
         return lines.stream().map(amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private static BigDecimal sumRuns(List<PayRun> runs, java.util.function.Function<PayRun, BigDecimal> amount) {
+        return runs.stream().map(amount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private String m(String key, Object... args) {

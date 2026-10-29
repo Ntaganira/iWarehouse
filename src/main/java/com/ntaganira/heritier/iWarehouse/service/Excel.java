@@ -10,8 +10,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * <pre>
@@ -50,8 +52,20 @@ public final class Excel {
         }
     }
 
-    /** A sheet: its tab name, title, what it covers, the headers and the rows. */
-    public record Sheet(String name, String title, String subtitle, List<String> headers, List<Row> rows) {
+    /**
+     * A sheet: its tab name, title, what it covers, the headers and the rows. Columns named in
+     * {@code textColumns} stay text, so a downloaded template keeps a 16-digit ID or an account number as typed.
+     */
+    public record Sheet(String name, String title, String subtitle, List<String> headers, List<Row> rows,
+                        Set<Integer> textColumns) {
+
+        public Sheet {
+            textColumns = textColumns == null ? Set.of() : Set.copyOf(textColumns);
+        }
+
+        public Sheet(String name, String title, String subtitle, List<String> headers, List<Row> rows) {
+            this(name, title, subtitle, headers, rows, Set.of());
+        }
     }
 
     /** Builds a sheet as rows are added. */
@@ -61,6 +75,7 @@ public final class Excel {
         private final String subtitle;
         private final List<String> headers;
         private final List<Row> rows = new ArrayList<>();
+        private final Set<Integer> textColumns = new LinkedHashSet<>();
 
         private Builder(String name, String title, String subtitle, List<String> headers) {
             this.name = name;
@@ -79,8 +94,16 @@ public final class Excel {
             return this;
         }
 
+        /** Columns kept as text, such as a national ID or an account number. */
+        public Builder text(int... columns) {
+            for (int column : columns) {
+                textColumns.add(column);
+            }
+            return this;
+        }
+
         public Sheet build() {
-            return new Sheet(name, title, subtitle, headers, rows);
+            return new Sheet(name, title, subtitle, headers, rows, textColumns);
         }
     }
 
@@ -144,6 +167,11 @@ public final class Excel {
 
     private static void write(Workbook wb, Styles st, Sheet sheet) {
         org.apache.poi.ss.usermodel.Sheet s = wb.createSheet(safeName(sheet.name()));
+        for (int c : sheet.textColumns()) {
+            if (c >= 0 && c < 256) {
+                s.setDefaultColumnStyle(c, st.text);
+            }
+        }
         int[] scales = scales(sheet);
         int[] widths = new int[Math.max(sheet.headers().size(), 1)];
         int r = 0;
@@ -185,6 +213,8 @@ public final class Excel {
                     cell.setCellValue(v.toString());
                     if (row.bold()) {
                         cell.setCellStyle(st.bold);
+                    } else if (sheet.textColumns().contains(c)) {
+                        cell.setCellStyle(st.text);
                     }
                     widen(widths, c, Math.min(v.toString().length(), 60));
                 }
@@ -216,6 +246,7 @@ public final class Excel {
         final CellStyle integer;
         final CellStyle integerBold;
         final CellStyle date;
+        final CellStyle text;
 
         Styles(Workbook wb) {
             DataFormat format = wb.createDataFormat();
@@ -249,6 +280,8 @@ public final class Excel {
             integerBold.setFont(boldFont);
             date = wb.createCellStyle();
             date.setDataFormat(format.getFormat("dd/mm/yyyy"));
+            text = wb.createCellStyle();
+            text.setDataFormat(format.getFormat("@"));
         }
 
         /** An amount's style: its own decimals (0 to 4), bold or not. */

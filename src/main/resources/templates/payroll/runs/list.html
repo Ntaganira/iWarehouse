@@ -9,11 +9,18 @@
             <h1 th:text="#{payRun.title}">Pay Runs</h1>
             <div class="subtitle" th:text="#{payRun.subtitle}">A month's salaries, deductions and net pay: prepared, approved by another person, then paid</div>
         </div>
-        <button type="button" class="btn btn-primary" data-modal-open="new-run-modal" th:if="${!months.isEmpty()}"
-                sec:authorize="hasAuthority('PERM_PREPARE_PAY_RUN')">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            <span th:text="#{payRun.add}">New pay run</span>
-        </button>
+        <div class="btn-group">
+            <a th:href="@{/payroll/runs/export(search=${search},status=${status})}" download class="btn btn-outline"
+               sec:authorize="hasAuthority('PERM_VIEW_PAY_RUN')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span th:text="#{payRun.export.link}">Export to Excel</span>
+            </a>
+            <button type="button" class="btn btn-primary" data-modal-open="new-run-modal" th:if="${!months.isEmpty()}"
+                    sec:authorize="hasAuthority('PERM_PREPARE_PAY_RUN')">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span th:text="#{payRun.add}">New pay run</span>
+            </button>
+        </div>
     </div>
 
     <div class="doc-note is-warning" th:if="${pending > 0}" sec:authorize="hasAuthority('PERM_APPROVE_PAY_RUN')">

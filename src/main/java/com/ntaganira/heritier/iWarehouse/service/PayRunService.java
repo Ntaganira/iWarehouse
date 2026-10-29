@@ -94,7 +94,16 @@ public class PayRunService {
     // ---------------------------------------------------------------- reading
 
     public Page<PayRun> findPage(String search, String status, int page, int size) {
-        Specification<PayRun> spec = (root, query, cb) -> {
+        return repo.findAll(spec(search, status), PageRequest.of(page, size, newestFirst()));
+    }
+
+    /** Every run the list shows, without paging, for its export. */
+    public List<PayRun> findForExport(String search, String status) {
+        return repo.findAll(spec(search, status), newestFirst());
+    }
+
+    private Specification<PayRun> spec(String search, String status) {
+        return (root, query, cb) -> {
             Predicate p = cb.conjunction();
             if (StringUtils.hasText(search)) {
                 p = cb.and(p, cb.like(cb.lower(root.get("number")), "%" + search.trim().toLowerCase(Locale.ROOT) + "%"));
@@ -105,7 +114,10 @@ public class PayRunService {
             }
             return p;
         };
-        return repo.findAll(spec, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "period").and(Sort.by(Sort.Direction.DESC, "number"))));
+    }
+
+    private static Sort newestFirst() {
+        return Sort.by(Sort.Direction.DESC, "period").and(Sort.by(Sort.Direction.DESC, "number"));
     }
 
     public PayRun findDetailed(UUID id) {

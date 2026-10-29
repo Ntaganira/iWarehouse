@@ -97,5 +97,7 @@
             <div><span th:text="#{delivery.signReceived}">Received in good order by</span><span class="print-doc-signline" th:text="${note.receivedByName}"></span></div>
         </div>
     </div>
+    <div th:replace="~{fragments/toasts :: toasts}"></div>
+    <script defer src="/js/iwarehouse.js"></script>
 </body>
 </html>

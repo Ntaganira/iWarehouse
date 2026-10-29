@@ -103,5 +103,7 @@
         <p class="print-doc-note" th:if="${quotation.notes != null}" th:text="${quotation.notes}">Delivery to site in Kicukiro</p>
         <p class="print-doc-note" th:text="#{quote.printTerms(${#temporals.format(quotation.validUntil, 'dd/MM/yyyy')})}">Prices in RWF, VAT included as shown, valid until 23/10/2026. Sizes to cut are cut once paid; whole sheets subject to stock.</p>
     </div>
+    <div th:replace="~{fragments/toasts :: toasts}"></div>
+    <script defer src="/js/iwarehouse.js"></script>
 </body>
 </html>

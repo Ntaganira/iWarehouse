@@ -74,6 +74,8 @@
         <div class="receipt-rule"></div>
         <th:block th:replace="~{fragments/ebm :: receipt(${ebm}, ${ebmQr}, ${copy}, ${note.postedAt})}"></th:block>
     </div>
+    <div th:replace="~{fragments/toasts :: toasts}"></div>
     <script th:if="${printNow}">window.addEventListener('load', function () { window.print(); });</script>
+    <script defer src="/js/iwarehouse.js"></script>
 </body>
 </html>

@@ -54,5 +54,7 @@
         <div class="receipt-foot" th:if="${payment.notes != null}" th:text="${payment.notes}">For invoices of September</div>
         <div class="receipt-foot" th:text="#{posReceipt.thanks}">Thank you</div>
     </div>
+    <div th:replace="~{fragments/toasts :: toasts}"></div>
+    <script defer src="/js/iwarehouse.js"></script>
 </body>
 </html>

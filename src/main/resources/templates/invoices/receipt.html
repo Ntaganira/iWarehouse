@@ -93,6 +93,8 @@
         <th:block th:replace="~{fragments/ebm :: receipt(${ebm}, ${ebmQr}, ${copy}, ${invoice.postedAt})}"></th:block>
         <div class="receipt-foot" th:text="#{posReceipt.thanks}">Thank you</div>
     </div>
+    <div th:replace="~{fragments/toasts :: toasts}"></div>
     <script th:if="${printNow}">window.addEventListener('load', function () { window.print(); });</script>
+    <script defer src="/js/iwarehouse.js"></script>
 </body>
 </html>

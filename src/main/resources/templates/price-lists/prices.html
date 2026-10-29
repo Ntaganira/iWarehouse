@@ -102,7 +102,7 @@
                         <tr th:each="r : ${accessoryRows}" th:with="field=${'s_' + r.service.id}">
                             <td><label th:for="${field}" th:text="${r.service.name}">Tape</label></td>
                             <td th:text="#{${'service.unit.' + r.service.chargeUnit}}">roll</td>
-                            <td class="num text-muted nowrap" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '�?"'">1,500</td>
+                            <td class="num text-muted nowrap" th:unless="${list.defaultList}" th:text="${r.defaultPrice != null} ? ${@num.money(r.defaultPrice)} : '—'">1,500</td>
                             <td class="price-col">
                                 <div class="input-unit">
                                     <input type="text" inputmode="decimal" th:id="${field}" th:name="${field}" autocomplete="off"

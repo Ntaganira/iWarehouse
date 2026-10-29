@@ -26,9 +26,15 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
+import javax.sql.DataSource;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -42,6 +48,10 @@ import java.util.Set;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    /** Opaque persistent-token cookie; the key feeds remember-me authentication, it does not sign a username cookie. */
+    private static final String REMEMBER_ME_KEY = "iWarehouseRememberMe";
+    private static final int REMEMBER_ME_SECONDS = Math.toIntExact(Duration.ofDays(30).toSeconds());
 
     /**
      * The mobile POS app shell (/m/: static files, MPOS-01): open, and without the web session, so an expired back-office
@@ -100,7 +110,8 @@ public class SecurityConfig {
                                                    AuthenticationSuccessHandler auditSuccessHandler,
                                                    AuthenticationFailureHandler auditFailureHandler,
                                                    LogoutSuccessHandler auditLogoutHandler,
-                                                   AccessDeniedHandler auditAccessDeniedHandler) throws Exception {
+                                                   AccessDeniedHandler auditAccessDeniedHandler,
+                                                   RememberMeServices rememberMeServices) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/vendor/**", "/r/**",
@@ -113,6 +124,7 @@ public class SecurityConfig {
                 .failureHandler(auditFailureHandler)
                 .permitAll()
             )
+            .rememberMe(remember -> remember.rememberMeServices(rememberMeServices))
             .logout(logout -> logout
                 .deleteCookies("JSESSIONID")
                 .logoutSuccessHandler(auditLogoutHandler)
@@ -129,6 +141,28 @@ public class SecurityConfig {
             )
             .exceptionHandling(ex -> ex.accessDeniedHandler(auditAccessDeniedHandler));
         return http.build();
+    }
+
+    /**
+     * The remembered device cookie (series:token) is kept in persistent_logins, so it can be revoked server-side
+     * rather than trusted as a signed username. Flyway creates the table (V59).
+     */
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository(DataSource dataSource) {
+        JdbcTokenRepositoryImpl repository = new JdbcTokenRepositoryImpl();
+        repository.setDataSource(dataSource);
+        return repository;
+    }
+
+    @Bean
+    public RememberMeServices rememberMeServices(UserDetailsService userDetailsService,
+                                               PersistentTokenRepository persistentTokenRepository) {
+        PersistentTokenBasedRememberMeServices services = new PersistentTokenBasedRememberMeServices(
+                REMEMBER_ME_KEY, userDetailsService, persistentTokenRepository);
+        services.setTokenValiditySeconds(REMEMBER_ME_SECONDS);
+        services.setParameter("remember-me");
+        services.afterPropertiesSet();
+        return services;
     }
 
     @Bean

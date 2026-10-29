@@ -7,6 +7,7 @@ import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.RoleRepository;
 import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
+import com.ntaganira.heritier.iWarehouse.security.RememberMeTokens;
 import com.ntaganira.heritier.iWarehouse.security.UserSessions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ class UserServiceTest {
     private RoleRepository roleRepo;
     private ActivityLogService activityLog;
     private UserSessions sessions;
+    private RememberMeTokens rememberedDevices;
     private UserService service;
 
     private final Role admin = role(1L, "ADMIN");
@@ -40,10 +42,11 @@ class UserServiceTest {
         roleRepo = mock(RoleRepository.class);
         activityLog = mock(ActivityLogService.class);
         sessions = mock(UserSessions.class);
+        rememberedDevices = mock(RememberMeTokens.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode(anyString())).thenAnswer(i -> "hash:" + i.getArgument(0));
         when(userRepo.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
-        service = new UserService(userRepo, roleRepo, encoder, activityLog, sessions);
+        service = new UserService(userRepo, roleRepo, encoder, activityLog, sessions, rememberedDevices);
     }
 
     @Test
@@ -113,6 +116,7 @@ class UserServiceTest {
 
         assertThat(target.isEnabled()).isFalse();
         verify(sessions).expire(5L);
+        verify(rememberedDevices).revoke("jdoe");
     }
 
     @Test
@@ -136,6 +140,7 @@ class UserServiceTest {
         verify(activityLog).record(eq(UserService.MODULE), eq("UPDATE_USER_ROLES"),
                 eq("User jdoe: roles added [ADMIN], removed [CASHIER]"), eq(ActivityStatus.SUCCESS));
         verify(sessions).expire(5L);
+        verify(rememberedDevices).revoke("jdoe");
     }
 
     @Test
@@ -151,6 +156,7 @@ class UserServiceTest {
         assertThat(target.getFailedLoginAttempts()).isZero();
         assertThat(target.getLockedUntil()).isNull();
         verify(sessions).expire(5L);
+        verify(rememberedDevices).revoke("jdoe");
     }
 
     private static Role role(Long id, String code) {

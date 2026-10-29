@@ -6,6 +6,7 @@ import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
+import com.ntaganira.heritier.iWarehouse.security.RememberMeTokens;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,11 +35,14 @@ public class ProfileService {
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorage;
+    private final RememberMeTokens rememberMeTokens;
 
-    public ProfileService(UserRepository userRepo, PasswordEncoder passwordEncoder, FileStorageService fileStorage) {
+    public ProfileService(UserRepository userRepo, PasswordEncoder passwordEncoder, FileStorageService fileStorage,
+                          RememberMeTokens rememberMeTokens) {
         this.userRepo = userRepo;
         this.passwordEncoder = passwordEncoder;
         this.fileStorage = fileStorage;
+        this.rememberMeTokens = rememberMeTokens;
     }
 
     public User me(Long userId) {
@@ -77,6 +81,7 @@ public class ProfileService {
             throw BusinessException.onField("newPassword", "profile.password.same");
         }
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        AfterCommit.run(() -> rememberMeTokens.revoke(user.getUsername()));
         return user;
     }
 

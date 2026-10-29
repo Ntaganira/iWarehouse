@@ -9,6 +9,7 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.RoleRepository;
 import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
+import com.ntaganira.heritier.iWarehouse.security.RememberMeTokens;
 import com.ntaganira.heritier.iWarehouse.security.UserSessions;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
@@ -54,14 +55,17 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLogService;
     private final UserSessions userSessions;
+    private final RememberMeTokens rememberMeTokens;
 
     public UserService(UserRepository userRepo, RoleRepository roleRepo, PasswordEncoder passwordEncoder,
-                       ActivityLogService activityLogService, UserSessions userSessions) {
+                       ActivityLogService activityLogService, UserSessions userSessions,
+                       RememberMeTokens rememberMeTokens) {
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
         this.passwordEncoder = passwordEncoder;
         this.activityLogService = activityLogService;
         this.userSessions = userSessions;
+        this.rememberMeTokens = rememberMeTokens;
     }
 
     public Page<User> findPage(String search, String status, Long roleId, int page, int size) {
@@ -146,7 +150,10 @@ public class UserService {
                 user.getRoles().clear();
                 user.getRoles().addAll(newRoles);
                 logRoleChange(user, change);
-                AfterCommit.run(() -> userSessions.expire(id)); // new access applies now, not at next sign-in
+                AfterCommit.run(() -> {
+                    userSessions.expire(id); // new access applies now, not at next sign-in
+                    rememberMeTokens.revoke(user.getUsername());
+                });
             }
         }
         user.setEmail(email);
@@ -169,7 +176,10 @@ public class UserService {
             if (hasRole(user, ADMIN_ROLE)) {
                 ensureAnotherAdmin(id);
             }
-            AfterCommit.run(() -> userSessions.expire(id));
+            AfterCommit.run(() -> {
+                userSessions.expire(id);
+                rememberMeTokens.revoke(user.getUsername());
+            });
         }
         user.setEnabled(enabled);
         return user;
@@ -185,9 +195,12 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
-        if (!id.equals(actingUserId)) {
-            AfterCommit.run(() -> userSessions.expire(id));
-        }
+        AfterCommit.run(() -> {
+            if (!id.equals(actingUserId)) {
+                userSessions.expire(id);
+            }
+            rememberMeTokens.revoke(user.getUsername());
+        });
         return user;
     }
 

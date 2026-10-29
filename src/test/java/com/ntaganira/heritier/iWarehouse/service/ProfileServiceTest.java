@@ -6,6 +6,7 @@ import com.ntaganira.heritier.iWarehouse.entity.User;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.repository.UserRepository;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import com.ntaganira.heritier.iWarehouse.security.RememberMeTokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,6 +29,7 @@ class ProfileServiceTest {
 
     private UserRepository userRepo;
     private FileStorageService storage;
+    private RememberMeTokens rememberedDevices;
     private ProfileService service;
     private User jean;
 
@@ -35,12 +37,13 @@ class ProfileServiceTest {
     void setUp() {
         userRepo = mock(UserRepository.class);
         storage = mock(FileStorageService.class);
+        rememberedDevices = mock(RememberMeTokens.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(encoder.encode(anyString())).thenAnswer(i -> "hash:" + i.getArgument(0));
         when(encoder.matches(anyString(), anyString())).thenAnswer(i -> ("hash:" + i.getArgument(0)).equals(i.getArgument(1)));
         jean = User.builder().id(7L).username("jean").email("jean@example.rw").fullName("Jean U").password("hash:OldSecret#1").build();
         when(userRepo.findById(7L)).thenReturn(Optional.of(jean));
-        service = new ProfileService(userRepo, encoder, storage);
+        service = new ProfileService(userRepo, encoder, storage, rememberedDevices);
     }
 
     @Test
@@ -79,6 +82,7 @@ class ProfileServiceTest {
         service.changePassword(7L, password("OldSecret#1", "NewSecret#2", "NewSecret#2"));
 
         assertThat(jean.getPassword()).isEqualTo("hash:NewSecret#2");
+        verify(rememberedDevices).revoke("jean");
     }
 
     @Test

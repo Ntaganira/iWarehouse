@@ -112,6 +112,11 @@
                     <span th:text="#{login.capsLock}">Caps Lock is on</span>
                 </div>
 
+                <label class="auth-remember">
+                    <input type="checkbox" id="remember-me" name="remember-me">
+                    <span th:text="#{login.rememberMe}">Remember me on this device</span>
+                </label>
+
                 <button type="submit" class="btn btn-primary auth-submit" id="login-submit" th:data-loading="#{login.signingIn}">
                     <span class="spinner" aria-hidden="true"></span>
                     <span class="submit-label" th:text="#{login.signIn}">Sign In</span>

@@ -68,6 +68,9 @@
                 <div class="kpi-label" th:text="#{vehicle.kpi.odometer}">Odometer</div>
                 <div class="kpi-value" th:text="${costSummary.currentKm != null} ? ${@num.whole(costSummary.currentKm)} : '—'">45,210</div>
                 <div class="kpi-trend flat"><span class="vs" th:text="#{vehicle.kpi.odometerSub}">km, the latest reading</span></div>
+                <div class="kpi-trend flat" th:if="${costSummary.monthlyTargetKm != null}">
+                    <span class="vs" th:text="#{vehicle.kpi.monthProgress(${@num.whole(costSummary.kmThisMonth)}, ${@num.whole(costSummary.monthlyTargetKm)}, ${costSummary.monthProgressPercent})}">2,000 of 6,000 km this month (33%)</span>
+                </div>
             </div>
         </div>
         <div class="kpi-card">
@@ -129,6 +132,10 @@
                     <div class="item">
                         <label th:text="#{vehicle.maxPieces}">Most pieces</label>
                         <div class="value" th:text="${vehicle.maxPieces}">35</div>
+                    </div>
+                    <div class="item">
+                        <label th:text="#{vehicle.monthlyTarget}">Monthly distance target</label>
+                        <div class="value" th:text="${vehicle.monthlyDistanceTargetKm != null} ? ${@num.whole(vehicle.monthlyDistanceTargetKm)} + ' km' : #{common.none}">6,000 km</div>
                     </div>
                     <div class="item">
                         <label th:text="#{vehicle.insurance}">Insurance until</label>

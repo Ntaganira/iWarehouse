@@ -186,6 +186,7 @@ public class ProductController {
         dto.setReorderLevelM2(product.getReorderLevelM2() == null ? null : product.getReorderLevelM2().stripTrailingZeros());
         dto.setMaxLevelM2(product.getMaxLevelM2() == null ? null : product.getMaxLevelM2().stripTrailingZeros());
         dto.setNotes(product.getNotes());
+        dto.setAliases(product.getAliases().stream().map(a -> a.getAlias()).reduce((a, b) -> a + "\n" + b).orElse(null));
         return form(model, withIdentity(dto, product));
     }
 

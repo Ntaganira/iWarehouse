@@ -55,10 +55,14 @@ public class Vehicle extends BaseEntity {
     @Column(name = "inspection_expiry", nullable = false)
     private LocalDate inspectionExpiry;
 
-    /** The last reading a trip recorded; the trips keep each one. */
+    /** The last reading a trip or a manual reading recorded; the trips keep each one. */
     @AuditIgnore
     @Column(name = "odometer_km")
     private Integer odometerKm;
+
+    /** How far the vehicle should drive a month (0 or null = no target). */
+    @Column(name = "monthly_distance_target_km")
+    private Integer monthlyDistanceTargetKm;
 
     /** Its VEHICLE location: where the units it carries are. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

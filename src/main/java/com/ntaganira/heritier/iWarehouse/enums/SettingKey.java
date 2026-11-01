@@ -60,6 +60,10 @@ public enum SettingKey {
     CREDIT_BLOCK_OVERDUE("credit.block-overdue", "creditBlockOverdue", "true"),
     /** Days past due before an invoice blocks credit. */
     CREDIT_OVERDUE_GRACE_DAYS("credit.overdue-grace-days", "creditOverdueGraceDays", "0"),
+    /** No new credit while the customer still owes on an issued invoice (TASK.md). */
+    CREDIT_BLOCK_OPEN_DEBT("credit.block-open-debt", "creditBlockOpenDebt", "true"),
+    /** A hard collection interval in days; when above 0 it replaces the overdue grace before credit is blocked (TASK.md). */
+    CREDIT_COLLECTION_INTERVAL_DAYS("credit.collection-interval-days", "creditCollectionIntervalDays", "0"),
     /** A credit note is asked, approved by another person, then issued (F-14); off: issued at once, as before. */
     APPROVAL_CREDIT_NOTE_REQUIRED("approval.credit-note-required", "approvalCreditNoteRequired", "true"),
     /** A credit note asked is reviewed (Finance) before it is approved. */
@@ -266,6 +270,15 @@ public enum SettingKey {
     FLOAT_ALERT_HOURS("fleet.float-alert-hours", "floatAlertHours", "24"),
     /** Km before a vehicle's service falls due that the fleet is told (the days are FLEET_EXPIRY_ALERT_DAYS). */
     SERVICE_ALERT_KM("fleet.service-alert-km", "serviceAlertKm", "500"),
+
+    /** Sale confirmations go to the customer's WhatsApp number (TASK.md). */
+    WHATSAPP_ENABLED("whatsapp.enabled", "whatsappEnabled", "false"),
+    /** The WhatsApp gateway that sends the confirmation, e.g. https://graph.facebook.com/v20.0/<phone-id>/messages. */
+    WHATSAPP_GATEWAY_URL("whatsapp.gateway-url", "whatsappGatewayUrl", null),
+    /** The gateway's bearer token. Masked in the activity log. */
+    WHATSAPP_TOKEN("whatsapp.token", "whatsappToken", null),
+    /** The registered sender, when the gateway needs one. */
+    WHATSAPP_SENDER("whatsapp.sender", "whatsappSender", null),
 
     /** How receipts are signed (TAX-02): SIMULATOR (development: receipts marked not fiscal) or VSDC. An EbmMode name. */
     EBM_MODE("ebm.mode", "ebmMode", "SIMULATOR"),

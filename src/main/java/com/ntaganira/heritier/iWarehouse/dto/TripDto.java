@@ -47,6 +47,11 @@ public class TripDto {
     @Size(max = 120, message = "{trip.area.size}")
     private String area;
 
+    /** The odometer when the trip leaves; never below the vehicle's last reading (FLT-12). */
+    @NotNull(message = "{trip.odometer.required}")
+    @Min(value = 0, message = "{trip.odometer.invalid}")
+    private Integer odometerStart;
+
     @Size(max = 255, message = "{trip.note.size}")
     private String note;
 

@@ -36,12 +36,20 @@ public final class SalesAnalysis {
     private SalesAnalysis() {
     }
 
-    public enum GroupBy { CUSTOMER, PRODUCT, SALESPERSON, CHANNEL, TERRITORY, MARKET, DAY, MONTH, INVOICE }
+    public enum GroupBy { CUSTOMER, PRODUCT, SALESPERSON, CHANNEL, TERRITORY, MARKET, VEHICLE, DRIVER, DAY, MONTH, INVOICE }
 
     /** An issued invoice: who bought, who sold, its net amount, and whether pieces are still to hand over. */
     public record Invoice(UUID id, String number, LocalDate date, UUID customerId, String customer, String buyer, String salesperson,
                           String salespersonName, BigDecimal net, boolean pending, String channel, String territory, String territoryCode,
-                          String market) {
+                          String market, UUID tripId, String vehicle, UUID driverId, String driver, String tripStatus) {
+
+        /** Before trip and driver reports: its channel, territory and market only. */
+        public Invoice(UUID id, String number, LocalDate date, UUID customerId, String customer, String buyer, String salesperson,
+                       String salespersonName, BigDecimal net, boolean pending, String channel, String territory, String territoryCode,
+                       String market) {
+            this(id, number, date, customerId, customer, buyer, salesperson, salespersonName, net, pending, channel, territory,
+                    territoryCode, market, null, null, null, null, null);
+        }
 
         /** Before markets and targets: its channel and territory only. */
         public Invoice(UUID id, String number, LocalDate date, UUID customerId, String customer, String buyer, String salesperson,
@@ -78,6 +86,14 @@ public final class SalesAnalysis {
 
     /** One invoice and one thing it sold. */
     public record Fact(Invoice invoice, String itemKey, String itemLabel, boolean glass, BigDecimal areaM2, BigDecimal net, BigDecimal cost) {
+    }
+
+    /** A driver's closed trips in the period: their sales and the margin at MAC. */
+    public record DriverRow(UUID driverId, String driver, long trips, long invoices, BigDecimal net, BigDecimal cost) {
+
+        public BigDecimal getMargin() {
+            return net.subtract(cost);
+        }
     }
 
     /** A line of the report: what it groups, how many invoices, m², net sales, cost and the margin. */
@@ -192,6 +208,8 @@ public final class SalesAnalysis {
             case CHANNEL -> f -> String.valueOf(f.invoice().channel());
             case TERRITORY -> f -> f.invoice().territory() == null ? "" : f.invoice().territory();
             case MARKET -> f -> f.invoice().market() == null ? "" : f.invoice().market();
+            case VEHICLE -> f -> f.invoice().vehicle() == null ? "" : f.invoice().vehicle();
+            case DRIVER -> f -> f.invoice().driverId() == null ? "" : f.invoice().driverId().toString();
             case DAY -> f -> f.invoice().date().toString();
             case MONTH -> f -> f.invoice().date().withDayOfMonth(1).toString();
             case INVOICE -> f -> f.invoice().id().toString();
@@ -208,6 +226,8 @@ public final class SalesAnalysis {
                 case CHANNEL -> first.invoice().channel();
                 case TERRITORY -> first.invoice().territory();
                 case MARKET -> first.invoice().market();
+                case VEHICLE -> first.invoice().vehicle();
+                case DRIVER -> first.invoice().driver();
                 case DAY, MONTH, INVOICE -> first.invoice().number();
             };
             LocalDate date = switch (by) {
@@ -223,6 +243,44 @@ public final class SalesAnalysis {
             default -> Comparator.comparing(Row::net).reversed().thenComparing(r -> r.label() == null ? "" : r.label());
         };
         rows.sort(order);
+        return rows;
+    }
+
+    /** The driver leaderboard: each driver's closed trips with their sales and margin, best net first (TASK.md). */
+    public static List<DriverRow> drivers(Collection<Fact> facts) {
+        Map<UUID, BigDecimal[]> perInvoice = new LinkedHashMap<>();
+        Map<UUID, Invoice> invoiceOf = new HashMap<>();
+        for (Fact f : facts) {
+            Invoice inv = f.invoice();
+            if (inv.driverId() == null || !"CLOSED".equals(inv.tripStatus())) {
+                continue;
+            }
+            BigDecimal[] v = perInvoice.computeIfAbsent(inv.id(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            v[0] = v[0].add(f.net());
+            v[1] = v[1].add(f.cost());
+            invoiceOf.put(inv.id(), inv);
+        }
+        Map<UUID, Long> invoices = new LinkedHashMap<>();
+        Map<UUID, Long> trips = new LinkedHashMap<>();
+        Map<UUID, Set<UUID>> tripIds = new LinkedHashMap<>();
+        Map<UUID, BigDecimal[]> sums = new LinkedHashMap<>();
+        Map<UUID, String> names = new HashMap<>();
+        for (Map.Entry<UUID, BigDecimal[]> e : perInvoice.entrySet()) {
+            Invoice inv = invoiceOf.get(e.getKey());
+            UUID driverId = inv.driverId();
+            invoices.merge(driverId, 1L, Long::sum);
+            if (tripIds.computeIfAbsent(driverId, k -> new LinkedHashSet<>()).add(inv.tripId())) {
+                trips.merge(driverId, 1L, Long::sum);
+            }
+            BigDecimal[] sum = sums.computeIfAbsent(driverId, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            sum[0] = sum[0].add(e.getValue()[0]);
+            sum[1] = sum[1].add(e.getValue()[1]);
+            names.putIfAbsent(driverId, inv.driver() == null ? "" : inv.driver());
+        }
+        List<DriverRow> rows = new ArrayList<>();
+        sums.forEach((id, v) -> rows.add(new DriverRow(id, names.get(id), trips.getOrDefault(id, 0L), invoices.getOrDefault(id, 0L),
+                v[0], v[1])));
+        rows.sort(Comparator.comparing(DriverRow::net).reversed().thenComparing(DriverRow::driver));
         return rows;
     }
 

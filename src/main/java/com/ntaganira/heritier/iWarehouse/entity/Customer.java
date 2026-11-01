@@ -106,6 +106,10 @@ public class Customer extends BaseEntity {
     @Column(name = "momo_number", length = 30)
     private String momoNumber;
 
+    /** International WhatsApp number for sale confirmations (+250...). */
+    @Column(name = "whatsapp_number", length = 20)
+    private String whatsappNumber;
+
     /** Expected purchases a month, RWF. */
     @Column(name = "expected_monthly", precision = 18, scale = 2)
     private BigDecimal expectedMonthly;

@@ -208,6 +208,7 @@ public class CustomerService {
         customer.setName(dto.getName().trim());
         customer.setTin(tin);
         customer.setPhone(PartyRules.clean(dto.getPhone()));
+        customer.setWhatsappNumber(PartyRules.clean(dto.getWhatsappNumber()));
         customer.setEmail(PartyRules.clean(dto.getEmail()));
         customer.setContactName(PartyRules.clean(dto.getContactName()));
         customer.setAddress(PartyRules.clean(dto.getAddress()));

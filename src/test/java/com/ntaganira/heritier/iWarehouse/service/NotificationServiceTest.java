@@ -57,7 +57,8 @@ class NotificationServiceTest {
         assertThat(n.getArgs()).isEqualTo("[\"MJ-1\",\"acc\",\"rent\"]");
         assertThat(n.getLink()).isEqualTo("/accounting/manual-journals/1");
         assertThat(n.isRead()).isFalse();
-        verify(mailer).send(List.of("owner@glass.rw"), "Manual journal MJ-1 waits for your approval", "Asked by acc: rent", "/accounting/manual-journals/1");
+        verify(mailer).send(List.of("owner@glass.rw"), "Manual journal MJ-1 waits for your approval", "Asked by acc: rent",
+                "/accounting/manual-journals/1", NotificationKind.APPROVAL);
     }
 
     @Test
@@ -74,7 +75,7 @@ class NotificationServiceTest {
         service.deliver(new Notifier.Alert(NotificationKind.DECISION, null, 7L, null, "notify.adjustment.approved", null, List.of(), null));
 
         verify(repo, times(1)).save(any(Notification.class));
-        verify(mailer, never()).send(anyList(), anyString(), anyString(), any());
+        verify(mailer, never()).send(anyList(), anyString(), anyString(), any(), any());
     }
 
     @Test

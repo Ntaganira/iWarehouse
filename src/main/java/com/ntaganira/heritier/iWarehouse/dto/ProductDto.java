@@ -59,6 +59,10 @@ public class ProductDto {
     @Size(max = 255, message = "{product.notes.size}")
     private String notes;
 
+    /** Other names the trade uses, one per line or separated by commas (TASK.md). */
+    @Size(max = 1000, message = "{product.aliases.size}")
+    private String aliases;
+
     public void setCode(String code) {
         this.code = code == null ? null : code.trim().toUpperCase(Locale.ROOT);
     }

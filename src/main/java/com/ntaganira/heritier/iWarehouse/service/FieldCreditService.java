@@ -68,7 +68,16 @@ public class FieldCreditService {
     }
 
     private boolean blocked(Customer customer) {
-        return settingService.getBoolean(SettingKey.CREDIT_BLOCK_OVERDUE)
-                && ageing.overdue(customer, settingService.getInt(SettingKey.CREDIT_OVERDUE_GRACE_DAYS)).any();
+        if (settingService.getBoolean(SettingKey.CREDIT_BLOCK_OPEN_DEBT)
+                && journalService.receivable(customer.getId()).signum() > 0) {
+            return true;
+        }
+        return settingService.getBoolean(SettingKey.CREDIT_BLOCK_OVERDUE) && ageing.overdue(customer, graceDays()).any();
+    }
+
+    /** The hard collection interval when one is set, else the overdue grace (TASK.md). */
+    private int graceDays() {
+        int interval = settingService.getInt(SettingKey.CREDIT_COLLECTION_INTERVAL_DAYS);
+        return interval > 0 ? interval : settingService.getInt(SettingKey.CREDIT_OVERDUE_GRACE_DAYS);
     }
 }

@@ -293,6 +293,7 @@ public class TripController {
         dto.setVehicleId(trip.getVehicle().getId());
         dto.setDriverId(trip.getDriver().getId());
         dto.setTripDate(trip.getTripDate());
+        dto.setOdometerStart(trip.getOdometerStart());
         dto.setArea(trip.getArea());
         dto.setNote(trip.getNote());
         dto.setRoute(trip.getRoute());

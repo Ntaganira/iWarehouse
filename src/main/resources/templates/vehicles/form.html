@@ -49,6 +49,26 @@
                     <span class="hint" th:text="#{vehicle.maxPiecesHint}">Sheets and pieces its racks hold</span>
                 </div>
                 <div class="form-group">
+                    <label for="monthlyDistanceTargetKm" th:text="#{vehicle.monthlyTarget}">Monthly distance target</label>
+                    <div class="input-unit">
+                        <input type="number" id="monthlyDistanceTargetKm" th:field="*{monthlyDistanceTargetKm}" step="1" min="0" max="100000" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('monthlyDistanceTargetKm')} ? 'is-invalid'">
+                        <span>km</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('monthlyDistanceTargetKm')}" th:errors="*{monthlyDistanceTargetKm}"></span>
+                    <span class="hint" th:text="#{vehicle.monthlyTargetHint}">Shown against the km driven this month; leave empty for none</span>
+                </div>
+                <div class="form-group" th:if="${vehicleDto.id != null}">
+                    <label for="currentOdometerKm" th:text="#{vehicle.odometerReading}">Current odometer</label>
+                    <div class="input-unit">
+                        <input type="number" id="currentOdometerKm" th:field="*{currentOdometerKm}" step="1" min="0" inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('currentOdometerKm')} ? 'is-invalid'">
+                        <span>km</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('currentOdometerKm')}" th:errors="*{currentOdometerKm}"></span>
+                    <span class="hint" th:text="#{vehicle.odometerReadingHint}">Only forward: it never goes below the vehicle's last reading</span>
+                </div>
+                <div class="form-group">
                     <label for="insuranceExpiry" th:text="#{vehicle.insurance}">Insurance until</label>
                     <input type="date" id="insuranceExpiry" th:field="*{insuranceExpiry}" required
                            th:classappend="${#fields.hasErrors('insuranceExpiry')} ? 'is-invalid'">

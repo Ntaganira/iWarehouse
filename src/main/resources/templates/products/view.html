@@ -86,9 +86,15 @@
                         <label th:text="#{product.maxLevel}">Maximum level</label>
                         <div class="value" th:text="${product.maxLevelM2 != null} ? ${product.maxLevelM2.stripTrailingZeros().toPlainString() + ' m²'} : #{product.noMaxLevel}">No maximum</div>
                     </div>
+                    <div class="item" th:if="${!product.aliases.isEmpty()}">
+                        <label th:text="#{product.aliases}">Other names</label>
+                        <div class="value">
+                            <span th:each="a, st : ${product.aliases}" th:text="${a.alias}">Bronze 6</span><span th:if="${!st.last}">, </span>
+                        </div>
+                    </div>
                     <div class="item">
                         <label th:text="#{product.notes}">Notes</label>
-                        <div class="value" th:text="${product.notes ?: '—'}">—</div>
+                        <div class="value" th:text="${product.notes ?: '�?"'}">�?"</div>
                     </div>
                     <div class="item">
                         <label th:text="#{user.createdAt}">Created</label>

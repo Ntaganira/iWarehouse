@@ -45,6 +45,9 @@ public class CustomerDto {
     @Pattern(regexp = "^[0-9+()\\s-]{0,30}$", message = "{party.phone.pattern}")
     private String phone;
 
+    @Pattern(regexp = "^$|^\\+250[0-9]{9}$", message = "{party.whatsapp.pattern}")
+    private String whatsappNumber;
+
     @Email(message = "{party.email.invalid}")
     @Size(max = 120, message = "{party.email.invalid}")
     private String email;

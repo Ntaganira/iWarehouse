@@ -38,6 +38,10 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    /** International WhatsApp number for sale confirmations (+250...). */
+    @Column(name = "whatsapp_number", length = 20)
+    private String whatsappNumber;
+
     /** The profile photo's storage key (avatars/{id}/{uuid}.jpg), served by /profile/photo; null: the initials. */
     @Column(name = "photo_url")
     private String photoUrl;

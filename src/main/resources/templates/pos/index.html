@@ -85,7 +85,7 @@
                         <select id="product" name="product" data-searchable>
                             <option value="" th:text="#{pos.anyGlass}">Any glass</option>
                             <option th:each="p : ${products}" th:value="${p.id}" th:selected="${p.id == product}"
-                                    th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                                    th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm' + (p.aliasLabel != null ? ' - ' + p.aliasLabel : '')}">CLR-6 · Clear 6 mm</option>
                         </select>
                     </div>
                     <div class="fit-search">
@@ -152,7 +152,7 @@
                             <select id="custom-product" name="productId" data-searchable th:classappend="${customField == 'productId'} ? 'is-invalid'">
                                 <option value="" th:text="#{pos.chooseGlass}">Choose the glass</option>
                                 <option th:each="p : ${cuttable}" th:value="${p.id}" th:selected="${f != null and p.id == f.get('productId')}"
-                                        th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm'}">CLR-6 · Clear 6 mm</option>
+                                        th:text="${p.code + ' · ' + #messages.msg('glass.type.' + p.glassType) + (p.variant != null ? ' ' + p.variant : '') + ' ' + p.thicknessLabel + ' mm' + (p.aliasLabel != null ? ' - ' + p.aliasLabel : '')}">CLR-6 · Clear 6 mm</option>
                             </select>
                         </div>
                         <div class="form-group">

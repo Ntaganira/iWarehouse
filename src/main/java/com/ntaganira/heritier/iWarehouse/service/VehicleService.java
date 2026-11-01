@@ -217,6 +217,14 @@ public class VehicleService {
         vehicle.setMaxPieces(dto.getMaxPieces());
         vehicle.setInsuranceExpiry(dto.getInsuranceExpiry());
         vehicle.setInspectionExpiry(dto.getInspectionExpiry());
+        vehicle.setMonthlyDistanceTargetKm(dto.getMonthlyDistanceTargetKm());
+        if (dto.getCurrentOdometerKm() != null) {
+            if (vehicle.getOdometerKm() != null && dto.getCurrentOdometerKm() < vehicle.getOdometerKm()) {
+                throw BusinessException.onField("currentOdometerKm", "trip.odometer.belowLast",
+                        dto.getCurrentOdometerKm(), vehicle.getOdometerKm());
+            }
+            vehicle.setOdometerKm(dto.getCurrentOdometerKm());
+        }
         vehicle.setNotes(PartyRules.clean(dto.getNotes()));
     }
 }

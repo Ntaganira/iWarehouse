@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <pre>
@@ -69,8 +71,18 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    /** Other names the trade uses for this glass (TASK.md); searched with its code. */
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("alias ASC")
+    private List<ProductAlias> aliases = new ArrayList<>();
+
     /** "6", "6.38". */
     public String getThicknessLabel() {
         return GlassProducts.thicknessLabel(thicknessMm);
+    }
+
+    /** The other names the trade uses, for a searchable list; null without any. */
+    public String getAliasLabel() {
+        return aliases.isEmpty() ? null : aliases.stream().map(ProductAlias::getAlias).reduce((a, b) -> a + ", " + b).orElse(null);
     }
 }

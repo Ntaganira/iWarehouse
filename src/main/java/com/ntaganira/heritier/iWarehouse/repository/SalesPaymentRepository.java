@@ -54,6 +54,10 @@ public interface SalesPaymentRepository extends Repository<SalesPayment, UUID> {
     @Query("select p.tripId, coalesce(sum(p.amount), 0) from SalesPayment p where p.tripId in :tripIds and p.method = :method group by p.tripId")
     List<Object[]> totalsOfTrips(@Param("tripIds") Collection<UUID> tripIds, @Param("method") PaymentMethod method);
 
+    /** Rows of (method, amount) taken on some invoices: the payment reconciliation of the sales report (TASK.md). */
+    @Query("select p.method, coalesce(sum(p.amount), 0) from SalesPayment p where p.invoiceId in :invoiceIds group by p.method order by p.method")
+    List<Object[]> totalsOfInvoices(@Param("invoiceIds") Collection<UUID> invoiceIds);
+
     /** Rows of (trip id, method, amount) of some trips, for the fleet reports. */
     @Query("select p.tripId, p.method, coalesce(sum(p.amount), 0) from SalesPayment p where p.tripId in :tripIds group by p.tripId, p.method")
     List<Object[]> totalsByMethodOfTrips(@Param("tripIds") Collection<UUID> tripIds);

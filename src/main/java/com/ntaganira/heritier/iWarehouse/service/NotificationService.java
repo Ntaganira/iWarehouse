@@ -113,7 +113,7 @@ public class NotificationService {
             if (!emails.isEmpty() && mailer.enabled()) {
                 Object[] a = alert.args().toArray();
                 mailer.send(emails, messages.get(alert.titleKey(), a),
-                        alert.messageKey() == null ? "" : messages.get(alert.messageKey(), a), alert.link());
+                        alert.messageKey() == null ? "" : messages.get(alert.messageKey(), a), alert.link(), alert.kind());
             }
         } catch (JsonProcessingException | RuntimeException e) {
             log.warn("Could not deliver the alert {} ({}): {}", alert.titleKey(), alert.kind(), e.getMessage());

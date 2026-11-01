@@ -58,6 +58,14 @@ public class VehicleDto {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate inspectionExpiry;
 
+    @Min(value = 0, message = "{vehicle.monthlyTarget.range}")
+    @Max(value = 100000, message = "{vehicle.monthlyTarget.range}")
+    private Integer monthlyDistanceTargetKm;
+
+    /** A manual reading; it only moves the odometer forward. */
+    @Min(value = 0, message = "{trip.odometer.invalid}")
+    private Integer currentOdometerKm;
+
     @Size(max = 255, message = "{vehicle.notes.size}")
     private String notes;
 

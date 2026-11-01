@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -67,6 +68,7 @@ class MobileSaleServiceTest {
     private AuditCaseService auditCaseService;
     private StockMovementRepository movementRepo;
     private TripRepository tripRepo;
+    private ApplicationEventPublisher events;
     private MobileSaleService service;
 
     @BeforeEach
@@ -188,9 +190,11 @@ class MobileSaleServiceTest {
         StockService stockService = new StockService(unitRepo, movementRepo, mock(StockCostEntryRepository.class), mock(StockAdjustmentLineRepository.class),
                 mock(StockCountRepository.class), mock(SalesInvoiceLineRepository.class), tripRepo, mock(LocationRepository.class),
                 mock(DocumentNumberService.class), CLOCK);
+        events = mock(ApplicationEventPublisher.class);
         service = new MobileSaleService(invoiceRepo, paymentRepo, conflictRepo, numberRepo, tripRepo, driverRepo, deviceRepo, unitRepo,
                 productRepo, customerRepo, priceListRepo, tripService, stockService, postingService, ebmService, pricing, notifier,
-                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK, mock(SettingService.class), fieldCredit);
+                new ObjectMapper().findAndRegisterModules(), breakageRepo, auditCaseService, CLOCK, mock(SettingService.class), fieldCredit,
+                events);
     }
 
     @AfterEach
@@ -210,6 +214,7 @@ class MobileSaleServiceTest {
 
         assertThat(results).extracting(MobileSaleService.Result::outcome).containsOnly(MobileSaleService.Outcome.ACCEPTED);
         assertThat(invoices).hasSize(3);
+        verify(events, times(3)).publishEvent(any(SaleIssued.class));
         SalesInvoice first = results.get(0).invoice();
         assertThat(first.getChannel()).isEqualTo(SaleChannel.MOBILE);
         assertThat(first.getNumber()).isEqualTo("MINV-WH-2026-000001");             // the number the phone printed

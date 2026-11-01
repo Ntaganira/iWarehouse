@@ -45,6 +45,16 @@
                     <span class="field-error" th:if="${#fields.hasErrors('tripDate')}" th:errors="*{tripDate}"></span>
                 </div>
                 <div class="form-group">
+                    <label for="odometerStart" th:text="#{trip.odometerStart}">Odometer at departure</label>
+                    <div class="input-unit">
+                        <input type="number" id="odometerStart" th:field="*{odometerStart}" min="0" step="1" required inputmode="numeric"
+                               th:classappend="${#fields.hasErrors('odometerStart')} ? 'is-invalid'">
+                        <span>km</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('odometerStart')}" th:errors="*{odometerStart}"></span>
+                    <span class="hint" th:text="#{trip.odometerStartHint}">Never below the vehicle's last reading or its previous trip's end</span>
+                </div>
+                <div class="form-group">
                     <label for="area" th:text="#{trip.area}">Area</label>
                     <input type="text" id="area" th:field="*{area}" maxlength="120" required th:placeholder="#{trip.areaPh}"
                            th:classappend="${#fields.hasErrors('area')} ? 'is-invalid'">

@@ -61,6 +61,10 @@
                         <label th:text="#{user.phone}">Phone</label>
                         <div class="value" th:text="${user.phone ?: '—'}">+250...</div>
                     </div>
+                    <div class="detail-item">
+                        <label th:text="#{party.whatsappNumber}">WhatsApp number</label>
+                        <div class="value" th:text="${user.whatsappNumber ?: '—'}">—</div>
+                    </div>
                     <div class="item">
                         <label th:text="#{user.jobTitle}">Job title</label>
                         <div class="value" th:text="${user.jobTitle ?: '—'}">Warehouse supervisor</div>

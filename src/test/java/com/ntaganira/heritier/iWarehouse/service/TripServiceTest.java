@@ -81,6 +81,7 @@ class TripServiceTest {
         truck.setModel("Isuzu NPR");
         truck.setMaxPieces(35);
         truck.setMaxLoadKg(2000);
+        truck.setOdometerKm(45000);
         truck.setInsuranceExpiry(TODAY.plusMonths(6));
         truck.setInspectionExpiry(TODAY.plusMonths(3));
         truck.setLocation(truckLocation);
@@ -239,8 +240,8 @@ class TripServiceTest {
 
     @Test
     void anOdometerBelowTheLastReadingIsRefused() {
-        truck.setOdometerKm(50000);
         Trip trip = plan();
+        truck.setOdometerKm(50000);
         List<StockUnit> one = sheets(1, rack1, "14.40");
         service.addUnits(trip.getId(), codes(one));
         service.scan(trip.getId(), codes(one));
@@ -450,6 +451,7 @@ class TripServiceTest {
         dto.setDriverId(jean.getId());
         dto.setTripDate(day);
         dto.setArea("Musanze");
+        dto.setOdometerStart(45210);
         return dto;
     }
 

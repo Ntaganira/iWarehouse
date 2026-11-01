@@ -192,18 +192,31 @@ public class ServicePlanService {
         return readings;
     }
 
-    /** What the vehicle cost this year (posted, without VAT), the km its trips drove this year and the cost per km. */
-    public record Summary(Integer currentKm, BigDecimal costsThisYear, long kmThisYear, BigDecimal perKm) {
+    /**
+     * What the vehicle cost this year (posted, without VAT), the km its trips drove this year and this month, the
+     * cost per km and how much of its monthly distance target that is (null without a target).
+     */
+    public record Summary(Integer currentKm, BigDecimal costsThisYear, long kmThisYear, long kmThisMonth,
+                          BigDecimal perKm, Integer monthlyTargetKm, Integer monthProgressPercent) {
     }
 
     public Summary summary(Vehicle vehicle) {
         LocalDate today = today();
         LocalDate first = today.withDayOfYear(1);
+        LocalDate monthStart = today.withDayOfMonth(1);
         BigDecimal costs = costRepo.totalOf(vehicle.getId(), VehicleCostStatus.POSTED, first, today);
-        long km = tripRepo.findByVehicle_IdAndOdometerStartIsNotNull(vehicle.getId()).stream()
+        List<Trip> withReadings = tripRepo.findByVehicle_IdAndOdometerStartIsNotNull(vehicle.getId());
+        long km = withReadings.stream()
                 .filter(t -> t.getDistanceKm() != null && t.getDepartedAt() != null && !t.getDepartedAt().toLocalDate().isBefore(first))
                 .mapToLong(Trip::getDistanceKm).sum();
-        return new Summary(costService.currentKm(vehicle), costs, km, VehicleCosts.perKm(costs, km));
+        long monthKm = withReadings.stream()
+                .filter(t -> t.getDistanceKm() != null && t.getDepartedAt() != null
+                        && !t.getDepartedAt().toLocalDate().isBefore(monthStart))
+                .mapToLong(Trip::getDistanceKm).sum();
+        Integer target = vehicle.getMonthlyDistanceTargetKm() == null || vehicle.getMonthlyDistanceTargetKm() <= 0
+                ? null : vehicle.getMonthlyDistanceTargetKm();
+        return new Summary(costService.currentKm(vehicle), costs, km, monthKm, VehicleCosts.perKm(costs, km),
+                target, ServicePlans.monthProgress(monthKm, target));
     }
 
     // ---------------------------------------------------------------- reminders

@@ -54,6 +54,7 @@ public class PosController {
     private final Messages messages;
     private final NumberFormats num;
 
+
     public PosController(TillService tillService, SalesService salesService, StockService stockService,
                          ProductRepository productRepo, CustomerRepository customerRepo, PriceListService priceListService,
                          ActivityLogService activityLogService, Messages messages, NumberFormats num) {

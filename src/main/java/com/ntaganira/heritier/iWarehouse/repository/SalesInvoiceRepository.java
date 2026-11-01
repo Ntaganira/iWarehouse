@@ -68,8 +68,9 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
      * channel, territory code, territory name, market), for the sales reports and targets (RPT-05, G.19, G.20, T.07, T.09).
      */
     @Query("select i.id, i.number, i.invoiceDate, c.id, c.name, i.buyerName, i.postedBy, i.netAmount, i.orderChannel, i.channel, t.code, t.name,"
-            + " i.market"
+            + " i.market, tr.id, v.plate, d.id, du.fullName, tr.status"
             + " from SalesInvoice i join i.customer c left join Territory t on t.id = i.territoryId"
+            + " left join i.trip tr left join tr.vehicle v left join tr.driver d left join d.user du"
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.invoiceDate between :from and :to")
     List<Object[]> issuedIn(@Param("from") java.time.LocalDate from, @Param("to") java.time.LocalDate to);
 
@@ -81,6 +82,11 @@ public interface SalesInvoiceRepository extends JpaRepository<SalesInvoice, UUID
             + " where i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED and i.postedAt between :from and :to"
             + " group by i.channel order by i.channel")
     List<Object[]> perChannel(@Param("from") java.time.LocalDateTime from, @Param("to") java.time.LocalDateTime to);
+
+    /** The gross amount of some issued invoices, for the payment reconciliation (TASK.md). */
+    @Query("select coalesce(sum(i.totalAmount), 0) from SalesInvoice i where i.id in :ids"
+            + " and i.status = com.ntaganira.heritier.iWarehouse.enums.SalesInvoiceStatus.POSTED")
+    java.math.BigDecimal totalOf(@Param("ids") java.util.Collection<UUID> ids);
 
     /** Some invoices with their customers (lists of payments). */
     @EntityGraph(attributePaths = {"customer"})

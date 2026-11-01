@@ -65,6 +65,7 @@
                             <span th:if="${c.creditLimit.signum() > 0}" th:text="${@num.money(c.creditLimit) + ' RWF'}">2,000,000 RWF</span>
                             <span class="text-muted" th:unless="${c.creditLimit.signum() > 0}" th:text="#{customer.cashOnly}">Cash only</span>
                             <div class="cell-sub" th:if="${c.paymentTermsDays > 0}" th:text="#{party.termsDays(${c.paymentTermsDays})}">30 days</div>
+                            <div class="cell-sub" th:if="${overdue.get(c.id) != null}" th:text="#{customer.overdueFlag(${@num.money(overdue.get(c.id).amount)}, ${overdue.get(c.id).oldestDays})}">Overdue: 250,000 RWF, 12 days</div>
                         </td>
                         <td>
                             <span th:if="${c.priceList != null}" th:text="${c.priceList.name}">Contractors</span>

@@ -145,6 +145,41 @@ class SalesAnalysisTest {
                 .containsExactly(null, "KGL · Kigali");
     }
 
+    @Test
+    void theDriverLeaderboardCountsClosedTripsOnlyAndBestNetFirst() {
+        UUID driverA = UUID.randomUUID();
+        UUID driverB = UUID.randomUUID();
+        UUID tripA1 = UUID.randomUUID();
+        UUID tripA2 = UUID.randomUUID();
+        UUID tripB = UUID.randomUUID();
+        SalesAnalysis.Invoice a1 = tripInvoice("INV-1", driverA, "Jean", tripA1, "CLOSED");
+        SalesAnalysis.Invoice a2 = tripInvoice("INV-2", driverA, "Jean", tripA2, "CLOSED");
+        SalesAnalysis.Invoice b = tripInvoice("INV-3", driverB, "Alice", tripB, "CLOSED");
+        SalesAnalysis.Invoice open = tripInvoice("INV-4", driverB, "Alice", UUID.randomUUID(), "RETURNED");
+        List<SalesAnalysis.Fact> facts = List.of(
+                new SalesAnalysis.Fact(a1, "CLR-6", "Clear 6", true, BigDecimal.ONE, new BigDecimal("1000.00"), new BigDecimal("600.00")),
+                new SalesAnalysis.Fact(a1, "EDGE", "Edging", false, BigDecimal.ZERO, new BigDecimal("100.00"), BigDecimal.ZERO),
+                new SalesAnalysis.Fact(a2, "CLR-6", "Clear 6", true, BigDecimal.ONE, new BigDecimal("500.00"), new BigDecimal("100.00")),
+                new SalesAnalysis.Fact(b, "CLR-6", "Clear 6", true, BigDecimal.ONE, new BigDecimal("900.00"), new BigDecimal("400.00")),
+                new SalesAnalysis.Fact(open, "CLR-6", "Clear 6", true, BigDecimal.ONE, new BigDecimal("5000.00"), BigDecimal.ZERO));
+
+        List<SalesAnalysis.DriverRow> rows = SalesAnalysis.drivers(facts);
+
+        assertThat(rows).extracting(SalesAnalysis.DriverRow::driver).containsExactly("Jean", "Alice");
+        assertThat(rows.get(0).trips()).isEqualTo(2);
+        assertThat(rows.get(0).invoices()).isEqualTo(2);
+        assertThat(rows.get(0).net()).isEqualByComparingTo("1600.00");
+        assertThat(rows.get(0).cost()).isEqualByComparingTo("700.00");
+        assertThat(rows.get(0).getMargin()).isEqualByComparingTo("900.00");
+        assertThat(rows.get(1).trips()).isEqualTo(1);
+        assertThat(rows.get(1).net()).isEqualByComparingTo("900.00");           // the returned trip is not closed
+    }
+
+    private SalesAnalysis.Invoice tripInvoice(String number, UUID driverId, String driver, UUID tripId, String status) {
+        return new SalesAnalysis.Invoice(UUID.randomUUID(), number, LocalDate.of(2026, 10, 1), customerA, "Umucyo", null,
+                "cashier1", "Cashier", BigDecimal.ZERO, false, "MOBILE", null, null, null, tripId, "RAC123A", driverId, driver, status);
+    }
+
     private SalesAnalysis.Invoice invoice(String number, LocalDate date, UUID customer, String name, String cashier, String net, boolean pending) {
         return new SalesAnalysis.Invoice(UUID.randomUUID(), number, date, customer, name, null, cashier, "Cashier " + cashier, new BigDecimal(net), pending);
     }

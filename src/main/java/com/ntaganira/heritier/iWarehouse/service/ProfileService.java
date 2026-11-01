@@ -60,6 +60,7 @@ public class ProfileService {
         user.setFullName(dto.getFullName().trim());
         user.setEmail(email);
         user.setPhone(blankToNull(dto.getPhone()));
+        user.setWhatsappNumber(blankToNull(dto.getWhatsappNumber()));
         user.setJobTitle(blankToNull(dto.getJobTitle()));
         return user;
     }

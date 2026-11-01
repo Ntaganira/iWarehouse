@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title th:text="${title}">iWarehouse notification</title>
+</head>
+<body style="margin:0;padding:0;background:#eef3f9;color:#16223b;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;" th:text="${title}">
+    iWarehouse notification
+</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef3f9;">
+    <tr>
+        <td align="center" style="padding:28px 12px;">
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #dbe4ef;border-radius:12px;overflow:hidden;">
+                <tr>
+                    <td style="background:#0b2a5b;padding:24px 28px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td width="54" valign="middle" th:if="${logoUrl}" style="padding-right:14px;">
+                                    <img th:src="${logoUrl}" alt="" width="46" height="46" style="display:block;width:46px;height:46px;border:0;border-radius:8px;background:#ffffff;object-fit:contain;">
+                                </td>
+                                <td valign="middle">
+                                    <div style="font-size:11px;line-height:16px;letter-spacing:.18em;text-transform:uppercase;color:#9fc2ff;font-weight:bold;">iWarehouse</div>
+                                    <div style="font-size:20px;line-height:26px;color:#ffffff;font-weight:bold;padding-top:2px;" th:text="${companyName}">Company</div>
+                                    <div style="font-size:12px;line-height:18px;color:#c9dcff;padding-top:2px;" th:text="${product}">Glass Warehouse &amp; Mobile POS</div>
+                                </td>
+                                <td align="right" valign="middle" style="font-size:11px;line-height:16px;color:#9fc2ff;text-transform:uppercase;letter-spacing:.12em;white-space:nowrap;" th:text="${kicker}">
+                                    Notification
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="height:4px;line-height:4px;background:#10b981;font-size:0;">&nbsp;</td>
+                </tr>
+                <tr>
+                    <td style="padding:32px 32px 8px;">
+                        <div style="display:inline-block;padding:5px 10px;border-radius:999px;background:#e8f0fe;color:#1250c4;font-size:11px;line-height:16px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;" th:text="${badge}">Approval</div>
+                        <h1 style="margin:18px 0 0;font-size:23px;line-height:31px;color:#0b2a5b;font-weight:bold;" th:text="${title}">Notification</h1>
+                        <p style="margin:12px 0 0;font-size:15px;line-height:24px;color:#3a4a61;" th:text="${message}">Message</p>
+                    </td>
+                </tr>
+                <tr th:if="${link}">
+                    <td style="padding:24px 32px 8px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td align="center" style="border-radius:8px;background:#1565e0;">
+                                    <a th:href="${link}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 22px;font-size:14px;line-height:20px;color:#ffffff;font-weight:bold;text-decoration:none;border-radius:8px;" th:text="${openLabel}">Open iWarehouse</a>
+                                </td>
+                            </tr>
+                        </table>
+                        <p style="margin:16px 0 0;font-size:12px;line-height:19px;color:#63738a;" th:text="${linkLabel}">If the button does not work, copy this link into your browser:</p>
+                        <p style="margin:4px 0 0;font-size:12px;line-height:19px;word-break:break-all;">
+                            <a th:href="${link}" target="_blank" rel="noopener noreferrer" style="color:#1565e0;text-decoration:underline;" th:text="${link}">https://example.com</a>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:24px 32px 32px;">
+                        <div style="height:1px;line-height:1px;background:#e3eaf3;font-size:0;">&nbsp;</div>
+                        <p style="margin:18px 0 0;font-size:12px;line-height:19px;color:#63738a;" th:text="${automated}">
+                            This is an automated message from iWarehouse. Please do not reply.
+                        </p>
+                        <p th:if="${confidential}" style="margin:8px 0 0;font-size:11px;line-height:17px;color:#8a99ad;" th:text="${confidential}">
+                            This message is intended for the named recipient and may contain confidential information.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:20px 32px 24px;background:#f7f9fc;border-top:1px solid #e3eaf3;">
+                        <div style="font-size:12px;line-height:19px;color:#0b2a5b;font-weight:bold;" th:text="${companyName}">Company</div>
+                        <div th:if="${companyAddress}" style="font-size:11px;line-height:18px;color:#63738a;padding-top:2px;" th:text="${companyAddress}">Address</div>
+                        <div th:if="${companyContact}" style="font-size:11px;line-height:18px;color:#63738a;padding-top:2px;" th:text="${companyContact}">Phone &middot; Email</div>
+                        <div th:if="${companyTin}" style="font-size:11px;line-height:18px;color:#63738a;padding-top:2px;">
+                            <span th:text="${tinLabel}">TIN</span>: <span th:text="${companyTin}">100200300</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <div style="max-width:600px;margin:14px auto 0;font-size:10px;line-height:16px;color:#8a99ad;text-align:center;">
+                iWarehouse &middot; <span th:text="${product}">Glass Warehouse &amp; Mobile POS</span>
+            </div>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

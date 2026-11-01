@@ -26,7 +26,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     @EntityGraph(attributePaths = "taxCategory")
     Page<Product> findAll(Specification<Product> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = "taxCategory")
+    @EntityGraph(attributePaths = {"taxCategory", "aliases"})
     Optional<Product> findWithTaxCategoryById(UUID id);
 
     boolean existsByCode(String code);
@@ -39,7 +39,8 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     boolean existsIdentity(@Param("type") GlassType type, @Param("variant") String variant,
                            @Param("thickness") BigDecimal thickness);
 
-    /** Products a document can be for, by code. */
+    /** Products a document can be for, by code, with the names the counter may search them by. */
+    @EntityGraph(attributePaths = "aliases")
     List<Product> findByEnabledTrueOrderByCodeAsc();
 
     /** Thicknesses in use, for the list filter. */

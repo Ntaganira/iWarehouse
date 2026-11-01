@@ -64,6 +64,11 @@ public final class ServicePlans {
         return new Status(stage, nextKm, nextDate, kmLeft, daysLeft);
     }
 
+    /** How much of a monthly distance target the km driven this month are, or null without a target. */
+    public static Integer monthProgress(long km, Integer target) {
+        return target == null || target <= 0 ? null : (int) Math.min(999, Math.round(km * 100.0 / target));
+    }
+
     /** The highest of two readings (either may be unknown). */
     public static Integer latest(Integer a, Integer b) {
         if (a == null) {

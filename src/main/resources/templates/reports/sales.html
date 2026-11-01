@@ -134,6 +134,8 @@
                                 <span th:case="'CHANNEL'" th:text="#{${'order.channel.' + r.label}}">Counter</span>
                                 <span th:case="'TERRITORY'" th:text="${r.label ?: #messages.msg('order.noTerritory')}">KGL · Kigali</span>
                                 <span th:case="'MARKET'" th:text="${r.label != null} ? #{${'order.market.' + r.label}} : '—'">Domestic</span>
+                                <span th:case="'VEHICLE'" th:text="${r.label ?: #messages.msg('salesReport.noVehicle')}">RAC123A</span>
+                                <span th:case="'DRIVER'" th:text="${r.label ?: #messages.msg('salesReport.noDriver')}">Jean Bosco</span>
                                 <a th:case="'DAY'" th:href="@{/reports/sales(from=${r.date}, to=${r.date}, group='INVOICE', customer=${customer}, item=${item}, salesperson=${salesperson})}" th:text="${#temporals.format(r.date, 'dd/MM/yyyy')}">09/10/2026</a>
                                 <a th:case="'MONTH'" th:href="@{/reports/sales(from=${r.date}, to=${r.date.plusMonths(1).minusDays(1).isAfter(today) ? today : r.date.plusMonths(1).minusDays(1)}, group='DAY', customer=${customer}, item=${item}, salesperson=${salesperson})}" th:text="${#temporals.format(r.date, 'MMMM yyyy')}">October 2026</a>
                             </td>
@@ -171,6 +173,63 @@
         <th:block th:replace="~{layout/pagination :: pager(${rows}, '/reports/sales', ${query})}"></th:block>
         <p class="doc-note" th:if="${report.pending > 0}" th:text="#{salesReport.pendingNote(${report.pending})}">2 invoices still have pieces to hand over: their cost is counted when the pieces leave, so their margin will come down.</p>
         <p class="form-note" th:text="#{salesReport.note}">Net sales leave VAT out. Each invoice counts with its credit notes, whenever they were issued. Cost is what the sale and hand-over journals took out of stock at average cost; processing has none. The salesperson is who took the payment.</p>
+    </div>
+
+    <div class="section" th:if="${!report.leaderboard.isEmpty()}">
+        <div class="section-header">
+            <h2 th:text="#{salesReport.driverSheet}">Driver leaderboard</h2>
+            <p class="hint" th:text="#{salesReport.driverHint}">Closed trips only, so every trip's sales count once</p>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{salesReport.driver}">Driver</th>
+                        <th class="num" th:text="#{salesReport.trips}">Trips</th>
+                        <th class="num" th:text="#{salesReport.invoices}">Invoices</th>
+                        <th class="num" th:text="#{salesReport.net}">Net sales (RWF)</th>
+                        <th class="num" th:if="${seeCost}" th:text="#{salesReport.margin}">Gross margin (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${report.leaderboard}">
+                        <td th:text="${d.driver}">Jean Bosco</td>
+                        <td class="num" th:text="${d.trips}">4</td>
+                        <td class="num" th:text="${d.invoices}">18</td>
+                        <td class="num strong" th:text="${@num.money(d.net)}">1,240,000</td>
+                        <td class="num" th:if="${seeCost}" th:classappend="${d.margin.signum() < 0} ? 'text-danger'" th:text="${@num.money(d.margin)}">420,000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section" th:if="${!report.payments.methods.isEmpty()}">
+        <div class="section-header">
+            <h2 th:text="#{salesReport.paymentSheet}">Payment reconciliation</h2>
+            <p class="hint" th:text="#{salesReport.paymentHint}">What was taken on the period's invoices against their gross total, including balances paid later</p>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th th:text="#{salesReport.method}">Method</th>
+                        <th class="num" th:text="#{salesReport.paid}">Taken (RWF)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="p : ${report.payments.methods}">
+                        <td th:text="#{${'payment.method.' + p.method}}">Cash</td>
+                        <td class="num" th:text="${@num.money(p.paid)}">500,000</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr><th th:text="#{salesReport.invoiced}">Invoiced</th><th class="num" th:text="${@num.money(report.payments.invoiced)}">1,800,000</th></tr>
+                    <tr><th th:text="#{salesReport.paidTotal}">Taken</th><th class="num" th:text="${@num.money(report.payments.paid)}">1,200,000</th></tr>
+                    <tr><th th:text="#{salesReport.outstanding}">Outstanding</th><th class="num" th:text="${@num.money(report.payments.outstanding)}">600,000</th></tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 </div>
 </body>

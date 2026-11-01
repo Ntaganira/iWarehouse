@@ -71,6 +71,9 @@ public interface TripRepository extends JpaRepository<Trip, UUID>, JpaSpecificat
     /** A vehicle's trips that recorded an odometer (its mileage log, the km it drove). */
     List<Trip> findByVehicle_IdAndOdometerStartIsNotNull(UUID vehicleId);
 
+    /** The last trip of a vehicle that came back, for the start reading of the next one (FLT-12). */
+    Optional<Trip> findFirstByVehicle_IdAndStatusInOrderByReturnedAtDesc(UUID vehicleId, Collection<TripStatus> statuses);
+
     @EntityGraph(attributePaths = {"vehicle", "driver", "driver.user"})
     Page<Trip> findByVehicle_Id(UUID vehicleId, Pageable pageable);
 

@@ -8,6 +8,7 @@ import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -71,6 +72,7 @@ public class MobileSaleService {
     private final Clock clock;
     private final SettingService settingService;
     private final FieldCreditService fieldCredit;
+    private final ApplicationEventPublisher events;
 
     public MobileSaleService(SalesInvoiceRepository invoiceRepo, SalesPaymentRepository paymentRepo, SyncConflictRepository conflictRepo,
                              TripInvoiceNumberRepository numberRepo, TripRepository tripRepo, DriverRepository driverRepo,
@@ -78,8 +80,10 @@ public class MobileSaleService {
                              CustomerRepository customerRepo, PriceListRepository priceListRepo, MobileTripService tripService,
                              StockService stockService, PostingService postingService, EbmService ebmService, LinePricing pricing,
                              Notifier notifier, ObjectMapper mapper, TripBreakageRepository breakageRepo, AuditCaseService auditCaseService,
-                             Clock clock, SettingService settingService, FieldCreditService fieldCredit) {
+                             Clock clock, SettingService settingService, FieldCreditService fieldCredit,
+                             ApplicationEventPublisher events) {
         this.fieldCredit = fieldCredit;
+        this.events = events;
         this.settingService = settingService;
         this.invoiceRepo = invoiceRepo;
         this.paymentRepo = paymentRepo;
@@ -361,6 +365,7 @@ public class MobileSaleService {
         }
         postingService.mobileSale(sale, taken, before, driver.getId());
         ebmService.queueSale(sale);                                 // signed after the commit, or when EBM answers (SYNC-06)
+        events.publishEvent(new SaleIssued(sale.getId()));           // the customer's WhatsApp confirmation, after the commit
         return new Result(Outcome.ACCEPTED, sale, null);
     }
 

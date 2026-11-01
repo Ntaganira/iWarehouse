@@ -875,7 +875,7 @@
                         <label for="odometerStart" th:text="#{trip.odometerStart}">Odometer at departure</label>
                         <div class="input-unit">
                             <input type="number" id="odometerStart" name="odometerStart" step="1" min="0" inputmode="numeric"
-                                   th:attr="min=${v.odometerKm != null} ? ${v.odometerKm} : 0">
+                                   th:value="${trip.odometerStart}" th:attr="min=${v.odometerKm != null} ? ${v.odometerKm} : 0">
                             <span>km</span>
                         </div>
                         <span class="hint" th:text="${v.odometerKm != null} ? #{trip.odometerLast(${@num.whole(v.odometerKm)})} : #{trip.odometerOptional}">Last reading 45,210 km; may be left empty</span>

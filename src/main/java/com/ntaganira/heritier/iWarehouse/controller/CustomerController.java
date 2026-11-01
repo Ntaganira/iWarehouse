@@ -7,6 +7,7 @@ import com.ntaganira.heritier.iWarehouse.entity.Customer;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
 import com.ntaganira.heritier.iWarehouse.enums.AttachmentOwner;
 import com.ntaganira.heritier.iWarehouse.enums.CustomerType;
+import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
@@ -15,6 +16,7 @@ import com.ntaganira.heritier.iWarehouse.service.Ageing;
 import com.ntaganira.heritier.iWarehouse.service.AttachmentService;
 import com.ntaganira.heritier.iWarehouse.service.CreditApplicationService;
 import com.ntaganira.heritier.iWarehouse.service.CustomerAccountService;
+import com.ntaganira.heritier.iWarehouse.service.CustomerAgeing;
 import com.ntaganira.heritier.iWarehouse.service.CustomerService;
 import com.ntaganira.heritier.iWarehouse.service.DataChangeService;
 import com.ntaganira.heritier.iWarehouse.service.PriceListService;
@@ -63,12 +65,17 @@ public class CustomerController {
     private final Messages messages;
     private final AttachmentService attachmentService;
     private final CreditApplicationService creditApplicationService;
+    private final CustomerAgeing customerAgeing;
+    private final com.ntaganira.heritier.iWarehouse.service.SettingService settingService;
 
     public CustomerController(CustomerService customerService, PriceListService priceListService, CustomerAccountService accountService,
                               TillService tillService, DataChangeService dataChangeService, ActivityLogService activityLogService,
-                              Messages messages, AttachmentService attachmentService, CreditApplicationService creditApplicationService) {
+                              Messages messages, AttachmentService attachmentService, CreditApplicationService creditApplicationService,
+                              CustomerAgeing customerAgeing, com.ntaganira.heritier.iWarehouse.service.SettingService settingService) {
         this.attachmentService = attachmentService;
         this.creditApplicationService = creditApplicationService;
+        this.customerAgeing = customerAgeing;
+        this.settingService = settingService;
         this.customerService = customerService;
         this.priceListService = priceListService;
         this.accountService = accountService;
@@ -85,7 +92,11 @@ public class CustomerController {
                        @RequestParam(required = false) String status,
                        @RequestParam(defaultValue = "0") int page,
                        Model model) {
-        model.addAttribute("customers", customerService.findPage(search, type, status, Paging.page(page), Paging.SIZE));
+        var customers = customerService.findPage(search, type, status, Paging.page(page), Paging.SIZE);
+        int interval = settingService.getInt(SettingKey.CREDIT_COLLECTION_INTERVAL_DAYS);
+        int grace = interval > 0 ? interval : settingService.getInt(SettingKey.CREDIT_OVERDUE_GRACE_DAYS);
+        model.addAttribute("customers", customers);
+        model.addAttribute("overdue", customerAgeing.overdue(customers.getContent(), grace));
         model.addAttribute("types", CustomerType.values());
         model.addAttribute("defaultList", priceListService.defaultList());
         model.addAttribute("search", search);
@@ -161,6 +172,7 @@ public class CustomerController {
         dto.setName(c.getName());
         dto.setTin(c.getTin());
         dto.setPhone(c.getPhone());
+        dto.setWhatsappNumber(c.getWhatsappNumber());
         dto.setEmail(c.getEmail());
         dto.setContactName(c.getContactName());
         dto.setAddress(c.getAddress());

@@ -2,6 +2,7 @@ package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.dto.ProductDto;
 import com.ntaganira.heritier.iWarehouse.entity.Product;
+import com.ntaganira.heritier.iWarehouse.entity.ProductAlias;
 import com.ntaganira.heritier.iWarehouse.entity.TaxCategory;
 import com.ntaganira.heritier.iWarehouse.enums.GlassType;
 import com.ntaganira.heritier.iWarehouse.enums.SettingKey;
@@ -12,6 +13,7 @@ import com.ntaganira.heritier.iWarehouse.repository.ProductRepository;
 import com.ntaganira.heritier.iWarehouse.repository.PurchaseOrderLineRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
 import com.ntaganira.heritier.iWarehouse.repository.TaxCategoryRepository;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,8 +25,10 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -65,10 +69,14 @@ public class ProductService {
             Predicate p = cb.conjunction();
             if (StringUtils.hasText(search)) {
                 String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+                if (query != null) {
+                    query.distinct(true);
+                }
                 p = cb.and(p, cb.or(
                         cb.like(cb.lower(root.get("code")), term),
                         cb.like(cb.lower(cb.coalesce(root.get("variant"), "")), term),
-                        cb.like(cb.lower(cb.coalesce(root.get("notes"), "")), term)));
+                        cb.like(cb.lower(cb.coalesce(root.get("notes"), "")), term),
+                        cb.like(root.join("aliases", JoinType.LEFT).get("aliasNormalized"), term)));
             }
             if (type != null) {
                 p = cb.and(p, cb.equal(root.get("glassType"), type));
@@ -178,6 +186,31 @@ public class ProductService {
         product.setReorderLevelM2(dto.getReorderLevelM2());
         product.setMaxLevelM2(dto.getMaxLevelM2());
         product.setNotes(StringUtils.hasText(dto.getNotes()) ? dto.getNotes().trim() : null);
+        syncAliases(product, dto.getAliases());
+    }
+
+    /** Keeps the product's aliases in step with the form, one per line or comma separated, ignoring case. */
+    private static void syncAliases(Product product, String text) {
+        Map<String, String> wanted = new LinkedHashMap<>();
+        if (StringUtils.hasText(text)) {
+            for (String part : text.split("[,;\\r\\n]+")) {
+                String alias = part.trim();
+                if (alias.isEmpty()) {
+                    continue;
+                }
+                if (alias.length() > 100) {
+                    throw BusinessException.onField("aliases", "product.alias.size");
+                }
+                wanted.putIfAbsent(alias.toLowerCase(Locale.ROOT), alias);
+            }
+        }
+        product.getAliases().removeIf(a -> !wanted.containsKey(a.getAliasNormalized()));
+        List<String> present = product.getAliases().stream().map(ProductAlias::getAliasNormalized).toList();
+        wanted.forEach((normalized, alias) -> {
+            if (!present.contains(normalized)) {
+                product.getAliases().add(new ProductAlias(product, alias));
+            }
+        });
     }
 
     /** The VAT category must be active, unless the product already had it. */

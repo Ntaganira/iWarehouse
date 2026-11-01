@@ -6,10 +6,12 @@ import com.ntaganira.heritier.iWarehouse.entity.*;
 import com.ntaganira.heritier.iWarehouse.entity.Currency;
 import com.ntaganira.heritier.iWarehouse.enums.*;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
+import com.ntaganira.heritier.iWarehouse.exception.CreditLimitExceededException;
 import com.ntaganira.heritier.iWarehouse.exception.NotFoundException;
 import com.ntaganira.heritier.iWarehouse.repository.*;
 import com.ntaganira.heritier.iWarehouse.security.AppUserPrincipal;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -87,6 +89,7 @@ public class SalesService {
     private final CustomerAgeing ageing;
     private final DelegationOfAuthority authority;
     private final PaymentConfirmationRepository confirmationRepo;
+    private final ApplicationEventPublisher events;
 
     public SalesService(SalesInvoiceRepository repo, SalesPaymentRepository paymentRepo, StockUnitRepository unitRepo,
                         ProductRepository productRepo, CustomerRepository customerRepo, ProcessingServiceRepository serviceRepo,
@@ -97,8 +100,9 @@ public class SalesService {
                         StockService stockService, LinePricing pricing, PostingService postingService, JournalService journalService,
                         DocumentNumberService numbers, SettingService settingService, Notifier notifier, EbmService ebmService,
                         Clock clock, CustomerAgeing ageing, DelegationOfAuthority authority,
-                        PaymentConfirmationRepository confirmationRepo) {
+                        PaymentConfirmationRepository confirmationRepo, ApplicationEventPublisher events) {
         this.confirmationRepo = confirmationRepo;
+        this.events = events;
         this.ageing = ageing;
         this.authority = authority;
         this.notifier = notifier;
@@ -509,15 +513,21 @@ public class SalesService {
             }
             // Above what the customer has left only as far as a manager approved (POS-05)
             BigDecimal approved = approvedCredit(approvals);
+            // Any open invoice debt stops new credit until a manager approves it (TASK.md)
+            BigDecimal openDebt = c.owed() == null ? BigDecimal.ZERO : c.owed();
+            if (settingService.getBoolean(SettingKey.CREDIT_BLOCK_OPEN_DEBT) && openDebt.signum() > 0
+                    && credit.compareTo(approved) > 0) {
+                throw CreditLimitExceededException.refused("credit", "sale.pay.credit.openDebt", openDebt);
+            }
             // Invoices overdue stop credit until a manager approves it anyway (SDP 11)
             CustomerAgeing.Overdue overdue = overdue(sale.getCustomer());
             if (overdue.any() && credit.compareTo(approved) > 0) {
-                throw BusinessException.onField("credit", "sale.pay.credit.overdue", overdue.amount(), overdue.oldestDays());
+                throw CreditLimitExceededException.refused("credit", "sale.pay.credit.overdue", overdue.amount(), overdue.oldestDays());
             }
             if (credit.compareTo(c.getAvailable()) > 0 && credit.compareTo(approved) > 0) {
                 throw approved.signum() > 0
-                        ? BusinessException.onField("credit", "sale.pay.credit.overApproved", approved, c.getAvailable())
-                        : BusinessException.onField("credit", "sale.pay.credit.over", c.getAvailable(), c.limit());
+                        ? CreditLimitExceededException.refused("credit", "sale.pay.credit.overApproved", approved, c.getAvailable())
+                        : CreditLimitExceededException.refused("credit", "sale.pay.credit.over", c.getAvailable(), c.limit());
             }
         }
 
@@ -580,6 +590,7 @@ public class SalesService {
         }
         JournalEntry journal = postingService.sale(sale, payments, before);
         ebmService.queueSale(sale);                                     // signed after the commit; queued if EBM is down (TAX-03)
+        events.publishEvent(new SaleIssued(sale.getId()));               // the customer's WhatsApp confirmation, after the commit
         return new Paid(sale, split.change(), journal, createJobs(sale));
     }
 
@@ -816,7 +827,13 @@ public class SalesService {
         if (!settingService.getBoolean(SettingKey.CREDIT_BLOCK_OVERDUE) || !customer.getType().isCreditAllowed()) {
             return CustomerAgeing.Overdue.NONE;
         }
-        return ageing.overdue(customer, settingService.getInt(SettingKey.CREDIT_OVERDUE_GRACE_DAYS));
+        return ageing.overdue(customer, creditGraceDays());
+    }
+
+    /** The hard collection interval when one is set, else the overdue grace (TASK.md). */
+    private int creditGraceDays() {
+        int interval = settingService.getInt(SettingKey.CREDIT_COLLECTION_INTERVAL_DAYS);
+        return interval > 0 ? interval : settingService.getInt(SettingKey.CREDIT_OVERDUE_GRACE_DAYS);
     }
 
     private static void setOverdue(SaleApproval request, CustomerAgeing.Overdue overdue) {

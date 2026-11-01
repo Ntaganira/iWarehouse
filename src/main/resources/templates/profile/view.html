@@ -77,6 +77,12 @@
                                th:classappend="${#fields.hasErrors('phone')} ? 'is-invalid'" maxlength="20" autocomplete="tel">
                         <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
                     </div>
+                    <div class="form-group">
+                        <label for="whatsappNumber" th:text="#{party.whatsappNumber}">WhatsApp number</label>
+                        <input type="tel" id="whatsappNumber" th:field="*{whatsappNumber}" placeholder="+250..."
+                               th:classappend="${#fields.hasErrors('whatsappNumber')} ? 'is-invalid'" maxlength="13" autocomplete="tel">
+                        <span class="field-error" th:if="${#fields.hasErrors('whatsappNumber')}" th:errors="*{whatsappNumber}"></span>
+                    </div>
                 </div>
                 <p class="form-note" th:text="#{profile.adminNote}">Your username and roles are changed by an administrator (ICT).</p>
                 <div class="form-actions">

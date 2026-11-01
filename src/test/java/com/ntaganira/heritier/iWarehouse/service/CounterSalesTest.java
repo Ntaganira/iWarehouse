@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -50,6 +51,7 @@ class CounterSalesTest {
     private StockMovementRepository movementRepo;
     private PostingService postings;
     private JournalService journals;
+    private ApplicationEventPublisher events;
     private PriceListService priceLists;
     private TillService tills;
     private SalesService sales;
@@ -364,10 +366,11 @@ class CounterSalesTest {
                 .sorted(Comparator.comparing(StockUnit::getCode)).toList());
 
         LinePricing pricing = new LinePricing(priceLists, taxRepo, currencyRepo);
+        events = mock(ApplicationEventPublisher.class);
         sales = new SalesService(invoiceRepo, paymentRepo, unitRepo, productRepo, customerRepo, serviceRepo, jobRepo, outputRepo,
                 jobLineRepo, deliveryRepo, approvalRepo, userRepo, quotationRepo, creditLineRepo, tills, cuttingJobs, stockService, pricing,
                 postings, journals, numbers, settings, mock(Notifier.class), ebm, CLOCK, mock(CustomerAgeing.class), mock(DelegationOfAuthority.class),
-                mock(PaymentConfirmationRepository.class));
+                mock(PaymentConfirmationRepository.class), events);
         approvalService = new SaleApprovalService(approvalRepo, invoiceRepo, tillRepo, sales, CLOCK, mock(DelegationOfAuthority.class), settings,
                 mock(Notifier.class));
         quotationService = new QuotationService(quotationRepo, customerRepo, productRepo, serviceRepo, invoiceRepo, pricing, sales,
@@ -512,6 +515,7 @@ class CounterSalesTest {
                 null, null, null, null, null));
 
         assertThat(sale.getStatus()).isEqualTo(SalesInvoiceStatus.POSTED);
+        verify(events).publishEvent(new SaleIssued(sale.getId()));
         assertThat(sale.getNumber()).isEqualTo("INV-WH-2026-000001");
         assertThat(sale.getInvoiceDate()).isEqualTo(LocalDate.of(2026, 10, 9));
         assertThat(sale.getTotalAmount()).isEqualByComparingTo("222008");                  // 195,008 + 27,000 exempt

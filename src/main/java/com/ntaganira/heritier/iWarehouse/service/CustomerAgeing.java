@@ -74,6 +74,19 @@ public class CustomerAgeing {
         return byCustomer;
     }
 
+    /** The overdue flag of each customer of a page, read from one set of receivable entries (TASK.md). */
+    public Map<UUID, Overdue> overdue(List<Customer> customers, int graceDays) {
+        Map<UUID, List<Ageing.Entry>> entries = entries();
+        LocalDate today = today();
+        Map<UUID, Overdue> flags = new HashMap<>();
+        for (Customer customer : customers) {
+            Ageing.Result result = Ageing.of(entries.getOrDefault(customer.getId(), List.of()),
+                    customer.getPaymentTermsDays(), today);
+            addFlag(flags, customer, result, graceDays, today);
+        }
+        return flags;
+    }
+
     /** What the customer owes more than {@code graceDays} past due; none when nothing is that late. */
     public Overdue overdue(Customer customer, int graceDays) {
         Ageing.Result result = of(customer);
@@ -85,6 +98,16 @@ public class CustomerAgeing {
             return Overdue.NONE;
         }
         return new Overdue(result.getOverdue(), late);
+    }
+
+    private static void addFlag(Map<UUID, Overdue> flags, Customer customer, Ageing.Result result, int graceDays, LocalDate today) {
+        if (result.oldestDue() == null) {
+            return;
+        }
+        long late = ChronoUnit.DAYS.between(result.oldestDue(), today);
+        if (late > graceDays && result.getOverdue().signum() > 0) {
+            flags.put(customer.getId(), new Overdue(result.getOverdue(), late));
+        }
     }
 
     private Map<UUID, Integer> extendedTerms() {

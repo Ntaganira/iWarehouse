@@ -19,7 +19,7 @@ public class BusinessException extends RuntimeException {
     private final String messageKey;
     private final transient Object[] args;
 
-    private BusinessException(String field, String messageKey, Object[] args) {
+    protected BusinessException(String field, String messageKey, Object[] args) {
         super(messageKey);
         this.field = field;
         this.messageKey = messageKey;

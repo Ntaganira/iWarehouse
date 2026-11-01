@@ -132,6 +132,16 @@ public class SettingsDto {
     @Max(value = 90, message = "{settings.creditOverdueGraceDays.range}")
     private Integer creditOverdueGraceDays;
 
+    /** No new credit while the customer still owes on an issued invoice (TASK.md). */
+    @NotNull(message = "{settings.value.required}")
+    private Boolean creditBlockOpenDebt;
+
+    /** A hard collection interval in days; 0 uses the overdue grace (TASK.md). */
+    @NotNull(message = "{settings.value.required}")
+    @Min(value = 0, message = "{settings.creditCollectionIntervalDays.range}")
+    @Max(value = 365, message = "{settings.creditCollectionIntervalDays.range}")
+    private Integer creditCollectionIntervalDays;
+
     /** Credit notes are asked for and approved before they are issued (F-14). */
     @NotNull(message = "{settings.value.required}")
     private Boolean approvalCreditNoteRequired;
@@ -635,6 +645,19 @@ public class SettingsDto {
 
     @NotNull(message = "{settings.value.required}")
     private EbmMode ebmMode;
+
+    @Pattern(regexp = "^$|^https?://[^\\s]{3,240}$", message = "{settings.whatsappGatewayUrl.pattern}")
+    private String whatsappGatewayUrl;
+
+    /** Only shown to those who may edit Settings; masked in the activity log. */
+    @Size(max = 500, message = "{settings.whatsappToken.size}")
+    private String whatsappToken;
+
+    @Size(max = 100, message = "{settings.whatsappSender.size}")
+    private String whatsappSender;
+
+    @NotNull(message = "{settings.value.required}")
+    private Boolean whatsappEnabled;
 
     @Pattern(regexp = "^$|^https?://[^\\s]{3,240}$", message = "{settings.ebmVsdcUrl.pattern}")
     private String ebmVsdcUrl;

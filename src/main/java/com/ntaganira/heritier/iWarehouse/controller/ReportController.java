@@ -166,9 +166,26 @@ public class ReportController {
             sheet.row(cells(r, group, seeCost, false));
         }
         sheet.bold(cells(report.total(), group, seeCost, true));
+        List<String> driverHeaders = List.of(m("salesReport.driver"), m("salesReport.trips"), m("salesReport.invoices"),
+                m("salesReport.net"), m("salesReport.cost"), m("salesReport.margin"));
+        Excel.Builder leaderboard = Excel.sheet(m("salesReport.driverSheet"), m("salesReport.driverSheet"), covers,
+                driverHeaders.toArray(String[]::new));
+        for (SalesAnalysis.DriverRow d : report.leaderboard()) {
+            leaderboard.row(d.driver(), d.trips(), d.invoices(), d.net(), d.cost(), d.getMargin());
+        }
+        List<String> paymentHeaders = List.of(m("salesReport.method"), m("salesReport.paid"));
+        Excel.Builder payments = Excel.sheet(m("salesReport.paymentSheet"), m("salesReport.paymentSheet"), covers,
+                paymentHeaders.toArray(String[]::new));
+        for (SalesReportService.PaymentRow row : report.payments().methods()) {
+            payments.row(m("payment.method." + row.method()), row.paid());
+        }
+        payments.bold(m("salesReport.invoiced"), report.payments().invoiced());
+        payments.bold(m("salesReport.paidTotal"), report.payments().paid());
+        payments.bold(m("salesReport.outstanding"), report.payments().getOutstanding());
         activityLogService.record(MODULE, "EXPORT_SALES_REPORT", "Exported the sales by " + group + " from " + p.from() + " to " + p.to()
                 + " to " + format.label(), ActivityStatus.SUCCESS);
-        return reportFiles.download(format, "sales-" + group.name().toLowerCase() + "-" + p.from() + "-" + p.to(), sheet.build());
+        return reportFiles.download(format, "sales-" + group.name().toLowerCase() + "-" + p.from() + "-" + p.to(), sheet.build(),
+                leaderboard.build(), payments.build());
     }
 
     private Object[] cells(SalesAnalysis.Row r, SalesAnalysis.GroupBy group, boolean seeCost, boolean total) {
@@ -207,6 +224,8 @@ public class ReportController {
             case CHANNEL -> messages.get("order.channel." + r.label());
             case TERRITORY -> r.label() == null ? messages.get("order.noTerritory") : r.label();
             case MARKET -> r.label() == null ? "—" : messages.get("order.market." + r.label());
+            case VEHICLE -> r.label() == null ? messages.get("salesReport.noVehicle") : r.label();
+            case DRIVER -> r.label() == null ? messages.get("salesReport.noDriver") : r.label();
             default -> r.label();
         };
     }

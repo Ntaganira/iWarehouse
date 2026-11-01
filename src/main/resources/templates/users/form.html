@@ -46,6 +46,12 @@
                     <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
                 </div>
                 <div class="form-group">
+                    <label for="whatsappNumber" th:text="#{party.whatsappNumber}">WhatsApp number</label>
+                    <input type="tel" id="whatsappNumber" th:field="*{whatsappNumber}" placeholder="+250..."
+                           th:classappend="${#fields.hasErrors('whatsappNumber')} ? 'is-invalid'" maxlength="13">
+                    <span class="field-error" th:if="${#fields.hasErrors('whatsappNumber')}" th:errors="*{whatsappNumber}"></span>
+                </div>
+                <div class="form-group">
                     <label for="jobTitle" th:text="#{user.jobTitle}">Job title</label>
                     <input type="text" id="jobTitle" th:field="*{jobTitle}" th:placeholder="#{user.jobTitlePh}"
                            th:classappend="${#fields.hasErrors('jobTitle')} ? 'is-invalid'" maxlength="100">

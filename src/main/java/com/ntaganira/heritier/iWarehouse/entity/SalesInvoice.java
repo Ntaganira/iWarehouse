@@ -167,6 +167,14 @@ public class SalesInvoice extends BaseEntity {
         return balanceDue != null && balanceDue.signum() > 0;
     }
 
+    /** The day the invoice is due: its date plus the customer's terms and any approved extra days (TASK.md). */
+    public LocalDate getDueDate() {
+        if (invoiceDate == null || customer == null) {
+            return null;
+        }
+        return invoiceDate.plusDays(customer.getPaymentTermsDays() + (extraTermsDays == null ? 0 : extraTermsDays));
+    }
+
     /** What was paid so far: the total less the balance due. */
     public BigDecimal getAmountPaid() {
         return totalAmount == null ? null : totalAmount.subtract(balanceDue == null ? BigDecimal.ZERO : balanceDue);

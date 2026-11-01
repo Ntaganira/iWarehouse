@@ -150,6 +150,7 @@ public class VehicleController {
         dto.setMaxPieces(v.getMaxPieces());
         dto.setInsuranceExpiry(v.getInsuranceExpiry());
         dto.setInspectionExpiry(v.getInspectionExpiry());
+        dto.setMonthlyDistanceTargetKm(v.getMonthlyDistanceTargetKm());
         dto.setNotes(v.getNotes());
         return form(model, dto);
     }

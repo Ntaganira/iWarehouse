@@ -147,6 +147,35 @@ class ProductServiceTest {
         assertThat(service.taxCategoriesFor(existing("CLR-6", exempt))).containsExactly(standard, exempt);
     }
 
+    @Test
+    void aliasesAreTidiedDeduplicatedAndKeptInStepWithTheForm() {
+        ProductDto form = dto(GlassType.CLEAR, null, "6", null, standard);
+        form.setAliases(" Bronze 6, bronze 6\nClear six; ");
+        Product product = service.create(form);
+
+        assertThat(product.getAliases()).extracting(a -> a.getAlias()).containsExactly("Bronze 6", "Clear six");
+        assertThat(product.getAliases()).extracting(a -> a.getAliasNormalized()).containsExactly("bronze 6", "clear six");
+
+        when(repo.findWithTaxCategoryById(product.getId())).thenReturn(Optional.of(product));
+        ProductDto edit = dto(GlassType.CLEAR, null, "6", product.getCode(), standard);
+        edit.setAliases("Clear six\nTransparent 6");
+        service.update(product.getId(), edit);
+
+        assertThat(product.getAliases()).extracting(a -> a.getAlias()).containsExactly("Clear six", "Transparent 6");
+    }
+
+    @Test
+    void anAliasTooLongIsRefusedOnTheField() {
+        ProductDto form = dto(GlassType.CLEAR, null, "6", null, standard);
+        form.setAliases("x".repeat(101));
+
+        assertThatThrownBy(() -> service.create(form))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getField()).isEqualTo("aliases");
+                    assertThat(e.getMessageKey()).isEqualTo("product.alias.size");
+                });
+    }
+
     private static ProductDto dto(GlassType type, String variant, String thickness, String code, TaxCategory tax) {
         ProductDto dto = new ProductDto();
         dto.setGlassType(type);

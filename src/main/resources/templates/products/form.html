@@ -122,6 +122,14 @@
                     <span class="hint" th:text="#{product.maxLevelHint}">More than this area is overstock; leave empty for no maximum</span>
                 </div>
                 <div class="form-group full-width">
+                    <label for="aliases" th:text="#{product.aliases}">Other names</label>
+                    <textarea id="aliases" th:field="*{aliases}" rows="3" maxlength="1000"
+                              th:placeholder="#{product.aliasesPh}"
+                              th:classappend="${#fields.hasErrors('aliases')} ? 'is-invalid'"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('aliases')}" th:errors="*{aliases}"></span>
+                    <span class="hint" th:text="#{product.aliasesHint}">Search finds the glass by these too: one per line or comma separated</span>
+                </div>
+                <div class="form-group full-width">
                     <label for="notes" th:text="#{product.notes}">Notes</label>
                     <input type="text" id="notes" th:field="*{notes}" maxlength="255" th:placeholder="#{product.notesPh}"
                            th:classappend="${#fields.hasErrors('notes')} ? 'is-invalid'">

@@ -6,6 +6,7 @@ import com.ntaganira.heritier.iWarehouse.enums.CreditNoteKind;
 import com.ntaganira.heritier.iWarehouse.enums.JournalSource;
 import com.ntaganira.heritier.iWarehouse.enums.Market;
 import com.ntaganira.heritier.iWarehouse.enums.OrderChannel;
+import com.ntaganira.heritier.iWarehouse.enums.PaymentMethod;
 import com.ntaganira.heritier.iWarehouse.enums.SaleChannel;
 import com.ntaganira.heritier.iWarehouse.enums.SaleLineKind;
 import com.ntaganira.heritier.iWarehouse.repository.*;
@@ -42,6 +43,7 @@ public class SalesReportService {
 
     private final SalesInvoiceRepository invoiceRepo;
     private final SalesInvoiceLineRepository lineRepo;
+    private final SalesPaymentRepository paymentRepo;
     private final CreditNoteRepository creditNoteRepo;
     private final CreditNoteLineRepository creditLineRepo;
     private final SalesDeliveryRepository deliveryRepo;
@@ -49,11 +51,12 @@ public class SalesReportService {
     private final UserRepository userRepo;
     private final Clock clock;
 
-    public SalesReportService(SalesInvoiceRepository invoiceRepo, SalesInvoiceLineRepository lineRepo, CreditNoteRepository creditNoteRepo,
-                              CreditNoteLineRepository creditLineRepo, SalesDeliveryRepository deliveryRepo,
+    public SalesReportService(SalesInvoiceRepository invoiceRepo, SalesInvoiceLineRepository lineRepo, SalesPaymentRepository paymentRepo,
+                              CreditNoteRepository creditNoteRepo, CreditNoteLineRepository creditLineRepo, SalesDeliveryRepository deliveryRepo,
                               JournalLineRepository journalLineRepo, UserRepository userRepo, Clock clock) {
         this.invoiceRepo = invoiceRepo;
         this.lineRepo = lineRepo;
+        this.paymentRepo = paymentRepo;
         this.creditNoteRepo = creditNoteRepo;
         this.creditLineRepo = creditLineRepo;
         this.deliveryRepo = deliveryRepo;
@@ -70,8 +73,20 @@ public class SalesReportService {
      * The report: its rows and total, how many of its invoices have pieces still to hand over, and the customers, items and
      * salespeople of the period for the filters.
      */
+    public record PaymentRow(PaymentMethod method, BigDecimal paid) {
+    }
+
+    /** What the period's invoices came to against what was taken on them, by payment method (TASK.md). */
+    public record Payments(BigDecimal invoiced, BigDecimal paid, List<PaymentRow> methods) {
+
+        public BigDecimal getOutstanding() {
+            return invoiced.subtract(paid);
+        }
+    }
+
     public record Report(LocalDate from, LocalDate to, SalesAnalysis.GroupBy groupBy, List<SalesAnalysis.Row> rows,
-                         SalesAnalysis.Row total, long pending, List<Option> customers, List<Option> items, List<Option> salespeople) {
+                         SalesAnalysis.Row total, long pending, List<Option> customers, List<Option> items, List<Option> salespeople,
+                         List<SalesAnalysis.DriverRow> leaderboard, Payments payments) {
     }
 
     public Report report(LocalDate from, LocalDate to, SalesAnalysis.GroupBy by, UUID customer, String item, String salesperson) {
@@ -84,7 +99,20 @@ public class SalesReportService {
         return new Report(from, to, by, SalesAnalysis.group(facts, by), SalesAnalysis.total(facts), SalesAnalysis.pending(facts),
                 options(all, f -> String.valueOf(f.invoice().customerId()), f -> f.invoice().customer()),
                 options(all, SalesAnalysis.Fact::itemKey, SalesAnalysis.Fact::itemLabel),
-                options(all, f -> f.invoice().salesperson(), f -> f.invoice().salespersonName()));
+                options(all, f -> f.invoice().salesperson(), f -> f.invoice().salespersonName()),
+                SalesAnalysis.drivers(facts), payments(facts));
+    }
+
+    /** The gross the selected invoices came to and what was taken on them, by method (TASK.md). */
+    private Payments payments(List<SalesAnalysis.Fact> facts) {
+        List<UUID> ids = facts.stream().map(f -> f.invoice().id()).distinct().toList();
+        if (ids.isEmpty()) {
+            return new Payments(BigDecimal.ZERO, BigDecimal.ZERO, List.of());
+        }
+        List<PaymentRow> methods = paymentRepo.totalsOfInvoices(ids).stream()
+                .map(r -> new PaymentRow((PaymentMethod) r[0], (BigDecimal) r[1])).toList();
+        BigDecimal paid = methods.stream().map(PaymentRow::paid).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new Payments(invoiceRepo.totalOf(ids), paid, methods);
     }
 
     /** Today's net sales, cost and margin (the owner dashboard, RPT-01). */
@@ -176,7 +204,8 @@ public class SalesReportService {
             String territory = r[10] == null ? null : r[10] + " · " + r[11];
             invoices.add(new SalesAnalysis.Invoice(id, (String) r[1], (LocalDate) r[2], (UUID) r[3], (String) r[4], (String) r[5], postedBy,
                     postedBy == null ? "" : names.getOrDefault(postedBy, postedBy), (BigDecimal) r[7], toHandOver > 0, channel, territory,
-                    (String) r[10], r[12] == null ? null : ((Market) r[12]).name()));
+                    (String) r[10], r[12] == null ? null : ((Market) r[12]).name(), (UUID) r[13], (String) r[14], (UUID) r[15],
+                    (String) r[16], r[17] == null ? null : ((com.ntaganira.heritier.iWarehouse.enums.TripStatus) r[17]).name()));
         }
 
         // Cost of Goods Sold of each journal of an invoice (sale, a vehicle's sale, hand-over, credit note), with its inventory lines per glass

@@ -121,6 +121,7 @@ public class UserService {
                 .email(email)
                 .fullName(dto.getFullName().trim())
                 .phone(blankToNull(dto.getPhone()))
+                .whatsappNumber(blankToNull(dto.getWhatsappNumber()))
                 .jobTitle(blankToNull(dto.getJobTitle()))
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .roles(roles)
@@ -159,6 +160,7 @@ public class UserService {
         user.setEmail(email);
         user.setFullName(dto.getFullName().trim());
         user.setPhone(blankToNull(dto.getPhone()));
+        user.setWhatsappNumber(blankToNull(dto.getWhatsappNumber()));
         user.setJobTitle(blankToNull(dto.getJobTitle()));
         return user;
     }

@@ -124,9 +124,9 @@ public class SettingService {
                 row.setSettingKey(key.key());
                 row.setSettingValue(value);
                 settingRepo.save(row);
-                changes.add(key.key() + ": " + display(value));
+                changes.add(key.key() + ": " + display(key, value));
             } else if (!Objects.equals(row.getSettingValue(), value)) {
-                changes.add(key.key() + ": " + display(row.getSettingValue()) + " -> " + display(value));
+                changes.add(key.key() + ": " + display(key, row.getSettingValue()) + " -> " + display(key, value));
                 row.setSettingValue(value);
             }
         }
@@ -145,7 +145,10 @@ public class SettingService {
         return text.isEmpty() ? null : text;
     }
 
-    private static String display(String value) {
+    private static String display(SettingKey key, String value) {
+        if (key == SettingKey.WHATSAPP_TOKEN) {
+            return value == null || value.isBlank() ? "(empty)" : "********";
+        }
         return value == null ? "(empty)" : value;
     }
 

@@ -249,6 +249,7 @@ public class TripService {
         if (dto.getTripDate().isBefore(today)) {
             throw BusinessException.onField("tripDate", "trip.date.past");
         }
+        requireOdometerStart(vehicle, dto.getOdometerStart(), null);
         requirePapers(driver, vehicle, dto.getTripDate(), true);
         Trip trip = new Trip();
         trip.setNumber(numbers.next(DocumentType.TRIP));
@@ -271,6 +272,7 @@ public class TripService {
         if (!dto.getTripDate().equals(trip.getTripDate()) && dto.getTripDate().isBefore(LocalDate.now(clock))) {
             throw BusinessException.onField("tripDate", "trip.date.past");
         }
+        requireOdometerStart(vehicle, dto.getOdometerStart(), trip.getId());
         requirePapers(driver, vehicle, dto.getTripDate(), true);
         apply(trip, dto, vehicle, driver);
         withdrawApproval(trip);
@@ -560,24 +562,16 @@ public class TripService {
             throw BusinessException.of("trip.depart.overKg", num.kg(check.load().kg()), vehicle.getPlate(),
                     num.kg(BigDecimal.valueOf(vehicle.getMaxLoadKg())), num.kg(check.kgOver()));
         }
-        if (odometerStart != null) {
-            if (odometerStart < 0) {
-                throw BusinessException.onField("odometerStart", "trip.odometer.invalid");
-            }
-            if (vehicle.getOdometerKm() != null && odometerStart < vehicle.getOdometerKm()) {
-                throw BusinessException.onField("odometerStart", "trip.odometer.belowLast", odometerStart, vehicle.getOdometerKm());
-            }
-        }
+        Integer start = odometerStart != null ? odometerStart : trip.getOdometerStart();
+        requireOdometerStart(vehicle, start, trip.getId());
 
         for (TripLine line : lines) {
             StockUnit unit = units.get(line.getStockUnitId());
             line.setFromLocationId(unit.getLocation().getId());
             stockService.load(unit, vehicle.getLocation(), trip.getId(), trip.getNumber());
         }
-        if (odometerStart != null) {
-            vehicle.setOdometerKm(odometerStart);
-        }
-        trip.setOdometerStart(odometerStart);
+        vehicle.setOdometerKm(start);
+        trip.setOdometerStart(start);
         trip.setLoadedPieces(check.load().pieces());
         trip.setLoadedKg(check.load().kg());
         trip.setDepartedAt(LocalDateTime.now(clock));
@@ -627,6 +621,33 @@ public class TripService {
     // ---------------------------------------------------------------- rules
 
     /**
+     * The start reading of a trip (TASK.md, FLT-12): the vehicle must have a reading, and the trip may not start below
+     * the vehicle's last one or below where its previous completed trip ended.
+     */
+    private void requireOdometerStart(Vehicle vehicle, Integer start, UUID currentTripId) {
+        if (start == null) {
+            throw BusinessException.onField("odometerStart", "trip.odometer.required");
+        }
+        if (start < 0) {
+            throw BusinessException.onField("odometerStart", "trip.odometer.invalid");
+        }
+        if (vehicle.getOdometerKm() == null) {
+            throw BusinessException.onField("odometerStart", "trip.odometer.vehicleMissing", vehicle.getPlate());
+        }
+        if (start < vehicle.getOdometerKm()) {
+            throw BusinessException.onField("odometerStart", "trip.odometer.belowLast", start, vehicle.getOdometerKm());
+        }
+        repo.findFirstByVehicle_IdAndStatusInOrderByReturnedAtDesc(vehicle.getId(),
+                        List.of(TripStatus.RETURNED, TripStatus.CLOSED))
+                .filter(previous -> currentTripId == null || !previous.getId().equals(currentTripId))
+                .filter(previous -> previous.getOdometerEnd() != null && start < previous.getOdometerEnd())
+                .ifPresent(previous -> {
+                    throw BusinessException.onField("odometerStart", "trip.odometer.belowPrevious",
+                            start, previous.getOdometerEnd(), previous.getNumber());
+                });
+    }
+
+    /**
      * The papers that must cover the day (FLT-04): the driver's licence, then the vehicle's insurance and inspection. When
      * planning, the refusal shows under the driver or vehicle field.
      */
@@ -664,6 +685,7 @@ public class TripService {
         trip.setVehicle(vehicle);
         trip.setDriver(driver);
         trip.setTripDate(dto.getTripDate());
+        trip.setOdometerStart(dto.getOdometerStart());
         trip.setArea(dto.getArea().trim());
         trip.setNote(PartyRules.clean(dto.getNote()));
         trip.setRoute(PartyRules.clean(dto.getRoute()));

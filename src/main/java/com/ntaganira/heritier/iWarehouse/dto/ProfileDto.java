@@ -39,6 +39,9 @@ public class ProfileDto {
     @Pattern(regexp = "^$|^[+0-9 ()-]{6,20}$", message = "{user.phone.pattern}")
     private String phone;
 
+    @Pattern(regexp = "^$|^\\+250[0-9]{9}$", message = "{party.whatsapp.pattern}")
+    private String whatsappNumber;
+
     @Size(max = 100, message = "{user.jobTitle.size}")
     private String jobTitle;
 
@@ -47,6 +50,7 @@ public class ProfileDto {
         dto.setFullName(user.getFullName());
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
+        dto.setWhatsappNumber(user.getWhatsappNumber());
         dto.setJobTitle(user.getJobTitle());
         return dto;
     }

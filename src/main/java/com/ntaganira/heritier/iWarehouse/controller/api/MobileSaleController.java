@@ -39,6 +39,7 @@ public class MobileSaleController {
     private final ActivityLogService activityLogService;
     private final Messages messages;
 
+
     public MobileSaleController(MobileSaleService saleService, EbmService ebmService, ActivityLogService activityLogService, Messages messages) {
         this.saleService = saleService;
         this.ebmService = ebmService;
@@ -55,9 +56,11 @@ public class MobileSaleController {
         String made = req.createdAt() == null ? "" : ", made on the phone at " + req.createdAt();
         String phone = AuditContext.current().getDeviceId();
         switch (r.outcome()) {
-            case ACCEPTED -> activityLogService.record(MobileAuthController.MODULE, "SYNC_MOBILE_SALE", "Took sale " + r.invoice().getNumber()
+            case ACCEPTED -> {
+                activityLogService.record(MobileAuthController.MODULE, "SYNC_MOBILE_SALE", "Took sale " + r.invoice().getNumber()
                     + " from the phone " + phone + " (" + r.invoice().getLines().size() + " unit(s), " + r.invoice().getTotalAmount().toPlainString()
                     + " RWF, trip " + r.invoice().getTrip().getNumber() + made + ")", ActivityStatus.SUCCESS);
+            }
             case CONFLICT -> activityLogService.record(MobileAuthController.MODULE, "SYNC_MOBILE_SALE", "Kept sale "
                     + r.conflict().getNumber() + " from the phone " + phone + " for the supervisor: " + r.conflict().getReason() + ", "
                     + r.conflict().getDetail() + made, ActivityStatus.FAILED);

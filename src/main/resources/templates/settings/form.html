@@ -210,6 +210,25 @@
                     <span class="hint" th:text="#{settings.creditOverdueGraceDaysHint}">Days past due before an invoice blocks credit</span>
                 </div>
                 <div class="form-group">
+                    <label for="creditBlockOpenDebt" th:text="#{settings.creditBlockOpenDebt}">Block on open debt</label>
+                    <select id="creditBlockOpenDebt" th:field="*{creditBlockOpenDebt}" required th:classappend="${#fields.hasErrors('creditBlockOpenDebt')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.onBlock}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditBlockOpenDebt')}" th:errors="*{creditBlockOpenDebt}"></span>
+                    <span class="hint" th:text="#{settings.creditBlockOpenDebtHint}">No new credit while the customer still owes on an invoice</span>
+                </div>
+                <div class="form-group">
+                    <label for="creditCollectionIntervalDays" th:text="#{settings.creditCollectionIntervalDays}">Collection interval</label>
+                    <div class="input-unit">
+                        <input type="number" id="creditCollectionIntervalDays" th:field="*{creditCollectionIntervalDays}" step="1" min="0" max="365" required
+                               th:classappend="${#fields.hasErrors('creditCollectionIntervalDays')} ? 'is-invalid'">
+                        <span th:text="#{settings.days}">days</span>
+                    </div>
+                    <span class="field-error" th:if="${#fields.hasErrors('creditCollectionIntervalDays')}" th:errors="*{creditCollectionIntervalDays}"></span>
+                    <span class="hint" th:text="#{settings.creditCollectionIntervalDaysHint}">A hard interval after which credit stops; 0 uses the grace</span>
+                </div>
+                <div class="form-group">
                     <label for="approvalCreditNoteRequired" th:text="#{settings.approvalCreditNoteRequired}">approvalCreditNoteRequired</label>
                     <select id="approvalCreditNoteRequired" th:field="*{approvalCreditNoteRequired}" required th:classappend="${#fields.hasErrors('approvalCreditNoteRequired')} ? 'is-invalid'">
                         <option value="true" th:text="#{settings.onApproval}">Yes</option>
@@ -1159,6 +1178,41 @@
                     </div>
                     <span class="field-error" th:if="${#fields.hasErrors('serviceAlertKm')}" th:errors="*{serviceAlertKm}"></span>
                     <span class="hint" th:text="#{settings.serviceAlertKmHint}">Before a vehicle's service falls due (or within the papers alert days)</span>
+                </div>
+            </div>
+
+            <div class="form-divider"><h3 th:text="#{settings.group.whatsapp}">WhatsApp confirmations</h3>
+                <p class="hint" th:text="#{settings.group.whatsappHint}">A sale confirmation sent to the customer's WhatsApp number</p></div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="whatsappEnabled" th:text="#{settings.whatsappEnabled}">Send confirmations</label>
+                    <select id="whatsappEnabled" th:field="*{whatsappEnabled}" required th:classappend="${#fields.hasErrors('whatsappEnabled')} ? 'is-invalid'">
+                        <option value="true" th:text="#{settings.on}">Yes</option>
+                        <option value="false" th:text="#{settings.off}">No</option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('whatsappEnabled')}" th:errors="*{whatsappEnabled}"></span>
+                    <span class="hint" th:text="#{settings.whatsappEnabledHint}">Only when the customer gave a number</span>
+                </div>
+                <div class="form-group">
+                    <label for="whatsappGatewayUrl" th:text="#{settings.whatsappGatewayUrl}">Gateway address</label>
+                    <input type="text" id="whatsappGatewayUrl" th:field="*{whatsappGatewayUrl}" maxlength="250" autocomplete="off" inputmode="url" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('whatsappGatewayUrl')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('whatsappGatewayUrl')}" th:errors="*{whatsappGatewayUrl}"></span>
+                    <span class="hint" th:text="#{settings.whatsappGatewayUrlHint}">The HTTP endpoint that sends a message</span>
+                </div>
+                <div class="form-group">
+                    <label for="whatsappToken" th:text="#{settings.whatsappToken}">Gateway token</label>
+                    <input type="password" id="whatsappToken" th:field="*{whatsappToken}" maxlength="500" autocomplete="new-password"
+                           th:classappend="${#fields.hasErrors('whatsappToken')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('whatsappToken')}" th:errors="*{whatsappToken}"></span>
+                    <span class="hint" th:text="#{settings.whatsappTokenHint}">Kept as a bearer token, masked in the activity log</span>
+                </div>
+                <div class="form-group">
+                    <label for="whatsappSender" th:text="#{settings.whatsappSender}">Sender</label>
+                    <input type="text" id="whatsappSender" th:field="*{whatsappSender}" maxlength="100" autocomplete="off" spellcheck="false"
+                           th:classappend="${#fields.hasErrors('whatsappSender')} ? 'is-invalid'">
+                    <span class="field-error" th:if="${#fields.hasErrors('whatsappSender')}" th:errors="*{whatsappSender}"></span>
+                    <span class="hint" th:text="#{settings.whatsappSenderHint}">The registered sender, when the gateway needs one</span>
                 </div>
             </div>
 

@@ -47,6 +47,9 @@ public class UserDto {
     @Pattern(regexp = "^$|^[+0-9 ()-]{6,20}$", message = "{user.phone.pattern}")
     private String phone;
 
+    @Pattern(regexp = "^$|^\\+250[0-9]{9}$", message = "{party.whatsapp.pattern}")
+    private String whatsappNumber;
+
     @Size(max = 100, message = "{user.jobTitle.size}")
     private String jobTitle;
 

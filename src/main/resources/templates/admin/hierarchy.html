@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/sidebar :: html(#{hierarchy.title}, ~{::content})}">
+<head><title>Rwanda administrative hierarchy - iWarehouse</title></head>
+<body>
+<div th:fragment="content">
+    <div class="page-header">
+        <div>
+            <h1 th:text="#{hierarchy.title}">Rwanda administrative hierarchy</h1>
+            <div class="subtitle" th:text="#{hierarchy.subtitle}">Provinces, districts, sectors, cells and villages, with their official codes and full paths</div>
+        </div>
+    </div>
+
+    <div class="stats-grid" sec:authorize="hasAuthority('PERM_VIEW_RWANDA_HIERARCHY')">
+        <a th:each="stat : ${dashboard.stats}" class="stat-card hierarchy-stat"
+           th:classappend="${dashboard.tier == stat.tier} ? 'is-active' : ''"
+           th:href="@{/admin/hierarchy(tier=${stat.tier.name()})}"
+           th:attr="aria-current=${dashboard.tier == stat.tier} ? 'page' : null">
+            <div class="stat-info">
+                <h3 th:text="#{${'hierarchy.tier.' + stat.tier.name()}}">Provinces</h3>
+                <div class="number" th:text="${stat.total}">5</div>
+                <div class="change" th:text="#{hierarchy.stat.enabled(${stat.active})}">5 enabled</div>
+            </div>
+            <div class="stat-icon blue">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+            </div>
+        </a>
+    </div>
+
+    <div class="section">
+        <form th:action="@{/admin/hierarchy}" method="get" class="table-toolbar report-filters hierarchy-filters">
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{hierarchy.filter.tier}">Level</span>
+                    <select name="tier" th:aria-label="#{hierarchy.filter.tier}">
+                        <option th:each="t : ${tiers}" th:value="${t.name()}" th:selected="${t == dashboard.tier}"
+                                th:text="#{${'hierarchy.tier.' + t.name()}}">Villages</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{hierarchy.filter.status}">Visibility</span>
+                    <select name="status" th:aria-label="#{hierarchy.filter.status}">
+                        <option value="" th:text="#{hierarchy.status.ALL}" th:selected="${dashboard.status == null}">All</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:selected="${s == dashboard.status}"
+                                th:text="#{${'hierarchy.status.' + s}}">Visible</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filter-group hierarchy-search-group">
+                <label class="filter-field hierarchy-search-field">
+                    <span th:text="#{hierarchy.filter.search}">Search</span>
+                    <input type="search" name="q" th:value="${dashboard.q}" autocomplete="off"
+                           th:placeholder="#{hierarchy.filter.searchPlaceholder}" th:aria-label="#{hierarchy.filter.search}">
+                </label>
+            </div>
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{hierarchy.filter.province}">Province</span>
+                    <select name="province" th:aria-label="#{hierarchy.filter.province}">
+                        <option value="" th:text="#{hierarchy.filter.allProvinces}">All provinces</option>
+                        <option th:each="p : ${dashboard.provinces}" th:value="${p.id}"
+                                th:selected="${p.id == dashboard.provinceId}" th:text="${p.name}">Kigali City</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{hierarchy.filter.district}">District</span>
+                    <select name="district" th:disabled="${dashboard.provinceId == null}"
+                            th:aria-label="#{hierarchy.filter.district}">
+                        <option value="" th:text="#{hierarchy.filter.allDistricts}">All districts</option>
+                        <option th:each="d : ${dashboard.districts}" th:value="${d.id}"
+                                th:selected="${d.id == dashboard.districtId}" th:text="${d.name}">Gasabo</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filter-group">
+                <label class="filter-field">
+                    <span th:text="#{hierarchy.filter.sector}">Sector</span>
+                    <select name="sector" th:disabled="${dashboard.districtId == null}"
+                            th:aria-label="#{hierarchy.filter.sector}">
+                        <option value="" th:text="#{hierarchy.filter.allSectors}">All sectors</option>
+                        <option th:each="s : ${dashboard.sectors}" th:value="${s.id}"
+                                th:selected="${s.id == dashboard.sectorId}" th:text="${s.name}">Kacyiru</option>
+                    </select>
+                </label>
+                <label class="filter-field">
+                    <span th:text="#{hierarchy.filter.cell}">Cell</span>
+                    <select name="cell" th:disabled="${dashboard.sectorId == null}"
+                            th:aria-label="#{hierarchy.filter.cell}">
+                        <option value="" th:text="#{hierarchy.filter.allCells}">All cells</option>
+                        <option th:each="c : ${dashboard.cells}" th:value="${c.id}"
+                                th:selected="${c.id == dashboard.cellId}" th:text="${c.name}">Kamatamu</option>
+                    </select>
+                </label>
+            </div>
+            <div class="filter-group hierarchy-filter-actions">
+                <button type="submit" class="btn btn-outline btn-sm" th:text="#{hierarchy.filter.apply}">Apply</button>
+                <a class="btn btn-outline btn-sm" th:href="@{/admin/hierarchy}" th:text="#{hierarchy.filter.clear}">Clear</a>
+            </div>
+        </form>
+        <p class="form-note hierarchy-filter-note" th:text="#{hierarchy.filter.note}">Lower-level filters become available once their parent is chosen. Changing the level keeps the search and the status filter.</p>
+    </div>
+
+    <div class="section">
+        <div class="section-header">
+            <h2>
+                <span th:text="#{${'hierarchy.tier.' + dashboard.tier.name()}}">Villages</span>
+                <span class="hierarchy-total" th:text="${dashboard.rows.totalElements}">14,837</span>
+            </h2>
+        </div>
+        <div class="table-container">
+            <table class="hierarchy-table">
+                <thead>
+                    <tr>
+                        <th th:text="#{hierarchy.table.name}">Name</th>
+                        <th th:text="#{hierarchy.table.code}">Official code</th>
+                        <th th:text="#{hierarchy.table.path}">Full hierarchical path</th>
+                        <th th:text="#{hierarchy.table.visibility}">Visibility</th>
+                        <th sec:authorize="hasAuthority('PERM_MANAGE_RWANDA_HIERARCHY')"><span class="sr-only" th:text="#{hierarchy.table.actions}">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${dashboard.rows.content}"
+                        th:classappend="${'hierarchy-row-' + #strings.toLowerCase(row.statusKey)}"
+                        th:attr="data-id=${row.id},data-tier=${row.tier.name()},data-code=${row.code},data-name=${row.name},data-path=${row.path},data-descendants=${row.descendants}">
+                        <td>
+                            <div class="hierarchy-name">
+                                <span class="strong" th:text="${row.name}">Kamatamu</span>
+                                <span th:if="${row.locked}" class="badge badge-secondary hierarchy-lock"
+                                      th:title="#{hierarchy.lockedHint}" th:text="#{hierarchy.locked}">System locked</span>
+                            </div>
+                        </td>
+                        <td><span class="mono" th:text="${row.code}">112010101</span></td>
+                        <td>
+                            <nav class="hierarchy-path" th:attr="aria-label=#{hierarchy.table.path}">
+                                <th:block th:each="link, iter : ${row.pathLinks}">
+                                    <a th:href="@{/admin/hierarchy(tier=${link.tier},province=${link.provinceId},district=${link.districtId},sector=${link.sectorId},cell=${link.cellId},q=${link.q})}"
+                                       th:text="${link.name}" th:title="${link.name}">Kigali City</a><span
+                                        th:unless="${iter.last}" class="hierarchy-path-sep" aria-hidden="true"> / </span>
+                                </th:block>
+                            </nav>
+                        </td>
+                        <td>
+                            <span th:if="${row.statusKey == 'VISIBLE'}" class="badge badge-success"
+                                  th:text="#{hierarchy.status.VISIBLE}">Visible</span>
+                            <span th:if="${row.statusKey == 'HIDDEN'}" class="badge badge-warning"
+                                  th:title="#{hierarchy.status.HIDDEN.hint}" th:text="#{hierarchy.status.HIDDEN}">Hidden by parent</span>
+                            <span th:if="${row.statusKey == 'INACTIVE'}" class="badge badge-secondary"
+                                  th:title="#{hierarchy.status.INACTIVE.hint}" th:text="#{hierarchy.status.INACTIVE}">Inactive</span>
+                        </td>
+                        <td sec:authorize="hasAuthority('PERM_MANAGE_RWANDA_HIERARCHY')">
+                            <div class="btn-group hierarchy-actions">
+                                <form th:action="@{/admin/hierarchy/toggle}" method="post" class="row-action-form"
+                                      th:classappend="${row.enabled} ? 'confirm-submit danger' : ''"
+                                      th:attr="data-confirm=${row.enabled} ? #{hierarchy.toggle.disableConfirm(${row.name})} : null">
+                                    <input type="hidden" name="tier" th:value="${row.tier.name()}">
+                                    <input type="hidden" name="id" th:value="${row.id}">
+                                    <input type="hidden" name="returnQuery" th:value="${dashboard.returnQuery}">
+                                    <button type="submit" class="action-icon"
+                                            th:classappend="${row.enabled} ? 'delete' : 'pay'"
+                                            th:title="${row.enabled} ? #{hierarchy.toggle.disable} : #{hierarchy.toggle.enable}"
+                                            th:aria-label="${row.enabled} ? #{hierarchy.toggle.disable} : #{hierarchy.toggle.enable}">
+                                        <svg th:if="${row.enabled}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                        </svg>
+                                        <svg th:unless="${row.enabled}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                        </svg>
+                                    </button>
+                                </form>
+                                <button th:if="${row.allowEdit}" type="button" class="action-icon edit js-hierarchy-rename"
+                                        th:title="#{hierarchy.rename}" th:aria-label="#{hierarchy.rename}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                </button>
+                                <button th:if="${row.allowEdit}" type="button" class="action-icon delete js-hierarchy-delete"
+                                        th:title="#{hierarchy.delete}" th:aria-label="#{hierarchy.delete}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                        <path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${dashboard.rows.empty}">
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h3 th:text="#{hierarchy.empty}">No administrative units match</h3>
+                                <p th:text="#{hierarchy.emptyHint}">Change the level, clear the filters or search for another name or code.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <th:block th:replace="~{layout/pagination :: pager(${dashboard.rows}, '/admin/hierarchy', ${dashboard.query})}"></th:block>
+        <p class="form-note hierarchy-legend" th:text="#{hierarchy.legend}">Visible means the unit and every level above it are enabled. Hidden by parent means an upper level is disabled. Inactive means this unit is disabled. Locked units cannot be renamed or deleted.</p>
+    </div>
+
+    <div class="modal-overlay" id="rename-modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title">
+            <div class="modal-header">
+                <h3 id="rename-modal-title" th:text="#{hierarchy.rename.title}">Rename administrative unit</h3>
+                <button type="button" class="modal-close" data-modal-close="rename-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/admin/hierarchy/rename}" id="rename-form">
+                <input type="hidden" name="tier" id="rename-tier">
+                <input type="hidden" name="id" id="rename-id">
+                <input type="hidden" name="returnQuery" th:value="${dashboard.returnQuery}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="rename-name" th:text="#{hierarchy.rename.name}">Name</label>
+                        <input type="text" id="rename-name" name="name" maxlength="100" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label th:text="#{hierarchy.rename.path}">Full path</label>
+                        <div class="hierarchy-modal-path" id="rename-path"></div>
+                    </div>
+                    <p class="hint" th:text="#{hierarchy.rename.hint}">Only the name changes. The official code and the position in the hierarchy stay the same.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="rename-modal" th:text="#{common.cancel}">Cancel</button>
+                    <button type="submit" class="btn btn-primary" th:text="#{hierarchy.rename.save}">Save name</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+            <div class="modal-header">
+                <h3 id="delete-modal-title" th:text="#{hierarchy.delete.title}">Delete administrative unit</h3>
+                <button type="button" class="modal-close" data-modal-close="delete-modal" th:aria-label="#{common.cancel}">&times;</button>
+            </div>
+            <form method="post" th:action="@{/admin/hierarchy/delete}" id="delete-form">
+                <input type="hidden" name="tier" id="delete-tier">
+                <input type="hidden" name="id" id="delete-id">
+                <input type="hidden" name="returnQuery" th:value="${dashboard.returnQuery}">
+                <div class="modal-body">
+                    <p class="doc-note is-danger">
+                        <strong id="delete-name"></strong>
+                        <span th:text="#{hierarchy.delete.warning}">will be permanently deleted with every unit below it. This cannot be undone.</span>
+                    </p>
+                    <p class="hierarchy-delete-count">
+                        <span th:text="#{hierarchy.delete.lowerUnits}">Lower-level units also deleted:</span>
+                        <strong id="delete-descendants">0</strong>
+                    </p>
+                    <div class="form-group">
+                        <label for="delete-confirm" th:text="#{hierarchy.delete.typeCode}">Type the official code to confirm</label>
+                        <div class="hierarchy-confirm-code">
+                            <code id="delete-code"></code>
+                        </div>
+                        <input type="text" id="delete-confirm" name="confirmCode" required autocomplete="off"
+                               inputmode="numeric" th:placeholder="#{hierarchy.delete.typeCodePlaceholder}">
+                    </div>
+                    <p class="hint" th:text="#{hierarchy.delete.hint}">The deletion is recorded in the activity log. A unit that contains a system-locked unit cannot be deleted.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-modal-close="delete-modal" th:text="#{common.confirmCancel}">Not now</button>
+                    <button type="submit" class="btn btn-danger" id="delete-submit" disabled th:text="#{hierarchy.delete.confirm}">Delete permanently</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script th:src="@{/js/hierarchy.js}"></script>
+</div>
+</body>
+</html>

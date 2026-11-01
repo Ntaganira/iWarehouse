@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.service;
 
+import com.ntaganira.heritier.iWarehouse.enums.AdministrativeTier;
 import com.ntaganira.heritier.iWarehouse.enums.QuotationKind;
 import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.NumberFormats;
@@ -114,6 +115,7 @@ public class GlobalSearchService {
     private final StaffAdvanceService advanceService;
     private final BudgetService budgetService;
     private final FixedAssetService fixedAssetService;
+    private final HierarchyService hierarchyService;
     private final NumberFormats num;
 
     public GlobalSearchService(StockService stockService, LocationService locationService, LocationRepository locationRepo,
@@ -131,13 +133,15 @@ public class GlobalSearchService {
                                SiteTransferService siteTransferService, TicketService ticketService,
                                DeliveryNoteService deliveryNoteService, DamageService damageService, StockVarianceService varianceService,
                                ExpenseBillService expenseBillService, RequisitionService requisitionService, PettyCashVoucherService voucherService,
-                               StaffAdvanceService advanceService, BudgetService budgetService, FixedAssetService fixedAssetService) {
+                               StaffAdvanceService advanceService, BudgetService budgetService, FixedAssetService fixedAssetService,
+                               HierarchyService hierarchyService) {
         this.expenseBillService = expenseBillService;
         this.requisitionService = requisitionService;
         this.voucherService = voucherService;
         this.advanceService = advanceService;
         this.budgetService = budgetService;
         this.fixedAssetService = fixedAssetService;
+        this.hierarchyService = hierarchyService;
         this.damageService = damageService;
         this.varianceService = varianceService;
         this.deliveryNoteService = deliveryNoteService;
@@ -392,6 +396,26 @@ public class GlobalSearchService {
             new Source<>("nav.payRuns", "/payroll/runs", null, List.of("PAGE_PAY_RUNS", "PERM_VIEW_PAY_RUN"),
                 q -> payRunService.findPage(q, null, 0, PER_GROUP),
                 r -> new Hit(r.getNumber(), date(r.getPeriod()), null, "/payroll/runs/" + r.getId())),
+            new Source<>("hierarchy.tier.PROVINCE", "/admin/hierarchy", "tier=PROVINCE",
+                List.of("PAGE_RWANDA_HIERARCHY", "PERM_VIEW_RWANDA_HIERARCHY"),
+                q -> hierarchyService.findRows(AdministrativeTier.PROVINCE, q, 0, PER_GROUP),
+                r -> new Hit(r.code(), r.name(), r.path(), "/admin/hierarchy?tier=PROVINCE&q=" + r.code())),
+            new Source<>("hierarchy.tier.DISTRICT", "/admin/hierarchy", "tier=DISTRICT",
+                List.of("PAGE_RWANDA_HIERARCHY", "PERM_VIEW_RWANDA_HIERARCHY"),
+                q -> hierarchyService.findRows(AdministrativeTier.DISTRICT, q, 0, PER_GROUP),
+                r -> new Hit(r.code(), r.name(), r.path(), "/admin/hierarchy?tier=DISTRICT&q=" + r.code())),
+            new Source<>("hierarchy.tier.SECTOR", "/admin/hierarchy", "tier=SECTOR",
+                List.of("PAGE_RWANDA_HIERARCHY", "PERM_VIEW_RWANDA_HIERARCHY"),
+                q -> hierarchyService.findRows(AdministrativeTier.SECTOR, q, 0, PER_GROUP),
+                r -> new Hit(r.code(), r.name(), r.path(), "/admin/hierarchy?tier=SECTOR&q=" + r.code())),
+            new Source<>("hierarchy.tier.CELL", "/admin/hierarchy", "tier=CELL",
+                List.of("PAGE_RWANDA_HIERARCHY", "PERM_VIEW_RWANDA_HIERARCHY"),
+                q -> hierarchyService.findRows(AdministrativeTier.CELL, q, 0, PER_GROUP),
+                r -> new Hit(r.code(), r.name(), r.path(), "/admin/hierarchy?tier=CELL&q=" + r.code())),
+            new Source<>("hierarchy.tier.VILLAGE", "/admin/hierarchy", "tier=VILLAGE",
+                List.of("PAGE_RWANDA_HIERARCHY", "PERM_VIEW_RWANDA_HIERARCHY"),
+                q -> hierarchyService.findRows(AdministrativeTier.VILLAGE, q, 0, PER_GROUP),
+                r -> new Hit(r.code(), r.name(), r.path(), "/admin/hierarchy?tier=VILLAGE&q=" + r.code())),
             new Source<>("nav.users", "/users", null, List.of("PAGE_USERS", "PERM_VIEW_USER"),
                 q -> userService.findPage(q, null, null, 0, PER_GROUP),
                 u -> new Hit(u.getUsername(), u.getFullName(), u.getEmail(), "/users/" + u.getId()))

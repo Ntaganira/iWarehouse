@@ -58,7 +58,23 @@
 - [ ] Add tests for alias persistence and alias-aware search.
   - Persistence and normalization are tested in `ProductServiceTest`; the repository search test still waits on Testcontainers.
 
-## 6. Verification
+## 6. Rwanda administrative hierarchy
+
+- [x] Add `V61__rwanda_administrative_hierarchy.sql`: five UUID/audited tables with official code lengths, unique codes,
+      parent foreign keys, `is_enabled` and `allow_edit`.
+- [x] Seed the canonical 5 / 30 / 416 / 2,148 / 14,837 dataset and verify the counts in PostgreSQL.
+- [x] Add `V62__rwanda_hierarchy_access.sql`: page, view/manage permissions and role grants.
+- [x] Add entities, repositories, `HierarchyService` and `HierarchyController` with cascading filters, pagination,
+      effective visibility, rename, toggle, typed-code cascade delete and the `allow_edit` lock.
+- [x] Add the dashboard template, modals, `hierarchy.js`, responsive CSS, EN/FR messages, sidebar link and global search.
+- [x] Fix empty filters so the default page lists rows, and style the filter selects; smoke-tested 20 rows with "All" selected.
+- [x] Make each full-path segment a drill-down link to the next tier (a village filters by its own code); smoke-tested 3 districts, 10 sectors and 1 village.
+- [x] Add `HierarchyServiceTest` (10 tests) and run the full suite (742 tests, 0 failures).
+- [ ] Add Testcontainers coverage for repository filtering, status queries and descendant counts.
+- [ ] Check the dashboard and its modals at 360, 390, 768 and 1024 px in light and dark themes.
+- [ ] Commit and push after explicit user approval.
+
+## 7. Verification
 
 - [x] Run the full Maven test suite.
 - [ ] Verify the new screens and forms at phone, tablet and desktop widths in light and dark themes.

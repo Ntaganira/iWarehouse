@@ -4926,3 +4926,6 @@ a.stat-card.hierarchy-stat { color: inherit; text-decoration: none; }
   .hierarchy-path { max-width: 100%; }
   .hierarchy-actions { justify-content: flex-start; }
 }
+
+/* Territory form: notes span the form grid. */
+.form-grid > .full-width { grid-column: 1 / -1; }

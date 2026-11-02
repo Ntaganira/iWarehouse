@@ -12,7 +12,7 @@
     </div>
     <div class="section">
         <form th:action="${territory == null} ? @{/territories/new} : @{/territories/{id}/edit(id=${territory.id})}" method="post"
-              class="form-container" novalidate>
+              class="form-container" novalidate th:attr="data-areas-url=@{/territories/areas}">
             <div class="form-grid">
                 <div class="form-group">
                     <label for="code" th:text="#{territory.code}">Code</label>
@@ -35,6 +35,82 @@
                     </select>
                     <span class="field-error" th:if="${errorField == 'managerUserId'}" th:text="${flashError}"></span>
                 </div>
+
+                <h3 class="form-section-title" th:text="#{territory.area.title}">Administrative area</h3>
+                <p class="form-note full-width" th:text="#{territory.area.hint}">Choose the level and the unit the territory covers; the code and name stay yours to set.</p>
+
+                <div class="form-group">
+                    <label for="tier" th:text="#{territory.level}">Level</label>
+                    <select id="tier" name="tier" required th:classappend="${errorField == 'tier'} ? 'is-invalid'">
+                        <option value="" th:selected="${form.tier == null}" th:text="#{territory.tier.choose}">Choose a level</option>
+                        <option th:each="level : ${tiers}" th:value="${level}" th:selected="${level == form.tier}"
+                                th:text="#{${'territory.tier.' + level}}">District</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'tier'}" th:text="${flashError}"></span>
+                </div>
+
+                <div class="form-group" data-area-level="PROVINCE"
+                     th:hidden="${form.tier == null}">
+                    <label for="provinceId" th:text="#{territory.area.province}">Province</label>
+                    <select id="provinceId" name="provinceId" data-area-select th:classappend="${errorField == 'provinceId'} ? 'is-invalid'">
+                        <option value="" th:text="#{territory.area.chooseProvince}">Choose a province</option>
+                        <option th:each="p : ${options.provinces}" th:value="${p.id}"
+                                th:selected="${form.provinceId != null and form.provinceId == p.id}"
+                                th:text="${p.code + ' · ' + p.name}">01 · Kigali City</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'provinceId'}" th:text="${flashError}"></span>
+                </div>
+
+                <div class="form-group" data-area-level="DISTRICT"
+                     th:hidden="${form.tier == null or form.tier.ordinal() < 1}">
+                    <label for="districtId" th:text="#{territory.area.district}">District</label>
+                    <select id="districtId" name="districtId" data-area-select th:classappend="${errorField == 'districtId'} ? 'is-invalid'">
+                        <option value="" th:text="#{territory.area.chooseDistrict}">Choose a district</option>
+                        <option th:each="d : ${options.districts}" th:value="${d.id}"
+                                th:selected="${form.districtId != null and form.districtId == d.id}"
+                                th:text="${d.code + ' · ' + d.name}">1101 · Gasabo</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'districtId'}" th:text="${flashError}"></span>
+                </div>
+
+                <div class="form-group" data-area-level="SECTOR"
+                     th:hidden="${form.tier == null or form.tier.ordinal() < 2}">
+                    <label for="sectorId" th:text="#{territory.area.sector}">Sector</label>
+                    <select id="sectorId" name="sectorId" data-area-select th:classappend="${errorField == 'sectorId'} ? 'is-invalid'">
+                        <option value="" th:text="#{territory.area.chooseSector}">Choose a sector</option>
+                        <option th:each="s : ${options.sectors}" th:value="${s.id}"
+                                th:selected="${form.sectorId != null and form.sectorId == s.id}"
+                                th:text="${s.code + ' · ' + s.name}">110101 · Kacyiru</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'sectorId'}" th:text="${flashError}"></span>
+                </div>
+
+                <div class="form-group" data-area-level="CELL"
+                     th:hidden="${form.tier == null or form.tier.ordinal() < 3}">
+                    <label for="cellId" th:text="#{territory.area.cell}">Cell</label>
+                    <select id="cellId" name="cellId" data-area-select th:classappend="${errorField == 'cellId'} ? 'is-invalid'">
+                        <option value="" th:text="#{territory.area.chooseCell}">Choose a cell</option>
+                        <option th:each="c : ${options.cells}" th:value="${c.id}"
+                                th:selected="${form.cellId != null and form.cellId == c.id}"
+                                th:text="${c.code + ' · ' + c.name}">11010101 · Kamatamu</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'cellId'}" th:text="${flashError}"></span>
+                </div>
+
+                <div class="form-group" data-area-level="VILLAGE"
+                     th:hidden="${form.tier == null or form.tier.ordinal() < 4}">
+                    <label for="villageId" th:text="#{territory.area.village}">Village</label>
+                    <select id="villageId" name="villageId" data-area-select th:classappend="${errorField == 'villageId'} ? 'is-invalid'">
+                        <option value="" th:text="#{territory.area.chooseVillage}">Choose a village</option>
+                        <option th:each="v : ${options.villages}" th:value="${v.id}"
+                                th:selected="${form.villageId != null and form.villageId == v.id}"
+                                th:text="${v.code + ' · ' + v.name}">1101010101 · Amahoro</option>
+                    </select>
+                    <span class="field-error" th:if="${errorField == 'villageId'}" th:text="${flashError}"></span>
+                </div>
+
+                <p id="territoryAreaError" class="form-note text-danger full-width" hidden
+                   th:text="#{territory.area.loadError}">Could not load the administrative units. Reload the page.</p>
             </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" th:text="#{common.save}">Save</button>
@@ -42,6 +118,7 @@
             </div>
         </form>
     </div>
+    <script th:src="@{/js/territory-form.js}" defer></script>
 </div>
 </body>
 </html>

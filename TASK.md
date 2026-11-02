@@ -72,9 +72,26 @@
 - [x] Add `HierarchyServiceTest` (10 tests) and run the full suite (742 tests, 0 failures).
 - [ ] Add Testcontainers coverage for repository filtering, status queries and descendant counts.
 - [ ] Check the dashboard and its modals at 360, 390, 768 and 1024 px in light and dark themes.
-- [ ] Commit and push after explicit user approval.
+- [x] Commit and push after explicit user approval.
 
-## 7. Verification
+## 7. Territory hierarchy mapping
+
+- [x] Add `V63__territory_hierarchy_mapping.sql`: territory tier, nullable province/district/sector/cell/village
+      keys, non-overlapping chain check, one-territory-per-unit indexes and legacy rows left unmapped.
+- [x] Extend `Territory` with its administrative level, lazy hierarchy links and area code/name/path helpers.
+- [x] Extend `TerritoryRepository` with entity-graph list/detail queries and per-unit duplicate lookups.
+- [x] Extend `TerritoryService` with the deepest-node chain, enabled-unit rules, one-unit-per-territory rule,
+      cascading options, children for the JSON endpoint, search by code/name/area and level/status filters.
+- [x] Add list filters and area/level columns; keep legacy territories visible as "Not mapped".
+- [x] Add the tier select and cascading province/district/sector/cell/village form fields with `territory-form.js`.
+- [x] Add EN/FR labels, validation texts and area load errors.
+- [x] Add `TerritoryServiceTest` (9 tests) and run the full suite (752 tests, 0 failures).
+- [x] Smoke-test login, list, new/edit forms, the children JSON endpoint and refused invalid submission.
+- [ ] Add Testcontainers coverage for territory repository filtering and duplicate constraints.
+- [ ] Check the list and cascading form at 360, 390, 768 and 1024 px in light and dark themes.
+- [x] Commit and push after explicit user approval.
+
+## 8. Verification
 
 - [x] Run the full Maven test suite.
 - [ ] Verify the new screens and forms at phone, tablet and desktop widths in light and dark themes.

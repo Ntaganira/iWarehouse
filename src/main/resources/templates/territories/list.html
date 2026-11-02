@@ -7,7 +7,7 @@
     <div class="page-header">
         <div>
             <h1 th:text="#{territory.title}">Territories</h1>
-            <div class="subtitle" th:text="#{territory.subtitle}">Sales territories and their regional sales managers: customers and orders belong to one, and sales are reported by territory</div>
+            <div class="subtitle" th:text="#{territory.subtitle}">Sales territories and their regional sales managers, each covering a Rwandan administrative unit</div>
         </div>
         <div class="btn-group">
             <a href="/territories/new" class="btn btn-primary" sec:authorize="hasAuthority('PERM_MANAGE_TERRITORIES')">
@@ -23,6 +23,22 @@
                 <span th:text="#{territory.title}">Territories</span>
                 <span class="section-count" th:text="${territories.totalElements}">0</span>
             </h2>
+            <form th:action="@{/territories}" method="get" class="table-toolbar party-filters">
+                <div class="toolbar-search">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="search" th:value="${search}" th:placeholder="#{territory.searchPh}" th:aria-label="#{territory.searchPh}">
+                </div>
+                <select name="tier" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{territory.level}">
+                    <option value="" th:selected="${tier == null}" th:text="#{territory.allLevels}">All levels</option>
+                    <option th:each="level : ${tiers}" th:value="${level}" th:selected="${level == tier}"
+                            th:text="#{${'territory.tier.' + level}}">District</option>
+                </select>
+                <select name="status" class="toolbar-filter" onchange="this.form.submit()" th:aria-label="#{common.status}">
+                    <option value="" th:selected="${status == null or status == ''}" th:text="#{common.allStatus}">All statuses</option>
+                    <option value="active" th:selected="${status == 'active'}" th:text="#{common.active}">Active</option>
+                    <option value="inactive" th:selected="${status == 'inactive'}" th:text="#{common.inactive}">Inactive</option>
+                </select>
+            </form>
         </div>
         <div class="table-container">
             <table>
@@ -30,6 +46,8 @@
                     <tr>
                         <th th:text="#{territory.code}">Code</th>
                         <th th:text="#{territory.name}">Name</th>
+                        <th th:text="#{territory.area}">Administrative area</th>
+                        <th th:text="#{territory.level}">Level</th>
                         <th th:text="#{territory.manager}">Regional sales manager</th>
                         <th th:text="#{common.status}">Status</th>
                         <th sec:authorize="hasAuthority('PERM_MANAGE_TERRITORIES')"><span class="sr-only" th:text="#{common.actions}">Actions</span></th>
@@ -39,7 +57,19 @@
                     <tr th:each="t : ${territories.content}">
                         <td class="mono strong" th:text="${t.code}">KGL</td>
                         <td th:text="${t.name}">Kigali</td>
-                        <td th:text="${t.managerName ?: '—'}">—</td>
+                        <td>
+                            <span th:if="${t.areaPath != null}" th:text="${t.areaPath}">Kigali City / Gasabo</span>
+                            <span class="text-muted" th:if="${t.areaPath == null}" th:text="#{territory.area.unmapped}">Not mapped</span>
+                            <div class="cell-sub mono" th:if="${t.areaCode != null}" th:text="${t.areaCode}">1101</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-secondary" th:if="${t.tier != null}" th:text="#{${'territory.tier.' + t.tier}}">District</span>
+                            <span class="badge badge-warning" th:if="${t.tier == null}" th:text="#{territory.area.unmapped}">Not mapped</span>
+                        </td>
+                        <td>
+                            <span th:if="${t.managerName != null}" th:text="${t.managerName}">Jean Bosco</span>
+                            <span class="text-muted" th:unless="${t.managerName != null}" th:text="#{common.none}">None</span>
+                        </td>
                         <td><span class="badge" th:classappend="${t.enabled} ? 'badge-success' : 'badge-secondary'"
                                   th:text="${t.enabled} ? #{common.active} : #{common.inactive}">Active</span></td>
                         <td sec:authorize="hasAuthority('PERM_MANAGE_TERRITORIES')">
@@ -54,18 +84,18 @@
                             </div>
                         </td>
                     </tr>
-                    <tr th:if="${territories.totalElements == 0}">
-                        <td colspan="5">
+                    <tr th:if="${#lists.isEmpty(territories.content)}">
+                        <td colspan="7">
                             <div class="empty-state">
-                                <h3 th:text="#{territory.empty}">No territories yet</h3>
-                                <p th:text="#{territory.emptyHint}">Add the territories the sales team covers, each with its regional sales manager</p>
+                                <h3 th:text="${search != '' or tier != null or status != ''} ? #{territory.filteredEmpty} : #{territory.empty}">No territories found</h3>
+                                <p th:text="${search != '' or tier != null or status != ''} ? #{territory.filteredEmptyHint} : #{territory.emptyHint}">Try other filters or add a territory</p>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <th:block th:replace="~{layout/pagination :: pager(${territories}, '/territories', '')}"></th:block>
+        <th:block th:replace="~{layout/pagination :: pager(${territories}, '/territories', ${paginationQuery})}"></th:block>
     </div>
 </div>
 </body>

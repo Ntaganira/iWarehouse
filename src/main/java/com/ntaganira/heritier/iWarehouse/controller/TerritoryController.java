@@ -4,6 +4,7 @@ import com.ntaganira.heritier.iWarehouse.config.Messages;
 import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.entity.Territory;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.AdministrativeTier;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
 import com.ntaganira.heritier.iWarehouse.service.ActivityLogService;
 import com.ntaganira.heritier.iWarehouse.service.TerritoryService;
@@ -13,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -25,7 +27,8 @@ import java.util.UUID;
  * - Email     : ntaganira71@gmail.com
  * - Phone     : +250 788 533 669
  * - Desc      : Sales territories and their Regional Sales Managers (BP 6, Res. 7): the list, add, change, deactivate
- *               and activate again. PAGE_TERRITORIES; changes PERM_MANAGE_TERRITORIES.
+ *               and activate again, each covering one Rwandan administrative unit. PAGE_TERRITORIES; changes
+ *               PERM_MANAGE_TERRITORIES.
  * </pre>
  */
 @Controller
@@ -47,25 +50,45 @@ public class TerritoryController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('PAGE_TERRITORIES')")
-    public String list(@RequestParam(defaultValue = "0") int page, Model model) {
-        model.addAttribute("territories", Paging.of(territoryService.all(), Paging.page(page)));
+    public String list(@RequestParam(defaultValue = "0") int page, @RequestParam(required = false) String search,
+                       @RequestParam(required = false) AdministrativeTier tier,
+                       @RequestParam(required = false) String status, Model model) {
+        String state = status == null ? "" : status;
+        model.addAttribute("search", search == null ? "" : search);
+        model.addAttribute("tier", tier);
+        model.addAttribute("status", state);
+        model.addAttribute("tiers", AdministrativeTier.values());
+        model.addAttribute("territories", Paging.of(territoryService.search(search, tier, state), Paging.page(page)));
+        model.addAttribute("paginationQuery", QueryString.of("search", search, "tier",
+                tier == null ? null : tier.name(), "status", state));
         return "territories/list";
     }
 
     @GetMapping("/new")
     @PreAuthorize(MANAGE)
     public String createForm(Model model) {
-        return form(model, null, new TerritoryService.Form(null, null, null), null, null);
+        TerritoryService.Form form = new TerritoryService.Form(null, null, null, AdministrativeTier.DISTRICT,
+                null, null, null, null, null);
+        return form(model, null, form, null, null);
     }
 
     @PostMapping("/new")
     @PreAuthorize(MANAGE)
     public String create(@RequestParam(required = false) String code, @RequestParam(required = false) String name,
-                         @RequestParam(required = false) Long managerUserId, Model model, RedirectAttributes redirect) {
-        TerritoryService.Form f = new TerritoryService.Form(code, name, managerUserId);
+                         @RequestParam(required = false) Long managerUserId,
+                         @RequestParam(required = false) AdministrativeTier tier,
+                         @RequestParam(required = false) UUID provinceId,
+                         @RequestParam(required = false) UUID districtId,
+                         @RequestParam(required = false) UUID sectorId,
+                         @RequestParam(required = false) UUID cellId,
+                         @RequestParam(required = false) UUID villageId,
+                         Model model, RedirectAttributes redirect) {
+        TerritoryService.Form f = new TerritoryService.Form(code, name, managerUserId, tier, provinceId,
+                districtId, sectorId, cellId, villageId);
         try {
             Territory t = territoryService.create(f);
             log("CREATE_TERRITORY", "Added territory " + t.getCode() + " " + t.getName()
+                    + areaSuffix(t)
                     + (t.getManagerName() == null ? "" : ", managed by " + t.getManagerName()), ActivityStatus.SUCCESS);
             redirect.addFlashAttribute("flashSuccess", messages.get("territory.created", t.getCode()));
             return "redirect:/territories";
@@ -80,17 +103,27 @@ public class TerritoryController {
     @PreAuthorize(MANAGE)
     public String editForm(@PathVariable UUID id, Model model) {
         Territory t = territoryService.find(id);
-        return form(model, t, new TerritoryService.Form(t.getCode(), t.getName(), t.getManagerUserId()), null, null);
+        return form(model, t, territoryService.formOf(t), null, null);
     }
 
     @PostMapping("/{id}/edit")
     @PreAuthorize(MANAGE)
-    public String update(@PathVariable UUID id, @RequestParam(required = false) String code, @RequestParam(required = false) String name,
-                         @RequestParam(required = false) Long managerUserId, Model model, RedirectAttributes redirect) {
-        TerritoryService.Form f = new TerritoryService.Form(code, name, managerUserId);
+    public String update(@PathVariable UUID id, @RequestParam(required = false) String code,
+                         @RequestParam(required = false) String name,
+                         @RequestParam(required = false) Long managerUserId,
+                         @RequestParam(required = false) AdministrativeTier tier,
+                         @RequestParam(required = false) UUID provinceId,
+                         @RequestParam(required = false) UUID districtId,
+                         @RequestParam(required = false) UUID sectorId,
+                         @RequestParam(required = false) UUID cellId,
+                         @RequestParam(required = false) UUID villageId,
+                         Model model, RedirectAttributes redirect) {
+        TerritoryService.Form f = new TerritoryService.Form(code, name, managerUserId, tier, provinceId,
+                districtId, sectorId, cellId, villageId);
         try {
             Territory t = territoryService.update(id, f);
             log("UPDATE_TERRITORY", "Updated territory " + t.getCode() + " " + t.getName()
+                    + areaSuffix(t)
                     + (t.getManagerName() == null ? "" : ", managed by " + t.getManagerName()), ActivityStatus.SUCCESS);
             redirect.addFlashAttribute("flashSuccess", messages.get("territory.updated", t.getCode()));
             return "redirect:/territories";
@@ -112,15 +145,30 @@ public class TerritoryController {
         return "redirect:/territories";
     }
 
+    /** The children of one unit, for the form's cascading selects. */
+    @GetMapping("/areas")
+    @PreAuthorize(MANAGE)
+    @ResponseBody
+    public List<TerritoryService.AreaOption> areas(@RequestParam(required = false) AdministrativeTier tier,
+                                                    @RequestParam(required = false) UUID parentId) {
+        return territoryService.children(tier, parentId);
+    }
+
     private String form(Model model, Territory current, TerritoryService.Form f, String errorField, String error) {
         model.addAttribute("territory", current);
         model.addAttribute("form", f);
         model.addAttribute("managers", territoryService.managers());
+        model.addAttribute("tiers", AdministrativeTier.values());
+        model.addAttribute("options", territoryService.options(f));
         model.addAttribute("errorField", errorField);
         if (error != null) {
             model.addAttribute("flashError", error);
         }
         return "territories/form";
+    }
+
+    private static String areaSuffix(Territory t) {
+        return t.getAreaPath() == null ? "" : ", covering " + t.getAreaPath();
     }
 
     private void log(String action, String text, ActivityStatus status) {

@@ -1,6 +1,7 @@
 package com.ntaganira.heritier.iWarehouse.entity;
 
 import com.ntaganira.heritier.iWarehouse.audit.AuditedEntity;
+import com.ntaganira.heritier.iWarehouse.enums.AdministrativeTier;
 import com.ntaganira.heritier.iWarehouse.enums.LocationType;
 import com.ntaganira.heritier.iWarehouse.enums.RackOrientation;
 import jakarta.persistence.*;
@@ -9,6 +10,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -62,6 +65,31 @@ public class Location extends BaseEntity {
     @Column(length = 10)
     private RackOrientation orientation;
 
+    /** The administrative level of a site; null while it is not mapped. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tier", length = 10)
+    private AdministrativeTier tier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "province_id")
+    private Province province;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "district_id")
+    private District district;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sector_id")
+    private Sector sector;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cell_id")
+    private Cell cell;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "village_id")
+    private Village village;
+
     @Column(nullable = false)
     private boolean enabled = true;
 
@@ -74,6 +102,64 @@ public class Location extends BaseEntity {
 
     public boolean isRack() {
         return type == LocationType.RACK;
+    }
+
+    public boolean isSite() {
+        return type == LocationType.SITE;
+    }
+
+    public boolean isVehicle() {
+        return type == LocationType.VEHICLE;
+    }
+
+    /** The selected administrative unit of a site, or null while it is not mapped. */
+    public AdministrativeNode getArea() {
+        if (!isSite() || tier == null) {
+            return null;
+        }
+        return switch (tier) {
+            case PROVINCE -> province;
+            case DISTRICT -> district;
+            case SECTOR -> sector;
+            case CELL -> cell;
+            case VILLAGE -> village;
+        };
+    }
+
+    public UUID getAreaId() {
+        AdministrativeNode area = getArea();
+        return area == null ? null : area.getId();
+    }
+
+    public String getAreaCode() {
+        AdministrativeNode area = getArea();
+        return area == null ? null : area.getCode();
+    }
+
+    public String getAreaName() {
+        AdministrativeNode area = getArea();
+        return area == null ? null : area.getName();
+    }
+
+    /** The full administrative path of a site, e.g. Kigali City / Gasabo / Kacyiru. */
+    public String getAreaPath() {
+        List<String> names = new ArrayList<>();
+        if (province != null) {
+            names.add(province.getName());
+        }
+        if (district != null) {
+            names.add(district.getName());
+        }
+        if (sector != null) {
+            names.add(sector.getName());
+        }
+        if (cell != null) {
+            names.add(cell.getName());
+        }
+        if (village != null) {
+            names.add(village.getName());
+        }
+        return names.isEmpty() ? null : String.join(" / ", names);
     }
 
     /** Racks and slots carry a label; sites and zones do not. */

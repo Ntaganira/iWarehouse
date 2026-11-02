@@ -83,6 +83,14 @@
                         <label th:text="#{location.type}">Type</label>
                         <div class="value" th:text="#{${'location.type.' + location.type}}">Rack</div>
                     </div>
+                    <div class="item" th:if="${area != null}">
+                        <label th:text="#{location.area.title}">Administrative area</label>
+                        <div class="value" th:if="${area.mapped}">
+                            <span class="loc-area-path" th:text="${area.path}">Kigali City / Gasabo / Kacyiru</span>
+                            <span class="text-muted small" th:if="${area.inherited}" th:text="#{location.area.from(${area.siteCode})}">from WH</span>
+                        </div>
+                        <div class="value text-muted" th:unless="${area.mapped}" th:text="#{location.area.notMapped}">Not mapped</div>
+                    </div>
                     <div class="item">
                         <label th:text="#{location.parent}">Under</label>
                         <div class="value">

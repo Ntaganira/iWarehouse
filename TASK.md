@@ -91,7 +91,25 @@
 - [ ] Check the list and cascading form at 360, 390, 768 and 1024 px in light and dark themes.
 - [x] Commit and push after explicit user approval.
 
-## 8. Verification
+## 8. Location hierarchy mapping
+
+- [x] Add `V64__location_hierarchy_mapping.sql`: site tier, nullable province/district/sector/cell/village
+      keys, FKs, SITE-only chain check and lookup indexes.
+- [x] Extend `Location` with its administrative level, lazy hierarchy links and area code/name/path helpers;
+      add entity graphs to the list/detail repository queries and hierarchy fields to `LocationDto`.
+- [x] Extend `LocationService` with site-only mapping, enabled-unit rules, cascading options, children for the
+      JSON endpoint, inherited zone/rack/slot areas and vehicle exclusion.
+- [x] Add the tier select and cascading form fields with `location-form.js`; show inherited areas read-only on
+      child forms and in the list and detail pages.
+- [x] Add EN/FR labels, validation texts and area load errors.
+- [x] Add four hierarchy tests to `LocationServiceTest`; full suite passes (756 tests, 0 failures).
+- [x] Smoke-test login, the location list, new/edit forms, the area JSON endpoint, mapped/unmapped site edits
+      (reverted afterwards), and the stock page.
+- [ ] Add Testcontainers coverage for location repository filtering and the SITE-only check constraint.
+- [ ] Check the location list, form and inherited-area display at 360, 390, 768 and 1024 px in both themes.
+- [x] Commit after explicit user approval (no push requested).
+
+## 9. Verification
 
 - [x] Run the full Maven test suite.
 - [ ] Verify the new screens and forms at phone, tablet and desktop widths in light and dark themes.

@@ -3,6 +3,7 @@ package com.ntaganira.heritier.iWarehouse.repository;
 import com.ntaganira.heritier.iWarehouse.entity.Location;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 public interface LocationRepository extends JpaRepository<Location, UUID> {
 
+    @EntityGraph(attributePaths = {"province", "district", "sector", "cell", "village"})
     List<Location> findAllByOrderByCodeAsc();
 
     /** The header's search: places whose code or name holds the text (the tree has no search of its own). No collection is fetched. */
@@ -22,6 +24,10 @@ public interface LocationRepository extends JpaRepository<Location, UUID> {
     List<Location> findByParentIdOrderByCodeAsc(UUID parentId);
 
     long countByParentIdAndEnabledTrue(UUID parentId);
+
+    @Override
+    @EntityGraph(attributePaths = {"province", "district", "sector", "cell", "village"})
+    Optional<Location> findById(UUID id);
 
     Optional<Location> findByCode(String code);
 

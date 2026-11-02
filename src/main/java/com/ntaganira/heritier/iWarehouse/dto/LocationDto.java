@@ -1,5 +1,6 @@
 package com.ntaganira.heritier.iWarehouse.dto;
 
+import com.ntaganira.heritier.iWarehouse.enums.AdministrativeTier;
 import com.ntaganira.heritier.iWarehouse.enums.LocationType;
 import com.ntaganira.heritier.iWarehouse.enums.RackOrientation;
 import jakarta.validation.constraints.*;
@@ -53,6 +54,19 @@ public class LocationDto {
     private Integer maxPieces;
 
     private RackOrientation orientation;
+
+    /** The administrative unit of a site; null leaves it unmapped. */
+    private AdministrativeTier tier;
+
+    private UUID provinceId;
+
+    private UUID districtId;
+
+    private UUID sectorId;
+
+    private UUID cellId;
+
+    private UUID villageId;
 
     public void setCode(String code) {
         this.code = code == null ? null : code.trim().toUpperCase(Locale.ROOT);

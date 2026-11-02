@@ -2,11 +2,18 @@ package com.ntaganira.heritier.iWarehouse.service;
 
 import com.ntaganira.heritier.iWarehouse.dto.LocationDto;
 import com.ntaganira.heritier.iWarehouse.entity.Location;
+import com.ntaganira.heritier.iWarehouse.entity.Province;
+import com.ntaganira.heritier.iWarehouse.enums.AdministrativeTier;
 import com.ntaganira.heritier.iWarehouse.enums.LocationType;
 import com.ntaganira.heritier.iWarehouse.enums.RackOrientation;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
+import com.ntaganira.heritier.iWarehouse.repository.CellRepository;
+import com.ntaganira.heritier.iWarehouse.repository.DistrictRepository;
 import com.ntaganira.heritier.iWarehouse.repository.LocationRepository;
+import com.ntaganira.heritier.iWarehouse.repository.ProvinceRepository;
+import com.ntaganira.heritier.iWarehouse.repository.SectorRepository;
 import com.ntaganira.heritier.iWarehouse.repository.StockUnitRepository;
+import com.ntaganira.heritier.iWarehouse.repository.VillageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +41,11 @@ class LocationServiceTest {
 
     private LocationRepository repo;
     private StockUnitRepository unitRepo;
+    private ProvinceRepository provinceRepo;
+    private DistrictRepository districtRepo;
+    private SectorRepository sectorRepo;
+    private CellRepository cellRepo;
+    private VillageRepository villageRepo;
     private LocationService service;
 
     private Location site;
@@ -46,9 +58,14 @@ class LocationServiceTest {
         repo = mock(LocationRepository.class);
         when(repo.save(any(Location.class))).thenAnswer(i -> i.getArgument(0));
         unitRepo = mock(StockUnitRepository.class);
+        provinceRepo = mock(ProvinceRepository.class);
+        districtRepo = mock(DistrictRepository.class);
+        sectorRepo = mock(SectorRepository.class);
+        cellRepo = mock(CellRepository.class);
+        villageRepo = mock(VillageRepository.class);
         when(repo.findAllByOrderByCodeAsc()).thenAnswer(i -> all.stream()
                 .sorted(Comparator.comparing(Location::getCode)).toList());
-        service = new LocationService(repo, unitRepo, CLOCK);
+        service = new LocationService(repo, unitRepo, provinceRepo, districtRepo, sectorRepo, cellRepo, villageRepo, CLOCK);
         site = location("WH", LocationType.SITE, null);
         zone = location("WH-A", LocationType.ZONE, site);
         rack = location("WH-A-R01", LocationType.RACK, zone);
@@ -163,6 +180,68 @@ class LocationServiceTest {
 
         assertThat(service.suggestCode(zone)).isEqualTo("WH-A-R03");
         assertThat(service.suggestCode(site)).isEqualTo("WH-B");
+    }
+
+    @Test
+    void aSiteIsMappedToAnAdministrativeUnit() {
+        Province province = province();
+        when(provinceRepo.findById(province.getId())).thenReturn(Optional.of(province));
+        LocationDto dto = dto(null, "DEPOT");
+        dto.setTier(AdministrativeTier.PROVINCE);
+        dto.setProvinceId(province.getId());
+
+        Location created = service.create(dto);
+
+        assertThat(created.getTier()).isEqualTo(AdministrativeTier.PROVINCE);
+        assertThat(created.getProvince()).isSameAs(province);
+        assertThat(created.getAreaPath()).isEqualTo("Kigali City");
+    }
+
+    @Test
+    void zonesRacksAndSlotsInheritTheAreasOfTheirSite() {
+        Province province = province();
+        site.setTier(AdministrativeTier.PROVINCE);
+        site.setProvince(province);
+
+        LocationService.Area siteArea = service.areaOf(site);
+        LocationService.Area rackArea = service.areaOf(rack);
+
+        assertThat(siteArea.mapped()).isTrue();
+        assertThat(siteArea.inherited()).isFalse();
+        assertThat(siteArea.path()).isEqualTo("Kigali City");
+        assertThat(rackArea.mapped()).isTrue();
+        assertThat(rackArea.inherited()).isTrue();
+        assertThat(rackArea.siteCode()).isEqualTo("WH");
+    }
+
+    @Test
+    void aVehicleHasNoAdministrativeArea() {
+        Location truck = location("RAC123A", LocationType.VEHICLE, null);
+
+        assertThat(service.areaOf(truck)).isNull();
+    }
+
+    @Test
+    void aDisabledUnitIsRefusedForANewMapping() {
+        Province province = province();
+        province.setEnabled(false);
+        when(provinceRepo.findById(province.getId())).thenReturn(Optional.of(province));
+        LocationDto dto = dto(null, "DEPOT");
+        dto.setTier(AdministrativeTier.PROVINCE);
+        dto.setProvinceId(province.getId());
+
+        assertThatThrownBy(() -> service.create(dto)).isInstanceOfSatisfying(BusinessException.class, e -> {
+            assertThat(e.getField()).isEqualTo("provinceId");
+            assertThat(e.getMessageKey()).isEqualTo("location.area.disabled");
+        });
+    }
+
+    private static Province province() {
+        Province province = new Province();
+        province.setId(UUID.randomUUID());
+        province.setCode("01");
+        province.setName("Kigali City");
+        return province;
     }
 
     private Location location(String code, LocationType type, Location parent) {

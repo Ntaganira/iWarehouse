@@ -5,6 +5,7 @@ import com.ntaganira.heritier.iWarehouse.config.Paging;
 import com.ntaganira.heritier.iWarehouse.dto.LocationDto;
 import com.ntaganira.heritier.iWarehouse.entity.Location;
 import com.ntaganira.heritier.iWarehouse.enums.ActivityStatus;
+import com.ntaganira.heritier.iWarehouse.enums.AdministrativeTier;
 import com.ntaganira.heritier.iWarehouse.enums.LocationType;
 import com.ntaganira.heritier.iWarehouse.enums.RackOrientation;
 import com.ntaganira.heritier.iWarehouse.exception.BusinessException;
@@ -72,9 +73,20 @@ public class LocationController {
     @GetMapping
     @PreAuthorize("hasAuthority('PAGE_LOCATIONS') and hasAuthority('PERM_VIEW_LOCATION')")
     public String list(@RequestParam(defaultValue = "false") boolean inactive, Model model) {
-        model.addAttribute("rows", locationService.tree(inactive));
+        LocationService.TreeView tree = locationService.treeView(inactive);
+        model.addAttribute("rows", tree.rows());
+        model.addAttribute("areas", tree.areas());
         model.addAttribute("inactive", inactive);
         return "locations/list";
+    }
+
+    /** The children of one administrative unit, for the site form's cascading selects. */
+    @GetMapping("/areas")
+    @PreAuthorize("hasAuthority('PAGE_LOCATIONS') and hasAuthority('PERM_MANAGE_LOCATION')")
+    @ResponseBody
+    public List<LocationService.AreaOption> areas(@RequestParam(required = false) AdministrativeTier tier,
+                                                  @RequestParam(required = false) UUID parentId) {
+        return locationService.children(tier, parentId);
     }
 
     @GetMapping("/{id}")
@@ -87,6 +99,7 @@ public class LocationController {
         // A vehicle's location is kept with its vehicle (FLT-02): the page says which
         model.addAttribute("vehicle", location.getType().isManual() ? null : vehicleService.ofLocation(id).orElse(null));
         model.addAttribute("ancestors", locationService.ancestors(location));
+        model.addAttribute("area", locationService.areaOf(location));
         model.addAttribute("children", Paging.of(locationService.children(id), Paging.pageOf("children", open, page)));
         model.addAttribute("history", dataChangeService.history("Location", id.toString(), Paging.pageOf("history", open, page), Paging.SIZE));
         model.addAttribute("tab", open);
@@ -205,6 +218,12 @@ public class LocationController {
         dto.setMaxWeightKg(location.getMaxWeightKg());
         dto.setMaxPieces(location.getMaxPieces());
         dto.setOrientation(location.getOrientation());
+        dto.setTier(location.getTier());
+        dto.setProvinceId(location.getProvince() == null ? null : location.getProvince().getId());
+        dto.setDistrictId(location.getDistrict() == null ? null : location.getDistrict().getId());
+        dto.setSectorId(location.getSector() == null ? null : location.getSector().getId());
+        dto.setCellId(location.getCell() == null ? null : location.getCell().getId());
+        dto.setVillageId(location.getVillage() == null ? null : location.getVillage().getId());
         return form(model, dto);
     }
 
@@ -303,6 +322,12 @@ public class LocationController {
         // Once its label is printed the code is fixed (MD-02)
         model.addAttribute("labelledAt", dto.getId() == null ? null : locationService.findById(dto.getId()).getLabelPrintedAt());
         model.addAttribute("orientations", RackOrientation.values());
+        model.addAttribute("tiers", AdministrativeTier.values());
+        if (type == LocationType.SITE) {
+            model.addAttribute("options", locationService.options(dto));
+        }
+        Location areaSource = dto.getId() != null ? locationService.findById(dto.getId()) : parent;
+        model.addAttribute("area", areaSource == null ? null : locationService.areaOf(areaSource));
         return "locations/form";
     }
 

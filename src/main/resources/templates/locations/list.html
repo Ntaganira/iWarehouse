@@ -35,6 +35,7 @@
                         <th th:text="#{location.code}">Code</th>
                         <th th:text="#{location.name}">Name</th>
                         <th th:text="#{location.type}">Type</th>
+                        <th th:text="#{location.area.title}">Administrative area</th>
                         <th th:text="#{location.limits}">Rack limits</th>
                         <th th:text="#{common.status}">Status</th>
                         <th th:text="#{common.actions}" sec:authorize="hasAuthority('PERM_MANAGE_LOCATION')">Actions</th>
@@ -55,6 +56,12 @@
                         </td>
                         <td th:text="${l.name ?: '—'}">Rack 1</td>
                         <td><span class="loc-type" th:classappend="${'loc-' + #strings.toLowerCase(l.type)}" th:text="#{${'location.type.' + l.type}}">Rack</span></td>
+                        <td th:with="a=${areas.get(l.id)}">
+                            <span th:if="${a != null and a.mapped}" class="loc-area" th:text="${a.path}">Kigali City / Gasabo / Kacyiru</span>
+                            <span th:if="${a != null and !a.mapped}" class="text-muted" th:text="#{location.area.notMapped}">Not mapped</span>
+                            <span th:if="${a == null}" class="text-muted">&mdash;</span>
+                            <span th:if="${a != null and a.inherited}" class="text-muted small" th:text="#{location.area.from(${a.siteCode})}">from WH</span>
+                        </td>
                         <td><th:block th:replace="~{locations/list :: limits(${l})}"></th:block></td>
                         <td>
                             <span class="badge badge-success" th:if="${l.enabled}" th:text="#{common.active}">Active</span>
@@ -87,7 +94,7 @@
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(rows)}">
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="empty-state">
                                 <h3 th:text="#{location.empty}">No locations yet</h3>
                                 <p th:text="#{location.emptyHint}">Add the first site, then its zones and racks</p>

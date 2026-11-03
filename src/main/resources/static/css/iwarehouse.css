@@ -4502,7 +4502,8 @@ button.notif-item:hover { background: var(--gray-100); }
 @media (max-width: 480px) {
   .notif-panel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; }
 }
-.notification-list .notif-unread td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+.notification-list .notif-unread td:first-child { box-shadow: inset 2px 0 0 var(--primary-soft); }
+.notification-list .notif-unread { background: var(--gray-100); }
 
 /* Documents on records (SRS 3.1): the upload form above the list, a thumbnail of each photo, a PDF mark */
 .attach-form { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }

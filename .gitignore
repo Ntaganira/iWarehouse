@@ -35,3 +35,7 @@ build/
 ### Python ###
 __pycache__/
 *.pyc
+
+### Local configuration (machine-specific ports and credentials, never committed) ###
+/config/
+/.env

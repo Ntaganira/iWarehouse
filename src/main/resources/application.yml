@@ -7,11 +7,11 @@ server:
     max-swallow-size: 50MB
   servlet:
     session:
-      timeout: 15m          # NFR-09: 15-minute idle session expiry (as iVura)
+      timeout: 30m          # server session expiry; the client signs out after 15 idle minutes (NFR-09)
 
 spring:
   application:
-    name: iWarehouse
+    name: High Bytes Ltd
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/iwarehouse}
     username: ${DB_USERNAME:postgres}
@@ -53,7 +53,7 @@ spring:
           writetimeout: 5000
   servlet:
     multipart:
-      max-file-size: 5MB
+      max-file-size: 2MB
       max-request-size: 6MB
 
 minio:
